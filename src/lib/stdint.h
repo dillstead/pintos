@@ -24,7 +24,7 @@ typedef unsigned short int uint16_t;
 #define UINT16_MAX 65535
 
 typedef unsigned int uint32_t;
-#define UINT32_MAX 4294967295
+#define UINT32_MAX 4294967295U
 
 typedef unsigned long long int uint64_t;
 #define UINT64_MAX 18446744073709551615ULL
