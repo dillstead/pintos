@@ -230,10 +230,9 @@ it ``handles'' system calls by terminating the process.  You will need
 to decipher system call arguments and take the appropriate action for
 each.
 
-In addition, implement system calls and system call handling.  You are
-required to support the following system calls, whose syscall numbers
-are defined in @file{lib/syscall-nr.h} and whose C functions called by
-user programs are prototyped in @file{lib/user/syscall.h}:
+You are required to support the following system calls, whose syscall
+numbers are defined in @file{lib/syscall-nr.h} and whose C functions
+called by user programs are prototyped in @file{lib/user/syscall.h}:
 
 @table @code
 @item SYS_halt
@@ -259,9 +258,9 @@ which otherwise should not be a valid id number.
 Joins the process @var{pid}, using the join rules from the last
 assignment, and returns the process's exit status.  If the process was
 terminated by the kernel (i.e.@: killed due to an exception), the exit
-status should be -1.  If the process was not a child process, the
-return value is undefined (but kernel operation must not be
-disrupted).
+status should be -1.  If the process was not a child of the calling
+process, the return value is undefined (but kernel operation must not
+be disrupted).
 
 @item SYS_create
 @itemx bool create (const char *@var{file})
@@ -322,9 +321,8 @@ is not safe to call into the filesystem code provided in the
 @file{filesys} directory from multiple threads at once.  For now, we
 recommend adding a single lock that controls access to the filesystem
 code.  You should acquire this lock before calling any functions in
-the @file{filesys} directory, and release it afterward.  Because it
-calls into @file{filesys} functions, you will have to modify
-@file{addrspace_load()} in the same way.  @strong{For now, we
+the @file{filesys} directory, and release it afterward.  Don't forget
+that @file{addrspace_load()} also accesses files.  @strong{For now, we
 recommend against modifying code in the @file{filesys} directory.}
 
 We have provided you a function for each system call in
@@ -438,9 +436,16 @@ You should assume that command line arguments are delimited by white
 space.
 
 @item
+@b{What is the maximum length of the command line arguments?}
+
+You can impose some reasonable maximum as long as you're prepared to
+defend it in your @file{DESIGNDOC}.
+
+@item
 @b{How do I parse all these argument strings?}
 
-We recommend you look at @code{strtok_r()}, prototyped in
+You're welcome to use any technique you please, as long as it works.
+If you're lost, look at @code{strtok_r()}, prototyped in
 @file{lib/string.h} and implemented with thorough comments in
 @file{lib/string.c}.  You can find more about it by looking at the man
 page (run @code{man strtok_r} at the prompt).
@@ -455,6 +460,13 @@ will be at address @t{0xbffffffc}.
 
 Also, the stack should always be aligned to a 4-byte boundary, but
 @t{0xbfffffff} isn't.
+
+@item
+@b{Is @code{PHYS_BASE} fixed?}
+
+No.  You should be able to support @code{PHYS_BASE} values that are
+any multiple of @t{0x10000000) from @t{0x80000000} to @t{0xc0000000},
+simply via recompilation.
 @end enumerate
 
 @item System Calls FAQs
@@ -500,8 +512,9 @@ or the machine shuts down.
 @b{What happens if a system call is passed an invalid argument, such
 as Open being called with an invalid filename?}
 
-Pintos should not crash.  You should have your system calls check for
-invalid arguments and return error codes.
+Pintos should not crash.  Acceptable options include returning an
+error value (for those calls that return a value), returning an
+undefined value, or terminating the process.
 
 @item
 @b{I've discovered that some of my user programs need more than one 4
@@ -578,16 +591,19 @@ and looking around a bit.  However, you can just act as if
 @code{main()} is the very first function called.)
 
 Pintos is written for the 80@var{x}86 architecture.  Therefore, we
-need to adhere to the 80@var{x}86 calling convention, which is
-detailed in the FAQ.  Basically, you put all the arguments on the
-stack and move the stack pointer appropriately.  The program will
-assume that this has been done when it begins running.
+need to adhere to the 80@var{x}86 calling convention.  Basically, you
+put all the arguments on the stack and move the stack pointer
+appropriately.  You also need to insert space for the function's
+``return address'': even though the initial function doesn't really
+have a caller, its stack frame must have the same layout as any other
+function's.  The program will assume that the stack has been laid out
+this way when it begins running.
 
 So, what are the arguments to @code{main()}? Just two: an @samp{int}
 (@code{argc}) and a @samp{char **} (@code{argv}).  @code{argv} is an
 array of strings, and @code{argc} is the number of strings in that
-array.  However, the hard part isn't these two things.  The hard part is
-getting all the individual strings in the right place.  As we go
+array.  However, the hard part isn't these two things.  The hard part
+is getting all the individual strings in the right place.  As we go
 through the procedure, let us consider the following example command:
 @samp{/bin/ls -l *.h *.c}.
 
@@ -615,59 +631,76 @@ there.  However, since the stack pointer should always be
 word-aligned, we instead leave the stack pointer at @t{0xffe8}.
 
 Once we align the stack pointer, we then push the elements of the
-argument vector (that is, the addresses of the strings @samp{/bin/ls},
-@samp{-l}, @samp{*.h}, and @samp{*.c}) onto the stack.  This must be
-done in reverse order, such that @code{argv[0]} is at the lowest
-virtual address (again, because the stack is growing downward).  This
-is because we are now writing the actual array of strings; if we write
-them in the wrong order, then the strings will be in the wrong order
-in the array.  This is also why, strictly speaking, it doesn't matter
-what order the strings themselves are placed on the stack: as long as
-the pointers are in the right order, the strings themselves can really
-be anywhere.  After we finish, we note the stack address of the first
-element of the argument vector, which is @code{argv} itself.
+argument vector, that is, a null pointer, then the addresses of the
+strings @samp{/bin/ls}, @samp{-l}, @samp{*.h}, and @samp{*.c}) onto
+the stack.  This must be done in reverse order, such that
+@code{argv[0]} is at the lowest virtual address, again because the
+stack is growing downward.  (The null pointer pushed first is because
+@code{argv[argc]} must be a null pointer.)  This is because we are now
+writing the actual array of strings; if we write them in the wrong
+order, then the strings will be in the wrong order in the array.  This
+is also why, strictly speaking, it doesn't matter what order the
+strings themselves are placed on the stack: as long as the pointers
+are in the right order, the strings themselves can really be anywhere.
+After we finish, we note the stack address of the first element of the
+argument vector, which is @code{argv} itself.
 
-Finally, we push @code{argv} (that is, the address of the first
-element of the @code{argv} array) onto the stack, along with the
-length of the argument vector (@code{argc}, 4 in this example).  This
-must also be done in this order, since @code{argc} is the first
-argument to main and therefore is on first (smaller address) on the
-stack.  We leave the stack pointer to point to the location where
-@code{argc} is, because it is at the top of the stack, the location
-directly below @code{argc}.
+Then we push @code{argv} (that is, the address of the first element of
+the @code{argv} array) onto the stack, along with the length of the
+argument vector (@code{argc}, 4 in this example).  This must also be
+done in this order, since @code{argc} is the first argument to
+@code{main()} and therefore is on first (smaller address) on the
+stack.  Finally, we push a fake ``return address'' and leave the stack
+pointer to point to its location.
 
-All of which may sound very confusing, so here's a picture which will
+All this may sound very confusing, so here's a picture which will
 hopefully clarify what's going on. This represents the state of the
 stack and the relevant registers right before the beginning of the
-user program (assuming for this example a 16-bit virtual address space
-with addresses from @t{0x0000} to @t{0xffff}):
+user program (assuming for this example that the stack bottom is
+@t{0xc0000000}):
 
 @html
 <CENTER>
 @end html
-@multitable {@t{0xffff}} {word-align} {@t{/bin/ls\0}}
+@multitable {@t{0xbfffffff}} {``return address''} {@t{/bin/ls\0}}
 @item Address @tab Name @tab Data
-@item @t{0xfffc} @tab @code{*argv[3]} @tab @samp{*.c\0}
-@item @t{0xfff8} @tab @code{*argv[2]} @tab @samp{*.h\0}
-@item @t{0xfff5} @tab @code{*argv[1]} @tab @samp{-l\0}
-@item @t{0xffed} @tab @code{*argv[0]} @tab @samp{/bin/ls\0}
-@item @t{0xffec} @tab word-align @tab @samp{\0}
-@item @t{0xffe8} @tab @code{argv[3]} @tab @t{0xfffc}
-@item @t{0xffe4} @tab @code{argv[2]} @tab @t{0xfff8}
-@item @t{0xffe0} @tab @code{argv[1]} @tab @t{0xfff5}
-@item @t{0xffdc} @tab @code{argv[0]} @tab @t{0xffed}
-@item @t{0xffd8} @tab @code{argv} @tab @t{0xffdc}
-@item @t{0xffd4} @tab @code{argc} @tab 4
+@item @t{0xbffffffc} @tab @code{*argv[3]} @tab @samp{*.c\0}
+@item @t{0xbffffff8} @tab @code{*argv[2]} @tab @samp{*.h\0}
+@item @t{0xbffffff5} @tab @code{*argv[1]} @tab @samp{-l\0}
+@item @t{0xbfffffed} @tab @code{*argv[0]} @tab @samp{/bin/ls\0}
+@item @t{0xbfffffec} @tab word-align @tab @samp{\0}
+@item @t{0xbfffffe8} @tab @code{argv[4]} @tab @t{0}
+@item @t{0xbfffffe4} @tab @code{argv[3]} @tab @t{0xbffffffc}
+@item @t{0xbfffffe0} @tab @code{argv[2]} @tab @t{0xbffffff8}
+@item @t{0xbfffffdc} @tab @code{argv[1]} @tab @t{0xbffffff5}
+@item @t{0xbfffffd8} @tab @code{argv[0]} @tab @t{0xbfffffed}
+@item @t{0xbfffffd4} @tab @code{argv} @tab @t{0xbffffffd8}
+@item @t{0xbfffffd0} @tab @code{argc} @tab 4
+@item @t{0xbfffffcc} @tab ``return address'' @tab 0
 @end multitable
 @html
 </CENTER>
 @end html
 
-In this example, the stack pointer would be initialized to @t{0xffd4}.
+In this example, the stack pointer would be initialized to
+@t{0xbfffffcc}.
 
-Your code should start the stack at the very top of the user virtual
-address space, in the page just below virtual address @code{PHYS_BASE}
-(defined in @file{threads/mmu.h}).
+As shown above, your code should start the stack at the very top of
+the user virtual address space, in the page just below virtual address
+@code{PHYS_BASE} (defined in @file{threads/mmu.h}).
+
+You may find the non-standard @code{hex_dump()} function, declared in
+@file{<stdio.h>}, useful for debugging your argument passing code.
+Here's what it would show in the above example, given that
+@code{PHYS_BASE} is @t{0xc0000000}, so that the dump starts at virtual
+address @t{0xbfffffcc}:
+
+@example
+ 00 00 00 00 04 00 00 00-d8 ff ff bf ed ff ff bf |................|
+ f5 ff ff bf f8 ff ff bf-fc ff ff bf 00 00 00 00 |................|
+ 00 2f 62 69 6e 2f 6c 73-00 2d 6c 00 2a 2e 68 00 |./bin/ls.-l.*.h.|
+ 2a 2e 63 00                                     |*.c.            |
+@end example
 
 @node System Calls
 @section System Calls
@@ -683,18 +716,9 @@ errors such as a page fault or division by zero.  However, exceptions
 are also the means by which a user program can request services
 (``system calls'') from the operating system.
 
-Some exceptions are ``restartable'': the condition that caused the
-exception can be fixed and the instruction retried. For example, page
-faults call the operating system, but the user code should re-start on
-the load or store that caused the exception (not the next one) so that
-the memory access actually occurs.  On the 80@var{x}86, restartable
-exceptions are called ``faults,'' whereas most non-restartable
-exceptions are classed as ``traps.''  Other architectures may define
-these terms differently.
-
 In the 80@var{x}86 architecture, the @samp{int} instruction is the
 most commonly used means for invoking system calls.  This instruction
-is handled in the same way that other software exceptions.  In Pintos,
+is handled in the same way as other software exceptions.  In Pintos,
 user program invoke @samp{int $0x30} to make a system call.  The
 system call number and any additional arguments are expected to be
 pushed on the stack in the normal fashion before invoking the
@@ -718,16 +742,17 @@ arbitrary:
 @end html
 @multitable {Address} {Value}
 @item Address @tab Value
-@item @t{0xfe7c} @tab 3
-@item @t{0xfe78} @tab 2
-@item @t{0xfe74} @tab 1
-@item @t{0xfe70} @tab 10
+@item @t{0xbffffe7c} @tab 3
+@item @t{0xbffffe78} @tab 2
+@item @t{0xbffffe74} @tab 1
+@item @t{0xbffffe70} @tab 10
 @end multitable
 @html
 </CENTER>
 @end html
 
-In this example, the caller's stack pointer would be at @t{0xfe70}.
+In this example, the caller's stack pointer would be at
+@t{0xbffffe70}.
 
 The 80@var{x}86 convention for function return values is to place them
 in the @samp{EAX} register.  System calls that return a value can do
