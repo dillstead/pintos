@@ -4,6 +4,29 @@
 #include "io.h"
 #include "timer.h"
 
+static void set_serial (int bps, int bits, enum parity_type parity, int stop);
+
+/* Initializes the serial port device. */
+void
+serial_init (void) 
+{
+  outb (IER_REG, 0);    /* Turn off all interrupts. */
+  outb (FCR_REG, 0);    /* Disable FIFO. */
+  set_serial (9600, 8, NONE, 1);
+  outb (MCR_REG, 0);    /* Turn off output lines. */
+}
+
+/* Sends BYTE to the serial port. */
+void
+serial_outb (uint8_t byte) 
+{
+  while ((inb (LSR_REG) & LSR_THRE) == 0)
+    continue;
+  outb (THR_REG, byte);
+}
+
+/* Configures the first serial port for BPS bits per second,
+   BITS bits per byte, the given PARITY, and STOP stop bits. */
 static void
 set_serial (int bps, int bits, enum parity_type parity, int stop)
 {
@@ -19,21 +42,4 @@ set_serial (int bps, int bits, enum parity_type parity, int stop)
   
   /* Reset DLAB. */
   outb (LCR_REG, make_lcr (bits, parity, stop, false, false));
-}
-
-void
-serial_init (void) 
-{
-  outb (IER_REG, 0);    /* Turn off all interrupts. */
-  outb (FCR_REG, 0);    /* Disable FIFO. */
-  set_serial (9600, 8, NONE, 1);
-  outb (MCR_REG, 0);    /* Turn off output lines. */
-}
-
-void
-serial_outb (uint8_t byte) 
-{
-  while ((inb (LSR_REG) & LSR_THRE) == 0)
-    continue;
-  outb (THR_REG, byte);
 }

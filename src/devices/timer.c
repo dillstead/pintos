@@ -7,14 +7,10 @@
 #error 8254 timer requires TIMER_FREQ >= 19
 #endif
 
+/* Number of timer ticks since OS booted. */
 static volatile int64_t ticks;
 
-static void
-irq20_timer (struct intr_frame *args UNUSED)
-{
-  ticks++;
-  intr_yield_on_return ();
-}
+static intr_handler_func timer_interrupt;
 
 /* Sets up the 8254 Programmable Interrupt Timer (PIT) to
    interrupt PIT_FREQ times per second, and registers the
@@ -30,9 +26,10 @@ timer_init (void)
   outb (0x40, count & 0xff);
   outb (0x40, count >> 8);
 
-  intr_register (0x20, 0, INTR_OFF, irq20_timer, "8254 Timer");
+  intr_register (0x20, 0, INTR_OFF, timer_interrupt, "8254 Timer");
 }
 
+/* Returns the number of timer ticks since the OS booted. */
 int64_t
 timer_ticks (void) 
 {
@@ -42,13 +39,15 @@ timer_ticks (void)
   return t;
 }
 
+/* Returns the number of timer ticks elapsed since THEN, which
+   should be a value once returned by timer_ticks(). */
 int64_t
 timer_elapsed (int64_t then) 
 {
   return timer_ticks () - then;
 }
 
-/* Suspends execution for approximately DURATION milliseconds. */
+/* Suspends execution for approximately MS milliseconds. */
 void
 timer_msleep (int64_t ms) 
 {
@@ -59,14 +58,26 @@ timer_msleep (int64_t ms)
     continue;
 }
 
+/* Suspends execution for approximately US microseconds.
+   Note: this is ridiculously inaccurate. */
 void
 timer_usleep (int64_t us) 
 {
   timer_msleep (us / 1000 + 1);
 }
 
+/* Suspends execution for approximately NS nanoseconds.
+   Note: this is ridiculously inaccurate. */
 void
 timer_nsleep (int64_t ns) 
 {
   timer_msleep (ns / 1000000 + 1);
+}
+
+/* Timer interrupt handler. */
+static void
+timer_interrupt (struct intr_frame *args UNUSED)
+{
+  ticks++;
+  intr_yield_on_return ();
 }

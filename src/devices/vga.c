@@ -5,86 +5,128 @@
 #include "lib.h"
 #include "mmu.h"
 
-static size_t vga_cols, vga_rows;
-static size_t vga_x, vga_y;
-static uint16_t *vga_base;
+/* VGA text screen support.  See [FREEVGA] for more information. */
 
+/* Number of columns and rows on the text display. */
+#define COL_CNT 80
+#define ROW_CNT 25
+
+/* Current cursor position.  (0,0) is in the upper left corner of
+   the display. */
+static size_t cx, cy;
+
+/* Attribute value for gray text on a black background. */
+#define GRAY_ON_BLACK 0x07
+
+/* Framebuffer.  See [FREEVGA] under "VGA Text Mode Operation".
+   The character at (x,y) is fb[y][x][0].
+   The attribute at (x,y) is fb[y][x][1]. */
+static uint8_t (*fb)[COL_CNT][2];
+
+static void clear_row (size_t y);
+static void cls (void);
+static void newline (void);
+static void move_cursor (void);
+
+/* Initializes the VGA text display and clears the screen. */
 void
 vga_init (void)
 {
-  vga_cols = 80;
-  vga_rows = 25;
-  vga_base = (uint16_t *) ptov (0xb8000);
-  vga_cls ();
+  fb = ptov (0xb8000);
+  cls ();
 }
 
-void
-vga_cls (void)
-{
-  size_t i;
-  for (i = 0; i < vga_cols * vga_rows; i++)
-    vga_base[i] = 0x0700;
-  vga_x = vga_y = 0;
-}
-
-static void
-vga_newline (void)
-{
-  vga_x = 0;
-  vga_y++;
-  if (vga_y >= vga_rows)
-    {
-      vga_y = vga_rows - 1;
-      memmove (vga_base, vga_base + vga_cols,
-               vga_cols * (vga_rows - 1) * 2);
-      memset (vga_base + vga_cols * (vga_rows - 1),
-              0, vga_cols * 2);
-    }
-}
-
-static void
-move_cursor (void) 
-{
-  uint16_t cp = (vga_x + vga_cols * vga_y);
-  outw (0x3d4, 0x0e | (cp & 0xff00));
-  outw (0x3d4, 0x0f | (cp << 8));
-}
-
+/* Writes C to the VGA text display, interpreting control
+   characters in the conventional ways. */
 void
 vga_putc (int c)
 {
   switch (c) 
     {
     case '\n':
-      vga_newline ();
+      newline ();
       break;
 
     case '\f':
-      vga_cls ();
+      cls ();
       break;
 
     case '\b':
-      if (vga_x > 0)
-        vga_x--;
+      if (cx > 0)
+        cx--;
       break;
       
     case '\r':
-      vga_x = 0;
+      cx = 0;
       break;
 
     case '\t':
-      vga_x = (vga_x + 8) / 8 * 8;
-      if (vga_x >= vga_cols)
-        vga_newline ();
+      cx = ROUND_UP (cx + 1, 8);
+      if (cx >= COL_CNT)
+        newline ();
       break;
       
     default:
-      vga_base[vga_x + vga_y * vga_cols] = 0x0700 | c;
-      vga_x++;
-      if (vga_x >= vga_cols)
-        vga_newline ();
+      fb[cy][cx][0] = c;
+      fb[cy][cx][1] = GRAY_ON_BLACK;
+      if (++cx >= COL_CNT)
+        newline ();
       break;
     }
 
+  /* Update cursor position. */
   move_cursor ();
 }
+
+/* Clears the screen and moves the cursor to the upper left. */
+static void
+cls (void)
+{
+  size_t y;
+
+  for (y = 0; y < ROW_CNT; y++)
+    clear_row (y);
+
+  cx = cy = 0;
+  move_cursor ();
+}
+
+/* Clears row Y to spaces. */
+static void
+clear_row (size_t y) 
+{
+  size_t x;
+
+  for (x = 0; x < COL_CNT; x++)
+    {
+      fb[y][x][0] = ' ';
+      fb[y][x][1] = GRAY_ON_BLACK;
+    }
+}
+
+/* Advances the cursor to the first column in the next line on
+   the screen.  If the cursor is already on the last line on the
+   screen, scrolls the screen upward one line. */
+static void
+newline (void)
+{
+  cx = 0;
+  cy++;
+  if (cy >= ROW_CNT)
+    {
+      cy = ROW_CNT - 1;
+      memmove (&fb[0], &fb[1], sizeof fb[0] * (ROW_CNT - 1));
+      clear_row (ROW_CNT - 1);
+    }
+}
+
+/* Moves the hardware cursor to (cx,cy). */
+static void
+move_cursor (void) 
+{
+  /* See [FREEVGA] under "Manipulating the Text-mode Cursor". */
+  uint16_t cp = cx + COL_CNT * cy;
+  outw (0x3d4, 0x0e | (cp & 0xff00));
+  outw (0x3d4, 0x0f | (cp << 8));
+}
+
