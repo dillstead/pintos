@@ -411,21 +411,20 @@ only be deleted if they are empty, as in Unix.
 @enumerate 1
 @item
 @b{We're limited to a 64-block cache, but can we also keep an
-@struct{inode_disk} inside @struct{file}, the way the provided code
+@struct{inode_disk} inside @struct{inode}, the way the provided code
 does?}
 
 The goal of the 64-block limit is to bound the amount of cached file
-system data.  If you keep a block of disk data anywhere in kernel
-memory, whether it's file data or metadata, then you have to count it
-against the 64-block limit.  The same rule applies to anything that's
+system data.  If you keep a block of disk data---whether file data or
+metadata---anywhere in kernel memory then you have to count it against
+the 64-block limit.  The same rule applies to anything that's
 ``similar'' to a block of disk data, such as a @struct{inode_disk}
 without the @code{length} or @code{sector_cnt} members.
 
-That means you'll have to change the way the file implementation
-accesses its corresponding inode right now, since it currently just
-creates a new @struct{inode} containing an @struct{inode_disk} in
-@func{inode_open} and reads the corresponding sector in from disk when
-it's created.
+That means you'll have to change the way the inode implementation
+accesses its corresponding on-disk inode right now, since it currently
+just embeds a @struct{inode_disk} in @struct{inode} and reads the
+corresponding sector in from disk when it's created.
 
 There are two reasons for not storing inode data in @struct{inode}.
 First, keeping extra copies of inodes would be cheating the 64-block
@@ -433,15 +432,16 @@ limitation that we place on your cache.  Second, if two processes have
 the same file open, you will create a huge synchronization headache for
 yourself if each @struct{inode} has its own copy of the on-disk inode.
 
-You can store pointers to inode data in @struct{inode_disk}, if you
-want, and you can store some other small amount of information to help
-you find the inode when you need it.  Similarly, if you want to store
-one block of data plus some small amount of metadata for each of your 64
-cache entries, that's fine.
+You can store pointers to inode data in @struct{inode}, if you want, and
+you can store some other small amount of information to help you find
+the inode when you need it.  Similarly, if you want to store one block
+of data plus some small amount of metadata for each of your 64 cache
+entries, that's fine.
 
-If you look at @func{file_read_at}, it uses the inode directly without
-having first read in that sector from wherever it was in the storage
-hierarchy.  This will no longer work.  You will need to change
-@code{file_read_at} (and similar functions) so that it reads the inode
-from the storage hierarchy before using it.
+If you look at @func{inode_byte_to_sector}, it uses the
+@struct{inode_disk} directly without having first read in that sector
+from wherever it was in the storage hierarchy.  This will no longer
+work.  You will need to change @func{inode_byte_to_sector} so that it
+reads the @struct{inode_disk} from the storage hierarchy before using
+it.
 @end enumerate
