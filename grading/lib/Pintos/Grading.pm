@@ -698,7 +698,7 @@ sub canonicalize_exit_codes {
 }
 
 sub strip_exit_codes {
-    return grep (!/^[-a-z0-9]+: exit\(-?\d+\)/, canonicalize_exit_codes (@_));
+    return grep (!/^[-_a-z0-9]+: exit\(-?\d+\)/, canonicalize_exit_codes (@_));
 }
 
 sub compare_output {
