@@ -434,41 +434,71 @@ as a special case of file mappings.)
 Yes.
 
 @item
-@b{How do I use the hash table provided in @file{lib/hash.c}?}
+@b{How do I use the hash table provided in @file{lib/kernel/hash.c}?}
 
-FIXME
+First, you need to embed a @code{hash_elem} object as a member of the
+object that the hash table will contain.  Each @code{hash_elem} allows
+the object to a member of at most one hash table at a given time.  All
+the hash table functions that deal with hash table items actually use
+the address of a @code{hash_elem}.  You can convert a pointer to a
+@code{hash_elem} member into a pointer to the structure in which
+member is embedded using the @code{hash_entry} macro.
 
-There are two things you need to use this hashtable:
+Second, you need to decide on a key type.  The key should be something
+that is unique for each object, because a given hash table may not
+contain two objects with equal keys.  Then you need to write two
+functions.  The first is a @dfn{hash function} that converts a key
+into an integer.  Some sample hash functions that you can use or just
+examine are given in @file{lib/kernel/hash.c}.  The second function
+needed is a @dfn{comparison function} that compares a pair and returns
+true if the first is less than the second.  These two functions have
+to be compatible with the prototypes for @code{hash_hash_func} and
+@code{hash_less_func} in @file{lib/kernel/hash.h}.
 
-1. You need to decide on a key type. The key should be something
-that is unique for each object as inserting two objects with
-the same key will cause the second to overwrite the first.
-(The keys are compared with ==, so you should stick to
-integers and pointers unless you know how to do operator
-overloading.) You also need to write a hash function that
-converts key values to integers, which you will pass into the
-hash table constructor.
-
-2. Your key needs to be a field of your object type, and you
-will need to supply a 'get' function that given an object
-returns the key.
-
-Here's a quick example of how to construct a hash table. In
-this table the keys are Thread pointers and the objects are
-integers (you will be using different key/value pairs I'm
-sure). In addition, this hash function is pretty puny. You
-should probably use a better one.
+Here's a quick example.  Suppose you want to put @code{struct thread}s
+in a hash table.  First, add a @code{hash_elem} to the thread
+structure by adding a line to its definition:
 
 @example
-FIXME
+hash_elem h_elem;               /* Hash table element. */
 @end example
 
-and to construct the hash table:
+We'll choose the @code{tid} member in @code{struct thread} as the key,
+and write a hash function and a comparison function:
 
-HashTable<Thread *, HashObject *> *htable;
+@example
+/* Returns a hash for E. */
+unsigned
+thread_hash (const hash_elem *e, void *aux UNUSED)
+@{
+  struct thread *t = hash_entry (e, struct thread, h_elem);
+  return hash_int (t->tid);
+@}
 
-htable = new HashTable<Thread *, HashObject *>(ExtractKeyFromHashObject,
-                                            MyKeyToHashValue);
+/* Returns true if A's tid is less than B's tid. */
+bool
+thread_less (const hash_elem *a_, const hash_elem *b_, void *aux UNUSED)
+@{
+  struct thread *a = hash_entry (a_, struct thread, h_elem);
+  struct thread *b = hash_entry (b_, struct thread, h_elem);
+  return a->tid < b->tid;
+@}
+@end example
+
+Then we can create a hash table like this:
+
+@example
+struct hash threads;
+
+hash_init (&threads, thread_hash, thread_less, NULL);
+@end example
+
+Finally, if @code{@var{t}} is a pointer to a @code{struct thread},
+then we can insert it into the hash table with:
+
+@example
+hash_insert (&threads, &@var{t}->h_elem);
+@end example
 
 If you have any other questions about hash tables, the CS109
 and CS161 textbooks have good chapters on them, or you can come
@@ -515,7 +545,6 @@ you handle a page fault in your code.
 @item Paging FAQs
 
 @enumerate 1
-@item
 @item
 @b{Does the virtual memory system need to support growth of the stack
 segment?}
@@ -667,5 +696,3 @@ No, once created the mapping is valid until @code{munmap} is called
 or the process exits.
 @end enumerate
 @end enumerate
-
-TLB invalidation FIXME
