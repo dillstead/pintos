@@ -35,7 +35,9 @@ sema_init (struct semaphore *sema, unsigned value, const char *name)
    atomically decrements it.
 
    This function may sleep, so it must not be called within an
-   interrupt handler. */
+   interrupt handler.  This function may be called with
+   interrupts disabled, but interrupts will be turned back on if
+   we need to sleep. */
 void
 sema_down (struct semaphore *sema) 
 {
@@ -117,9 +119,9 @@ sema_self_test (void)
 
 /* Initializes LOCK and names it NAME (for debugging purposes).
    A lock can be held by at most a single thread at any given
-   time.  Our locks are not "recursive", meaning that it is an
-   error for a thread that holds a lock to attempt to reacquire
-   it.
+   time.  Our locks are not "recursive", that is, it is an error
+   for the thread currently holding a lock to try to acquire that
+   lock.
 
    A lock is a specialization of a semaphore with an initial
    value of 1.  The difference between a lock and such a
@@ -147,7 +149,9 @@ lock_init (struct lock *lock, const char *name)
    thread.
 
    This function may sleep, so it must not be called within an
-   interrupt handler. */
+   interrupt handler.  This function may be called with
+   interrupts disabled, but interrupts will be turned back on if
+   we need to sleep. */
 void
 lock_acquire (struct lock *lock)
 {
@@ -240,7 +244,9 @@ cond_init (struct condition *cond, const char *name)
    from locks to condition variables.
 
    This function may sleep, so it must not be called within an
-   interrupt handler. */
+   interrupt handler.  This function may be called with
+   interrupts disabled, but interrupts will be turned back on if
+   we need to sleep. */
 void
 cond_wait (struct condition *cond, struct lock *lock) 
 {
