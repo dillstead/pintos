@@ -42,6 +42,7 @@ random_bytes (void *buf_, size_t size)
 {
   uint8_t *buf;
 
+  ASSERT (inited);
   for (buf = buf_; size-- > 0; buf++)
     {
       uint8_t s_k;
