@@ -1,6 +1,6 @@
 (join-twice) begin
-(child-twice) run
-child-twice: exit(81)
+(child-simple) run
+child-simple: exit(81)
 (join-twice) join(exec()) = 81
 (join-twice) end
 join-twice: exit(0)

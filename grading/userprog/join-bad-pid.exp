@@ -1,4 +1,6 @@
-(join-simple) begin
-(join-simple) join(exec()) = 81
-(join-simple) end
-join-simple: exit(0)
+(join-bad-pid) begin
+(join-bad-pid) end
+join-bad-pid: exit(0)
+--OR--
+(join-bad-pid) begin
+join-bad-pid: exit(-1)

@@ -51,6 +51,7 @@ sub usage {
 	     write-normal write-bad-ptr write-boundary write-zero write-stdin
 	     write-bad-fd
 	     exec-once exec-arg exec-multiple exec-missing exec-bad-ptr
+	     join-simple join-twice join-killed join-bad-pid
 	     multi-recurse multi-oom multi-child-fd
 	     ) unless @TESTS > 0;
 
@@ -347,16 +348,28 @@ sub grade_multi_oom {
 	shift @output;
     }
     die "Only $n child processes started.\n" if $n < 15;
+
+    # There could be a death notice for a process that didn't get
+    # fully loaded, and/or notices from the loader.
+    while (@output > 0
+	   && ($output[0] =~ /^\(multi-oom\) end $n$/
+	       || $output[0] =~ /^load: /)) {
+	shift @output;
+    }
+
     while (--$n >= 0) {
 	die "Output ended unexpectedly before process $n finished.\n"
 	    if @output < 2;
-	die "Child process $n ended out of order.\n"
-	    if $output[0] !~ /^\(multi-oom\) end $n$/;
-	shift @output;
 
-	die "Child process $n didn't print proper exit message.\n"
-	    if $output[0] !~ /^multi-oom: exit\($n\)$/;
-	shift @output;
+	local ($_);
+	chomp ($_ = shift @output);
+	die "Found '$_' expecting 'end' message.\n" if !/^\(multi-oom\) end/;
+	die "Child process $n ended out of order.\n"
+	    if !/^\(multi-oom\) end $n$/;
+
+	chomp ($_ = shift @output);
+	die "Kernel didn't print proper exit message for process $n.\n"
+	    if !/^multi-oom: exit\($n\)$/;
     }
     die "Spurious output at end: '$output[0]'.\n" if @output;
 }
@@ -446,9 +459,18 @@ sub fix_exit_codes {
     my (@output) = @_;
 
     # Fix up lines that look like exit codes.
+    # Exit codes are supposed to be printed in the form "process: exit(code)"
+    # but people get unfortunately creative with it.
     for my $i (0...$#output) {
-	if (my ($process, $code)
-	    = $output[$i] =~ /^([-a-zA-Z0-9 ]+):.*[ \(](-?\d+)\b\)?$/) {
+	local ($_) = $output[$i];
+	
+	my ($process, $code);
+	if ((($process, $code) = /^([-a-zA-Z0-9 ]+):.*[ \(](-?\d+)\b\)?$/)
+	    || (($process, $code) = /^([-a-zA-Z0-9 ]+) exit\((-?\d+)\)$/)
+	    || (($process, $code)
+		= /^([-a-zA-Z0-9 ]+) \(.*\): exit\((-?\d+)\)$/)
+	    || (($process, $code) = /^([-a-zA-Z0-9 ]+):\( (-?\d+) \) $/)
+) {
 	    $process = substr ($process, 0, 15);
 	    $process =~ s/\s.*//;
 	    $output[$i] = "$process: exit($code)\n";
@@ -510,7 +532,8 @@ sub compare_output {
 
 	$details .= "Differences in `diff -u' format:\n";
 	$details .= join ('', @diff);
-	$details .= "(This is considered a `fuzzy match'.)\n" if $fuzzy_match;
+	$details .= "(This is considered a `fuzzy match'.)\n"
+	    if !$not_fuzzy_match;
     }
 
     $details{$test} = $details;
