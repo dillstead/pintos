@@ -212,7 +212,9 @@ strstr (const char *haystack, const char *needle)
    single string.
 
    strtok_r() modifies the string S, changing delimiters to null
-   bytes.  Thus, S must be a modifiable string.
+   bytes.  Thus, S must be a modifiable string.  String literals,
+   in particular, are *not* modifiable in C, even though for
+   backward compatibility they are not `const'.
 
    Example usage:
 
