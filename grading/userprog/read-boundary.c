@@ -30,7 +30,7 @@ main (void)
 
   byte_cnt = read (handle, actual_p, sizeof sample - 1);
   if (byte_cnt != sizeof sample - 1)
-    printf ("(read-boundary) fail: read() returned %d instead of %d\n",
+    printf ("(read-boundary) fail: read() returned %d instead of %zu\n",
             byte_cnt, sizeof sample - 1);
   else if (strcmp (sample, actual_p))
     printf ("(read-boundary) fail: expected text differs from actual:\n%s",

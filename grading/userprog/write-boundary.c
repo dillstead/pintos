@@ -30,7 +30,7 @@ main (void)
 
   byte_cnt = write (handle, sample_p, sizeof sample - 1);
   if (byte_cnt != sizeof sample - 1)
-    printf ("(write-boundary) fail: write() returned %d instead of %d\n",
+    printf ("(write-boundary) fail: write() returned %d instead of %zu\n",
             byte_cnt, sizeof sample - 1);
   
   printf ("(write-boundary) end\n");

@@ -17,7 +17,7 @@ main (void)
 
   byte_cnt = read (handle, actual, sizeof actual - 1);
   if (byte_cnt != sizeof actual - 1)
-    printf ("(read-normal) fail: read() returned %d instead of %d\n",
+    printf ("(read-normal) fail: read() returned %d instead of %zu\n",
             byte_cnt, sizeof actual - 1);
   else if (strcmp (sample, actual))
     printf ("(read-normal) fail: expected text differs from actual:\n%s",

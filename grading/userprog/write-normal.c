@@ -18,7 +18,7 @@ main (void)
 
   byte_cnt = write (handle, sample, sizeof sample - 1);
   if (byte_cnt != sizeof sample - 1)
-    printf ("(write-normal) fail: write() returned %d instead of %d\n",
+    printf ("(write-normal) fail: write() returned %d instead of %zu\n",
             byte_cnt, sizeof sample - 1);
   
   printf ("(write-normal) end\n");
