@@ -458,7 +458,7 @@ disk_read (struct disk *d, disk_sector_no sec_no, void *buffer)
   sema_down (&d->channel->completion_wait);
   wait_while_busy (d);
   if (!input_sector (d->channel, buffer))
-    panic ("%s: disk read failed, sector=%"PRDSNu, d->name, sec_no);
+    PANIC ("%s: disk read failed, sector=%"PRDSNu, d->name, sec_no);
   lock_release (&d->channel->lock);
 }
 
@@ -473,7 +473,7 @@ disk_write (struct disk *d, disk_sector_no sec_no, const void *buffer)
   issue_command (d, CMD_WRITE_SECTOR_RETRY);
   wait_while_busy (d);
   if (!output_sector (d->channel, buffer))
-    panic ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
+    PANIC ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
   sema_down (&d->channel->completion_wait);
   lock_release (&d->channel->lock);
 }

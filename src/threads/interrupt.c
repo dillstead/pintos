@@ -269,7 +269,7 @@ void
 intr_panic (struct intr_frame *regs) 
 {
   dump_intr_frame (regs);
-  panic ("Panic!");
+  PANIC ("Panic!");
 }
 
 void

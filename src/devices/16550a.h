@@ -78,7 +78,7 @@ make_lcr (int bits, enum parity_type parity, int stop, bool send_break,
     case EVEN: lcr |= 0x18; break;
     case MARK: lcr |= 0x28; break;
     case SPACE: lcr |= 0x38; break;
-    default: panic ("bad parity %d", (int) parity); 
+    default: PANIC ("bad parity %d", (int) parity); 
     }
 
   ASSERT (stop == 1 || stop == 2);

@@ -54,7 +54,7 @@ palloc_get (enum palloc_flags flags)
   else 
     {
       if (flags & PAL_ASSERT)
-        panic ("palloc_get: out of pages");
+        PANIC ("palloc_get: out of pages");
     }
   
   return page;
