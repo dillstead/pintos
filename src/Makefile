@@ -10,9 +10,11 @@ clean::
 distclean:: clean
 	find . -name '*~' -exec rm '{}' \;
 
+TAGS_SOURCES = `find \( -name tests -o -name build \) -prune -o -name \*.[chS] -print`
+
 TAGS::
-	etags --members *.[chS] `find $(SUBDIRS) -name \*.[chS]`
+	etags --members $(TAGS_SOURCES)
 
 tags::
-	ctags -T *.[chS] `find . -name \*.[chS]`
+	ctags -T --no-warn $(TAGS_SOURCES)
 
