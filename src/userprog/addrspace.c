@@ -223,6 +223,12 @@ load_segment (struct thread *t, struct file *file,
   off_t filesz_left;  /* Bytes left of file data (as opposed to
                          zero-initialized bytes). */
 
+  /* Is this a read-only segment?  Not currently used, so it's
+     commented out.  You'll want to use it when implementing VM
+     to decide whether to page the segment from its executable or
+     from swap. */
+  //bool read_only = (phdr->p_flags & PF_W) == 0;
+
   ASSERT (t != NULL);
   ASSERT (file != NULL);
   ASSERT (phdr != NULL);
