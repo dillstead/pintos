@@ -119,6 +119,7 @@ start:
 	mov ah, 0x88
 	int 0x15
 	jc panic
+	cli			# BIOS might have enabled interrupts
 	add eax, 1024		# Total kB memory
 	cmp eax, 0x10000	# Cap at 64 MB
 	jbe 1f
