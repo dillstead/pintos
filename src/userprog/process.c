@@ -320,7 +320,7 @@ load_segment (struct file *file, const struct Elf32_Phdr *phdr)
     }
 
   /* p_offset must point within file. */
-  if (phdr->p_offset < 0 || phdr->p_offset > file_length (file)) 
+  if (phdr->p_offset > (Elf32_Off) file_length (file)) 
     {
       printf ("bad p_offset %"PE32Ox, phdr->p_offset);
       return false;
