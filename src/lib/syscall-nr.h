@@ -9,12 +9,15 @@
 #define SYS_create 4            /* Creates a file. */
 #define SYS_remove 5            /* Deletes a file. */
 #define SYS_open 6              /* Opens a file. */
-#define SYS_read 7              /* Reads from a file. */
-#define SYS_write 8             /* Writes to a file. */
-#define SYS_close 9             /* Closes a file. */
-#define SYS_length 10           /* Obtains a file's size. */
-#define SYS_mmap 11             /* Maps a file into memory. */
-#define SYS_munmap 12           /* Removes a memory mapping. */
+#define SYS_filesize 7          /* Obtains a file's size. */
+#define SYS_read 8              /* Reads from a file. */
+#define SYS_write 9             /* Writes to a file. */
+#define SYS_close 10            /* Closes a file. */
+#define SYS_mmap 12             /* Maps a file into memory. */
+#define SYS_munmap 13           /* Removes a memory mapping. */
+#define SYS_chdir 14            /* Changes the current directory. */
+#define SYS_mkdir 15            /* Create a directory. */
+#define SYS_lsdir 16            /* Lists the current directory to stdout. */
 
 /* Predefined file handles. */
 #define STDIN_FILENO 0
