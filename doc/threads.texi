@@ -135,10 +135,6 @@ above.
 @itemx palloc.h
 Page allocator, which hands out system memory one 4 kB page at a time.
 
-@item paging.c
-@itemx paging.h
-Initializes the kernel page table.  FIXME
-
 @item malloc.c
 @itemx malloc.h
 A very simple implementation of @code{malloc()} and @code{free()} for
@@ -205,16 +201,14 @@ thread switches.  That means that running the same test several times
 doesn't give you any greater confidence in your code's correctness
 than does running it only once.
 
-FIXME
 So, to make your code easier to test, we've added a feature to Bochs
 that makes timer interrupts come at random intervals, but in a
-perfectly predictable way.  In particular, if you put a line
-@samp{ips-jitter: @var{seed}}, where @var{seed} is an integer, into
-your Bochs configuration file, then timer interrupts will come at
-irregularly spaced intervals.  Within a single @var{seed} value,
-execution will still be reproducible, but timer behavior will change
-as @var{seed} is varied.  Thus, for the highest degree of confidence
-you should test your code with many seed values.
+perfectly predictable way.  In particular, if you invoke
+@command{pintos} with the option @option{-j @var{seed}}, timer
+interrupts will come at irregularly spaced intervals.  Within a single
+@var{seed} value, execution will still be reproducible, but timer
+behavior will change as @var{seed} is varied.  Thus, for the highest
+degree of confidence you should test your code with many seed values.
 
 @node Tips
 @section Tips
