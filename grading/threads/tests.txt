@@ -30,9 +30,6 @@ Problem 1-3: Priority Scheduler
 Score: /10
 
 Problem 1-4: Advanced Scheduler
-  -2 mlfqs-on: stats
-  -2 mlfqs-off: stats
-  -2 Public testcase doesn't run faster with MLFQS
-  -2 Group's own testcase doesn't run faster with MLFQS
-  -4 Priorities don't change properly
+  -4 mlfqs-speedup: Public testcase doesn't run faster with MLFQS
+  -4 mlfqs-priority: Priorities don't change properly
 Score: /8
