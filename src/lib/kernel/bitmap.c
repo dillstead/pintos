@@ -216,9 +216,10 @@ bitmap_scan (const struct bitmap *b, size_t start, size_t cnt, bool value)
   ASSERT (b != NULL);
   ASSERT (start <= b->bit_cnt);
 
-  for (idx = start, last = b->bit_cnt - cnt; idx <= last; idx++)
-    if (!contains (b, idx, idx + cnt, !value))
-      return idx;
+  if (cnt <= b->bit_cnt)
+    for (idx = start, last = b->bit_cnt - cnt; idx <= last; idx++)
+      if (!contains (b, idx, idx + cnt, !value))
+        return idx;
   return BITMAP_ERROR;
 }
 
