@@ -6,6 +6,7 @@
 #include <string.h>
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
+#include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "threads/init.h"
@@ -78,7 +79,7 @@ struct Elf32_Phdr
 
 static bool load_segment (struct thread *, struct file *,
                           const struct Elf32_Phdr *);
-static bool setup_stack (struct thread *);
+static bool setup_stack (struct thread *, void **esp);
 
 /* Aborts loading an executable, with an error message. */
 #define LOAD_ERROR(MSG)                                         \
@@ -90,10 +91,12 @@ static bool setup_stack (struct thread *);
         } while (0)
 
 /* Loads an ELF executable from FILENAME into T,
-   and stores the executable's entry point into *START.
+   Stores the executable's entry point into *EIP
+   and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-addrspace_load (struct thread *t, const char *filename, void (**start) (void)) 
+addrspace_load (struct thread *t, const char *filename,
+                void (**eip) (void), void **esp) 
 {
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
@@ -163,11 +166,11 @@ addrspace_load (struct thread *t, const char *filename, void (**start) (void))
     }
 
   /* Set up stack. */
-  if (!setup_stack (t))
+  if (!setup_stack (t, esp))
     goto done;
 
   /* Start address. */
-  *start = (void (*) (void)) ehdr.e_entry;
+  *eip = (void (*) (void)) ehdr.e_entry;
 
   success = true;
 
@@ -299,7 +302,7 @@ load_segment (struct thread *t, struct file *file,
 /* Create a minimal stack for T by mapping a zeroed page at the
    top of user virtual memory. */
 static bool
-setup_stack (struct thread *t) 
+setup_stack (struct thread *t, void **esp) 
 {
   uint8_t *kpage;
   bool success = false;
@@ -308,7 +311,9 @@ setup_stack (struct thread *t)
   if (kpage != NULL) 
     {
       success = install_page (t, ((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
-      if (!success)
+      if (success)
+        *esp = PHYS_BASE;
+      else
         palloc_free (kpage);
     }
   else

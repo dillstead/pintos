@@ -2,6 +2,7 @@
 #include <debug.h>
 #include <stddef.h>
 #include <random.h>
+#include <stdio.h>
 #include <string.h>
 #include "threads/flags.h"
 #include "threads/interrupt.h"
@@ -151,7 +152,6 @@ thread_execute (const char *filename)
   struct intr_frame *if_;
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
-  void (*start) (void);
   tid_t tid;
 
   ASSERT (filename != NULL);
@@ -161,17 +161,12 @@ thread_execute (const char *filename)
     return TID_ERROR;
   tid = t->tid;
   
-  if (!addrspace_load (t, filename, &start)) 
-    PANIC ("%s: program load failed", filename);
-
   /* Interrupt frame. */
   if_ = alloc_frame (t, sizeof *if_);
   if_->es = SEL_UDSEG;
   if_->ds = SEL_UDSEG;
-  if_->eip = start;
   if_->cs = SEL_UCSEG;
   if_->eflags = FLAG_IF | FLAG_MBS;
-  if_->esp = PHYS_BASE;
   if_->ss = SEL_UDSEG;
 
   /* Stack frame for switch_entry(). */
@@ -181,6 +176,13 @@ thread_execute (const char *filename)
   /* Stack frame for switch_threads(). */
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
+
+  /* Load. */
+  if (!addrspace_load (t, filename, &if_->eip, &if_->esp))
+    {
+      destroy_thread (t);
+      return TID_ERROR;
+    }
 
   /* Add to run queue. */
   thread_unblock (t);
@@ -397,13 +399,11 @@ next_thread_to_run (void)
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
 }
 
-/* Destroys T, which must be in the dying state and must not be
-   the running thread. */
+/* Destroys T, which must not be the running thread. */
 static void
 destroy_thread (struct thread *t) 
 {
   ASSERT (is_thread (t));
-  ASSERT (t->status == THREAD_DYING);
   ASSERT (t != thread_current ());
 
 #ifdef USERPROG

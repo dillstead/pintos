@@ -4,7 +4,8 @@
 #include <stdbool.h>
 
 struct thread;
-bool addrspace_load (struct thread *, const char *, void (**start) (void));
+bool addrspace_load (struct thread *, const char *,
+                     void (**eip) (void), void **esp);
 void addrspace_destroy (struct thread *);
 void addrspace_activate (struct thread *);
 
