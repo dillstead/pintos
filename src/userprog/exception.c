@@ -116,24 +116,27 @@ page_fault (struct intr_frame *f)
   bool not_present, write, user;
   uint32_t fault_addr;
 
+  /* Obtain faulting address, then turn interrupts back on.
+     (Interrupts were only off so that we could be assured of
+     reading CR2 before it changed.)
+
+     The faulting address is not necesarily the address of the
+     instruction that caused the fault--that's in F's eip
+     member.  Rather, it's the linear address that was accessed
+     to cause the fault, which is probably an address of data,
+     not code. */
+  asm ("movl %%cr2, %0" : "=r" (fault_addr));
+  intr_enable ();
+
   /* Determine cause. */
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
-  /* Obtain faulting address.
-
-     (The faulting address is not necesarily the address of the
-     instruction that caused the fault--that's in F's eip
-     member.  Rather, it's the linear address that was accessed
-     to cause the fault, which is probably an address of data,
-     not code.) */
-  asm ("movl %%cr2, %0" : "=r" (fault_addr));
-
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
-  printk ("Page fault on address %08"PRIx32": %s %s page in %s context.\n",
+  printk ("Page fault at %08"PRIx32": %s error %s page in %s context.\n",
           fault_addr,
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",
