@@ -177,3 +177,30 @@ that the third is less likely, but it is also possible.
 @node Modifying Bochs
 @section Modifying Bochs
 
+An advanced debugging technique is to modify and recompile the
+simulator.  This proves useful when the simulated hardware has more
+information than it makes available to the OS.  For example, page
+faults have a long list of potential causes, but the hardware does not
+report to the OS exactly which one is the particular cause.
+Furthermore, a bug in the kernel's handling of page faults can easily
+lead to recursive faults, but a ``triple fault'' will cause the CPU to
+reset itself, which is hardly conducive to debugging.
+
+In a case like this, you might appreciate being able to make Bochs
+print out more debug information, such as the exact type of fault that
+occurred.  It's not very hard.  You start by retrieving the source
+code for Bochs 2.1.1 from @uref{http://bochs.sourceforge.net} and
+extracting it into a directory.  Then read
+@file{pintos/src/misc/bochs-2.1.1.patch} and apply the patches needed.
+Then run @file{./configure}, supplying the options you want (some
+suggestions are in the patch file).  Finally, run @command{make}.
+This will compile Bochs and eventually produce a new binary
+@file{bochs}.  To use your @file{bochs} binary with @command{pintos},
+put it in your @env{PATH}, and make sure that it is earlier than
+@file{/usr/class/cs140/i386/bochs}.
+
+Of course, to get any good out of this you'll have to actually modify
+Bochs.  Instructions for doing this are firmly out of the scope of
+this document.  However, if you want to debug page faults as suggested
+above, a good place to start adding @code{printf()}s is
+@code{BX_CPU_C::dtranslate_linear()} in @file{cpu/paging.cc}.
