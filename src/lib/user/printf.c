@@ -4,11 +4,12 @@
 
 static void vprintf_helper (char, void *);
 
+/* Auxiliary data for vprintf_helper(). */
 struct vprintf_aux 
   {
-    char buf[64];
-    char *p;
-    int char_cnt;
+    char buf[64];       /* Character buffer. */
+    char *p;            /* Current position in buffer. */
+    int char_cnt;       /* Total characters written so far. */
   };
 
 int
