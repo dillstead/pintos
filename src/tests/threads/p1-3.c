@@ -11,6 +11,10 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 
+#ifdef MLFQS
+#error This test not applicable with MLFQS enabled.
+#endif
+
 static void test_preempt (void);
 static void test_fifo (void);
 static void test_donate_return (void);
