@@ -1,13 +1,16 @@
 # -*- makefile -*-
 
 SHELL = /bin/sh
+
+CC = gcc
+CPP = $(CC) -E
+
 VPATH := $(TOP_SRCDIR)/threads
 VPATH := $(VPATH):$(TOP_SRCDIR)/devices
 VPATH := $(VPATH):$(TOP_SRCDIR)/lib
 VPATH := $(VPATH):$(TOP_SRCDIR)/filesys
 VPATH := $(VPATH):$(TOP_SRCDIR)/userprog
 
-DEFINES += -DCNACHOS86
 WARNINGS = -Wall -W -Wstrict-prototypes -Wmissing-prototypes
 CFLAGS = -g -O3 -MMD $(WARNINGS) $(INCLUDES) $(DEFINES)
 ASFLAGS = -Wa,--gstabs+ $(INCLUDES) $(DEFINES)
@@ -56,9 +59,11 @@ all: diskimage.bin
 intr-stubs.S: $(TOP_SRCDIR)/threads/intr-stubs.pl
 	$< > $@
 
-kernel.o: $(OBJECTS)
-	ld -T $(TOP_SRCDIR)/threads/kernel.lds -o $@ $^ \
-		`$(CC) -print-libgcc-file-name`
+kernel.lds: $(TOP_SRCDIR)/threads/kernel.lds.in
+	$(CPP) -x assembler-with-cpp -P $< -o $@
+
+kernel.o: $(OBJECTS) kernel.lds
+	ld -T kernel.lds -o $@ $(OBJECTS) `$(CC) -print-libgcc-file-name`
 
 kernel.bin: kernel.o
 	objcopy -O binary -R .note -R .comment -S $< $@.tmp
@@ -72,6 +77,7 @@ diskimage.bin: loader.bin kernel.bin
 	cat loader.bin kernel.bin > diskimage.bin
 
 clean:
-	rm -f *.o *.d *.bin kernel.bin.data kernel.bin.pad intr-stubs.S
+	rm -f *.o *.d *.bin
+	rm -f kernel.bin.data kernel.bin.pad intr-stubs.S kernel.lds
 
 -include *.d
