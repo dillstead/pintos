@@ -30,6 +30,7 @@ have the entire machine, when you load into memory and run more than
 one process at a time, you must manage things correctly to maintain
 this illusion.
 
+FIXME
 Before we delve into the details of the new code that you'll be
 working with, you should probably undo the test cases from project 1.
 All you need to do is make sure the original
@@ -38,6 +39,7 @@ from being run.
 
 @menu
 * Project 2 Code to Hack::      
+* Using the File System::       
 * How User Programs Work::      
 * Global Requirements::         
 * Problem 2-1 Argument Passing::  
@@ -103,23 +105,55 @@ However, you can read the code if you're interested in how the GDT
 works.
 @end table
 
-Elsewhere in the kernel, you will need to use some file system code.
-You will not actually write a file system until the end of the
-quarter, but since user programs need files to do anything
-interesting, we have provided a simple file system in the
-@file{filesys} directory.  You will want to look over the
-@file{filesys.h} and @file{file.h} interfaces to understand how to use
-the file system.  However, @strong{you should not modify the file
-system code for this project}.  Proper use of the file system routines
-now will make life much easier for project 4, when you improve the
-file system implementation.
-
 Finally, in @file{lib/kernel}, you might want to use
 @file{bitmap.[ch]}.  A bitmap is basically an array of bits, each of
 which can be true or false.  Bitmaps are typically used to keep track
 of the usage of a large array of (identical) resources: if resource
 @var{n} is in use, then bit @var{n} of the bitmap is true.  You might
 find it useful for tracking memory pages, for example.
+
+@node Using the File System
+@section Using the File System
+
+You will need to use some file system code for this project.  First,
+user programs are loaded from the file system.  Second, many of the
+system calls you must implement deal with the file system.  However,
+the focus of this project is not on the file system code, so we have
+provided a simple file system in the @file{filesys} directory.  You
+will want to look over the @file{filesys.h} and @file{file.h}
+interfaces to understand how to use the file system.  @strong{You
+should not modify the file system code for this project}.  Proper use
+of the file system routines now will make life much easier for project
+4, when you improve the file system implementation.
+
+You need to be able to create and format simulated disks.  The
+@command{pintos} program provides this functionality with its
+@option{make-disk} command.  From the @filesys{build} directory,
+execute @code{pintos make-disk fs.dsk 2}.  This command creates a 2 MB
+simulated disk named @file{fs.dsk}.  (It does not actually start
+Pintos.)  Then format the disk by passing the @option{-f} option to
+Pintos on the kernel's command line: @code{pintos run -f}.
+
+You'll need a way to get files in and out of the simulated file
+system.  The @code{pintos} @option{put} and @option{get} commands are
+designed for this.  To copy @file{@var{file}} into the Pintos file
+system, use the command @file{pintos put @var{file}}.  To copy it to
+the Pintos file system under the name @file{@var{newname}}, add the
+new name to the end of the command: @file{pintos put @var{file}
+@var{newname}}.  The commands for copying files out of a VM are
+similar, but substitute @option{get} for @option{get}.
+
+Incidentally, these commands work by passing special options
+@option{-ci} and @option{-co} on the kernel's command line and copying
+to and from a special simulated disk named @file{scratch.dsk}.  If
+you're very curious, you can look at the @command{pintos} program as
+well as @file{filesys/fsutil.c} to learn the implementation details,
+but it's really not relevant for this project.
+
+You can delete a file from the Pintos file system using the @option{-r
+@var{file}} kernel option, e.g.@: @code{pintos run -r @var{file}}.
+Also, @option{-ls} lists the files in the file system and @option{-p
+@var{file}} prints a file's contents to the display.
 
 @node How User Programs Work
 @section How User Programs Work
@@ -138,10 +172,19 @@ Pintos loads ELF executables, where ELF is an executable format used
 by Linux, Solaris, and many other Unix and Unix-like systems.
 Therefore, you can use any compiler and linker that produce
 80@var{x}86 ELF executables to produce programs for Pintos.  We
-recommend using the tools we provide in the @file{test} directory.  By
+recommend using the tools we provide in the @file{tests} directory.  By
 default, the @file{Makefile} in this directory will compile the test
 programs we provide.  You can edit the @file{Makefile} to compile your
 own test programs as well.
+
+One thing you should realize immediately is that, until you use the
+above operation to copy a test program to the emulated disk, Pintos
+will be unable to do very much useful work.  You will also find that
+you won't be able to do interesting things until you copy a variety of
+programs to the disk.  A useful technique is to create a clean
+reference disk and copy that over whenever you trash your
+@file{fs.dsk} beyond a useful state, which may happen occasionally
+while debugging.
 
 @node Global Requirements
 @section Global Requirements
@@ -151,13 +194,14 @@ your output.  The kernel should print out the program's name and exit
 status whenever a process exits.  Aside from this, it should print out
 no other messages.  You may understand all those debug messages, but
 we won't, and it just clutters our ability to see the stuff we care
-about.  Additionally, while it may be useful to hard-code which
-process will run at startup while debugging, before you submit your
-code you must make sure that it takes the start-up process name and
-arguments from the @samp{-ex} argument.  The infrastructure for this
-is already there---you just need to make sure you enable it!  For
-example, running @code{pintos -ex "testprogram 1 2 3 4"} will spawn
-@samp{testprogram 1 2 3 4} as the first process.
+about.
+
+Additionally, while it may be useful to hard-code which process will
+run at startup while debugging, before you submit your code you must
+make sure that it takes the start-up process name and arguments from
+the @samp{-ex} argument.  For example, running @code{pintos run -ex
+"testprogram 1 2 3 4"} will spawn @samp{testprogram 1 2 3 4} as the
+first process.
 
 @node Problem 2-1 Argument Passing
 @section Problem 2-1: Argument Passing
@@ -314,11 +358,11 @@ the original code provided for project 1.
 @item
 @b{Is there a way I can disassemble user programs?}
 
-@c FIXME
-The @command{objdump} utility can disassemble entire user programs or
-object files.  Invoke it as @code{objdump -d @var{file}}.  You can
-also use @code{gdb}'s @command{disassemble} command to disassemble
-individual functions in object files compiled with debug information.
+The @command{i386-elf-objdump} utility can disassemble entire user
+programs or object files.  Invoke it as @code{i386-elf-objdump -d
+@var{file}}.  You can also use @code{i386-elf-gdb}'s
+@command{disassemble} command to disassemble individual functions in
+object files compiled with debug information.
 
 @item
 @b{Why can't I use many C include files in my Pintos programs?}

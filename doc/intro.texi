@@ -221,17 +221,25 @@ Bochs's @code{stdout}.  You can log this output to a file by
 redirecting at the command line, e.g.@: @code{pintos run > logfile}.
 
 The @command{pintos} program offers multiple options for running
-Pintos.  Use @code{pintos help} to see a list of the options.  You can
-select a simulator other than Bochs, although the Leland systems only
-have Bochs installed.  You can start the simulator running a debugger
-(@pxref{i386-elf-gdb}).  You can set the amount of memory to give the
-VM.  Finally, you can set up how you want VM output to be displayed:
-use @option{-nv} to turn off the VGA display, @option{-t} to use your
-terminal window as the VGA display instead of opening a new window, or
-@option{-ns} to suppress the serial output to @code{stdout}.
+Pintos.  Specify these options on the command line @emph{before} the
+@option{run} command.  Use @code{pintos help} to see a list of the
+options.  You can select a simulator other than Bochs, although the
+Leland systems only have Bochs installed.  You can start the simulator
+running a debugger (@pxref{i386-elf-gdb}).  You can set the amount of
+memory to give the VM.  Finally, you can set up how you want VM output
+to be displayed: use @option{-nv} to turn off the VGA display,
+@option{-t} to use your terminal window as the VGA display instead of
+opening a new window, or @option{-ns} to suppress the serial output to
+@code{stdout}.
 
 The @command{pintos} program offers commands other than @samp{run} and
 @samp{help}, but we won't have any need for them until project 2.
+
+The Pintos kernel has its own command line that you can use to pass
+options.  These options must be specified @emph{after} the
+@option{run} command.  These options are not very interesting for now,
+but you can see a list of them using the @option{-u} option, e.g.@:
+@code{pintos run -u}.
 
 @node Pintos Trivia
 @section Pintos Trivia

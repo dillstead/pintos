@@ -1,5 +1,19 @@
+\input texinfo                          @c -*- texinfo -*-
+@c %**start of header
+@setfilename projects.info
+@settitle Pintos Projects
+@c %**end of header
+
+@titlepage
+@title Pintos Projects
+@end titlepage
+
+@contents
+
+@ifnottex
 @node Top, Introduction, (dir), (dir)
 @top Pintos Projects
+@end ifnottex
 
 @menu
 * Introduction::                
@@ -22,3 +36,5 @@
 @include standards.texi
 @include doc.texi
 @include debug.texi
+
+@bye

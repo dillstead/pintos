@@ -23,27 +23,7 @@ filesystem implementation.
 
 FIXME FIXME FIXME
 The first step is to understand the default filesystem provided by the
-base code.  The first things you should look at are
-@file{threads/init.c} and @file{filesys/fsutil.c}: there are special
-command line arguments to Pintos which are used to format and
-manipulate the emulated disk.  Specifically, @option{-f} formats the
-file system disk for use with Pintos, and @option{-cp @var{src}
-@var{dst}} copies @var{src} on the Unix filesystem to @var{dst} on the
-file system disk.  With this information, you should be able to
-compile the base code and try out the command: @samp{pintos -f -cp
-./small small} to copy the file @file{small} from your working
-directory into the Pintos file system.
-
-FIXME FIXME FIXME
-One thing you should realize immediately is that, until you use the
-above operation to copy the shell (or whatever your initial program
-is) to the emulated disk, Pintos will be unable to do very much useful
-work (it'll try to open the shell and fail, thereby quitting out).  You
-will also find that you won't be able to do interesting things until
-you copy a variety of programs to the disk.  A useful technique, once
-your inode formats are finalized, is to create a clean reference disk
-and copy that over whenever you trash your disk beyond a useful state
-(which will probably happen quite often while debugging).
+base code.  
 
 @menu
 * File System New Code::        
