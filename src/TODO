@@ -1,17 +1,32 @@
-* Should we use a task gate for hardware interrupts?  Then we could
-  dedicate a stack to interrupt handling and not worry about interrupt
-  usage of kernel stacks.
+* Write user test programs.
 
-* Filesystem dumps should include filehdrs?
+* Write, test join.
+
+* Write, test user programs.
+
+* Figure out PD/PT management API.
+  - We should document what's in mmu.h.  
+
+* Write, test VM.
+
+* Implement `jitter'.
+
+* Test list, hash ADTs.
+
+* Compile and install gdb, dbg versions.
+  - Test gdb version.
+
+* Write "tour".
+
+* Get rid of 16550a.h header.
+
+----------------------------------------------------------------------
 
 * Cygwin support:
   - PE linker scripts?  Doesn't seem to support ELF ones.
   - .S files need _ prefixes on symbols.
 
-* Implement `jitter'.
-
-* Compile and install gdb, dbg versions.
-  - Test gdb version.
+* Filesystem dumps should include filehdrs?
 
 * Cross-compile notes:
 
