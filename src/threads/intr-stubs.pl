@@ -3,6 +3,7 @@
 print <<'EOF';
 #include "mmu.h"
 
+	.data
 	.globl intr_stubs
 intr_stubs:
 EOF
@@ -11,7 +12,11 @@ for $i (0...255) {
     $x = sprintf ("%02x", $i);
     print "\t.long intr${x}_stub\n";
 }
-print "\n";
+
+print <<'EOF';
+
+	.text
+EOF
 
 for $i (0...255) {
     $x = sprintf ("%02x", $i);
@@ -42,10 +47,10 @@ intr_entry:
 	pushl %esp
 	.globl intr_handler
 	call intr_handler
+	addl $4, %esp
 
 	.globl intr_exit
 intr_exit:
-	addl $4, %esp
 
 	# Restore caller's registers.
 	popal
