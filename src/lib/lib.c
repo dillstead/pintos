@@ -469,8 +469,8 @@ struct integer_base
 
 static const struct integer_base base_d = {10, "0123456789", "", 3};
 static const struct integer_base base_o = {8, "01234567", "0", 3};
-static const struct integer_base base_x = {16, "0123456789acbdef", "", 4};
-static const struct integer_base base_X = {16, "0123456789ABCDEF", "", 4};
+static const struct integer_base base_x = {16, "0123456789abcdef", "0x", 4};
+static const struct integer_base base_X = {16, "0123456789ABCDEF", "0x", 4};
 
 static const char *parse_conversion (const char *format,
                                      struct printf_conversion *,
