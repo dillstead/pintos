@@ -18,6 +18,7 @@
 #include "vga.h"
 #ifdef FILESYS
 #include "filesys.h"
+#include "disk.h"
 #endif
 
 /* Size of kernel static code and data, in 4 kB pages. */
@@ -32,6 +33,7 @@ void power_off (void);
 static void
 main_thread (void *aux UNUSED) 
 {
+  disk_init ();
   thread_execute ("a.out");
 }
 

@@ -31,6 +31,7 @@ DEVICES_SRC  = timer.c		# Timer device.
 DEVICES_SRC += kbd.c		# Keyboard device.
 DEVICES_SRC += vga.c		# Video device.
 DEVICES_SRC += serial.c		# Serial port device.
+DEVICES_SRC += disk.c		# IDE disk device.
 
 # Library code.
 LIB_SRC  = debug.c		# Debug helpers.
