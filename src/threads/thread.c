@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <random.h>
 #include <string.h>
+#include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
 #include "threads/mmu.h"

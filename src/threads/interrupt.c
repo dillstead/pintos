@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "threads/flags.h"
 #include "threads/intr-stubs.h"
 #include "threads/io.h"
 #include "threads/mmu.h"

@@ -1,4 +1,4 @@
-#include "loader.h"
+#include "threads/loader.h"
 
 OUTPUT_FORMAT("elf32-i386")
 OUTPUT_ARCH("i386")

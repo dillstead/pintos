@@ -17,7 +17,6 @@
 #include "threads/loader.h"
 #include "threads/malloc.h"
 #include "threads/mmu.h"
-#include "threads/paging.h"
 #include "threads/palloc.h"
 #include "threads/test.h"
 #include "threads/thread.h"
@@ -36,6 +35,9 @@
 /* Amount of physical memory, in 4 kB pages. */
 size_t ram_pages;
 
+/* Page directory with kernel mappings only. */
+uint32_t *base_page_dir;
+
 #ifdef FILESYS
 /* Format the filesystem? */
 static bool format_filesys;
@@ -50,6 +52,7 @@ static char *initial_program;
 static bool power_off;
 
 static void ram_init (void);
+static void paging_init (void);
 static void argv_init (void);
 static void do_power_off (void);
 
@@ -140,6 +143,42 @@ ram_init (void)
   ram_pages = *(uint32_t *) ptov (LOADER_RAM_PAGES);
 }
 
+/* Populates the base page directory and page table with the
+   kernel virtual mapping, and then sets up the CPU to use the
+   new page directory.  Points base_page_dir to the page
+   directory it creates.
+
+   At the time this function is called, the active page table
+   (set up by loader.S) only maps the first 4 MB of RAM, so we
+   should not try to use extravagant amounts of memory.
+   Fortunately, there is no need to do so. */
+static void
+paging_init (void)
+{
+  uint32_t *pd, *pt;
+  size_t page;
+
+  pd = base_page_dir = palloc_get (PAL_ASSERT | PAL_ZERO);
+  pt = NULL;
+  for (page = 0; page < ram_pages; page++) 
+    {
+      uintptr_t paddr = page * PGSIZE;
+      void *vaddr = ptov (paddr);
+      size_t pde_idx = pd_no (vaddr);
+      size_t pte_idx = pt_no (vaddr);
+
+      if (pd[pde_idx] == 0)
+        {
+          pt = palloc_get (PAL_ASSERT | PAL_ZERO);
+          pd[pde_idx] = pde_create (pt);
+        }
+
+      pt[pte_idx] = pte_create_kernel (vaddr, true);
+    }
+
+  asm volatile ("movl %0,%%cr3" :: "r" (vtop (base_page_dir)));
+}
+
 /* Parses the command line. */
 static void
 argv_init (void) 
@@ -226,6 +265,8 @@ argv_init (void)
       PANIC ("unknown option `%s' (use -u for help)", argv[i]);
 }
 
+/* Powers down the machine we're running on,
+   as long as we're running on Bochs or qemu. */
 void
 do_power_off (void) 
 {

@@ -4,12 +4,12 @@
 #include <round.h>
 #include <stdio.h>
 #include <string.h>
+#include "userprog/pagedir.h"
 #include "userprog/tss.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "threads/init.h"
 #include "threads/mmu.h"
-#include "threads/paging.h"
 #include "threads/palloc.h"
 #include "threads/thread.h"
 

@@ -39,7 +39,7 @@
  */
 
 #include "threads/loader.h"
-#include "threads/mmu.h"
+/*#include "threads/mmu.h"*/
 	
 #### Kernel loader.
 
@@ -133,14 +133,16 @@ start:
 	rep stosl
 
 # Set PDEs for 0 and LOADER_PHYS_BASE to point to the page table.
+# See comments near the PG_* macros in paging.h for a description of
+# the values stored here.
 
-	movl $0x11000 | PG_U | PG_W | PG_P, %eax
+	movl $0x11007, %eax
 	movl %eax, %es:0
 	movl %eax, %es:LOADER_PHYS_BASE >> 20
 
 # Initialize page table.
 
-	movl $PG_U | PG_W | PG_P, %eax
+	movl $7, %eax
 	movl $0x400, %ecx
 1:	stosl
 	addl $0x1000, %eax

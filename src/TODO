@@ -4,6 +4,7 @@
 
 * Figure out PD/PT management API.
   - We should document what's in mmu.h.  
+  - pagedir.[ch] is undocumented.
 
 * Write, test VM.
 
