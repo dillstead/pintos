@@ -22,6 +22,10 @@ You will be building this assignment on the last one.  It will benefit
 you to get your project 2 in good working order before this assignment
 so those bugs don't keep haunting you.
 
+All the test programs from the previous project should also work with
+this project.  You should also write programs to test the new features
+introduced in this project.
+
 @menu
 * VM Design::                   
 * Page Faults::                 
@@ -136,13 +140,6 @@ address.
        0|____________|  \__\0|____________|  \____\|____________|
                            /                      /
 @end example
-
-
-FIXME need to explain virtual and physical memory layout - probably
-back in userprog project
-
-FIXME need to mention that there are many possible implementations and
-that the above is just an outline
 
 @node Disk as Backing Store
 @section Disk as Backing Store
@@ -276,6 +273,10 @@ probably want to leave the code that reads the pages from disk, but
 use your new page table management code to construct the page tables
 only as page faults occur for them.
 
+There are many possible ways to implement virtual memory.  The above
+is simply an outline of our suggested implementation.  You may choose
+any implementation you like, as long as it accomplishes the goal.
+
 @node Problem 3-2 Paging To and From Disk
 @section Problem 3-2: Paging To and From Disk
 
@@ -355,7 +356,11 @@ be ``lazy''; even real OSes such as Linux do not load partial pages
 lazily.
 @end itemize
 
-FIXME mention that you can test with these special cases eliminated
+Incidentally, if you have trouble handling the third case above, you
+can eliminate it temporarily by linking the test programs with a
+special ``linker script.''  Read @file{tests/userprog/Makefile} for
+details.  We will not test your submission with this special linker
+script, so the code you turn in must properly handle all cases.
 
 You may optionally implement sharing: when multiple processes are
 created that use the same executable file, share read-only pages among
