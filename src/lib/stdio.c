@@ -200,6 +200,9 @@ __vprintf (const char *format, va_list args,
               case INT:
                 value = va_arg (args, int);
                 break;
+              case INTMAX:
+                value = va_arg (args, intmax_t);
+                break;
               case LONG:
                 value = va_arg (args, long);
                 break;
@@ -240,6 +243,9 @@ __vprintf (const char *format, va_list args,
                 break;
               case INT:
                 value = va_arg (args, unsigned);
+                break;
+              case INTMAX:
+                value = va_arg (args, uintmax_t);
                 break;
               case LONG:
                 value = va_arg (args, unsigned long);
