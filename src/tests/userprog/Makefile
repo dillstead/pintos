@@ -41,7 +41,7 @@ LIB_SRC += lib/user/console.c		# Console code.
 
 LIB_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(LIB_SRC)))
 LIB_DEP = $(patsubst %.o,%.d,$(LIB_OBJ))
-LIB = libc.a lib/user/entry.o
+LIB = lib/user/entry.o libc.a
 
 PROGS_SRC = $(foreach prog,$(PROGS),$($(prog)_SRC))
 PROGS_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(PROGS_SRC)))
