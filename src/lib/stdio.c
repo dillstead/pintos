@@ -469,23 +469,21 @@ format_integer (uintmax_t value, bool negative, const struct integer_base *b,
   const char *signifier;        /* b->signifier or "". */
   int precision;                /* Rendered precision. */
   int pad_cnt;                  /* # of pad characters to fill field width. */
-  int group_cnt;                /* # of digits grouped so far. */
+  int digit_cnt;                /* # of digits output so far. */
 
   /* Accumulate digits into buffer.
      This algorithm produces digits in reverse order, so later we
      will output the buffer's content in reverse.  This is also
      the reason that later we append zeros and the sign. */
   cp = buf;
-  group_cnt = 0;
+  digit_cnt = 0;
   while (value > 0) 
     {
-      if ((c->flags & GROUP) && group_cnt++ == b->group) 
-        {
-          *cp++ = ',';
-          group_cnt = 0; 
-        }
+      if ((c->flags & GROUP) && digit_cnt > 0 && digit_cnt % b->group == 0)
+        *cp++ = ',';
       *cp++ = b->digits[value % b->base];
       value /= b->base;
+      digit_cnt++;
     }
 
   /* Append enough zeros to match precision.
