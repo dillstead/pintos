@@ -283,24 +283,28 @@ list_empty (struct list *list)
   return list_begin (list) == list_end (list);
 }
 
+/* Swaps the `list_elem *'s that A and B point to. */
+static void
+swap (list_elem **a, list_elem **b) 
+{
+  list_elem *t = *a;
+  *a = *b;
+  *b = t;
+}
+
 /* Reverses the order of LIST. */
 void
 list_reverse (struct list *list)
 {
-  list_elem te, *e;
-
-  /* Swap the prev and next pointers in each element of LIST. */
-  for (e = &list->head; e != NULL; e = e->prev)
+  if (!list_empty (list)) 
     {
-      list_elem *tep = e->prev;
-      e->prev = e->next;
-      e->next = tep;
-    }
+      list_elem *e;
 
-  /* Swap the head and tail. */
-  te = list->head;
-  list->head = list->tail;
-  list->tail = te;
+      for (e = list_begin (list); e != list_end (list); e = e->prev)
+        swap (&e->prev, &e->next);
+      swap (&list->head.next, &list->tail.prev);
+      swap (&list->head.next->prev, &list->tail.prev->next);
+    }
 }
 
 /* Merges lists AL and BL, which must each be sorted according to
@@ -351,8 +355,7 @@ list_sort (struct list *list,
 
   /* Find middle of LIST.  (We're not interested in the end of
      the list but it's incidentally needed.) */
-  middle = list_begin (list);
-  last = list_next (middle);
+  middle = last = list_begin (list);
   while (last != list_end (list) && list_next (last) != list_end (list))
     {
       middle = list_next (middle);
