@@ -14,14 +14,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "threads/test.h"
 
-void
+/* Number of failures so far. */
+static int failure_cnt;
+
+static void
 checkf (const char *expect, const char *format, ...) 
 {
   char output[128];
   va_list args;
 
-  printf (" [%s]", format);
+  printf ("\"%s\" -> \"%s\": ", format, expect);
   
   va_start (args, format);
   vsnprintf (output, sizeof output, format, args);
@@ -29,20 +33,17 @@ checkf (const char *expect, const char *format, ...)
 
   if (strcmp (expect, output)) 
     {
-      printf ("FAIL: format string \"%s\": "
-              "actual output \"%s\", expected \"%s\"\n",
-              format, output, expect);
-      exit (1);
+      printf ("\nFAIL: actual output \"%s\"\n", output);
+      failure_cnt++;
     }
+  else
+    printf ("okay\n");
 }
 
 /* Test printf() implementation. */
 void
 test (void) 
 {
-  long long x;
-  int i;
-
   printf ("Testing formats:");
 
   /* Check that commas show up in the right places, for positive
@@ -176,29 +177,32 @@ test (void)
 
   /* From Cristian Cadar's automatic test case generator. */
   checkf (" abcdefgh", "%9s", "abcdefgh");
-  checkf ("36657730000", "%- o", 036657730000);
-  checkf ("4139757568", "%- u", 4139757568);
-  checkf ("f6bfb000", "%- x", 0xf6bfb000);
+  checkf ("36657730000", "%- o", (unsigned) 036657730000);
+  checkf ("4139757568", "%- u", (unsigned) 4139757568UL);
+  checkf ("f6bfb000", "%- x", (unsigned) 0xf6bfb000);
   checkf ("36657730000", "%-to", (ptrdiff_t) 036657730000);
-  checkf ("4139757568", "%-tu", (ptrdiff_t) 4139757568);
+  checkf ("4139757568", "%-tu", (ptrdiff_t) 4139757568UL);
   checkf ("-155209728", "%-zi", (size_t) -155209728);
   checkf ("-155209728", "%-zd", (size_t) -155209728);
-  checkf ("036657730000", "%+#o", 036657730000);
-  checkf ("0xf6bfb000", "%+#x", 0xf6bfb000);
+  checkf ("036657730000", "%+#o", (unsigned) 036657730000);
+  checkf ("0xf6bfb000", "%+#x", (unsigned) 0xf6bfb000);
   checkf ("-155209728", "% zi", (size_t) -155209728);
   checkf ("-155209728", "% zd", (size_t) -155209728);
-  checkf ("4139757568", "% tu", (ptrdiff_t) 4139757568);
-  checkf ("036657730000", "% #o", 036657730000);
-  checkf ("0xf6bfb000", "% #x", 0xf6bfb000);
-  checkf ("0xf6bfb000", "%# x", 0xf6bfb000);
+  checkf ("4139757568", "% tu", (ptrdiff_t) 4139757568UL);
+  checkf ("036657730000", "% #o", (unsigned) 036657730000);
+  checkf ("0xf6bfb000", "% #x", (unsigned) 0xf6bfb000);
+  checkf ("0xf6bfb000", "%# x", (unsigned) 0xf6bfb000);
   checkf ("-155209728", "%#zd", (size_t) -155209728);
   checkf ("-155209728", "%0zi", (size_t) -155209728);
-  checkf ("4,139,757,568", "%'tu", (ptrdiff_t) 4139757568);
+  checkf ("4,139,757,568", "%'tu", (ptrdiff_t) 4139757568UL);
   checkf ("-155,209,728", "%-'d", -155209728);
   checkf ("-155209728", "%.zi", (size_t) -155209728);
   checkf ("-155209728", "%zi", (size_t) -155209728);
   checkf ("-155209728", "%zd", (size_t) -155209728);
   checkf ("-155209728", "%+zi", (size_t) -155209728);
 
-  printf ("\nstdio: PASS\n");
+  if (failure_cnt == 0)
+    printf ("\nstdio: PASS\n");
+  else
+    printf ("\nstdio: FAIL: %d tests failed\n", failure_cnt);
 }                                                                  
