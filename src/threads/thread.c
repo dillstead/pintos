@@ -353,7 +353,7 @@ new_thread (const char *name, int priority)
   return t;
 }
 
-/* Does basic initialization of T as a new, blocked thread named
+/* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
 init_thread (struct thread *t, const char *name, int priority)

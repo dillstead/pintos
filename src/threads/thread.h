@@ -86,7 +86,7 @@ typedef int tid_t;
    blocked state is on a semaphore wait list. */
 struct thread
   {
-    /* These members are owned by thread.c. */
+    /* Owned by thread.c. */
     tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
@@ -97,12 +97,12 @@ struct thread
     list_elem elem;                     /* List element. */
 
 #ifdef USERPROG
-    /* These members are owned by userprog/addrspace.c. */
+    /* Owned by userprog/addrspace.c. */
     uint32_t *pagedir;                  /* Page directory. */
 #endif
 
-    /* Marker to detect stack overflow. */
-    unsigned magic;                     /* Always set to THREAD_MAGIC. */
+    /* Owned by thread.c */
+    unsigned magic;                     /* Detects stack overflow. */
   };
 
 void thread_init (void);
