@@ -54,16 +54,15 @@ OBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))
 all: diskimage.bin
 
 intr-stubs.S: $(TOP_SRCDIR)/threads/intr-stubs.pl
-	$< > $@.tmp && mv $@.tmp $@
+	$< > $@
 
 kernel.o: $(OBJECTS)
 	ld -T $(TOP_SRCDIR)/threads/kernel.lds -o $@ $^ \
 		`$(CC) -print-libgcc-file-name`
 
 kernel.bin: kernel.o
-	objcopy -O binary -R .note -R .comment -S $< $@.data
-	perl -e 'print "\0" x (4096 - (-s "$@.data") % 4096)' > $@.pad
-	cat $@.data $@.pad > $@.tmp && mv $@.tmp $@
+	objcopy -O binary -R .note -R .comment -S $< $@.tmp
+	$(TOP_SRCDIR)/pad 4096 < $@.tmp > $@
 
 loader.bin: loader.S kernel.bin
 	gcc -c $< -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`

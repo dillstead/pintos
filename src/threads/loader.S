@@ -1,14 +1,15 @@
 #include "mmu.h"
 	
-###################################################################################
-# ENTRY POINT	
-#   This code should be stored in the first sector of the hard disk.  When the  
-#   BIOS runs, it loads this code at physical address 0x7c00 - 0x7e00 (512 bytes).
-#   Then jumps to the beginning of it, in real-mode (BIOS runs in real mode).  
-#	
+##############################################################################
+# Kernel loader.
+#
+# This code should be stored in the first sector of the hard disk.  When the  
+# BIOS runs, it loads this code at physical address 0x7c00-0x7e00 (512 bytes).
+# Then it jumps to the beginning of it, in real mode.  
 # This code switches into protected mode (32-bit mode) so that all of
-# memory can accessed, then calls into C.
-###################################################################################
+# memory can accessed, loads the kernel into memory, and jumps to the
+# first byte of the kernel, where start.S is linked.
+##############################################################################
 	
 .globl start				# Entry point	
 start:	.code16				# This runs in real mode
@@ -40,12 +41,12 @@ start:	.code16				# This runs in real mode
 #### Returns CF clear if successful, with AX = (kB of physical memory) - 1024.
 #### This only works for memory sizes <= 65 MB, which should be fine for our purposes.
 	
-	movb	$0x88,%ah
-	int	$0x15
-	jc	panic			# Carry flag set on error
-	addl	$1024,%eax		# Total kB
-	shrl	$2,%eax			# Total 4 kB pages
-	movl	%eax, ram_pages
+	movb $0x88,%ah
+	int $0x15
+	jc panic		# Carry flag set on error
+2:	addl $1024,%eax		# Total kB
+	shrl $2,%eax		# Total 4 kB pages
+	movl %eax, ram_pages
 	
 #### switch from real to protected mode	
 ####     The segments in GDT allow all of physical memory to be accessed.
@@ -178,11 +179,29 @@ gdtdesc:
 	.word	0x17			# sizeof (gdt) - 1
 	.long	gdt			# address gdt
 
-##### Arrive here on error
-panic:	jmp panic
+##### To panic, we print panicmsg (with help from the BIOS) and spin.
+panic:  .code16			# We only panic in real mode.
+	movw $panicmsg, %si
+	movb $0xe, %ah
+	xorb %bh, %bh
+1:	lodsb
+	test %al, %al
+2:	jz 2b			# Spin.
+	int $0x10
+	jmp 1b
+
+panicmsg:
+	.ascii "Loader panic!\r\n"
+	.byte 0
+
+##### Command-line arguments inserted by another utility.
+##### The loader doesn't use these, but we note their
+##### location here for easy reference.
+	.org 0x200 - 0x80
+cmd_line:	
 
 ##### Memory size in 4 kB pages.
-	.org 0x200 - 8
+	.org 0x200 - 6
 ram_pages:
 	.long 0
 

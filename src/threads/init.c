@@ -50,7 +50,7 @@ main (void)
   /* Calculate how much RAM the kernel uses, and find out from
      the bootloader how much RAM this machine has. */
   kernel_pages = (&_end - &_text + 4095) / 4096;
-  ram_pages = *(uint32_t *) (0x7e00 - 8);
+  ram_pages = *(uint32_t *) (0x7e00 - 6);
 
   printk ("Initializing nachos-x86, %d kB RAM detected.\n",
           ram_pages * 4);
