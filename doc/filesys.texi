@@ -111,6 +111,19 @@ root directory file to expand beyond its current limit of ten files.
 Make sure that concurrent accesses to the inode remain properly
 synchronized.
 
+The user is allowed to seek beyond the current end-of-file (EOF).  The
+seek itself does not extend the file.  Writing at a position past EOF
+extends the file to the position being written, and any gap between the
+previous EOF and the start of the write must be filled with zeros.  A
+read past EOF returns zero bytes.
+
+Writing far beyond EOF can cause many blocks to be entirely zero.  Some
+file systems allocate and write real data blocks for these implicitly
+zeroed blocks.  Other file systems do not allocate these blocks at all
+until they are explicitly written.  The latter file systems are said to
+support ``sparse files.''  You may adopt either allocation strategy in
+your file system.
+
 @node Problem 4-3 Subdirectories
 @section Problem 4-3: Subdirectories
 
