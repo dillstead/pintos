@@ -225,7 +225,8 @@ data structures in files the same way?)
 
 Memory mapped files are typically implemented using system calls.  One
 system call maps the file to a particular part of the address space.
-For example, one might map the file @file{foo}, which is 1000 bytes
+For example, one might conceptually map the file @file{foo}, which is
+1000 bytes
 long, starting at address 5000.  Assuming that nothing else is already
 at virtual addresses 5000@dots{}6000, any memory accesses to these
 locations will access the corresponding bytes of @file{foo}.
@@ -233,8 +234,8 @@ locations will access the corresponding bytes of @file{foo}.
 A consequence of memory mapped files is that address spaces are
 sparsely populated with lots of segments, one for each memory mapped
 file (plus one each for code, data, and stack).  You will implement
-memory mapped files for problem 3 of this assignment, but you should
-design your solutions to problems 1 and 2 to account for this.
+memory mapped files in problem 3-3.  You should
+design your solutions to problems 3-1 and 3-2 to anticipate this.
 
 @node Stack
 @section Stack
@@ -448,22 +449,22 @@ system call's implementation were
 @example
 length = ROUND_UP (length, PGSIZE);
 @end example
+(The @code{ROUND_UP} macro is defined in @file{<round.h>}.)
 The remainder of this description assumes that this has been done.
 
 If @var{length} is less than @var{fd}'s length, you should only map
-the first part of the file.  If @var{length} is greater than
-@var{fd}'s length, when the file's length is also rounded up to the
-nearest multiple of the page size, the call should fail.  Ideally it
-would extend the file, but our file system does not yet support
-growing files.
+the first @var{length} bytes of the file.  If @var{length} is greater
+than @var{fd}'s length, when the file's length is also rounded up to a
+page multiple, the call should fail.  Ideally it would extend the
+file, but our file system does not yet support growing files.
 
-If @var{length} is greater than @var{fd}'s unrounded length, then some
+If @var{length} is greater than @var{fd}'s (unrounded) length, then some
 bytes in the final mapped page ``stick out'' beyond the end of the
-file.  These bytes are set to zero when the page is faulted in from
-disk.  They are discarded when the page is written back to disk.
+file.  Set these bytes to zero when the page is faulted in from
+disk, and discard them when the page is written back to disk.
 
-Your VM system should be able to use the @code{mmap}'d file itself as
-backing store for the mapped segment.  That is, if a page mapped by
+Your VM system should use the @code{mmap}'d file itself as
+backing store for the mapped segment.  That is, to evict a page mapped by
 @code{mmap} must be evicted, write it to the file it was mapped from.
 (In fact, you may choose to implement executable mappings as a special
 case of file mappings.)
@@ -487,7 +488,7 @@ using the @code{mmap} system call.
 @end itemize
 
 As with @code{mmap}, @var{length} is treated as if it were rounded up
-to the nearest multiple of the page size
+to the nearest multiple of the page size.
 
 It is valid to unmap only some of the pages that were mapped in a
 previous system call.
