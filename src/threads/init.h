@@ -6,11 +6,6 @@
 /* Physical memory size, in 4 kB pages. */
 size_t ram_pages;
 
-/* Kernel command line. */
-extern int argc;
-extern char *argv[];
-
 struct tss *tss;
-
 
 #endif /* init.h */
