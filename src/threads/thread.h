@@ -47,11 +47,11 @@ typedef int tid_t;
              |                                 |
              |                                 |
              +---------------------------------+
-             |             magic               |
-             |               :                 |
-             |               :                 |
-             |              name               |
-             |             status              |
+             |              magic              |
+             |                :                |
+             |                :                |
+             |               name              |
+             |              status             |
         0 kB +---------------------------------+
 
    The upshot of this is twofold:
@@ -66,7 +66,7 @@ typedef int tid_t;
          large.  If a stack overflows, it will corrupt the thread
          state.  Thus, kernel functions should not allocate large
          structures or arrays as non-static local variables.  Use
-         dynamic allocation with malloc() or palloc_get()
+         dynamic allocation with malloc() or palloc_get_page()
          instead.
 
    The first symptom of either of these problems will probably be
@@ -97,7 +97,7 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
 #endif
 
-    /* Owned by thread.c */
+    /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
 
@@ -114,6 +114,7 @@ void thread_unblock (struct thread *);
 struct thread *thread_current (void);
 tid_t thread_tid (void);
 const char *thread_name (void);
+
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
 void thread_block (void);

@@ -59,10 +59,11 @@ void schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 /* Initializes the threading system by transforming the code
-   that's currently running into a thread.  Note that this is
-   possible only because the loader was careful to put the bottom
-   of the stack at a page boundary; it won't work in general.
-   Also initializes the run queue.
+   that's currently running into a thread.  This can't work in
+   general and it is possible in this case only because loader.S
+   was careful to put the bottom of the stack at a page boundary.
+
+   Also initializes the run queue and the tid lock.
 
    After calling this function, be sure to initialize the page
    allocator before trying to create any threads with
