@@ -489,11 +489,12 @@ sub fix_exit_codes {
 	local ($_) = $output[$i];
 	
 	my ($process, $code);
-	if ((($process, $code) = /^([-a-zA-Z0-9 ]+):.*[ \(](-?\d+)\b\)?$/)
-	    || (($process, $code) = /^([-a-zA-Z0-9 ]+) exit\((-?\d+)\)$/)
+	if ((($process, $code) = /^([-a-z0-9 ]+):.*[ \(](-?\d+)\b\)?$/)
+	    || (($process, $code) = /^([-a-z0-9 ]+) exit\((-?\d+)\)$/)
 	    || (($process, $code)
-		= /^([-a-zA-Z0-9 ]+) \(.*\): exit\((-?\d+)\)$/)
-	    || (($process, $code) = /^([-a-zA-Z0-9 ]+):\( (-?\d+) \) $/)
+		= /^([-a-z0-9 ]+) \(.*\): exit\((-?\d+)\)$/)
+	    || (($process, $code) = /^([-a-z0-9 ]+):\( (-?\d+) \) $/)
+	    || (($code, $process) = /^shell: exit\((-?\d+)\) \| ([-a-z0-9]+)/)
 ) {
 	    $process = substr ($process, 0, 15);
 	    $process =~ s/\s.*//;

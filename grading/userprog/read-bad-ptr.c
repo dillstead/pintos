@@ -11,7 +11,7 @@ main (void)
   if (handle < 2)
     printf ("(read-bad-ptr) fail: open() returned %d\n", handle);
 
-  read (handle, (char *) 0xc0101234, 123);
+  read (handle, (char *) 0x20101234, 123);
   
   printf ("(read-bad-ptr) end\n");
   return 0;

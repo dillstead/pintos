@@ -14,7 +14,6 @@ DESIGN [[/40]]
 --------------
 
  -20 Missing or far too brief DESIGNDOC
-  -2 Troublesome or unexplained dependencies
   -2 Changing interfaces, each (max -6)
 
 DESIGNDOC (per problem):
