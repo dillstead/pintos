@@ -1,4 +1,8 @@
 #include <string.h>
+
+#ifdef KERNEL
+#define NDEBUG
+#endif
 #include <debug.h>
 
 /* Copies SIZE bytes from SRC to DST, which must not overlap.
