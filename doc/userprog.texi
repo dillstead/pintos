@@ -34,8 +34,6 @@ this illusion.
 
 Before we delve into the details of the new code that you'll be
 working with, you should probably undo the test cases from project 1.
-All you need to do is make sure the original @file{threads/test.c} is
-in place.  This will stop the tests from being run.
 
 @menu
 * Project 2 Code::              
@@ -103,7 +101,7 @@ The Task-State Segment (TSS) is used for 80@var{x}86 architectural
 task switching.  Pintos uses the TSS only for switching stacks when a
 user process enters an interrupt handler, as does Linux.  @strong{You
 should not need to modify these files for any of the projects.}
-However, you can read the code if you're interested in how the GDT
+However, you can read the code if you're interested in how the TSS
 works.
 @end table
 
@@ -478,7 +476,7 @@ because there's no way to return an error code from a memory access.
 Therefore, for those who want to try the latter technique, we'll
 provide a little bit of helpful code:
 
-@verbatim
+@example
 /* Tries to copy a byte from user address USRC to kernel address DST.
    Returns true if successful, false if USRC is invalid. */
 static inline bool get_user (uint8_t *dst, const uint8_t *usrc) {
@@ -496,7 +494,7 @@ static inline bool put_user (uint8_t *udst, uint8_t byte) {
        : "=m" (*udst), "=&a" (eax) : "r" (byte));
   return eax != 0;
 }
-@end verbatim
+@end example
 
 Each of these functions assumes that the user address has already been
 verified to be below @code{PHYS_BASE}.  They also assume that you've
@@ -787,7 +785,7 @@ user program (assuming for this example that the stack bottom is
 @item @t{0xbfffffe0} @tab @code{argv[2]} @tab @t{0xbffffff8}
 @item @t{0xbfffffdc} @tab @code{argv[1]} @tab @t{0xbffffff5}
 @item @t{0xbfffffd8} @tab @code{argv[0]} @tab @t{0xbfffffed}
-@item @t{0xbfffffd4} @tab @code{argv} @tab @t{0xbffffffd8}
+@item @t{0xbfffffd4} @tab @code{argv} @tab @t{0xbfffffd8}
 @item @t{0xbfffffd0} @tab @code{argc} @tab 4
 @item @t{0xbfffffcc} @tab ``return address'' @tab 0
 @end multitable
@@ -807,12 +805,12 @@ You may find the non-standard @func{hex_dump} function, declared in
 Here's what it would show in the above example, given that
 @code{PHYS_BASE} is @t{0xc0000000}:
 
-@verbatim
+@example
 bfffffc0                                      00 00 00 00 |            ....|
 bfffffd0  04 00 00 00 d8 ff ff bf-ed ff ff bf f5 ff ff bf |................|
 bfffffe0  f8 ff ff bf fc ff ff bf-00 00 00 00 00 2f 62 69 |............./bi|
 bffffff0  6e 2f 6c 73 00 2d 6c 00-2a 2e 68 00 2a 2e 63 00 |n/ls.-l.*.h.*.c.|
-@end verbatim
+@end example
 
 @node System Calls
 @section System Calls
