@@ -445,8 +445,6 @@ limit of 128 open files per process (as the Solaris machines here do).
 @b{What happens when two (or more) processes have a file open and one of
 them removes it?}
 
-FIXME FIXME FIXME
-
 You should copy the standard Unix semantics for files.  That is, when
 a file is removed an process which has a file descriptor for that file
 may continue to do operations on that descriptor.  This means that
