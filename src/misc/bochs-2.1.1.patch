@@ -29,7 +29,7 @@ unwanted patches, then follow the above instructions.
 
 Here's a ./configure invocation for Bochs that works optimally with
 the `pintos' utility:
-	./configure --enable-4meg-pages --with-x --with-x11 --with-term --with-nogui
+	./configure --with-x --with-x11 --with-term --with-nogui
 If you want the gdb stub, add --enable-gdb-stub
 If you want the internal debugger, add --enable-debugger
 
