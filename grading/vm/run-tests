@@ -24,9 +24,6 @@ parse_cmd_line qw (pt-grow-stack pt-big-stk-obj pt-bad-addr pt-write-code
 		   page-shuffle mmap-read mmap-close mmap-unmap mmap-overlap
 		   mmap-twice mmap-write mmap-exit mmap-shuffle);
 
-# Default set of tests.
-@TESTS =  unless @TESTS > 0;
-
 clean_dir (), exit if $action eq 'clean';
 
 extract_sources (); 

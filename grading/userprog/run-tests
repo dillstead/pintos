@@ -38,9 +38,6 @@ parse_cmd_line qw (args-argc args-argv0 args-argvn args-single args-multiple
 		   join-simple join-twice join-killed join-bad-pid
 		   multi-recurse multi-oom multi-child-fd);
 
-# Default set of tests.
-@TESTS =  unless @TESTS > 0;
-
 clean_dir (), exit if $action eq 'clean';
 
 extract_sources (); 
