@@ -61,8 +61,9 @@ debug_message (const char *file, int line, const char *function,
     }
 }
 
-/* Halts the OS, printing the source file name, line number, and
-   function name, plus a user-specific message. */
+/* Halts the OS or user program, printing the source file name,
+   line number, and function name, plus a user-specific
+   message. */
 void
 debug_panic (const char *file, int line, const char *function,
              const char *message, ...)
@@ -73,7 +74,12 @@ debug_panic (const char *file, int line, const char *function,
   intr_disable ();
 #endif
 
-  printf ("PANIC at %s:%d in %s(): ", file, line, function);
+#ifdef KERNEL
+  printf ("Kernel PANIC at %s:%d in %s(): ", file, line, function);
+#else
+  printf ("User process panic at %s:%d in %s(): ", file, line, function);
+#endif
+
   va_start (args, message);
   vprintf (message, args);
   printf ("\n");
@@ -83,7 +89,7 @@ debug_panic (const char *file, int line, const char *function,
 
 #ifdef KERNEL
   serial_flush ();
-  for (;;);
+  power_off ();
 #else
   exit (1);
 #endif
