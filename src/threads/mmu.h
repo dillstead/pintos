@@ -51,8 +51,8 @@
 #define	NBPG		(1 << PGSHIFT)	/* bytes/page */
 
 /* Page tables (selected by VA[31:22] and indexed by VA[21:12]) */
-#define NLPG (1<<(PGSHIFT-2))   /* Number of 32-bit longwords per page */
 #define PGMASK (NBPG - 1)       /* Mask for page offset.  Terrible name! */
+#define PGOFS(va) ((va) & PGMASK)
 /* Page number of virtual page in the virtual page table. */
 #define PGNO(va) ((uint32_t) (va) >> PGSHIFT)
 /* Index of PTE for VA within the corresponding page table */
@@ -165,11 +165,15 @@
 #define NPPT ((-KERNBASE)>>PDSHIFT)
 
 #ifndef __ASSEMBLER__
+#include "debug.h"
+
 /* Kernel virtual address at which physical address PADDR is
    mapped. */
 static inline void *
 ptov (uint32_t paddr) 
 {
+  ASSERT (paddr < PHYS_BASE);
+
   return (void *) (paddr + PHYS_BASE);
 }
 
@@ -178,6 +182,8 @@ ptov (uint32_t paddr)
 static inline uint32_t
 vtop (void *vaddr) 
 {
+  ASSERT ((uint32_t) vaddr >= PHYS_BASE);
+
   return (uint32_t) vaddr - PHYS_BASE;
 }
 #endif
