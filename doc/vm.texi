@@ -291,8 +291,9 @@ The page fault handler, @func{page_fault} in
 @item
 Locate the page backing the virtual
 address that faulted.  It might be in the file system, in swap,
-already be in physical memory and just not set up in the page table,
 or it might be an invalid virtual address.
+If you implement sharing, it might even
+already be in physical memory and just not set up in the page table,
 
 If the virtual address is invalid, that is, if there's nothing
 assigned to go there, or if the virtual address is above

@@ -466,7 +466,7 @@ the @file{filesys} directory, and release it afterward.  Don't forget
 that @func{process_execute} also accesses files.  @strong{For now, we
 recommend against modifying code in the @file{filesys} directory.}
 
-We have provided you a function for each system call in
+We have provided you a user-level function for each system call in
 @file{lib/user/syscall.c}.  These provide a way for user processes to
 invoke each system call from a C program.  Each of them calls an
 assembly language routine in @file{lib/user/syscall-stub.S}, which in
@@ -971,3 +971,9 @@ In this example, the caller's stack pointer would be at
 The 80@var{x}86 convention for function return values is to place them
 in the @samp{EAX} register.  System calls that return a value can do
 so by modifying the @samp{eax} member of @struct{intr_frame}.
+
+You should try to avoid writing large amounts of repetitive code for
+implementing system calls.  Each system call argument, whether an
+integer or a pointer, takes up 4 bytes on the stack.  You should be able
+to take advantage of this to avoid writing much near-identical code for
+retrieving each system call's arguments from the stack.
