@@ -52,6 +52,12 @@ print CVSIGNORE <<EOF;
 *.d
 *.dsk
 *.o
+bochsrc.txt
+bochsout.txt
+child-arg
+child-bad
+child-close
+child-simple
 EOF
 print CVSIGNORE join ("\n", @tests), "\n";
 close (CVSIGNORE);

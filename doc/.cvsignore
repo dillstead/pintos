@@ -11,5 +11,10 @@
 *.vr
 mlfqs1.png
 mlfqs2.png
+mlfqs1.pdf
+mlfqs2.pdf
 projects.html
-projects_*.html
+pintos.html
+pintos.pdf
+pintos.ps
+pintos_*.html

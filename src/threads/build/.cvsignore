@@ -1,0 +1,9 @@
+Makefile
+bochsout.txt
+bochsrc.txt
+devices
+kernel.bin
+lib
+loader.bin
+os.dsk
+threads

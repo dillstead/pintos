@@ -2,6 +2,12 @@
 *.d
 *.dsk
 *.o
+bochsrc.txt
+bochsout.txt
+child-arg
+child-bad
+child-close
+child-simple
 args-argc
 args-argv0
 args-argvn
