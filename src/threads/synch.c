@@ -1,7 +1,6 @@
 #include "synch.h"
 #include "interrupt.h"
 #include "lib.h"
-#include "malloc.h"
 #include "thread.h"
 
 /* One thread in a list. */

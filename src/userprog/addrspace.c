@@ -6,7 +6,6 @@
 #include "init.h"
 #include "lib.h"
 #include "mmu.h"
-#include "malloc.h"
 #include "paging.h"
 #include "palloc.h"
 
