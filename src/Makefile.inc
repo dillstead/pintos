@@ -45,6 +45,7 @@ FILESYS_SRC  = filesys.c	# Filesystem core.
 FILESYS_SRC += file.c		# Files.
 FILESYS_SRC += directory.c	# Directories.
 FILESYS_SRC += filehdr.c	# File headers (inodes).
+FILESYS_SRC += fsutil.c		# Utilities.
 
 # User process code.
 USERPROG_SRC  = addrspace.c	# Address spaces.
