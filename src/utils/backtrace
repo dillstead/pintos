@@ -12,7 +12,7 @@ while ($function = <A2L>) {
 sub search_path {
     my ($target) = @_;
     for $dir (split (':', $ENV{PATH})) {
-	my ($file = "$dir/$target";
+	my ($file) = "$dir/$target";
 	return $file if -e $file;
     }
     return 0;
