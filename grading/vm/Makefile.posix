@@ -1,3 +1,8 @@
+# This makefile allows the VM tests to be compiled on a POSIX host
+# system.  It's easier to test them on a host than under Pintos.
+# Before and after using this Makefile, run `make clean' to ensure
+# that Pintos and host objects don't interfere with one another.
+
 SRCDIR = ../../src
 
 include $(SRCDIR)/Make.config
