@@ -516,9 +516,9 @@ recommend against modifying code in the @file{filesys} directory.}
 
 We have provided you a user-level function for each system call in
 @file{lib/user/syscall.c}.  These provide a way for user processes to
-invoke each system call from a C program.  Each of them calls an
-assembly language routine in @file{lib/user/syscall-stub.S}, which in
-turn invokes the system call interrupt and returns.
+invoke each system call from a C program.  Each uses a little inline
+assembly code to invoke the system call and (if appropriate) returns the
+system call's return value.
 
 When you're done with this part, and forevermore, Pintos should be
 bulletproof.  Nothing that a user program can do should ever cause the
