@@ -8,9 +8,9 @@
 
 cd /tmp
 bzcat ~/binutils-2.15.tar.bz2 | tar x
-tar xzf newlib-1.12.0.tar.gz
-tar xzf gcc-core-3.3.2.tar.gz
-tar xzf gdb-6.2.1.tar.gz
+tar xzf ~/newlib-1.12.0.tar.gz
+tar xzf ~/gcc-core-3.3.2.tar.gz
+tar xzf ~/gdb-6.2.1.tar.gz
 
 PATH=$PATH:/usr/class/cs140/i386/bin
 
@@ -21,7 +21,7 @@ cd i386
 make LDFLAGS=-lintl
 make install
 
-cd /tmp/gcc-core-3.3.2.tar.gz
+cd /tmp/gcc-3.3.2
 mkdir i386
 cd i386
 ../configure --target=i386-elf --prefix=/usr/class/cs140/i386 --with-gnu-as --with-as=/usr/class/cs140/i386/bin/i386-elf-as --with-gnu-ld --with-ld=/usr/class/cs140/i386/bin/i386-elf-ld --with-headers=/tmp/newlib-1.12.0/newlib/libc/include --with-newlib
