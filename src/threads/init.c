@@ -33,7 +33,17 @@ void power_off (void);
 static void
 main_thread (void *aux UNUSED) 
 {
+  struct disk *hda;
   disk_init ();
+  hda = disk_get (0);
+  if (hda != NULL) 
+    {
+      char buf[DISK_SECTOR_SIZE];
+      disk_read (hda, 0, buf);
+      hex_dump (buf, sizeof buf);
+    }
+  else
+    printk ("no hda\n");
   thread_execute ("a.out");
 }
 
@@ -46,16 +56,16 @@ main (void)
   /* Clear out the BSS segment. */
   memset (&__bss_start, 0, &_end - &__bss_start);
 
+  /* Initialize components needed by printk() very early. */
   vga_init ();
   serial_init ();
+  printk ("Booting cnachos86...\n");
 
   /* Calculate how much RAM the kernel uses, and find out from
      the bootloader how much RAM this machine has. */
   kernel_pages = (&_end - &_text + 4095) / 4096;
   ram_pages = *(uint32_t *) (0x7e00 - 6);
-
-  printk ("Initializing nachos-x86, %d kB RAM detected.\n",
-          ram_pages * 4);
+  printk ("ram: detected %'d kB.\n", ram_pages * 4);
 
   /* Memory from the end of the kernel through the end of memory
      is free.  Give it to the page allocator. */
