@@ -110,7 +110,10 @@ inode_open (disk_sector_t sector)
   list_elem *e;
   struct inode *idx;
 
-  /* Check whether this inode is already open. */
+  /* Check whether this inode is already open.
+     (A hash table would be better, but the Pintos base code
+     avoids using the hash table so that users are free to modify
+     it at will.) */
   for (e = list_begin (&open_inodes); e != list_end (&open_inodes);
        e = list_next (e)) 
     {
