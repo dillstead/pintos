@@ -13,7 +13,6 @@
 #include "threads/synch.h"
 #ifdef USERPROG
 #include "userprog/process.h"
-#include "userprog/gdt.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
