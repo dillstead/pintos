@@ -12,11 +12,10 @@ You will be using the @file{vm} directory for this project.  There is
 no new code to get acquainted with for this assignment.  The @file{vm}
 directory contains only the @file{Makefile}s.  The only change from
 @file{userprog} is that this new @file{Makefile} turns on the setting
-@option{-DVM}, which you will need for this assignment.  All code you
-write will either be newly generated files (e.g.@: if you choose to
-implement your paging code in their own source files), or will be
-modifications to pre-existing code (e.g.@: you will change the
-behavior of @file{process.c} significantly).
+@option{-DVM}.  All code you write will either be newly generated
+files (e.g.@: if you choose to implement your paging code in their own
+source files), or will be modifications to pre-existing code (e.g.@:
+you will change the behavior of @file{process.c} significantly).
 
 You will be building this assignment on the last one.  It will benefit
 you to get your project 2 in good working order before this assignment

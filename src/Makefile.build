@@ -43,13 +43,6 @@ lib_kernel_SRC += lib/kernel/bitmap.c	# Bitmaps.
 lib_kernel_SRC += lib/kernel/hash.c	# Hash tables.
 lib_kernel_SRC += lib/kernel/console.c	# printf(), putchar().
 
-# Filesystem code.
-filesys_SRC  = filesys/filesys.c	# Filesystem core.
-filesys_SRC += filesys/file.c		# Files.
-filesys_SRC += filesys/directory.c	# Directories.
-filesys_SRC += filesys/inode.c		# File headers.
-filesys_SRC += filesys/fsutil.c		# Utilities.
-
 # User process code.
 userprog_SRC  = userprog/process.c	# Process loading.
 userprog_SRC += userprog/pagedir.c	# Page directories.
@@ -57,6 +50,16 @@ userprog_SRC += userprog/exception.c	# User exception handler.
 userprog_SRC += userprog/syscall.c	# System call handler.
 userprog_SRC += userprog/gdt.c		# GDT initialization.
 userprog_SRC += userprog/tss.c		# TSS management.
+
+# No virtual memory code yet.
+#vm_SRC = vm/filename.c			# Some file.
+
+# Filesystem code.
+filesys_SRC  = filesys/filesys.c	# Filesystem core.
+filesys_SRC += filesys/file.c		# Files.
+filesys_SRC += filesys/directory.c	# Directories.
+filesys_SRC += filesys/inode.c		# File headers.
+filesys_SRC += filesys/fsutil.c		# Utilities.
 
 SOURCES = $(foreach dir,$(SUBDIRS),$($(subst /,_,$(dir))_SRC))
 OBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))
