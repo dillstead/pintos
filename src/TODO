@@ -1,3 +1,7 @@
+* Get rid of names for synch primitives?  They increase the size of
+  each one by 16 bytes and are probably not that useful.
+  Alternatively make the names pointers?
+
 * Write, test user programs.
   - addrspace_load() should return thread's esp.
   - thread_execute() shouldn't panic on failure (!).

@@ -1,4 +1,4 @@
-include Makefile.vars
+include Make.vars
 BUILD_SUBDIRS = $(addprefix build/, $(SUBDIRS))
 CP = cp
 MKDIR = mkdir

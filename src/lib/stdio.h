@@ -6,15 +6,23 @@
 #include <stddef.h>
 #include <stdarg.h>
 
+/* Predefined file handles. */
+#define STDIN_FILENO 0
+#define STDOUT_FILENO 1
+
 /* Standard functions. */
-int vsnprintf (char *, size_t, const char *, va_list) PRINTF_FORMAT (3, 0);
+int printf (const char *, ...) PRINTF_FORMAT (1, 2);
 int snprintf (char *, size_t, const char *, ...) PRINTF_FORMAT (3, 4);
 int vprintf (const char *, va_list) PRINTF_FORMAT (1, 0);
-int printf (const char *, ...) PRINTF_FORMAT (1, 2);
+int vsnprintf (char *, size_t, const char *, va_list) PRINTF_FORMAT (3, 0);
 int putchar (int);
 int puts (const char *);
 
 /* Nonstandard functions. */
+#ifndef KERNEL
+int hprintf (int, const char *, ...) PRINTF_FORMAT (2, 3);
+int vhprintf (int, const char *, va_list) PRINTF_FORMAT (2, 0);
+#endif
 void hex_dump (const void *, size_t size, bool ascii);
 
 /* Internal functions. */

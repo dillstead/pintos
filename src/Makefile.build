@@ -1,37 +1,14 @@
 # -*- makefile -*-
 
-include ../Makefile.vars
-
-SHELL = /bin/sh
-
-# Binary utilities.
-# If the host appears to be x86, use the normal tools.
-# Otherwise assume cross-tools are installed as i386-elf-*.
-X86 = i.86\|pentium.*\|[pk][56]\|nexgen\|viac3\|6x86\|athlon.*
-ifneq (0, $(shell expr `uname -m` : '$(X86)'))
-CC = gcc
-LD = ld
-OBJCOPY = objcopy
-else
-CC = i386-elf-gcc
-LD = i386-elf-ld
-OBJCOPY = i386-elf-objcopy
-endif
-
-# Other utilities.
-DD = dd
-RM = rm
-CAT = cat
+include ../Make.vars
+include ../../Make.config
 
 VPATH = ../..
 
 # Compiler and assembler options.
 DEFINES += -DKERNEL
-WARNINGS = -Wall -W -Wstrict-prototypes -Wmissing-prototypes
 CPPFLAGS = -nostdinc -I../.. -I- -I../../lib -I../../lib/kernel	\
 	   -include constants.h
-CFLAGS = -g -O3 -MMD -msoft-float 
-ASFLAGS = -Wa,--gstabs -MMD
 
 # Core kernel.
 threads_SRC  = threads/init.c		# Main program.
@@ -118,11 +95,5 @@ clean:
 
 Makefile: ../../Makefile.build
 	cp $< $@
-
-%.o: %.c
-	$(CC) -c $< -o $@ $(CFLAGS) $(CPPFLAGS) $(WARNINGS) $(DEFINES)
-
-%.o: %.S
-	$(CC) -c $< -o $@ $(ASFLAGS) $(CPPFLAGS) $(DEFINES)
 
 -include $(DEPENDS)

@@ -5,15 +5,14 @@ all::
 	@echo "This top-level make has only 'clean' targets."
 
 clean::
-	for d in $(SUBDIRS); do $(MAKE) -C $$d $@; done
+	for d in $(SUBDIRS) tests; do $(MAKE) -C $$d $@; done
 
-distclean::
-	$(MAKE) clean
+distclean:: clean
 	find . -name '*~' -exec rm '{}' \;
 
 TAGS::
-	etags --members `find . -name \*.[chS]`
+	etags --members *.[chS] `find $(SUBDIRS) -name \*.[chS]`
 
 tags::
-	ctags -T `find . -name \*.[chS]`
+	ctags -T *.[chS] `find . -name \*.[chS]`
 

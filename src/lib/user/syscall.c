@@ -59,6 +59,18 @@ write (int fd, const void *buffer, unsigned size)
 }
 
 void
+seek (int fd, unsigned position) 
+{
+  syscall (SYS_seek, fd, position);
+}
+
+unsigned
+tell (int fd) 
+{
+  return syscall (SYS_tell, fd);
+}
+
+void
 close (int fd)
 {
   syscall (SYS_close, fd);
