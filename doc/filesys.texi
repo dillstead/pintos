@@ -146,16 +146,20 @@ is specified when the file is created.  One advantage of this is that
 the inode data structure, once created, never changes.  In UNIX and
 most other file systems, a file is initially created with size 0 and
 is then expanded every time a write is made off the end of the file.
-Modify the file system to allow this.  As one test case, allow the
-root directory file to expand beyond its current limit of ten files.
+Modify the file system to allow this.  
 Make sure that concurrent accesses to the inode remain properly
 synchronized.
+
+There should be no predetermined limit on the size of a file, except
+that a disk cannot exceed the size of the disk (minus metadata).  This
+also applies to the root directory file, which should now be allowed
+to expand beyond its initial limit of ten files.
 
 The user is allowed to seek beyond the current end-of-file (EOF).  The
 seek itself does not extend the file.  Writing at a position past EOF
 extends the file to the position being written, and any gap between the
 previous EOF and the start of the write must be filled with zeros.  A
-read past EOF returns zero bytes.
+read starting from a position past EOF returns no bytes.
 
 Writing far beyond EOF can cause many blocks to be entirely zero.  Some
 file systems allocate and write real data blocks for these implicitly
@@ -168,28 +172,39 @@ your file system.
 @section Problem 4-3: Subdirectories
 
 Implement a hierarchical name space.  In the basic file system, all
-files live in a single directory.  Modify this to allow directories to
-point to either files or other directories.  To do this, you will need
-to implement routines that parse path names into a sequence of
-directories, as well as routines that change the current working
-directory and that list the contents of the current directory.  For
-performance, allow concurrent updates to different directories, but
-use mutual exclusion to ensure that updates to the same directory are
-performed atomically (for example, to ensure that a file is deleted
-only once).
+files live in a single directory.  Modify this to allow directory
+entries to point to files or to other directories.  You will need
+routines to parse a path name into a sequence of directories, to
+change the current working directory, and to list the contents of the
+current directory.  For performance, allow concurrent updates to
+different directories, but use mutual exclusion to ensure that updates
+to the same directory are performed atomically (for example, to ensure
+that a file is deleted only once).
 
 Make sure that directories can expand beyond their original size just
-as any other file can.
+as any other file can.  
 
-Each process has its own current directory.  When one process starts
-another with the @code{exec} system call, the child process inherits its
-parent's current directory.  After that, the two processes' current
-directories are independent, so that either changing its own current
-directory has no effect on the other.
+The basic file system has a 14-character limit on file names.  You may
+retain this limit for individual file name components, or may extend
+it, at your option.  In any case you must allow full path names to be
+much longer than 14 characters.
+
+The current directory is maintained separately for each process.  At
+startup, the initial process has the root directory as its current
+directory.  When one process starts another with the @code{exec}
+system call, the child process inherits its parent's current
+directory.  After that, the two processes' current directories are
+independent, so that either changing its own current directory has no
+effect on the other.
 
 Update the existing system calls so that, anywhere a file name is
 provided by the caller, an absolute or relative path name may used.
-Also, implement the following new system calls:
+
+Update the @code{remove} system call so that it can delete empty
+directories in addition to regular files.  Directories can only be
+deleted if they do not contain files or subdirectories.
+
+Implement the following new system calls:
 
 @table @code
 @item SYS_chdir
@@ -202,17 +217,26 @@ successful, false on failure.
 @itemx bool mkdir (const char *dir)
 Attempts to create the directory named @var{dir}, which may be either
 relative or absolute.  Returns true if successful, false on failure.
+Fails if @var{dir} already exists or if any directory name in
+@var{dir}, besides the last, does not already exist.  That is,
+@code{mkdir("/a/b/c")} succeeds only if @file{/a/b} already exists and
+@file{/a/b/c} does not.
 
 @item SYS_lsdir
 @itemx void lsdir (void)
 Prints a list of files in the current directory to @code{stdout}, one
-per line.
+per line, in no particular order.
 @end table
 
-Also write the @command{ls} and @command{mkdir} user programs.  This
-is straightforward once the above syscalls are implemented.  In Unix,
+We have provided @command{ls} and @command{mkdir} user programs, which
+are straightforward once the above syscalls are implemented.  In Unix,
 these are programs rather than built-in shell commands, but
 @command{cd} is a shell command.  (Why?)
+
+The @code{pintos} @option{put} and @option{get} commands should now
+accept full path names, assuming that the directories used in the
+paths have already been created.  This should not require any extra
+effort on your part.
 
 @node Problem 4-4 Buffer Cache
 @section Problem 4-4: Buffer Cache
@@ -360,9 +384,9 @@ pintos -ci shell 12345
 pintos -ex "shell"
 @end example
 
-If you don't change the filesystem interface, then this should already
-be implemented properly in @file{threads/init.c} and
-@file{filesys/fsutil.c}.
+If you don't change the filesystem interface, none of this should
+require any special effort on your part.  They are already implemented
+properly in @file{threads/init.c} and @file{filesys/fsutil.c}.
 
 You must also implement the @option{-q} option and make sure that data
 gets flushed out to disk properly when it is used.
@@ -421,17 +445,6 @@ user process.  In fact, Unix-like systems don't provide any way for
 one process to change another process's current working directory.
 
 @item
-@b{When the spec states that directories should be able to grow beyond
-ten files, does this mean that there can still be a set maximum number
-of files per directory that is greater than ten, or should directories
-now support unlimited growth (bounded by the maximum supported file
-size)?}
-
-We're looking for directories that can support arbitrarily large
-numbers of files.  Now that directories can grow, we want you to
-remove the concept of a preset maximum file limit.
-
-@item
 @b{When should the @code{lsdir} system call return?}
 
 The @code{lsdir} system call should not return until after the
@@ -448,7 +461,7 @@ This code should create the following output:
 
 @example
 Start of directory
-...  directory contents ...
+@dots{}directory contents@dots{}
 End of directory
 @end example
 
@@ -456,13 +469,6 @@ End of directory
 @b{Do we have to implement both absolute and relative pathnames?}
 
 Yes.  Implementing @file{.} and @file{..} is extra credit, though.
-
-@item
-@b{Should @func{remove} also be able to remove directories?}
-
-Yes.  The @code{remove} system call should handle removal of both
-regular files and directories.  You may assume that directories can
-only be deleted if they are empty, as in Unix.
 @end enumerate
 
 @node Problem 4-4 Buffer Cache FAQ

@@ -278,8 +278,8 @@ that needs @var{N} pages of memory must not require that all @var{N}
 be contiguous.  In fact, it must not require that any of the pages be
 contiguous.
 
-@node Global Requirements
-@section Global Requirements
+@node Grading Requirements
+@section Grading Requirements
 
 For testing and grading purposes, we have some simple overall
 requirements:
@@ -326,6 +326,16 @@ make sure that it takes the start-up process name and arguments from
 the @samp{-ex} argument.  For example, running @code{pintos run -ex
 "testprogram 1 2 3 4"} will spawn @samp{testprogram 1 2 3 4} as the
 first process.
+
+@item
+In the previous project, we required that you provided some specific
+function interfaces, because we tested your project by compiling our
+test code into it.  For this project and all later projects, this is
+no longer necessary, because we will do all of our testing with user
+programs.  You must make sure that the user program interface meets
+the specifications described in the assignments, but given that
+constraint you are free to restructure or rewrite kernel code however
+you wish.
 @end itemize
 
 @node Problem 2-1 Argument Passing
