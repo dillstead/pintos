@@ -207,7 +207,7 @@ terminator and it has performance problems besides.  Again, use
 @func{strlcpy}.
 
 @item strcat
-Same issue as @func{strcpy}, but substitute @func{strlcat}.
+Same issue as @func{strcpy}.  Use @func{strlcat} instead.
 Again, refer to comments in its source code in @code{lib/string.c} for
 documentation.
 
