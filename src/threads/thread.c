@@ -376,6 +376,10 @@ next_thread_to_run (void)
    the first time a thread is scheduled it is called by
    switch_entry() (see switch.S).
 
+   It's not safe to call printf() until the thread switch is
+   complete.  In practice that means that printf()s should be
+   added at the end of the function.
+
    After this function and its caller returns, the thread switch
    is complete. */
 void
@@ -407,7 +411,10 @@ schedule_tail (struct thread *prev)
 /* Schedules a new process.  At entry, interrupts must be off and
    the running process's state must have been changed from
    running to some other state.  This function finds another
-   thread to run and switches to it. */
+   thread to run and switches to it.
+
+   It's not safe to call printf() until schedule_tail() has
+   completed. */
 static void
 schedule (void) 
 {
