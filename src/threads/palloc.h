@@ -6,7 +6,8 @@
 enum palloc_flags
   {
     PAL_ASSERT = 001,           /* Panic on failure. */
-    PAL_ZERO = 002              /* Zero page contents. */
+    PAL_ZERO = 002,             /* Zero page contents. */
+    PAL_USER = 004              /* User page. */
   };
 
 void palloc_init (void);
