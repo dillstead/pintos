@@ -13,38 +13,34 @@ while (@ARGV) {
     } elsif ($arg eq 'run') {
 	run_vm (@ARGV);
 	exit 0;
-    } elsif ($arg =~ /^mem(?:ory)?=(\d+)/) {
+    } elsif ($arg =~ /^--mem(?:ory)?=(\d+)/) {
 	$mem = $1;
+    } elsif ($arg eq '-m') {
+	die "-m needs integer argument\n" if !@ARGV || $ARGV[0] !~ /^-?\d+$/;
+	$mem = shift (@ARGV);
     } elsif ($arg eq '-j') {
 	die "-j need random seed argument\n" if !@ARGV;
 	die "-j need integer argument\n" if $ARGV[0] !~ /^-?\d+$/;
 	$jitter = shift (@ARGV);
     } elsif ($arg =~ /--jitter=(-?\d+)$/) {
 	$jitter = $1;
-    } elsif ($arg eq '--no-vga' || $arg eq '-nv') {
+    } elsif ($arg eq '--no-vga' || $arg eq '-v') {
 	print "warning: --no-vga conflicts with --terminal\n"
 	    if $vga eq 'terminal';
 	$vga = 'none';
-    } elsif ($arg eq '--no-serial' || $arg eq '-ns') {
+    } elsif ($arg eq '--no-serial' || $arg eq '-s') {
 	$serial_out = 0;
     } elsif ($arg eq '--terminal' || $arg eq '-t') {
 	print "warning: --terminal conflicts with --no-vga\n"
 	    if $vga eq 'none';
 	$vga = 'terminal';
     } elsif ($arg eq 'make-disk') {
-	my ($force) = @ARGV > 0 && $ARGV[0] eq '--force';
-	shift @ARGV if $force;
 	usage () if @ARGV != 2;
 	my ($file, $mb) = @ARGV;
-	usage () if $mb !~ /^\d+$/;
+	usage () if $mb !~ /^\d+(\.\d+)?|\.\d+$/;
 	die "$file: already exists\n" if -e $file;
 
-	if ($mb != .5 && $mb != 1 && $mb != 1.5 && $mb != 2) {
-	    print "$file: recommended sizes are .5, 1, 1.5, or 2 MB\n";
-	    die "use --force to override\n" if !$force;
-	}
-
-	create_disk ($file, $mb * 1008);
+	create_disk ($file, int ($mb * 1008));
 	exit 0;
     } elsif ($arg eq 'put') {
 	usage () if @ARGV != 1 && @ARGV != 2;
@@ -119,12 +115,12 @@ sub usage {
     print "  --monitor        Debug with simulator's monitor\n";
     print "  --gdb            Debug with gdb\n";
     print "Display options: (default is VGA + serial)\n";
-    print "  -nv, --no-vga    No VGA display\n";
-    print "  -ns, --no-serial No serial output\n";
+    print "  -v, --no-vga     No VGA display\n";
+    print "  -s, --no-serial  No serial output\n";
     print "  -t, --terminal   Display VGA in terminal (Bochs only)\n";
     print "VM options:\n";
     print "  -j SEED          Randomize timer interrupts (Bochs only)\n";
-    print "  --mem=MB         Run VM with MB megabytes of physical memory\n";
+    print "  -m, --mem=MB     Run VM with MB megabytes of physical memory\n";
     exit $exitcode;
 }
 
