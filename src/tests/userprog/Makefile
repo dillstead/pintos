@@ -7,7 +7,7 @@ LDLIBS = $(shell $(CC) -print-libgcc-file-name)
 
 # Uncomment the line below to round up segment sizes to full pages for
 # testing purposes only.
-LDFLAGS += -Wl,-T,fullpage.x
+#LDFLAGS += -Wl,-T,fullpage.x
 
 VPATH = ../..
 
