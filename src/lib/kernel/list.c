@@ -232,8 +232,9 @@ list_remove (list_elem *elem)
 list_elem *
 list_pop_front (struct list *list)
 {
-  ASSERT (list != NULL);
-  return list_remove (list_front (list));
+  list_elem *front = list_front (list);
+  list_remove (front);
+  return front;
 }
 
 /* Removes the back element from LIST and returns it.
@@ -241,8 +242,9 @@ list_pop_front (struct list *list)
 list_elem *
 list_pop_back (struct list *list)
 {
-  ASSERT (list != NULL);
-  return list_remove (list_back (list));
+  list_elem *back = list_back (list);
+  list_remove (back);
+  return back;
 }
 
 /* Returns the front element in LIST.
