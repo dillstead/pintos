@@ -103,7 +103,7 @@ disk_init (void)
       int dev_no;
 
       /* Initialize channel. */
-      snprintf (c->name, sizeof c->name, "hd%d", chan_no);
+      snprintf (c->name, sizeof c->name, "hd%zd", chan_no);
       switch (chan_no) 
         {
         case 0:
