@@ -431,9 +431,10 @@ sub verify_common {
 		$A2L = "i386-elf-addr2line";
 	    }
 	    open (A2L, "$A2L -fe output/$test/kernel.o @addrs|");
-	    my ($function);
-	    while ($function = <A2L>) {
-		my ($line) = <A2L>;
+	    for (;;) {
+		my ($function, $line);
+		last unless $function = <A2L>;
+		$line = <A2L>;
 		chomp $function;
 		chomp $line;
 		$details .= "  $function ($line)\n";
