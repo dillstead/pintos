@@ -1,3 +1,5 @@
+# -*- makefile -*-
+
 include Make.vars
 BUILD_SUBDIRS = $(addprefix build/, $(SUBDIRS))
 CP = cp
