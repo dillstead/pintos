@@ -6,7 +6,7 @@ SHELL = /bin/sh
 
 VPATH = $(SRCDIR)
 
-DEFINES = -DUSER
+DEFINES = -DPINTOS -DUSER
 CPPFLAGS = -nostdinc -I$(SRCDIR) -I- -I$(SRCDIR)/lib -I$(SRCDIR)/lib/user -I.
 
 # Linker flags.
