@@ -20,8 +20,8 @@ projects
   including at least the following people: Yu Ping
   <yph@cs.stanford.edu>, Greg Hutchins, Kelly Shaw <kashaw (at)
   cs.stanford.edu>, Paul Twohey <twohey AT cs DOT stanford DOT edu>,
-  Sameer Qureshi <squreshi@cs.stanford.edu>.  (If you're not on this
-  list but should be, please let me know.)
+  Sameer Qureshi <squreshi@cs.stanford.edu>, John Rector.  (If you're
+  not on this list but should be, please let me know.)
 
 * The section on multilevel feedback schedulers in the threads project
   is adapted from a handout written by Andrea Arpaci-Dusseau
