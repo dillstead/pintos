@@ -1,0 +1,1085 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+ <META NAME="GENERATOR" CONTENT="SGML-Tools 1.0.9">
+ <TITLE> Partition types: List of partition identifiers for PCs</TITLE>
+ <LINK HREF="partition_types-2.html" REL=next>
+
+ <LINK HREF="partition_types.html#toc1" REL=contents>
+</HEAD>
+<BODY>
+<A HREF="partition_types-2.html">Next</A>
+Previous
+<A HREF="partition_types.html#toc1">Contents</A>
+<HR>
+<H2><A NAME="s1">1. List of partition identifiers for PCs</A></H2>
+
+<P>Below a list of the known partition IDs (system indicators)
+of the various operating systems, file systems, boot managers, etc.
+For the various systems, short descriptions are given,
+in the cases where I have some info.
+There seem to be two other major such lists: Ralf Brown's
+(see 
+<A HREF="http://www.cs.cmu.edu/afs/cs.cmu.edu/user/ralf/pub/WWW/files.html">interrupt list</A> under 
+<A HREF="http://www.ctyme.com/intr/rb-2270.htm">Int 19</A>)
+and 
+<A HREF="http://ata-atapi.com/hiwtab.htm">Hale Landis'</A>
+but the present one is more correct and more complete.
+(However, these two URLs are a valuable source for other information.)
+See also the 
+<A HREF="http://www.powerquest.com/support/primus/id233.html">Powerquest table</A>
+and the
+<A HREF="http://www.win.tue.nl/~aeb/partitions/partition_tables.html">specification for DOS-type partition tables</A>.
+<P>Copyright (C) Andries E. Brouwer 1995-2004.
+Link to this list - do not copy it.
+It is being updated regularly.
+Additions, corrections, explanations are welcome.
+(Mail to 
+<A HREF="mailto:aeb@cwi.nl">aeb@cwi.nl</A>.)
+<P>
+<DL>
+<P>
+<DT><B>ID  Name</B><DD><P>
+<P>
+<DT><B>00  Empty</B><DD><P>To be precise: this is not used to designate unused area
+on the disk, but marks an unused partition table entry.
+(All other fields should be zero as well.)
+Unused area is not designated. 
+<A HREF="#plan9label">Plan9</A>
+assumes that it can use everything not claimed for other systems
+in the partition table.
+<P>
+<DT><B>01  DOS 12-bit FAT</B><DD><P>DOS is a family of single-user operating systems for PCs.
+86-DOS (`QDOS' - Quick and Dirty OS) was a CP/M-like operating
+system written by Tim Paterson of Seattle Computer Products (1979).
+Microsoft bought it, renamed it to MS-DOS 1.0 and sold it to IBM (1980)
+to be delivered together with the first IBM PCs (1981).
+MS-DOS 2.0 (1983) was rather different, and designed to be somewhat
+Unix-like. It supported a hard disk (up to 16MB; up to 32MB for version 2.1).
+Version 3.3+ added the concept of partitions, where each partition is
+at most 32MB. (Compaq DOS 3.31 relaxed this restriction.)
+Since version 4.0 partitions can be 512 MB.
+Version 5.0 supports partitions up to 2 GB.
+Several clones exist:
+<A HREF="http://www.drdos.com/">DR-DOS</A>
+(from Digital Research, later part of Novell and called NovellDOS or
+<A HREF="http://support.novell.com/products/ndos7/">NDOS</A>,
+then owned by Caldera and called
+<A HREF="ftp://ftp.lineo.com/pub/drdos/OpenDOS.701/">OpenDOS</A>,
+then by its subsidiary Lineo who named it back to DR-DOS.
+See 
+<A HREF="http://www.drdos.com/">http://www.drdos.com/</A>),
+<A HREF="http://www-4.ibm.com/software/os/dos/">PC-DOS</A>
+(from IBM),
+<A HREF="http://www.freedos.org/">FreeDOS</A>, ...
+See 
+<A HREF="http://www.powerload.fsnet.co.uk/o_dos.htm">Types of DOS</A>.
+See comp.os.msdos.* and
+<A HREF="http://support.microsoft.com/support/kb/articles/q69/9/12.asp">MSDOS partitioning summary</A>.
+The type <B>01</B> is for partitions up to 15 MB.
+<P>
+<DT><B>02  XENIX root</B><DD><P>
+<P>
+<DT><B>03  XENIX /usr</B><DD><P>Xenix is an old port of Unix V7.
+Microsoft Xenix OS was announced August 1980, a portable and commercial
+version of the Unix operating system for the Intel 8086, Zilog Z8000,
+Motorola M68000 and Digital Equipment PDP-11.
+Microsoft introduces XENIX 3.0 in April 1983.
+(
+<A HREF="http://www.islandnet.com/~kpolsson/comphist/comp1977.htm">Timeline of Microcomputers</A>)
+SCO delivered its first Xenix for 8088/8086 in 1983.
+See comp.unix.xenix.sco.
+<P>
+<DT><B>04  DOS 3.0+ 16-bit FAT (up to 32M)</B><DD><P>Matthias Paul writes: Some old DOS versions have had a bug which requires this
+partition to be located in the 1st physical 32 MB of the hard disk, hence
+for compatibility with these old issues, partitions located elsewhere
+should better be assigned the ID FAT16B (06h).
+<P>
+<DT><B>05  DOS 3.3+ Extended Partition</B><DD><P>Supports at most 8.4 GB disks: with type <B>05</B> DOS/Windows will not use
+the extended BIOS call, even if it is available. See type <B>0f</B> below.
+Using type <B>05</B> for extended partitions beyond 8 GB may lead
+to data corruption with MSDOS.
+<P>An extended partition is a box containing a linked list of logical
+partitions. This chain (linked list) can have arbitrary length, but
+some FDISK versions refuse to make more logical partitions than there
+are drive letters available (e.g. MS-DOS LASTDRIVE=26 is good for at
+most 24 disk partitions; Novell DOS 7+ allows LASTDRIVE=32).
+<P>
+<DT><B>06  DOS 3.31+ 16-bit FAT (over 32M)</B><DD><P>Partitions, or at least the FAT16 filesystems created on them,
+are at most 2 GB for DOS and Windows 95/98 (at most 65536 clusters,
+each at most 32 KB).
+Windows NT can create up to 4 GB FAT16 filesystems (using 64 KB clusters),
+but these cause problems for DOS and Windows 95/98.
+Note that VFAT is 16-bit FAT with long filenames; FAT32 is a different
+filesystem.
+<P>
+<DT><B>07  OS/2 IFS (e.g., HPFS)</B><DD><P>IFS = Installable File System. The best known example is HPFS.
+OS/2 will only look at partitions with ID 7 for any installed
+IFS (that's why the EXT2.IFS packet includes a special "Linux
+partition filter" device driver to fool OS/2 into thinking Linux
+partitions have ID 07). (Kai Henningsen (<CODE>kai@khms.westfalen.de</CODE>))
+<P>
+<DT><B>07  Windows NT NTFS</B><DD><P>It is rumoured that the Windows NT boot partition must be primary,
+and within the first 2 GB of the disk.
+<P>
+<DT><B>07  Advanced Unix</B><DD><P>
+<P>
+<DT><B>07  QNX2.x pre-1988 (see below under IDs 4d-4f)</B><DD><P>
+<P>
+<DT><B>08  OS/2 (v1.0-1.3 only)</B><DD><P>
+<P>
+<DT><B>08  AIX boot partition</B><DD><P>
+<P>
+<DT><B>08  SplitDrive</B><DD><P>
+<P>
+<DT><B>08  Commodore DOS</B><DD><P>Matthias Paul writes: "This indicates a Commodore MS-DOS 3.x
+<A HREF="partition_types-2.html#logsectfat">logically sectored FAT</A> partition."
+<P>
+<DT><B>08  DELL partition spanning multiple drives</B><DD><P>
+<P>
+<DT><B>08  QNX 1.x and 2.x ("qny")</B><DD><P>(according to
+<A HREF="http://www.qnx.com/literature/qnx_sysarch/fsys.html#RAWVOLUMES">QNX Partitions</A>)
+<P>
+<DT><B>09  AIX data partition</B><DD><P>Some reports interchange AIX boot &amp; data.
+AIX is IBM's version of Unix. See comp.unix.aix.
+<P>
+<DT><B>09  Coherent filesystem</B><DD><P>Coherent was a UNIX-type OS for the 286-386-486, marketed by
+Mark Williams Company led by Bob Swartz, renowned for its good
+documentation. It was introduced in 1980 and died 1 Feb 1995.
+The last versions are V3.2 for 286-386-486 and V4.0
+(May 1992, using protected mode) for 386-486 only.
+It sold for $99 a copy, and the FAQ says that 40000 copies have been sold.
+See comp.os.coherent and
+<A HREF="http://personales.mundivia.es/varel/coherent/">this page</A>.
+A Coherent partition has to be primary.
+<P>
+<DT><B>09  QNX 1.x and 2.x ("qnz")</B><DD><P>(according to
+<A HREF="http://www.qnx.com/literature/qnx_sysarch/fsys.html#RAWVOLUMES">QNX Partitions</A>)
+<P>
+<DT><B>0a  OS/2 Boot Manager</B><DD><P>OS/2 is the operating system designed by Microsoft and IBM to be
+the successor of MS-DOS. Dropped by Microsoft. See comp.os.os2.
+Windows 2000 actively tries to destroy OS/2 Boot Manager.
+See 
+<A HREF="partition_types-2.html#w2kandos2bm">below</A>.
+<P>
+<DT><B>0a  Coherent swap partition</B><DD><P>
+<P>
+<DT><B>0a  OPUS</B><DD><P>Open Parallel Unisys Server.
+See 
+<A HREF="http://www.unisys.com/">Unisys</A>.
+<P>
+<DT><B>0b  WIN95 OSR2 FAT32</B><DD><P>Partitions up to 2047GB. See 
+<A HREF="http://support.microsoft.com/support/msdn/sdk/platforms/doc/sdk/win32/95guide/src/fat32ovr_4.asp">Partition Types</A><P>
+<DT><B>0c  WIN95 OSR2 FAT32, LBA-mapped</B><DD><P>Extended-INT13 equivalent of <B>0b</B>.
+<P>
+<DT><B>0e  WIN95: DOS 16-bit FAT, LBA-mapped</B><DD><P>
+<P>
+<DT><B>0f  WIN95: Extended partition, LBA-mapped</B><DD><P>Windows 95 uses <B>0e</B> and <B>0f</B> as the extended-INT13 equivalents
+of <B>06</B> and <B>05</B>.
+For the problems this causes, see
+<A HREF="http://www.firmware.com/pb4ts/w95fdisk.htm">Windows 95 fdisk problems</A> and
+<A HREF="http://support.microsoft.com/support/kb/peropsys/win95/q148821.asp">Possible data loss with LBA and INT13 extensions</A>.
+(Especially when going back and forth between MSDOS and Windows 95,
+strange things may happen with a type <B>0e</B> or <B>0f</B> partition.)
+Windows NT does not recognize the four W95 types <B>0b</B>, <B>0c</B>,
+<B>0e</B>, <B>0f</B>
+(
+<A HREF="http://support.microsoft.com/support/kb/articles/q151/4/14.asp">Win95 Partition Types Not Recognized by Windows NT</A>).
+DRDOS 7.03 does not support this type (but DRDOS 7.04 does).
+<P>
+<DT><B>10  OPUS (?)</B><DD><P>Maybe decimal, for type <B>0a</B>.
+<P>
+<DT><B>11  Hidden DOS 12-bit FAT</B><DD><P>When it boots a DOS partition, OS/2 Boot Manager will hide
+all primary DOS partitions except the one that is booted,
+by changing its ID: <B>01</B>, <B>04</B>, <B>06</B> becomes
+<B>11</B>, <B>14</B>, <B>16</B>. Also <B>07</B> becomes <B>17</B>.
+<P>
+<DT><B>11  Leading Edge DOS 3.x
+<A HREF="partition_types-2.html#logsectfat">logically sectored FAT</A></B><DD><P>(According to Matthias Paul.)
+<P>
+<DT><B>12  Configuration/diagnostics partition</B><DD><P>ID 12 (decimal 18) is used by Compaq for their configuration utility
+partition.  It is a FAT-compatible partition (about 6 MB) that boots
+into their utilities, and can be added to a LILO menu as if it were MS-DOS.
+(David C. Niemi)
+Stephen Collins reports a 12 MB partition with ID 12 on a Compaq 7330T.
+Tigran A. Aivazian reports a 40 MB partition with ID 12 on a
+64 MB Compaq Proliant 1600.
+ID 12 is used by the Compaq Contura to denote its hibernation partition.
+(dan@fch.wimsey.bc.ca)
+<P>NCR has used ID 0x12 MS-DOS partitions for diagnostics and
+firmware support on their WorldMark systems since the mid-90s.
+DataLight's ROM-DOS has replaced MS-DOS on more recent systems.
+Partition sizes were once 72M (MS-DOS) but are now 40M (ROM-DOS).
+<P>Intel has begun offering ROM-DOS based "Service Partition" support
+on many OEM systems. This support initially used ID 0x98 but has
+recently changed to ID 0x12. Intel provides their own support for
+this partition in the form of a System Resource CD. Partition size
+has remained constant at 40M. See e.g.
+<A HREF="www.km-elba.cz/pdf/sds2.pdf">sds2.pdf</A>.
+(Chuck Rouillard)
+<P>
+<DT><B>14  Hidden DOS 16-bit FAT &lt;32M</B><DD><P>(Ralf Brown's interrupt list adds: `ID 14 resulted from using Novell
+DOS 7.0 FDISK to delete Linux Native partition')
+<P>
+<DT><B>14  AST DOS with 
+<A HREF="partition_types-2.html#logsectfat">logically sectored FAT</A></B><DD><P>AST MS-DOS 3.x was an OEM version supporting 8 instead of the usual 4
+partition entries in the MBR. These special MBRs can be detected
+by another signature in the MBR stored in front of the partition table.
+<P>
+<DT><B>16  Hidden DOS 16-bit FAT &gt;=32M</B><DD><P>
+<P>
+<DT><B>17  Hidden IFS (e.g., HPFS)</B><DD><P>
+<P>
+<DT><B>18  AST SmartSleep Partition</B><DD><P>Ascentia laptops have a `Zero Volt Suspend Partition'
+or `SmartSleep Partition' of size 2MB+memory size.
+See 
+<A HREF="http://www.ast.com/">AST</A>.
+Ralf Brown calls this the "AST Windows swapfile".
+<P>
+<DT><B>19  Unused</B><DD><P>Claimed for Willowtech Photon coS (completely optimized system)
+by Willow Schlanger <CODE>willow@dezine.net</CODE>. See dejanews.
+<P>
+<DT><B>1b  Hidden WIN95 OSR2 FAT32</B><DD><P>
+<P>
+<DT><B>1c  Hidden WIN95 OSR2 FAT32, LBA-mapped</B><DD><P>
+<P>
+<DT><B>1e  Hidden WIN95 16-bit FAT, LBA-mapped</B><DD><P>
+<P>
+<DT><B>20  Unused</B><DD><P>Rumoured to be used by Willowsoft Overture File System (OFS1),
+if there is such a thing.
+<P>
+<DT><B>21  Reserved</B><DD><P>(according to 
+<A HREF="http://www.delorie.com/djgpp/doc/rbinter/it/49/5.html">delorie</A>). And 
+<A HREF="http://www.powerquest.com/support/primus/id233.html">Powerquest</A>
+writes `Officially listed as reserved (HP Volume Expansion,
+SpeedStor variant)'. See also ID <B>a1</B>.)
+<P>
+<DT><B>21  Unused</B><DD><P>Claimed for FSo2 (Oxygen File System) by Dave Poirier
+(<CODE>ekstazya@sprint.ca</CODE>).
+See dejanews.
+<P>
+<DT><B>22  Unused</B><DD><P>Claimed for Oxygen Extended Partition Table by <CODE>ekstazya@sprint.ca</CODE>.
+See dejanews.
+<P>
+<DT><B>23  Reserved</B><DD><P>
+<P>
+<DT><B>24  NEC DOS 3.x</B><DD><P>This is NEC MS-DOS 3.30 
+<A HREF="partition_types-2.html#logsectfat">logically sectored FAT</A>.
+Similar to type <B>14</B> above, the MBR could have up to 8
+partition entries.
+<P>
+<DT><B>26  Reserved</B><DD><P>
+<P>
+<DT><B>2a  AtheOS File System (AFS)</B><DD><P>AtheOS is an open source operating system written by Kurt Skauen.
+It is dead now - for a single page, see
+<A HREF="http://www.atheos.cx/">www.atheos.cx</A> or
+<A HREF="http://sourceforge.net/projects/atheos/">sourceforge</A>.
+For the history, see
+<A HREF="http://en.wikipedia.org/wiki/AtheOS">wikipedia</A>.
+When progress seemed to stop, the project forked and the
+<A HREF="http://www.syllable.org/">Syllable OS</A>
+was started by Kristian van der Vliet (2002). See also
+<A HREF="http://en.wikipedia.org/wiki/Syllable_%28operating_system%29">wikipedia</A>.
+It uses the same filesystem, AthFS or AFS, an extension of BeFS, the
+filesystem of BeOS. There is an attempt at a Linux driver at
+<A HREF="http://sourceforge.net/projects/athfs/">sourceforge</A>.
+<P>
+<DT><B>2b SyllableSecure (SylStor)</B><DD><P>A variation on AthFS is 
+<A HREF="http://wiki.isaksson.tk/cgi-bin/zwiki.pl?id=RFCs/Access_Control_Lists/SylStor&amp;sid=">Sylstor</A>,
+with added security.
+<P>
+<DT><B>31  Reserved</B><DD><P>
+<P>
+<DT><B>32  NOS</B><DD><P>Simon Butcher (<CODE>simonb@alien.net.au</CODE>) writes:
+This type is being used by an operating system being developed
+by Alien Internet Services in Melbourne Australia called NOS.
+The id '32' was chosen not only because it's one of the few
+that are left available, but 32k is the size of the
+EEPROM the OS was originally targetted for.
+<P>
+<DT><B>33  Reserved</B><DD><P>
+<P>
+<DT><B>34  Reserved</B><DD><P>
+<P>
+<DT><B>35  JFS on OS/2 or eCS </B><DD><P>David van Enckevort (<CODE>david@mensys.nl</CODE>) writes:
+<I>Type 0x35 is used by OS/2 Warp Server for e-Business,
+OS/2 Convenience Pack (aka version 4.5) and
+<A HREF="http://www.ecomstation.com">eComStation</A>
+(eCS, an OEM version of OS/2 Convenience Pack) for the OS/2 implementation
+of JFS (IBM AIX Journaling Filesystem).</I>
+Since JFS is a non-bootable file system, you cannot install eCS
+to a JFS partition.
+<P>
+<DT><B>36  Reserved</B><DD><P>
+<P>
+<DT><B>38  THEOS ver 3.2 2gb partition</B><DD><P>
+<A NAME="plan9label"></A> <P>
+<DT><B>39  Plan 9 partition</B><DD><P>
+<A HREF="http://plan9.bell-labs.com/plan9dist/index.html">Plan 9</A>
+is an operating system developed at Bell Labs for many architectures.
+Source is available. See comp.os.plan9.
+Originally Plan 9 used an unallocated portion at the end of the disk.
+Plan 9 3rd edition uses partitions of 
+<A HREF="http://plan9.bell-labs.com/magic/man2html/8/prep">type 0x39</A>, subdivided into subpartitions described in
+the Plan 9 partition table in the second sector of the partition.
+<P>
+<DT><B>39  THEOS ver 4 spanned partition</B><DD><P>
+<P>
+<DT><B>3a  THEOS ver 4 4gb partition</B><DD><P>
+<P>
+<DT><B>3b  THEOS ver 4 extended partition</B><DD><P>THEOS is a multiuser multitasking OS for PCs founded by Timothy Williams
+in 1983. Current release 4.0, previous release 3.2. They say about
+themselves: `THEOS with over 150,000 customers and over 1,000,000 users
+around the world brings a mainframe look and feel to computers
+without the complexity and high maintenance costs.
+Hundreds of applications exist with networking and Windows integration.'
+See 
+<A HREF="http://www.theos-software.com/">the Theos home page</A><P>
+<DT><B>3c  PartitionMagic recovery partition</B><DD><P>Cody Batt (<CODE>codyb@powerquest.com</CODE>) writes:
+When a 
+<A HREF="http://www.powerquest.com">PowerQuest</A>
+product like
+<A HREF="http://www.powerquest.com/en/partitionmagic/index.html">PartitionMagic</A> or
+<A HREF="http://www.powerquest.com/en/driveimage/index.html">Drive Image</A> makes changes to the disk,
+it first changes the type flag to 0x3C so that the OS won't try to
+modify it etc.  At the end of the process, it gets changed back to
+what it was at first.  So, the only time you should see a 0x3C type flag
+is if the process was interrupted somehow (power outage, user reboot etc).
+If you change it back manually with a partition table editor or something
+then most of the time everything is okay.
+<P>
+<DT><B>3d  Hidden NetWare</B><DD><P>According to 
+<A HREF="http://www.powerquest.com/support/primus/id233.html">Powerquest</A>.
+<P>
+<DT><B>40  Venix 80286</B><DD><P>A very old Unix-like operating system for PCs.
+<P>
+<DT><B>41  Linux/MINIX (sharing disk with DRDOS)</B><DD><P>Very old FAQs recommended to use <B>41</B> etc instead of <B>81</B> etc
+on a disk shared with DRDOS because DRDOS allegedly disregards
+the high order bit of the partition type.
+These types are not used anymore today.
+Roger Wolff (<CODE>R.E.Wolff@BitWizard.nl</CODE>) confirms:
+<I>I remember installing DRDOS, and getting a few extra drive letters
+that I didn't expect. Turns out those are my Minix partitions.
+It is looking at them as a FAT filesystem. Looks like a big mess.
+After finding no other possibility than to just "not touch those drive
+letters" I continue with the install. After a few minutes DRDOS
+automatically decides to write a copy of the FAT into a file on one
+of my MINIX partitions. Bye bye Minix partition.</I>
+<P>
+<DT><B>41  Personal RISC Boot</B><DD><P>
+<P>
+<DT><B>41  PPC PReP (Power PC Reference Platform) Boot</B><DD><P>
+<P>
+<DT><B>42  Linux swap (sharing disk with DRDOS)</B><DD><P>
+<P>
+<DT><B>42  SFS (Secure Filesystem)</B><DD><P>SFS is an encrypted filesystem driver for DOS on 386+ PCs, written
+by Peter Gutmann.
+<P>
+<DT><B>42  Windows 2000 dynamic extended partition marker</B><DD><P>If a partition table entry of type 0x42 is present in the legacy
+partition table, then W2K ignores the legacy partition table
+and uses a proprietary partition table and a proprietary partitioning
+scheme (LDM or DDM). As the Microsoft KnowledgeBase writes:
+<I>Pure dynamic disks (those not containing any
+hard-linked partitions) have only a single
+partition table entry (type <B>42</B>) to define the
+entire disk. Dynamic disks store their volume
+configuration in a database located in a 1-MB
+private region at the end of each dynamic disk.</I>
+<P>
+<DT><B>43  Linux native (sharing disk with DRDOS)</B><DD><P>
+<P>
+<DT><B>44  GoBack partition</B><DD><P>
+<A HREF="http://www.goback.com">GoBack</A>
+is a utility that records changes made to the disk,
+allowing you to view or go back to some earlier state.
+It takes over disk I/O like a Disk Manager would,
+and stores its logs in its own partition.
+<P>
+<DT><B>45  Boot-US boot manager</B><DD><P>Ulrich Straub (<CODE>ustraub@boot-us.de</CODE>) writes:
+The boot manager can be installed to MBR, a separate primary partition or
+diskette. When installed to a primary partition this partition gets
+the ID 45h. This partition does not contain a file system, it contains
+only the boot manager and occupies a single cylinder (below 8 GB).
+See 
+<A HREF="http://www.boot-us.com">www.boot-us.com</A>.
+<P>
+<DT><B>45  Priam</B><DD><P>According to 
+<A HREF="http://www.powerquest.com/support/primus/id233.html">Powerquest</A>.
+See also ID 5c.
+<P>
+<DT><B>45  EUMEL/Elan </B><DD><P>
+<P>
+<DT><B>46  EUMEL/Elan </B><DD><P>
+<P>
+<DT><B>47  EUMEL/Elan </B><DD><P>
+<P>
+<DT><B>48  EUMEL/Elan </B><DD><P>Eumel, and later Ergos L3, are multiuser multitasking systems
+developed by Jochen Liedtke at GMD.
+It was used at German schools for the computer science education.
+(
+<A HREF="http://os.inf.tu-dresden.de/L4/l3elan.html">Elan</A> was the programming language used.)
+<P>
+<DT><B>4a  Mark Aitchison's ALFS/THIN lightweight filesystem for DOS</B><DD><P>According to 
+<A HREF="http://www.powerquest.com/support/primus/id233.html">Powerquest</A>.
+<P>
+<DT><B>4a  AdaOS Aquila (Withdrawn)</B><DD><P>Nick Roberts at some point in time announced that he would use <B>4a</B>
+for Aquila, but now plans to use the AODPS <B>7f</B>.
+<P>
+<DT><B>4c  Oberon partition</B><DD><P>See 
+<A HREF="http://www.oberon.ethz.ch/betadocu.html#PM">http://www.oberon.ethz.ch/betadocu.html</A>.
+This partition type (decimal 76) is used for the Aos filesystem.
+Type <B>4f</B> is used for the Nat filesystem.
+One may have several partitions of this type.
+<P>
+<DT><B>4d  QNX4.x</B><DD><P>
+<P>
+<DT><B>4e  QNX4.x 2nd part</B><DD><P>
+<P>
+<DT><B>4f  QNX4.x 3rd part</B><DD><P>QNX is a POSIX-certified, microkernel, distributed, fault-tolerant
+OS for the 386 and up, including support for the 386EX in embedded
+applications.  For info see
+<A HREF="http://www.qnx.com/">http://www.qnx.com/</A> or
+<A HREF="ftp://ftp.qnx.com">ftp.qnx.com</A>.
+See also comp.os.qnx.
+ID 7 is outdated - QNX2 used <B>07</B>, QNX4.x uses 77,
+and optionally 78 and 79 for additional QNX partitions
+on a single drive.
+These values 77, 78, 79 seem to be the decimal values in view of
+<A HREF="http://www.qnx.com/literature/qnx_sysarch/fsys.html#RAWVOLUMES">QNX Partitions</A> and
+<A HREF="http://www.qnx.com/literature/nto_sysarch/fsys.html">Neutrino filesystems</A>.
+<P>
+<DT><B>4f  Oberon partition</B><DD><P>See 
+<A HREF="http://www.oberon.ethz.ch/native/">http://www.oberon.ethz.ch/native/</A>.
+(The partition ID is given in 
+<A HREF="http://www.dejanews.com/getdoc.xp?AN=384857457">this posting</A> in comp.lang.oberon. The
+<A HREF="http://www.oberon.ethz.ch/install.html#ID1">install instructions</A> say that at most one partition
+can have this type (decimal 79), and that one needs a different type,
+like <B>50</B> (decimal 80) for a second Oberon system. Moreover, that users
+of System Commander must avoid types containing the 0x10 bit.)
+See also type <B>4c</B> (decimal 76) above.
+<P>
+<DT><B>50  OnTrack Disk Manager (older versions) RO</B><DD><P>Disk Manager is a program of OnTrack, to enable people to use
+IDE disks that are larger than 504MB under DOS.
+For info see 
+<A HREF="http://www.ontrack.com">http://www.ontrack.com</A>.
+Linux kernel versions older than 1.3.14 do not coexist with DM.
+<P>
+<DT><B>50  Lynx RTOS</B><DD><P>"Beginning with version 3.0, LynxOS gives users the ability to
+place up to 14 partitions of 2 GB each on both SCSI and IDE drives,
+for a total of up to 28 GB of file system space."
+See 
+<A HREF="http://www.lynuxworks.com/">www.lynuxworks.com</A>.
+<P>
+<DT><B>50  Native Oberon (alt)</B><DD><P>
+<P>
+<DT><B>51  OnTrack Disk Manager RW (DM6 Aux1)</B><DD><P>
+<P>
+<DT><B>51  Novell</B><DD><P>
+<P>
+<DT><B>52  CP/M</B><DD><P>
+<P>
+<DT><B>52  Microport SysV/AT</B><DD><P>
+<P>
+<DT><B>53  Disk Manager 6.0 Aux3</B><DD><P>
+<P>
+<DT><B>54  Disk Manager 6.0 Dynamic Drive Overlay (DDO)</B><DD><P>
+<P>
+<DT><B>55  EZ-Drive</B><DD><P>EZ-Drive is another disk manager (by MicroHouse, 1992).
+Linux kernel versions older than 1.3.29 do not coexist with EZD.
+(On 990323 MicroHouse International was acquired by EarthWeb;
+MicroHouse Solutions split off and changed its name into
+<A HREF="http://www.storagesoft.com/">StorageSoft</A>.
+MicroHouse Development split off and changed its name into
+<A HREF="http://www.imagecast.com">ImageCast</A>.
+It is StorageSoft that now markets EZDrive and DrivePro.)
+<P>
+<DT><B>56  Golden Bow VFeature Partitioned Volume.</B><DD><P>This is a Non-Standard DOS Volume.
+(Disk Manager type utility software)
+<P>
+<DT><B>56  DM converted to EZ-BIOS</B><DD><P>
+<DT><B>56  AT&amp;T MS-DOS 3.x
+<A HREF="partition_types-2.html#logsectfat">logically sectored FAT</A>.</B><DD><P>
+<DT><B>57  DrivePro</B><DD><P>Doug Anderson (<CODE>DougA@ImageCast.com</CODE>), with his brother Steve cofounder
+of MicroHouse (1989), writes: We actually use three different partition types:
+$55: `StorageSoft EZ-BIOS' - EZ-Drive, Maxtor, MaxBlast, and DriveGuide install
+this type if the drive needs to be handled by our INT13 redirector.
+$56: `StorageSoft EZ-BIOS DM Conversion' - Same as $55 but used
+when a DiskManager "skewed" partition has been converted to EZ-BIOS.
+$57: `StorageSoft DrivePro' - Used by our DrivePro product.
+<P>
+<DT><B>57  VNDI Partition</B><DD><P>(According to <CODE>disk.c</CODE> in the Netware source.
+Not in actual use.)
+<P>
+<DT><B>5c  Priam EDisk</B><DD><P>Priam EDisk Partitioned Volume.
+This is a Non-Standard DOS Volume.
+(Disk Manager type utility software) 
+<P>
+<DT><B>61  SpeedStor</B><DD><P>Storage Dimensions SpeedStor Volume.
+This is a Non-Standard DOS Volume.
+(Disk Manager type utility software) 
+<P>
+<DT><B>63  Unix System V (SCO, ISC Unix, UnixWare, ...), Mach, GNU Hurd</B><DD><P>A Unixware 7.1 partition must start below the 4GB limit.
+(If the /stand/stage3.blm is located past this limit, booting
+will fail with "FATAL BOOT ERROR: Can't load stage3".)
+<P>
+<DT><B>64  PC-ARMOUR protected partition</B><DD><P>Used by PC-ARMOUR, a disk protection by Dr. A.Solomon,
+intended to keep the disk inaccessible until the right
+password was given (and then an int13 hook was loaded
+above top-of-memory that showed c/h/s 0/0/2, with a copy
+of the real partition table, when 0/0/1 was requested).
+(<CODE>loekw@worldonline.nl</CODE>)
+<P>
+<DT><B>64  Novell Netware 286, 2.xx</B><DD><P>
+<P>
+<DT><B>65  Novell Netware 386, 3.xx or 4.xx</B><DD><P>(Novell Netware used to be the main Network Operating System available.
+Netware 68 or S-Net (1983) was for a Motorola 68000,
+Netware 86 for an Intel 8086 or 8088.
+Netware 286 was for an Intel 80286 and existed in various
+versions that were later merged to Netware 2.2.
+Netware 386 was a rewrite in C for the Intel 386,
+later renamed 3.x - it existed at least in versions
+3.0, 3.1, 3.10, 3.11, 3.12. Its successor Netware 4.xx had
+versions 4.00, 4.01, 4.02, 4.10, 4.11. Then came Intranetware.)
+Netware &gt;= 3.0 uses one partition per drive. It allocates
+logical Volumes inside these partitions. The volumes can be
+split over several drives. The filesystem used is called
+"Turbo FAT"; it only very vaguely resembles the DOS FAT file system.
+(Kai Henningsen (<CODE>kai@khms.westfalen.de</CODE>))
+<P>
+<DT><B>66  Novell Netware SMS Partition</B><DD><P>According to <CODE>disk.c</CODE> in the Netware source.
+SMS: Storage Management Services. No longer used.
+<P>
+<DT><B>67  Novell</B><DD><P>Roman Gruber reports: this code has frozen my version of norton disk-editor
+(so I think it has to be something special).
+Jeff Merkey says: 67 is for Wolf Mountain.
+<P>
+<DT><B>68  Novell</B><DD><P>
+<P>
+<DT><B>69  Novell Netware 5+, Novell Netware NSS Partition</B><DD><P>According to <CODE>disk.c</CODE> in the Netware source.
+NSS = Novell Storage Services.
+<P>
+<DT><B>6e  ??</B><DD><P>
+<A HREF="http://www.linuxsa.org.au/mailing-list/1999-03/108.html">Reported once.</A><P>
+<DT><B>70  DiskSecure Multi-Boot</B><DD><P>
+<P>
+<DT><B>71  Reserved</B><DD><P>
+<P>
+<DT><B>73  Reserved</B><DD><P>
+<P>
+<DT><B>74  Reserved</B><DD><P>
+<P>
+<DT><B>74  Scramdisk partition</B><DD><P>
+<A HREF="http://www.scramdisk.clara.net">Scramdisk</A>
+is freeware and shareware disk encryption software.
+It supports container files, dedicated partitions (type 0x74) and
+disks hidden in WAV audio files.
+(Shaun Hollingworth (<CODE>moatlane@btconnect.com</CODE>))
+<P>
+<DT><B>75  IBM PC/IX</B><DD><P>
+<P>
+<DT><B>76  Reserved</B><DD><P>
+<P>
+<DT><B>77  M2FS/M2CS partition</B><DD><P>Jeff Merkey writes: 77 is one we are using internally for M2FS/M2CS partitions.
+<P>
+<DT><B>77  VNDI Partition</B><DD><P>(According to <CODE>disk.c</CODE> in the Netware source. Not in actual use.)
+<P>
+<DT><B>78  XOSL FS</B><DD><P>XOSL Bootloader filesystem, see 
+<A HREF="http://www.xosl.org/">www.xosl.org</A>.
+<P>
+<DT><B>7e  Unused</B><DD><P>Claimed for F.I.X. by <CODE>gruberr@kapsch.net</CODE>. See dejanews.
+<P>
+<DT><B>7f  Unused</B><DD><P>Proposed for the 
+<A HREF="http://www.adaos.net/aodps/aodps.html">Alt-OS-Development Partition Standard</A>.
+<P>
+<DT><B>80  MINIX until 1.4a</B><DD><P>
+<P>
+<DT><B>81  MINIX since 1.4b, early Linux</B><DD><P>Minix is a Unix-like operating system written by Andy Tanenbaum
+and students at the Vrije Universiteit, Amsterdam, around 1989-1991.
+It runs on PCs (8086 and up), MacIntosh, Atari, Amiga, Sparc.
+Ref: Operating Systems: Design and Implementation, Andrew S. Tanenbaum,
+Prentice-Hall, ISBN 0-13-637406-9
+Since 950601 Minix is freely available - site:
+<A HREF="ftp://ftp.cs.vu.nl/pub/minix">ftp.cs.vu.nl</A>.
+See also comp.os.minix.
+<P>
+<DT><B>81  Mitac disk manager</B><DD><P>
+<P>
+<DT><B>82  Prime</B><DD><P>
+<P>
+<DT><B>82  Solaris x86</B><DD><P>Solaris creates a single partition with id 0x82, then uses Sun disk labels 
+within the partition to split it further.
+(Brandon S. Allbery (<CODE>allbery@kf8nh.apk.net</CODE>))
+Starting from 2005, newly installed systems will use 0xbf.
+<P>
+<DT><B>82  Linux swap</B><DD><P>
+<P>
+<DT><B>83  Linux native partition</B><DD><P>Linux is a Unix-like operating system written by Linus Torvalds
+and many others on the internet since Fall 1991.
+It runs on PCs (386 and up) and a variety of other hardware.
+It is distributed under GPL.
+Software can be found numerous places, like ftp.funet.fi,
+metalab.unc.edu and tsx-11.mit.edu.
+See also comp.os.linux.* and
+<A HREF="http://www.linux.org/">http://www.linux.org/</A>.
+Various filesystem types like xiafs, ext2, ext3, reiserfs, etc.
+all use ID 83. Some systems mistakenly assume that 83 must mean ext2.
+<P>
+<DT><B>84  OS/2 hidden C: drive</B><DD><P>OS/2-renumbered type <B>04</B> partition.
+<P>
+<DT><B>84  Hibernation partition</B><DD><P>(following Appendix E of the Microsoft APM 1.1f specification).
+Reported for various laptop models.
+E.g., used on Dell Latitudes (with Dell BIOS) that use the MKS2D utility.
+APM 1.2 hibernation partitions can be used by Windows 98 or higher.
+<P>
+<DT><B>85  Linux extended partition</B><DD><P>
+<P>
+<DT><B>86  Old Linux RAID partition superblock</B><DD><P>See <B>fd</B>.
+<P>
+<DT><B>86  NTFS volume set</B><DD><P>Legacy Fault Tolerant FAT16 volume.
+Windows NT 4.0 or earlier will add 0x80 to the partition type
+for partitions that are part of a Fault Tolerant set (mirrored
+or in a RAID-5 volume). Thus, one gets types <B>86</B>, <B>87</B>,
+<B>8b</B>, <B>8c</B>. See also
+<A HREF="http://support.microsoft.com/support/kb/articles/q114/8/41.asp">Windows NT Boot Process and Hard Disk Constraints</A>.
+<P>
+<DT><B>87  NTFS volume set</B><DD><P>Legacy Fault Tolerant NTFS volume.
+HPFS Fault-Tolerant mirrored partition.
+<P>
+<DT><B>88  Linux plaintext partition table</B><DD><P>
+<P>
+<DT><B>8a  Linux Kernel Partition (used by AiR-BOOT)</B><DD><P>Martin Kiewitz (<CODE>KiWi@vision.fido.de</CODE>) writes:
+I'm currently writing a pretty nice boot-loader.
+For this I'm using Linux Boot Loader ID A0h, and partitition
+type 8Ah for the partition holding the kernel image.
+<P>
+<DT><B>8b  Legacy Fault Tolerant FAT32 volume</B><DD><P>
+<P>
+<DT><B>8c  Legacy Fault Tolerant FAT32 volume using BIOS extd INT 13h</B><DD><P>
+<P>
+<DT><B>8d  Free FDISK hidden Primary DOS FAT12 partitition</B><DD><P>
+<A HREF="http://www.23cc.com/free-fdisk/">Free FDISK</A> is the
+FDISK used by 
+<A HREF="http://www.freedos.org/">FreeDOS</A>.
+It hides types <B>01</B>, <B>04</B>, <B>05</B>, <B>06</B>,
+<B>0b</B>, <B>0c</B>, <B>0e</B>, <B>0f</B> by adding
+decimal 140 (0x8c).
+<P>
+<DT><B>8e  Linux Logical Volume Manager partition</B><DD><P>See 
+<A HREF="http://linux.msede.com/lvm/man/man2html.cgi?pvcreate:8">pvcreate(8)</A> as found under
+<A HREF="http://linux.msede.com/lvm">http://linux.msede.com/lvm</A>.
+(For a while this was 0xfe.)
+<P>
+<DT><B>90  Free FDISK hidden Primary DOS FAT16 partitition</B><DD><P>
+<P>
+<DT><B>91  Free FDISK hidden DOS extended partitition</B><DD><P>
+<P>
+<DT><B>92  Free FDISK hidden Primary DOS large FAT16 partitition</B><DD><P>
+<P>
+<DT><B>93  Hidden Linux native partition</B><DD><P>
+<P>
+<DT><B>93  Amoeba</B><DD><P>
+<P>
+<DT><B>94  Amoeba bad block table</B><DD><P>Amoeba is a distributed operating system written by Andy Tanenbaum,
+together with Frans Kaashoek, Sape Mullender, Robert van Renesse
+and others since 1981.
+It runs on PCs (386 and up), Sun3, Sparc, 68030.
+It is free for universities for research/teaching purposes.
+For information, see
+<A HREF="ftp://ftp.cs.vu.nl/pub/amoeba">ftp.cs.vu.nl</A>.
+<P>
+<DT><B>95  MIT EXOPC native partitions</B><DD><P>
+<A HREF="http://www.pdos.lcs.mit.edu/exo/">http://www.pdos.lcs.mit.edu/exo/</A>
+(Andrew Purtell, <CODE>Andrew_Purtell@NAI.com</CODE>)
+<P>
+<DT><B>97  Free FDISK hidden Primary DOS FAT32 partitition</B><DD><P>
+<P>
+<DT><B>98  Free FDISK hidden Primary DOS FAT32 partitition (LBA)</B><DD><P>
+<P>
+<DT><B>98  Datalight ROM-DOS Super-Boot Partition</B><DD><P>See 
+<A HREF="http://www.datalight.com/rom-dos-v.htm">www.datalight.com</A>, and type <B>12</B> above.
+<P>
+<DT><B>99  DCE376 logical drive</B><DD><P>No, it's not a hibernation partition; it's closest to a DOS extended
+partition. It's used by the Mylex DCE376 EISA SCSI adaptor for partitions
+which are beyond the 1024th cylinder of a drive. I've only seen references
+to type <B>99</B> with the DCE376. 
+(Christian Carey, <CODE>ccarey@CapAccess.ORG</CODE>)
+<P>
+<DT><B>9a  Free FDISK hidden Primary DOS FAT16 partitition (LBA)</B><DD><P>
+<P>
+<DT><B>9b  Free FDISK hidden DOS extended partitition (LBA)</B><DD><P>
+<P>
+<DT><B>9f  BSD/OS</B><DD><P>Current sysid for BSDI. The types <B>b7</B> and <B>b8</B> given below
+are for an older version of the filesystem used in pre-v3.0 versions of the OS.
+These days the system is v4.1 BSD/OS.
+BSDI reports 2.1 million installed servers and 12 million licenses sold.
+See 
+<A HREF="http://www.bsdi.com/">http://www.bsdi.com/</A>.
+<P>
+<DT><B>a0  Laptop hibernation partition</B><DD><P>Reported for various laptops like IBM Thinkpad, Phoenix NoteBIOS, Toshiba
+under names like zero-volt suspend partition, suspend-to-disk partition,
+save-to-disk partition, power-management partition, hibernation partition.
+Usually at the start or end of the disk area.
+(This is also the number used by Sony on the VAIO. Recent VAIOs
+can also hibernate to a file in the filesystem,
+the choice being made from the BIOS setup screen.)
+<P>
+<DT><B>a1  Laptop hibernation partition</B><DD><P>Reportedly used as "Save-to-Disk" partition on a NEC 6000H notebook.
+Types <B>a0</B> and <B>a1</B> are used on systems with Phoenix BIOS;
+the Phoenix PHDISK utility is used with these. 
+<P>
+<DT><B>a1  HP Volume Expansion (SpeedStor variant)</B><DD><P>IDs 21, a1, a3, a4, a6, b1, b3, b4, b6 are for HP Volume Expansion
+(SpeedStor variant). 
+<P>
+<DT><B>a3  HP Volume Expansion (SpeedStor variant)</B><DD><P>
+<P>
+<DT><B>a4  HP Volume Expansion (SpeedStor variant)</B><DD><P>
+<P>
+<DT><B>a5  BSD/386, 386BSD, NetBSD, FreeBSD</B><DD><P>386BSD is a Unix-like operating system, a port of 4.3BSD Net/2
+to the PC done by Bill Jolitz around 1991. When Jolitz seemed to
+stop development, an updated version was called FreeBSD (1992).
+The outcome of a Novell vs. UCB law suit was that Net/2 contained
+AT&amp;T code, and hence was not free, but that 4.4BSD-Lite was free.
+After that, FreeBSD and NetBSD were restructured, and FreeBSD 2.0
+and NetBSD 1.0 are based on 4.4BSD-Lite.
+FreeBSD runs on PCs. See
+<A HREF="http://www.freebsd.org/FreeBSD.html">http://www.freebsd.org/FreeBSD.html</A>.
+For NetBSD, see below - it changed partition type to <B>a9</B>.
+386BSD seems to be dead now. The kernel source is being published - see
+<A HREF="http://www.peer-to-peer.com/catalog/opsrc.html">Operating System Source Code Secrets</A> by Bill and Lynne Jolitz.
+See comp.os.386bsd.*.
+See 
+<A HREF="http://www.paranoia.com/~vax/boot.html">http://www.paranoia.com/~vax/boot.html</A> for NetBSD
+boot and partitioning info.
+<P>
+<DT><B>a6  OpenBSD</B><DD><P>OpenBSD, led by Theo de Raadt, split off from NetBSD.
+It tries to emphasize on security. See 
+<A HREF="http://www.openbsd.org/">http://www.openbsd.org/</A>.
+<P>
+<DT><B>a6  HP Volume Expansion (SpeedStor variant)</B><DD><P>
+<P>
+<DT><B>a7  NeXTStep</B><DD><P>Based on Mach 2.6 and features of Mach 3.0, is a true
+object-oriented operating system and user environment.
+See 
+<A HREF="http://www.next.com/">http://www.next.com/</A>.
+<P>
+<DT><B>a8  Mac OS-X</B><DD><P>Apple's OS-X (
+<A HREF="http://www.darwinfo.org/howto/intel.shtml">Darwin Intel</A>) uses this type for its filesystem partition
+(a UFS file system, in NeXT flavour, only differing from the *BSD formats
+in the first 8 KB). See also type <B>ab</B>.
+<P>
+<DT><B>a9  NetBSD</B><DD><P>NetBSD is one of the children of *BSD (see above).
+It runs on PCs and a variety of other hardware.
+Since 19-Feb-98 NetBSD uses <B>a9</B> instead of <B>a5</B>.
+See 
+<A HREF="http://www.netbsd.org/">http://www.netbsd.org/</A>.
+It is freely obtainable - see 
+<A HREF="http://www.netbsd.org/Sites/net.html">http://www.netbsd.org/Sites/net.html</A>.
+<P>
+<DT><B>aa  Olivetti Fat 12 1.44MB Service Partition</B><DD><P>Contains a bare DOS 6.22 and a utility to exchange types
+<B>06</B> and <B>aa</B> in the partition table. (<CODE>loekw@worldonline.nl</CODE>)
+<P>
+<DT><B>ab  Mac OS-X Boot partition</B><DD><P>Apple's OS-X (Darwin Intel) uses this type for its boot partition.
+The image (<CODE>/usr/standalone/i386/boot</CODE>) starts at sector 1.
+See also type <B>a8</B>.
+<P>
+<DT><B>ab  GO! partition</B><DD><P>Unused. Claimed by Stanislav Karchebny for his
+<A HREF="http://goos.sourceforge.net/">GO! OS</A>.
+<P>
+<DT><B>ae  ShagOS filesystem</B><DD><P>
+<DT><B>af  ShagOS swap partition</B><DD><P>Unused. Claimed by Frank Barrus for his
+<A HREF="http://www.csh.rit.edu/~shaggy/software.html">ShagOS</A>.
+<P>
+<DT><B>b0  BootStar Dummy</B><DD><P>The boot manager BootStar manages its own partition table,
+with up to 15 primary partitions. It fills unused entries in the
+MBR with BootStar Dummy values.
+See 
+<A HREF="http://www.star-tools.com/english/">www.star-tools.com</A>.
+If you use this, don't use a disk manager, do not put LILO in the MBR
+and do not use fdisk.
+<P>
+<DT><B>b1  HP Volume Expansion (SpeedStor variant)</B><DD><P>
+<P>
+<DT><B>b3  HP Volume Expansion (SpeedStor variant)</B><DD><P>
+<P>
+<DT><B>b4  HP Volume Expansion (SpeedStor variant)</B><DD><P>
+<P>
+<DT><B>b6  HP Volume Expansion (SpeedStor variant)</B><DD><P>
+<P>
+<DT><B>b6  Corrupted Windows NT mirror set (master), FAT16 file system</B><DD><P>
+<DT><B>b7  Corrupted Windows NT mirror set (master), NTFS file system</B><DD><P>
+<DT><B>b7  BSDI BSD/386 filesystem</B><DD><P>
+<P>
+<DT><B>b8  BSDI BSD/386 swap partition</B><DD><P>BSDI (Berkeley Software Design, Inc.) was founded by former CSRG
+(UCB Computer Systems Research Group) members.
+Their operating system, based on Net/2, was called BSD/386.
+After the USL (Unix System Laboratories, Inc./Novell Corp.) vs. BSDI
+lawsuit, new releases were based on BSD4.4-Lite.
+Now they are announcing BSD/OS V2.0.1. This is an operating for PCs
+(386 and up), boasting 3000 customers. (That was long ago. The current
+partition id is <B>9f</B>, see above.)
+<P>
+<DT><B>bb  Boot Wizard hidden</B><DD><P>(PTS) BootWizard 4.0 and its new version Acronis OS Selector 5.0
+use this id (i) when hiding partitions with types other than
+<B>01</B>, <B>04</B>, <B>06</B>, <B>07</B>, <B>0b</B>,
+<B>0c</B>, <B>0e</B>, and (ii) when creating a partition
+without file system.
+See 
+<A HREF="http://www.PhysTechSoft.com/en/ptsdos/">www.PhysTechSoft.com</A>. The boot software was purchased
+on 2001-01-05 by SWsoft. See 
+<A HREF="http://www.acronis.com/en/">www.acronis.com</A>.
+<P>
+<DT><B>be  Solaris 8 boot partition</B><DD><P>
+<P>
+<DT><B>bf  New Solaris x86 partition</B><DD><P>The old 0x82 id conflicted with Linux swap. New Solaris installations
+will use the id 0xbf. (Larry Lee <CODE>&lt;lclee@west.sun.com&gt;</CODE>)
+<P>
+<DT><B>c0  CTOS</B><DD><P>
+<P>
+<DT><B>c0  REAL/32 secure small partition</B><DD><P>See d0 below.
+<P>
+<DT><B>c0  NTFT Partition</B><DD><P>According to <CODE>disk.c</CODE> in the Netware source.
+<P>
+<DT><B>c0  DR-DOS/Novell DOS secured partition</B><DD><P>DR-DOS 7.02+ / OpenDOS 7.01 / Novell DOS 7 secured partition.
+<P>
+<DT><B>c1  DRDOS/secured (FAT-12)</B><DD><P>
+<P>
+<DT><B>c2  Unused</B><DD><P>According to 
+<A HREF="http://www.powerquest.com/support/primus/id233.html">Powerquest</A>
+IDs <B>c2</B>, <B>c3</B>, <B>c8</B>, <B>c9</B>, <B>ca</B>,
+<B>cd</B> are reserved for DR-DOS 7+.
+According to Matthias Paul <B>c2</B>, <B>c3</B>, <B>cd</B>
+are no longer reserved for DR-DOS.
+<P>
+<DT><B>c2  Hidden Linux</B><DD><P>
+<P>
+<DT><B>c3  Hidden Linux swap</B><DD><P>Benedict Chong (<CODE>bchong@blueskyinnovations.com</CODE>) writes:
+<A HREF="http://www.blueskyinnovations.com">BlueSky Innovations LLC</A> does a boot manager product
+called Power Boot and we use, in addition,
+0C2h and 0C3h for hidden Linux partitions (swap and ext2fs).
+See also ID c2.
+<P>
+<DT><B>c4  DRDOS/secured (FAT-16, &lt; 32M)</B><DD><P>
+<P>
+<DT><B>c5  DRDOS/secured (extended)</B><DD><P>This ID may also be used in obscure trickery:
+on a shared MS-DOS / DR-DOS machine with DR-DOS 6.0-7.03 (so that
+the DR_DOS does not understand type <B>0f</B> and the MS-DOS
+does not understand type <B>c5</B>) one may have two extended
+partitions, where each operating system sees only one.
+<P>
+<DT><B>c6  DRDOS/secured (FAT-16, &gt;= 32M)</B><DD><P>DR-DOS 6.0 and higher (NetWare PalmDOS 1.0, Novell DOS 7, OpenDOS 7.01,
+DR-DOS 7.02+) will add 0xc0 to the partition type for
+a LOGIN.EXE-secured partition (so that people cannot avoid
+the password check by booting from an MS-DOS floppy).
+Otherwise it seems that the types <B>c1</B>, <B>c4</B>, <B>c5</B>,
+<B>c6</B> and <B>d1</B>, <B>d4</B>, <B>d5</B>, <B>d6</B>
+are used precisely like <B>01</B>, <B>04</B>, <B>05</B>, <B>06</B>
+(but are accepted only when booting from disk).
+<P>
+<DT><B>c6  Windows NT corrupted FAT16 volume/stripe set</B><DD><P>NTFS will add 0xc0 to the partition type for disabled parts
+of a Fault Tolerant set. Thus, one gets types <B>c6</B>, <B>c7</B>.
+See also
+<A HREF="http://support.microsoft.com/support/kb/articles/q114/8/41.asp">Windows NT Boot Process and Hard Disk Constraints</A> and
+<A HREF="http://support.microsoft.com/support/kb/articles/q80/5/70.asp">Switching from DR-DOS 6.0 to MS-DOS 5.0</A>.
+<P>
+<DT><B>c7  Windows NT corrupted NTFS volume/stripe set</B><DD><P>
+<P>
+<DT><B>c7  Syrinx boot</B><DD><P>Primary partition only.
+<P>
+<DT><B>c8  Reserved for DR-DOS 8.0+</B><DD><P>
+<DT><B>c9  Reserved for DR-DOS 8.0+</B><DD><P>
+<DT><B>ca  Reserved for DR-DOS 8.0+</B><DD><P>
+<DT><B>cb  DR-DOS 7.04+ secured FAT32 (CHS)/</B><DD><P>
+<DT><B>cc  DR-DOS 7.04+ secured FAT32 (LBA)/</B><DD><P>
+<DT><B>cd  CTOS Memdump? </B><DD><P>
+<P>
+<DT><B>ce  DR-DOS 7.04+ FAT16X (LBA)/</B><DD><P>
+<DT><B>cf  DR-DOS 7.04+ secured EXT DOS (LBA)/</B><DD><P>
+<DT><B>d0  REAL/32 secure big partition</B><DD><P>REAL/32 is a continuation of DR Multiuser DOS.
+It supports FAT12, FAT16 and REAL/32 7.90 also supports FAT32.
+Andrew Freeman (<CODE>afreeman@imsltd.com</CODE>) writes:
+For partitions which have been marked as secure we use
+0xC0 and 0xD0 as partition markers (C0 &lt; 32mb, D0 &gt;= 32mb).
+REAL/32 is an advanced 32-bit multitasking &amp; multi-user
+MS-DOS &amp; Windows compatible operating system.
+Home page is 
+<A HREF="http://www.imsltd.com">www.imsltd.com</A>.
+<P>
+<DT><B>d0  Multiuser DOS secured partition</B><DD><P>This applies to the whole MDOS family range, Digital Research
+DR Multiuser DOS and Novell DR Multiuser DOS, as well as to
+Concurrent Controls Multiuser DOS, Datapaq Australasia System Manager 7,
+and IMS Multiuser DOS.
+<P>
+<DT><B>d1  Old Multiuser DOS secured FAT12</B><DD><P>
+<P>
+<DT><B>d4  Old Multiuser DOS secured FAT16 &lt;32M</B><DD><P>
+<P>
+<DT><B>d5  Old Multiuser DOS secured extended partition</B><DD><P>
+<P>
+<DT><B>d6  Old Multiuser DOS secured FAT16 &gt;=32M</B><DD><P>
+<DT><B>d8  CP/M-86</B><DD><P>
+<P>
+<DT><B>da  Non-FS Data</B><DD><P>Added on request of John Hardin (<CODE>johnh@aproposretail.com</CODE>).
+<P>
+<DT><B>db  Digital Research CP/M, Concurrent CP/M, Concurrent DOS</B><DD><P>
+<P>
+<DT><B>db  CTOS (Convergent Technologies OS -Unisys)</B><DD><P>
+<P>
+<DT><B>db  KDG Telemetry SCPU boot</B><DD><P>Mark Morgan Lloyd (<CODE>markMLl.in@telemetry.co.uk</CODE>) writes:
+<A HREF="http://www.telemetry.co.uk/">KDG Telemetry</A>
+uses type 0xdb to store a protected-mode binary image of the code
+to be run on a 'x86-based SCPU (Supervisory CPU) module from the DT800 range.
+<P>
+<DT><B>dd  Hidden CTOS Memdump? </B><DD><P>
+<P>
+<DT><B>de  Dell PowerEdge Server utilities (FAT fs)</B><DD><P>
+<P>
+<DT><B>df  DG/UX virtual disk manager partition</B><DD><P>Glenn Steen (<CODE>glenn.steen@ap1.se</CODE>) writes:
+When I made an old Aviion 2000 triple-boot (DOS, DG/UX and Linux)
+I saw that Linux fdisk reported the DG/UX virtual disk manager
+partition as type 0xdf.
+<P>
+<DT><B>df  BootIt EMBRM</B><DD><P>The boot manager BootIt manages its own partition table,
+with up to 255 primary partitions. See
+<A HREF="http://www.terabyteunlimited.com/oldsite/BOOTIT.HTM">www.terabyteunlimited.com</A>.
+If you use this, don't use a disk manager, do not put LILO in the MBR
+and do not use fdisk. Reference for the ID: BOOTIT.TXT.
+<P>
+<DT><B>e0  Reserved by 
+<A HREF="http://www.st.com">STMicroelectronics</A> for a filesystem called ST AVFS.</B><DD><P>
+<P>
+<DT><B>e1  DOS access or SpeedStor 12-bit FAT extended partition</B><DD><P>Kevin Cummings reports in alt.os.linux:
+it's a SSTOR partition on cylinders &gt; 1023.
+<P>
+<DT><B>e3  DOS R/O or SpeedStor</B><DD><P>
+<P>
+<DT><B>e4  SpeedStor 16-bit FAT extended partition &lt; 1024 cyl.</B><DD><P>
+<P>
+<DT><B>e5  Tandy MSDOS with
+<A HREF="partition_types-2.html#logsectfat">logically sectored FAT</A></B><DD><P>
+<DT><B>e6  Storage Dimensions SpeedStor</B><DD><P>
+<P>
+<DT><B>eb  BeOS BFS</B><DD><P>BeOS is an operating system that runs on Power PCs and on Intel PCs.
+<A HREF="http://www.bebits.com/app/2680">Version 5</A>
+(the last version) is distributed freely to individuals.
+The system was sold to Palm and is not developed any more.
+<A HREF="http://www.openbeos.org/">OpenBeOS</A>
+tries to create an open source version.
+<P>
+<DT><B>ec  SkyOS SkyFS</B><DD><P>
+<A HREF="http://www.skyos.org/">SkyOS</A>
+is an operating system written by Robert Szeleney.
+Its filesystem SkyFS is based on OpenBeFS.
+<P>
+<DT><B>ed  Unused</B><DD><P>Matthias Paul plans to use this for an OS called Sprytix.
+<P>
+<DT><B>ee  Indication that this legacy MBR is followed by an EFI header</B><DD><P>
+<P>
+<DT><B>ef  Partition that contains an EFI file system</B><DD><P>Bob Griswold (<CODE>rogris@Exchange.Microsoft.com</CODE>) writes:
+MS plans on using EE and EF in the future for support of
+non-legacy BIOS booting.
+Mark Doran (<CODE>mark.doran@intel.com</CODE>) adds: these types are used to
+support the Extensible Firmware Interface specification (EFI); go to
+<A HREF="http://developer.intel.com/">developer.intel.com</A>
+and search for EFI.
+(For the types <B>ee</B> and <B>ef</B>, see Tables 16-6 and 16-7 of
+the EFI specification, EFISpec_091.pdf.)
+<P>
+<DT><B>f0  Linux/PA-RISC boot loader</B><DD><P>Paul Bame (<CODE>bame@debian.org</CODE>) writes: the F0 partition will be
+located in the first 2GB of a drive and used to store the
+<A HREF="http://www.parisc-linux.org/">Linux/PA-RISC</A>
+boot loader and boot command line, optionally including a kernel and ramdisk.
+<P>
+<DT><B>f1  Storage Dimensions SpeedStor</B><DD><P>
+<P>
+<DT><B>f2  DOS 3.3+ secondary partition</B><DD><P>Matthias Paul writes:
+"This ID was originally used by Sperry IT MS-DOS 3.xx for a
+<A HREF="partition_types-2.html#logsectfat">logically sectored</A> variant of FAT.
+When Sperry IT became part of Unisys, the operating system was called
+Unisys MS-DOS 3.3. Digital Research's DOS Plus 2.1 (for OEM machines
+such as the Amstrad/Schneider PC1512, the T.R.A.N. Jasmin Turbo (Speed 8M),
+or the Acorn BBC Master 512 also supports this ID and logs it in, as
+if this would be either a type 01h FAT12 or a type 04h FAT16 partition."
+<P>
+<DT><B>f3  Reserved</B><DD><P>
+<A HREF="http://www.powerquest.com/support/primus/id233.html">Powerquest</A>
+writes: Storage Dimensions SpeedStor.
+<P>
+<DT><B>f4  SpeedStor large partition</B><DD><P>
+<P>
+<DT><B>f4  Prologue single-volume partition</B><DD><P>
+<P>
+<DT><B>f5  Prologue multi-volume partition</B><DD><P>The type F4 partition contains one volume, and is not used anymore.
+The type F5 partition contains 1 to 10 volumes (called MD0 to MD9).
+It supports one or more systems (Prologue 3, 4, 5, Twin Server).
+Each volume can have as file system the NGF file system or TwinFS file system.
+NGF (old): volume size at most 512 MB, at most 895 files per directory,
+at most 256 directories per volume.
+TwinFS (new): volume size up to 4 GB.
+No limit in number of files and directories.
+See 
+<A HREF="http://www.prologue-software.com/">Prologue</A>.
+<P>
+<DT><B>f6  Storage Dimensions SpeedStor</B><DD><P>
+<P>
+<DT><B>f7  Unused</B><DD><P>Maybe Natalia Portillo plans to use this for O.S.G. EFAT
+("Enhanced File Allocation Techniques").
+<P>
+<DT><B>f9  pCache</B><DD><P>Ed Sawicki writes: "We propose using the F9 partition type as
+a pCache partition, which is our name for an "ext2/ext3 persistent
+cache partition". See 
+<A HREF="http://www.alcpress.com/articles/pcache.html">www.alcpress.com</A>.
+<P>
+<DT><B>fa  Bochs</B><DD><P>Rob Judd writes: MandrakeSoft's
+<A HREF="http://bochs.sourceforge.net">Bochs</A> x86 emulator
+(similar to VMWare) uses <B>fa</B> as a partition identifier. 
+<P>
+<DT><B>fb  VMware File System partition</B><DD><P>
+<P>
+<DT><B>fc  VMware Swap partition</B><DD><P>
+<A HREF="http://www.vmware.com/">VMware</A>
+offers virtual machines in which one can run Linux, Windows, FreeBSD.
+These partition IDs announced by Dan Scales
+(<CODE>scales@vmware.com</CODE>).
+<P>
+<DT><B>fd  Linux raid partition with autodetect using persistent superblock</B><DD><P>See the
+<A HREF="http://ostenfeld.dk/~jakob/Software-RAID.HOWTO/">HOWTO</A>
+and the
+<A HREF="ftp://ftp.fi.kernel.org/pub/linux/daemons/raid/alpha/">kernel patches</A>.
+Earlier, <B>86</B> was used instead of <B>fd</B>.
+<P>
+<P>
+<A HREF="http://www.powerquest.com/support/primus/id233.html">Powerquest</A>
+writes: Reserved for FreeDOS
+(
+<A HREF="http://www.freedos.org">www.freedos.org</A>),
+but it seems FreeDOS never used this ID.
+<P>
+<DT><B>fe  SpeedStor &gt; 1024 cyl.</B><DD><P>
+<DT><B>fe  LANstep</B><DD><P>
+<P>
+<DT><B>fe  IBM PS/2 IML (Initial Microcode Load) partition,
+located at the end of the disk.</B><DD><P>
+<P>
+<DT><B>fe  Windows NT Disk Administrator hidden partition</B><DD><P>Mark Morgan Lloyd (<CODE>markMLl.in@telemetry.co.uk</CODE>) writes:
+Windows NT Disk Administrator marks hidden partitions (i.e. present but
+not to be accessed) as type 0xfe. A primary partition of this type is also
+used by IBM to hold an image of the "Reference Diskettes" on many of their
+machines, particularly newer PS/2 systems (at a rough guess, anything built
+after about 1994). This clash can cause major confusion and grief
+if running NT on IBM kit.
+When this Reference Partition is activated, it changes its type into 1
+(FAT12) and hides all other partitions by adding 0x10 to the type.
+<P>
+<DT><B>fe  Linux Logical Volume Manager partition (old)</B><DD><P>This has been in use since the early LVM days back in 1997,
+and has now (Sept. 1999) been renamed 0x8e.
+<P>
+<DT><B>ff  Xenix Bad Block Table</B><DD><P>
+</DL>
+<P>
+<P>
+<HR>
+<A HREF="partition_types-2.html">Next</A>
+Previous
+<A HREF="partition_types.html#toc1">Contents</A>
+</BODY>
+</HTML>
