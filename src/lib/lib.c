@@ -9,44 +9,52 @@
 #include "vga.h"
 
 void *
-memset (void *dst_, int value, size_t cnt) 
+memset (void *dst_, int value, size_t size) 
 {
   unsigned char *dst = dst_;
+
+  ASSERT (dst != NULL || size == 0);
   
-  while (cnt-- > 0)
+  while (size-- > 0)
     *dst++ = value;
 
   return dst_;
 }
 
 void *
-memcpy (void *dst_, const void *src_, size_t cnt) 
+memcpy (void *dst_, const void *src_, size_t size) 
 {
   unsigned char *dst = dst_;
   const unsigned char *src = src_;
 
-  while (cnt-- > 0)
+  ASSERT (dst != NULL || size == 0);
+  ASSERT (src != NULL || size == 0);
+
+  while (size-- > 0)
     *dst++ = *src++;
 
   return dst_;
 }
 
 void *
-memmove (void *dst_, const void *src_, size_t cnt) 
+memmove (void *dst_, const void *src_, size_t size) 
 {
   unsigned char *dst = dst_;
   const unsigned char *src = src_;
 
+  ASSERT (dst != NULL || size == 0);
+  ASSERT (src != NULL || size == 0);
+
   if (dst < src) 
     {
-      while (cnt-- > 0)
+      while (size-- > 0)
         *dst++ = *src++;
     }
   else 
     {
-      dst += cnt;
-      src += cnt;
-      while (cnt-- > 0)
+      dst += size;
+      src += size;
+      while (size-- > 0)
         *--dst = *--src;
     }
 
@@ -58,6 +66,8 @@ memchr (const void *block_, int ch_, size_t size)
 {
   const unsigned char *block = block_;
   unsigned char ch = ch_;
+
+  ASSERT (block != NULL || size == 0);
 
   for (; size-- > 0; block++)
     if (*block == ch)
@@ -72,6 +82,9 @@ memcmp (const void *a_, const void *b_, size_t size)
   const unsigned char *a = a_;
   const unsigned char *b = b_;
 
+  ASSERT (a != NULL || size == 0);
+  ASSERT (b != NULL || size == 0);
+
   for (; size-- > 0; a++, b++)
     if (*a != *b)
       return *a > *b ? +1 : -1;
@@ -81,7 +94,12 @@ memcmp (const void *a_, const void *b_, size_t size)
 size_t
 strlcpy (char *dst, const char *src, size_t size) 
 {
-  size_t src_len = strlen (src);
+  size_t src_len;
+
+  ASSERT (dst != NULL);
+  ASSERT (src != NULL);
+
+  src_len = strlen (src);
   if (size > 0) 
     {
       size_t dst_len_max = size - 1;
@@ -97,6 +115,8 @@ strlen (const char *string)
 {
   const char *p;
 
+  ASSERT (string != NULL);
+
   for (p = string; *p != '\0'; p++)
     continue;
   return p - string;
@@ -107,12 +127,33 @@ strchr (const char *string, int c_)
 {
   char c = c_;
 
+  ASSERT (string != NULL);
+
   for (;;) 
     if (*string == c)
       return (char *) string;
     else if (*string == '\0')
       return NULL;
-    else string++;
+    else
+      string++;
+}
+
+int
+strcmp (const char *a_, const char *b_) 
+{
+  const unsigned char *a = (const unsigned char *) a_;
+  const unsigned char *b = (const unsigned char *) b_;
+
+  ASSERT (a != NULL);
+  ASSERT (b != NULL);
+
+  while (*a != '\0' && *a == *b) 
+    {
+      a++;
+      b++;
+    }
+
+  return *a < *b ? -1 : *a > *b;
 }
 
 static void
@@ -120,7 +161,7 @@ vprintf_core (const char *format, va_list args,
               void (*output) (char, void *), void *aux);
 
 static void
-vprintk_helper (char ch, void *aux __attribute__ ((unused))) 
+vprintk_helper (char ch, void *aux UNUSED) 
 {
   vga_putc (ch);
   serial_outb (ch);

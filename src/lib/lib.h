@@ -18,6 +18,7 @@ int memcmp (const void *, const void *, size_t);
 char *strchr (const char *, int);
 size_t strlcpy (char *, const char *, size_t);
 size_t strlen (const char *);
+int strcmp (const char *, const char *);
 
 void vprintk (const char *, va_list);
 void printk (const char *, ...) PRINTF_FORMAT (1, 2);
