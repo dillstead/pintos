@@ -261,7 +261,7 @@ extending @func{process_execute} so that instead of simply taking a
 program file name as its argument, it divides it into words at spaces.
 The first word is the program name, the second word is the first
 argument, and so on.  That is, @code{process_execute("grep foo bar")}
-should run @program{grep} passing two arguments @code{foo} and
+should run @command{grep} passing two arguments @code{foo} and
 @file{bar}.  A few details:
 
 @itemize
