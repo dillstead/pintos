@@ -6,6 +6,12 @@
 
 * Filesystem dumps should include filehdrs?
 
+* Cygwin support:
+  - PE linker scripts?  Doesn't seem to support ELF ones.
+  - .S files need _ prefixes on symbols.
+
+* Add Solaris support to serial.cc.
+
 * Cross-compile notes:
 
 cd /tmp
