@@ -1,6 +1,8 @@
 src
 ---
 
+* Most code written by Ben Pfaff <blp@cs.stanford.edu>.
+
 * The structure and form of this operating system is inspired by the
   Nachos system from the University of California, Berkeley.  A few of
   the source files are more-or-less literal translations of the Nachos
@@ -10,18 +12,26 @@ src
   Massachusetts Institute of Technology's 6.828 advanced operating
   systems course.  These files bear the original MIT license notice.
 
-* All other code written by Ben Pfaff <blp@cs.stanford.edu>.
-
 projects
 --------
 
 * The projects are derived from those designed for Nachos by current
   and former CS140 teaching assistants at Stanford University,
-  including at least the following people: Yu Ping
-  <yph@cs.stanford.edu>, Greg Hutchins, Kelly Shaw <kashaw (at)
-  cs.stanford.edu>, Paul Twohey <twohey AT cs DOT stanford DOT edu>,
-  Sameer Qureshi <squreshi@cs.stanford.edu>, John Rector.  (If you're
-  not on this list but should be, please let me know.)
+  including at least the following people: 
+	
+	- Yu Ping <yph@cs.stanford.edu>
+
+	- Greg Hutchins
+
+	- Kelly Shaw <kashaw (at) cs.stanford.edu>, 
+
+	- Paul Twohey <twohey AT cs DOT stanford DOT edu>
+
+	- Sameer Qureshi <squreshi@cs.stanford.edu>
+
+	- John Rector
+
+  If you're not on this list but should be, please let me know.
 
 * The section on multilevel feedback schedulers in the threads project
   is adapted from a handout written by Andrea Arpaci-Dusseau
