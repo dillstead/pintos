@@ -332,9 +332,12 @@ and options @option{-j} and @option{-r} are mutually exclusive.
 @node Tips
 @section Tips
 
+@itemize @bullet
+@item
 There should be no busy-waiting in any of your solutions to this
 assignment.
 
+@item
 Do your best to resist the temptation to directly disable interrupts
 in your solution by calling @func{intr_disable} or
 @func{intr_set_level}, although you may find doing so to be useful
@@ -350,23 +353,32 @@ instead of relying on the given synchronization primitives.  This must
 be justified in your @file{DESIGNDOC} file.  If you're not sure you're
 justified, ask!
 
-While all parts of this assignment are required if you intend to earn
-full credit on this project, keep in mind that Problem 1-2 (Join) will
-be needed for future assignments, so you'll want to get this one
-right.  We don't give out solutions, so you're stuck with your Join
-code for the whole quarter.  Problem 1-1 (Alarm Clock) could be very
-handy, but not strictly required in the future.  The upshot of all
-this is that you should focus heavily on making sure that your
-implementation of @func{thread_join} works correctly, since if it's
-broken, you will need to fix it for future assignments.  The other
-parts can be turned off in the future if you find you can't make them
-work quite right.
+@item
+All parts of this assignment are required if you intend to earn full
+credit on this project.  However, some will be more important in
+future projects:
 
-Also keep in mind that Problem 1-4 (the MLFQS) builds on the features you
-implement in Problem 1-3, so to avoid unnecessary code duplication, it
+@itemize @minus
+@item
+Problem 1-1 (Alarm Clock) could be handy for later projects, but it is
+not strictly required.
+
+@item
+Problem 1-2 (Join) will be needed for future projects.  We don't give
+out solutions, so to avoid extra work later you should make sure that
+your implementation of @func{thread_join} works correctly.
+
+@item
+Problems 1-3 and 1-4 won't be needed for later projects.
+@end itemize
+
+@item
+Problem 1-4 (MLFQS) builds on the features you
+implement in Problem 1-3.  To avoid unnecessary code duplication, it
 would be a good idea to divide up the work among your team members
 such that you have Problem 1-3 fully working before you begin to tackle
 Problem 1-4.
+@end itemize
 
 @node Problem 1-1 Alarm Clock
 @section Problem 1-1: Alarm Clock
