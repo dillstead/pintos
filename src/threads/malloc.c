@@ -177,7 +177,12 @@ free (void *p)
   a = block_to_arena (b);
   d = a->desc;
 
+#ifndef NDEBUG
+  memset (b, 0xcd, d->block_size);
+#endif
+  
   lock_acquire (&d->lock);
+
 
   /* Add block to free list. */
   list_push_front (&d->free_list, &b->free_elem);
