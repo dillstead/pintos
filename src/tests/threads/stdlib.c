@@ -1,4 +1,4 @@
-/* Test program for sorting and searching in lib/kernel/stdlib.c.
+/* Test program for sorting and searching in lib/stdlib.c.
 
    Attempts to test the sorting and searching functionality that
    is not sufficiently tested elsewhere in Pintos.
