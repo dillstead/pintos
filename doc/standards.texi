@@ -65,9 +65,10 @@ There are a few exceptions:
 
 @itemize @bullet
 @item
-Project 1 has a few parts that we must be able to turn on and off via
-conditional compilation.  You must use the macros we specify for those
-parts.
+Problem 1-4, the advanced scheduler.  We must be able to turn this on
+and off with a compile time directive.  You must use the macro name we
+specify for that part.  @xref{Problem 1-4 Advanced Scheduler}, for
+details.
 
 @item
 Code written for extra credit may be included conditionally.  If the
