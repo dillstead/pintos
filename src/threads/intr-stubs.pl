@@ -42,7 +42,7 @@ intr_entry:
 	movl %eax, %ds
 	movl %eax, %es
 
-	# Call handler.
+	# Call interrupt handler.
 	pushl %esp
 .globl intr_handler
 	call intr_handler
@@ -55,5 +55,7 @@ intr_exit:
 	popl %es
 	popl %ds
 	addl $8, %esp
+
+        # Return to caller.
 	iret
 EOF
