@@ -173,19 +173,20 @@ addrspace_load (struct addrspace *as, const char *filename,
                 void (**start) (void)) 
 {
   struct Elf32_Ehdr ehdr;
-  struct file *file = NULL;
+  struct file file;
+  bool file_open = false;
   off_t file_ofs;
   bool success = false;
   int i;
 
   as->pagedir = pagedir_create ();
 
-  file = filesys_open (filename);
-  if (file == NULL)
+  file_open = filesys_open (filename, &file);
+  if (!file_open)
     LOAD_ERROR (("open failed"));
 
   /* Read and verify executable header. */
-  if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr) 
+  if (file_read (&file, &ehdr, sizeof ehdr) != sizeof ehdr) 
     LOAD_ERROR (("error reading executable header"));
   if (memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7) != 0)
     LOAD_ERROR (("file is not ELF"));
@@ -207,8 +208,8 @@ addrspace_load (struct addrspace *as, const char *filename,
     {
       struct Elf32_Phdr phdr;
 
-      file_seek (file, file_ofs);
-      if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
+      file_seek (&file, file_ofs);
+      if (file_read (&file, &phdr, sizeof phdr) != sizeof phdr)
         LOAD_ERROR (("error reading program header"));
       file_ofs += sizeof phdr;
       switch (phdr.p_type) 
@@ -229,7 +230,7 @@ addrspace_load (struct addrspace *as, const char *filename,
           printk ("unknown ELF segment type %08x\n", phdr.p_type);
           break;
         case PT_LOAD:
-          if (!load_segment (as, file, &phdr))
+          if (!load_segment (as, &file, &phdr))
             goto error;
           break;
         }
@@ -245,8 +246,8 @@ addrspace_load (struct addrspace *as, const char *filename,
   success = true;
 
  error:
-  if (file != NULL)
-    file_close (file);
+  if (file_open)
+    file_close (&file);
   if (!success) 
     addrspace_destroy (as);
   return success;
