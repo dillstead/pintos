@@ -64,13 +64,24 @@ sub run_test {
 
     # Changes devices/timer.c if necessary.
     my ($new_time_slice) = $test eq 'priority-fifo' ? 100 : 1;
-    my (@timer) = snarf ("pintos/src/devices/timer.c");
-    if (!grep (/^\#define TIME_SLICE $new_time_slice$/, @timer)) {
-	@timer = grep (!/^\#define TIME_SLICE/, @timer);
-	unshift (@timer, "#define TIME_SLICE $new_time_slice");
-	open (TIMER, ">pintos/src/devices/timer.c");
-	print TIMER map ("$_\n", @timer);
-	close (TIMER);
+    my (@timer_c) = snarf ("pintos/src/devices/timer.c");
+    if (!grep (/^\#define TIME_SLICE $new_time_slice$/, @timer_c)) {
+	@timer_c = grep (!/^\#define TIME_SLICE/, @timer_c);
+	unshift (@timer_c, "#define TIME_SLICE $new_time_slice");
+	open (TIMER_C, ">pintos/src/devices/timer.c");
+	print TIMER_C map ("$_\n", @timer_c);
+	close (TIMER_C);
+    }
+
+    # Changes devices/timer.h if necessary.
+    my ($new_timer_freq) = $test eq 'priority-fifo' ? 19 : 100;
+    my (@timer_h) = snarf ("pintos/src/devices/timer.h");
+    if (!grep (/^\#define TIMER_FREQ $new_time_slice$/, @timer_h)) {
+	@timer_h = grep (!/^\#define TIMER_FREQ/, @timer_h);
+	unshift (@timer_h, "#define TIMER_FREQ $new_timer_freq");
+	open (TIMER_H, ">pintos/src/devices/timer.h");
+	print TIMER_H map ("$_\n", @timer_h);
+	close (TIMER_H);
     }
 
     # Copy in the new test.c and delete enough files to ensure a full rebuild.
