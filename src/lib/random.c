@@ -1,9 +1,11 @@
 #include "random.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 /* RC4-based pseudo-random state. */
 static uint8_t s[256];
 static uint8_t s_i, s_j;
+static bool inited;
 
 static inline void
 swap_byte (uint8_t *a, uint8_t *b) 
@@ -13,27 +15,26 @@ swap_byte (uint8_t *a, uint8_t *b)
   *b = t;
 }
 
-static uint8_t
-key_byte (int idx) 
-{
-  return idx ^ 0xff;
-}
-
 void
-random_init (void)
+random_init (unsigned seed)
 {
+  uint8_t *seedp = (uint8_t *) &seed;
   int i;
   uint8_t j;
 
+  if (inited)
+    return;
+  
   for (i = 0; i < 256; i++) 
     s[i] = i;
   for (i = j = 0; i < 256; i++) 
     {
-      j += s[i] + key_byte (i);
+      j += s[i] + seedp[i % sizeof seed];
       swap_byte (s + i, s + j);
     }
 
   s_i = s_j = 0;
+  inited = true;
 }
 
 void
