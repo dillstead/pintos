@@ -88,10 +88,13 @@ pic_init (void)
    If we don't acknowledge the IRQ, we'll never get it again, so
    this is important.  */
 static void
-pic_eoi (void) 
+pic_eoi (int irq) 
 {
   /* FIXME?  The Linux code is much more complicated. */
+  ASSERT (irq >= 0x20 && irq < 0x30);
   outb (0x20, 0x20);
+  if (irq >= 0x28)
+    outb (0xa0, 0x20);
 }
 
 #define INTR_CNT 256
@@ -133,7 +136,7 @@ intr_handler (struct intr_frame *args)
       ASSERT (intr_get_level () == IF_OFF);
       ASSERT (intr_context ());
       intr_in_progress = false;
-      pic_eoi (); 
+      pic_eoi (args->vec_no); 
 
       if (yield_on_return) 
         thread_yield (); 
@@ -275,8 +278,8 @@ intr_kill (struct intr_frame *f)
   switch (f->cs)
     {
     case SEL_UCSEG:
-      printk ("[%p] Interrupt %#04x (%s), killing process.\n",
-              thread_current (), f->vec_no, intr_name (f->vec_no));
+      printk ("%s: dying due to interrupt %#04x (%s).\n",
+              thread_current ()->name, f->vec_no, intr_name (f->vec_no));
       thread_exit (); 
 
     case SEL_KCSEG:
