@@ -309,80 +309,107 @@ list_reverse (struct list *list)
     }
 }
 
-/* Merges lists AL and BL, which must each be sorted according to
-   LESS given auxiliary data AUX, by inserting each element of BL
-   at the proper place in AL to preserve the ordering.
-   Runs in O(n) in the combined length of AL and BL. */
-void
-list_merge (struct list *al, struct list *bl,
-            list_less_func *less, void *aux)
-{
-  struct list_elem *a;
-
-  ASSERT (al != NULL);
-  ASSERT (bl != NULL);
-  ASSERT (less != NULL);
-
-  a = list_begin (al);
-  while (a != list_end (al))
-    {
-      struct list_elem *b = list_begin (bl);
-      if (less (b, a, aux))
-        {
-          list_splice (a, b, list_next (b));
-          if (list_empty (bl))
-            break;
-        }
-      else
-        a = list_next (a);
-    }
-  list_splice (list_end (al), list_begin (bl), list_end (bl));
-}
-
-/* Returns the middle element in LIST, that is, the N/2'th
-   element (rounding down) in a N-element list.
-   Given an empty list, returns the list tail. */
-static struct list_elem *
-middle_of_list (struct list *list) 
-{
-  struct list_elem *middle, *last;
-
-  middle = last = list_begin (list);
-  while (last != list_end (list) && list_next (last) != list_end (list))
-    {
-      middle = list_next (middle);
-      last = list_next (list_next (last));
-    }
-  return middle;
-}
-
-/* Sorts LIST according to LESS given auxiliary data AUX.
-   Runs in O(n lg n) time in the number of elements in LIST. */
-void
-list_sort (struct list *list,
+/* Returns true only if the list elements A through B (exclusive)
+   are in order according to LESS given auxiliary data AUX. */
+static bool
+is_sorted (struct list_elem *a, struct list_elem *b,
            list_less_func *less, void *aux)
 {
-  /* Find the middle of the list. */
-  struct list_elem *middle = middle_of_list (list);
-  if (middle != list_begin (list))
-    {
-      /* Extract first half of LIST into a temporary list. */
-      struct list tmp;
-      list_init (&tmp);
-      list_splice (list_begin (&tmp), list_begin (list), middle);
+  if (a != b)
+    while ((a = list_next (a)) != b) 
+      if (less (a, list_prev (a), aux))
+        return false;
+  return true;
+}
 
-      /* Sort each half-list and merge the result. */
-      list_sort (&tmp, less, aux);
-      list_sort (list, less, aux);
-      list_merge (list, &tmp, less, aux);
-    }
-  else 
+/* Finds a run, starting at A and ending not after B, of list
+   elements that are in nondecreasing order according to LESS
+   given auxiliary data AUX.  Returns the (exclusive) end of the
+   run.
+   A through B (exclusive) must form a non-empty range. */
+static struct list_elem *
+find_end_of_run (struct list_elem *a, struct list_elem *b,
+                 list_less_func *less, void *aux)
+{
+  ASSERT (a != NULL);
+  ASSERT (b != NULL);
+  ASSERT (less != NULL);
+  ASSERT (a != b);
+  
+  do 
     {
-      /* The middle is at the beginning of the list.
-         This only happens in empty lists and 1-element lists.
-         Because such lists are already sorted, we have nothing
-         to do. */
+      a = list_next (a);
     }
+  while (a != b && !less (a, list_prev (a), aux));
+  return a;
+}
+
+/* Merges A0 through A1B0 (exclusive) with A1B0 through B1
+   (exclusive) to form a combined range also ending at B1
+   (exclusive).  Both input ranges must be nonempty and sorted in
+   nondecreasing order according to LESS given auxiliary data
+   AUX.  The output range will be sorted the same way. */
+static void
+inplace_merge (struct list_elem *a0, struct list_elem *a1b0,
+               struct list_elem *b1,
+               list_less_func *less, void *aux)
+{
+  ASSERT (a0 != NULL);
+  ASSERT (a1b0 != NULL);
+  ASSERT (b1 != NULL);
+  ASSERT (less != NULL);
+  ASSERT (is_sorted (a0, a1b0, less, aux));
+  ASSERT (is_sorted (a1b0, b1, less, aux));
+
+  while (a0 != a1b0 && a1b0 != b1)
+    if (!less (a1b0, a0, aux)) 
+      a0 = list_next (a0);
+    else 
+      {
+        a1b0 = list_next (a1b0);
+        list_splice (a0, list_prev (a1b0), a1b0);
+      }
+}
+
+/* Sorts LIST according to LESS given auxiliary data AUX, using a
+   natural iterative merge sort that runs in O(n lg n) time and
+   O(1) space in the number of elements in LIST. */
+void
+list_sort (struct list *list, list_less_func *less, void *aux)
+{
+  size_t output_run_cnt;        /* Number of runs output in current pass. */
+
+  ASSERT (list != NULL);
+  ASSERT (less != NULL);
+
+  /* Pass over the list repeatedly, merging adjacent runs of
+     nondecreasing elements, until only one run is left. */
+  do
+    {
+      struct list_elem *a0;     /* Start of first run. */
+      struct list_elem *a1b0;   /* End of first run, start of second. */
+      struct list_elem *b1;     /* End of second run. */
+
+      output_run_cnt = 0;
+      for (a0 = list_begin (list); a0 != list_end (list); a0 = b1)
+        {
+          /* Each iteration produces one output run. */
+          output_run_cnt++;
+
+          /* Locate two adjacent runs of nondecreasing elements
+             A0...A1B0 and A1B0...B1. */
+          a1b0 = find_end_of_run (a0, list_end (list), less, aux);
+          if (a1b0 == list_end (list))
+            break;
+          b1 = find_end_of_run (a1b0, list_end (list), less, aux);
+
+          /* Merge the runs. */
+          inplace_merge (a0, a1b0, b1, less, aux);
+        }
+    }
+  while (output_run_cnt > 1);
+
+  ASSERT (is_sorted (list_begin (list), list_end (list), less, aux));
 }
 
 /* Inserts ELEM in the proper position in LIST, which must be
