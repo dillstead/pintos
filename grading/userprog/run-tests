@@ -170,7 +170,7 @@ sub get_file {
 			       . "-v get $guest_fn $host_fn",
 			       LOG => "$test/get-$guest_fn",
 			       TIMEOUT => 10,
-			       EXPECT => 0);
+			       EXPECT => 1);
     die "`pintos get $guest_fn' failed - $result\n"
 	if $result ne 'ok';
 }
