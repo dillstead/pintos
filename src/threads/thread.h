@@ -108,4 +108,8 @@ void thread_exit (void) NO_RETURN;
 void thread_yield (void);
 void thread_block (void);
 
+void thread_join (struct thread *);
+void thread_set_priority (struct thread *, int);
+int thread_get_priority (const struct thread *);
+
 #endif /* threads/thread.h */
