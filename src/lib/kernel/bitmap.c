@@ -8,8 +8,27 @@
 #include "filesys/file.h"
 #endif
 
+/* Element type.
+
+   This must be an unsigned integer type at least as wide as int.
+
+   Each bit represents one bit in the bitmap.
+   If bit 0 in an element represents bit K in the bitmap,
+   then bit 1 in the element represents bit K+1 in the bitmap,
+   and so on. */
+typedef unsigned long elem_type;
+
 /* Number of bits in an element. */
 #define ELEM_BITS (sizeof (elem_type) * CHAR_BIT)
+
+/* From the outside, a bitmap is an array of bits.  From the
+   inside, it's an array of elem_type (defined above) that
+   simulates an array of bits. */
+struct bitmap
+  {
+    size_t bit_cnt;     /* Number of bits. */
+    elem_type *bits;    /* Elements that represent bits. */
+  };
 
 /* Returns the index of the element that contains the bit
    numbered BIT_IDX. */
@@ -53,25 +72,33 @@ last_mask (const struct bitmap *b)
 /* Initializes B to be a bitmap of BIT_CNT bits.
    Returns true if successfalse, false if memory allocation
    failed. */
-bool
-bitmap_init (struct bitmap *b, size_t bit_cnt) 
+struct bitmap *
+bitmap_create (size_t bit_cnt) 
 {
-  b->bit_cnt = bit_cnt;
-  b->bits = malloc (byte_cnt (b));
-  if (b->bits == NULL && bit_cnt > 0) 
-    return false;
-
-  bitmap_set_all (b, false);
-  return true;
+  struct bitmap *b = malloc (sizeof *b);
+  if (b != NULL)
+    {
+      b->bit_cnt = bit_cnt;
+      b->bits = malloc (byte_cnt (b));
+      if (b->bits != NULL || bit_cnt == 0)
+        {
+          bitmap_set_all (b, false);
+          return b;
+        }
+      free (b);
+    }
+  return NULL;
 }
 
 /* Destroys bitmap B, freeing its storage. */
 void
 bitmap_destroy (struct bitmap *b) 
 {
-  ASSERT (b);
-  
-  free (b->bits);
+  if (b != NULL) 
+    {
+      free (b->bits);
+      free (b);
+    }
 }
 
 /* Returns the number of bits in B. */
