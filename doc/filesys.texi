@@ -92,7 +92,7 @@ prepared for interactions with all previous parts (as usual).
 
 The provided file system requires external synchronization, that is,
 callers must ensure that only one thread can be running in the file
-system code at once.  Your submission should use a more finely granular
+system code at once.  Your submission should use a finer-grained
 synchronization strategy.  You will need to consider synchronization
 issues for each type of file system object.  The provided code uses the
 following strategies:
@@ -480,6 +480,9 @@ metadata---anywhere in kernel memory then you have to count it against
 the 64-block limit.  The same rule applies to anything that's
 ``similar'' to a block of disk data, such as a @struct{inode_disk}
 without the @code{length} or @code{sector_cnt} members.
+
+You can keep a cached copy of the free map in memory permanently if you
+like.  It doesn't have to count against the cache size.
 
 That means you'll have to change the way the inode implementation
 accesses its corresponding on-disk inode right now, since it currently
