@@ -63,3 +63,34 @@ close (int fd)
 {
   syscall (SYS_close, fd);
 }
+
+bool
+mmap (int fd, void *addr, unsigned length)
+{
+  return syscall (SYS_mmap, fd, addr, length);
+}
+
+bool
+munmap (void *addr, unsigned length)
+{
+  return syscall (SYS_munmap, addr, length);
+}
+
+bool
+chdir (const char *dir)
+{
+  return syscall (SYS_chdir, dir);
+}
+
+bool
+mkdir (const char *dir)
+{
+  return syscall (SYS_mkdir, dir);
+}
+
+void
+lsdir (void)
+{
+  syscall (SYS_lsdir);
+}
+
