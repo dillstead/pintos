@@ -4,7 +4,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-struct bitmap *bitmap_create (size_t bit_cnt);
+struct bitmap
+  {
+    size_t bit_cnt;
+    elem_type *bits;
+  };
+
+void bitmap_init (struct bitmap *, size_t bit_cnt);
 void bitmap_destroy (struct bitmap *);
 
 size_t bitmap_size (const struct bitmap *);

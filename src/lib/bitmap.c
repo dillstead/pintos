@@ -10,12 +10,6 @@ typedef unsigned long elem_type;
 #define ELEM_IDX(BIT_IDX) ((BIT_IDX) / ELEM_BITS)
 #define BIT_MASK(BIT_IDX) ((elem_type) 1 << ((BIT_IDX) % ELEM_BITS))
 
-struct bitmap
-  {
-    size_t bit_cnt;
-    elem_type *bits;
-  };
-
 static inline size_t
 elem_cnt (const struct bitmap *b) 
 {
@@ -28,22 +22,22 @@ byte_cnt (const struct bitmap *b)
   return sizeof (elem_type) * elem_cnt (b);
 }
 
-struct bitmap *
-bitmap_create (size_t bit_cnt) 
+void
+bitmap_init (struct bitmap *b, size_t bit_cnt) 
 {
-  struct bitmap *b = malloc (sizeof *b);
-  if (b == NULL)
-    return NULL;
-
   b->bit_cnt = bit_cnt;
   b->bits = malloc (byte_cnt (b));
   if (b->bits == NULL && bit_cnt > 0) 
-    {
-      free (b);
-      return NULL;
-    }
+    return NULL;
+
   bitmap_set_all (b, false);
   return b;
+}
+
+size_t
+bitmap_storage_size (const struct bitmap *b) 
+{
+  return byte_cnt (b);
 }
 
 void
@@ -52,7 +46,6 @@ bitmap_destroy (struct bitmap *b)
   ASSERT (b);
   
   free (b->bits);
-  free (b);
 }
 
 size_t
