@@ -8,7 +8,7 @@ our (@disks) = ("os.dsk", "fs.dsk", "scratch.dsk", "swap.dsk");
 our ($sim);
 our ($debug);
 our ($vga);
-our ($jitter);
+our ($jitter, $realtime);
 
 use Getopt::Long qw(:config require_order bundling);
 GetOptions ("sim=s" => sub { set_sim (@_) },
@@ -24,7 +24,8 @@ GetOptions ("sim=s" => sub { set_sim (@_) },
 	    "run|get|put|make-disk" => \&cmd_option,
 	    
 	    "m|memory=i" => \$mem,
-	    "j|jitter=i" => \$jitter,
+	    "j|jitter=i" => sub { set_jitter (@_) },
+	    "r|realtime" => sub { set_realtime () },
 	    
 	    "v|no-vga" => sub { set_vga ('none'); },
 	    "s|no-serial" => sub { $serial_out = 0; },
@@ -62,6 +63,19 @@ sub set_vga {
 	print "warning: conflicting vga display options\n";
     }
     $vga = $new_vga;
+}
+
+sub set_jitter {
+    my ($new_jitter) = @_;
+    die "--realtime conflicts with --jitter\n" if defined $realtime;
+    die "different --jitter already defined\n"
+	if defined $jitter && $jitter != $new_jitter;
+    $jitter = $new_jitter;
+}
+
+sub set_realtime {
+    die "--realtime conflicts with --jitter\n" if defined $jitter;
+    $realtime = 1;
 }
 
 sub cmd_option {
@@ -165,6 +179,7 @@ sub usage {
     print "  -t, --terminal   Display VGA in terminal (Bochs only)\n";
     print "VM options:\n";
     print "  -j SEED          Randomize timer interrupts (Bochs only)\n";
+    print "  -r, --realtime   Use realistic, but not reproducible, timings\n";
     print "  -m, --mem=MB     Run VM with MB megabytes of physical memory\n";
     print "Disk options:\n";
     print "  --os-disk=DISK    Set OS disk file (default: os.dsk)\n";
@@ -222,7 +237,11 @@ sub run_vm {
 	print BOCHSRC bochs_disk_line ("ata1-slave", $disks[3]);
 	print BOCHSRC "boot: c\n";
 	print BOCHSRC "ips: 1000000\n";
-	print BOCHSRC "clock: sync=none, time0=0\n";
+	if (!$realtime) {
+	    print BOCHSRC "clock: sync=none, time0=0\n";
+	} else {
+	    print BOCHSRC "clock: sync=realtime, time0=0\n";
+	}
 	print BOCHSRC "megs: $mem\n";
 	print BOCHSRC "log: bochsout.txt\n";
 	if ($vga ne 'terminal') {

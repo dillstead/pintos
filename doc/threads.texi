@@ -295,7 +295,8 @@ program twice and have it do exactly the same thing.  On second and
 later runs, you can make new observations without having to discard or
 verify your old observations.  This property is called
 ``reproducibility.''  The simulator we use, Bochs, can be set up for
-reproducibility, and that's the way that @command{pintos} invokes it.
+reproducibility, and that's the way that @command{pintos} invokes it
+by default.
 
 Of course, a simulation can only be reproducible from one run to the
 next if its input is the same each time.  For simulating an entire
@@ -313,14 +314,22 @@ thread switches.  That means that running the same test several times
 doesn't give you any greater confidence in your code's correctness
 than does running it only once.
 
-So, to make your code easier to test, we've added a feature to Bochs
-that makes timer interrupts come at random intervals, but in a
-perfectly predictable way.  In particular, if you invoke
-@command{pintos} with the option @option{-j @var{seed}}, timer
+So, to make your code easier to test, we've added a feature, called
+``jitter,'' to Bochs, that makes timer interrupts come at random
+intervals, but in a perfectly predictable way.  In particular, if you
+invoke @command{pintos} with the option @option{-j @var{seed}}, timer
 interrupts will come at irregularly spaced intervals.  Within a single
 @var{seed} value, execution will still be reproducible, but timer
 behavior will change as @var{seed} is varied.  Thus, for the highest
 degree of confidence you should test your code with many seed values.
+
+On the other hand, when Bochs runs in reproducible mode, timings are not
+realistic, meaning that a ``one-second'' delay may be much shorter or
+even much longer than one second.  You can invoke @command{pintos} with
+a different option, @option{-r}, to make it set up Bochs for realistic
+timings, in which a one-second delay should take approximately one
+second of real time.  Simulation in real-time mode is not reproducible,
+and options @option{-j} and @option{-r} are mutually exclusive.
 
 @node Tips
 @section Tips
@@ -382,6 +391,10 @@ The argument to @func{timer_sleep} is expressed in timer ticks, not
 in milliseconds or another unit.  There are @code{TIMER_FREQ} timer
 ticks per second, where @code{TIMER_FREQ} is a macro defined in
 @code{devices/timer.h}.
+
+If your delays seem too short or too long, reread the explanation of the
+@option{-r} option to @command{pintos} (@pxref{Debugging versus
+Testing}).
 
 @node Problem 1-2 Join
 @section Problem 1-2: Join

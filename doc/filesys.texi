@@ -266,7 +266,11 @@ Note that write-behind makes your filesystem more fragile in the face
 of crashes.  Therefore, you should
 periodically write all cached blocks to disk.  If you have
 @func{timer_sleep} from the first project working, this is an
-excellent application for it.
+excellent application for it.  (If you're still using the base
+implementation of @func{timer_sleep}, be aware that it busy-waits, which
+is not an acceptable solution.) If @func{timer_sleep}'s delays seem too
+short or too long, reread the explanation of the @option{-r} option to
+@command{pintos} (@pxref{Debugging versus Testing}).
 
 Likewise, read-ahead is only really useful when done asynchronously.
 That is, if a process wants disk block 1 from the file, it needs to
