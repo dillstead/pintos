@@ -140,7 +140,7 @@ dir_add (struct dir *d, const char *name, disk_sector_t inode_sector)
   ASSERT (name != NULL);
   ASSERT (lookup (d, name) == NULL);
 
-  if (strlen (name) > NAME_MAX)
+  if (*name == '\0' || strlen (name) > NAME_MAX)
     return false;
 
   for (i = 0; i < d->entry_cnt; i++)
