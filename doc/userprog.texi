@@ -129,7 +129,7 @@ system implementation.
 
 You need to be able to create and format simulated disks.  The
 @command{pintos} program provides this functionality with its
-@option{make-disk} command.  From the @file{filesys/build} directory,
+@option{make-disk} command.  From the @file{userprog/build} directory,
 execute @code{pintos make-disk fs.dsk 2}.  This command creates a 2 MB
 simulated disk named @file{fs.dsk}.  (It does not actually start
 Pintos.)  Then format the disk by passing the @option{-f} option to
