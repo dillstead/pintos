@@ -254,6 +254,10 @@ another reason.  The name printed should be the full name passed to
 @func{process_execute}, except that it is acceptable to truncate it to
 15 characters to allow for the limited space in @struct{thread}.
 
+Do not print a message when a kernel thread that is not a process
+terminates.  Do not print messages about process termination for the
+@code{halt} system call.
+
 @item
 Aside from this, the kernel should print out no other messages that
 Pintos as provided doesn't already print.  You
