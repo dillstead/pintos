@@ -119,10 +119,8 @@ const char *thread_name (void);
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
 
-/* This function will be implemented in problem 1-2. */
 void thread_join (tid_t);
 
-/* These functions will be implemented in problem 1-3. */
 void thread_set_priority (int);
 int thread_get_priority (void);
 

@@ -273,6 +273,31 @@ thread_yield (void)
   schedule ();
   intr_set_level (old_level);
 }
+
+/* Waits for the thread with the specified TID to terminate.  If
+   TID has already terminated or TID does not refer to an
+   immediate child of the current thread, returns immediately.
+
+   This function will be implemented in problem 1-2.  For now, it
+   does nothing. */
+void
+thread_join (tid_t child_tid UNUSED) 
+{
+}
+
+/* Sets the current thread's priority to NEW_PRIORITY. */
+void
+thread_set_priority (int new_priority) 
+{
+  thread_current ()->priority = new_priority;
+}
+
+/* Returns the current thread's priority. */
+int
+thread_get_priority (void) 
+{
+  return thread_current ()->priority;
+}
 
 /* Idle thread.  Executes when no other thread is ready to run. */
 static void

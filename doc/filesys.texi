@@ -21,9 +21,6 @@ parts work together so that you can run VM and your filesystem at the
 same time.  Plus, keeping VM is a great way to stress-test your
 filesystem implementation.
 
-Your submission should define @code{THREAD_JOIN_IMPLEMENTED} in
-@file{constants.h} (@pxref{Conditional Compilation}).
-
 @menu
 * File System New Code::        
 * File System Synchronization::  

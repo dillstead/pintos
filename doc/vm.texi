@@ -38,9 +38,6 @@ introduced in this project.
 You will continue to handle Pintos disks and file systems the same way
 you did in the previous assignment (@pxref{Using the File System}).
 
-Your submission should define @code{THREAD_JOIN_IMPLEMENTED} in
-@file{constants.h} (@pxref{Conditional Compilation}).
-
 @menu
 * VM Design::                   
 * Page Faults::                 

@@ -15,9 +15,7 @@ other part of the code for this assignment. We will describe the
 relevant parts below. If you are confident in your HW1 code, you can
 build on top of it.  However, if you wish you can start with a fresh
 copy of the code and re-implement @func{thread_join}, which is the
-only part of project #1 required for this assignment.  Your submission
-should define @code{THREAD_JOIN_IMPLEMENTED} in @file{constants.h}
-(@pxref{Conditional Compilation}).
+only part of project #1 required for this assignment.
 
 Up to now, all of the code you have written for Pintos has been part
 of the operating system kernel.  This means, for example, that all the

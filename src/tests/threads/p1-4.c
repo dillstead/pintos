@@ -33,7 +33,6 @@ test (void)
   static thread_func *funcs[] = {io_thread, cpu_thread, io_cpu_thread};
   static const char *names[] = {"IO", "CPU", "IO & CPU"};
   struct semaphore done[3];
-  tid_t tids[3];
   int i;
 
   printf ("\n"
@@ -43,18 +42,12 @@ test (void)
   for (i = 0; i < 3; i++) 
     {
       sema_init (&done[i], 0, names[i]);
-      tids[i] = thread_create (names[i], PRI_DEFAULT, funcs[i], &done[i]);
+      thread_create (names[i], PRI_DEFAULT, funcs[i], &done[i]);
     }
 
   /* Wait for threads to finish. */
   for (i = 0; i < 3; i++)
-    {
-#ifdef THREAD_JOIN_IMPLEMENTED
-      thread_join (tids[i]);
-#else
-      sema_down (&done[i]);
-#endif
-    }
+    sema_down (&done[i]);
   printf ("Multilevel feedback queue scheduler test done.\n");
 }
 

@@ -6,6 +6,3 @@
 
 /* Example definition. */
 /*#define MACRONAME 1 */
-
-/* Uncomment if if you've implemented thread_join(). */
-/*#define THREAD_JOIN_IMPLEMENTED 1*/

@@ -91,7 +91,6 @@ userprog::
 	$(prep-grading)
 	$(mk-sandbox)
 	$(apply-patch) ../solutions/p1-2.patch
-	echo '#define THREAD_JOIN_IMPLEMENTED 1' > $@/pintos/src/constants.h
 	$(run-tests) null
 	$(clean)
 

@@ -502,10 +502,6 @@ Write test code that demonstrates the cases your join works for.
 Be careful to program this function correctly.  You will need its
 functionality for project 2.
 
-Once you've implemented @func{thread_join}, define
-@code{THREAD_JOIN_IMPLEMENTED} in @file{constants.h}.
-@xref{Conditional Compilation}, for more information.
-
 @node Problem 1-3 Priority Scheduling
 @section Problem 1-3: Priority Scheduling
 
