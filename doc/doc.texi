@@ -10,7 +10,9 @@ Your submission should have exactly one of each file, in the
 appropriate directory (e.g.@: for Assignment 1, place the files in the
 @file{threads} directory).  These files must be written in plain text
 format (not Microsoft Word, not PDF).  We recommend a text width of 65
-characters per line, with a hard limit of 80.
+characters per line, with a hard limit of 80.  If you use tab characters
+in your document files, be sure that your text editor's tab width is set
+to 8.
 
 @menu
 * README::                      
