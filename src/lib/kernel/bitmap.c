@@ -111,16 +111,16 @@ bitmap_size (const struct bitmap *b)
   return b->bit_cnt;
 }
 
-/* Sets the bit numbered IDX in B to VALUE. */
+/* Atomically sets the bit numbered IDX in B to VALUE. */
 void
 bitmap_set (struct bitmap *b, size_t idx, bool value) 
 {
   ASSERT (b != NULL);
   ASSERT (idx < b->bit_cnt);
   if (value)
-    b->bits[elem_idx (idx)] |= bit_mask (idx);
+    bitmap_mark (b, idx);
   else
-    b->bits[elem_idx (idx)] &= ~bit_mask (idx);
+    bitmap_reset (b, idx);
 }
 
 /* Sets all bits in B to VALUE. */
@@ -146,35 +146,45 @@ bitmap_set_multiple (struct bitmap *b, size_t start, size_t cnt, bool value)
     bitmap_set (b, start + i, value);
 }
 
-/* Atomically sets the bit numbered IDX in B to true. */
+/* Atomically sets the bit numbered BIT_IDX in B to true. */
 void
-bitmap_mark (struct bitmap *b, size_t idx) 
+bitmap_mark (struct bitmap *b, size_t bit_idx) 
 {
-  asm ("orl %1, %0"
-       : "=m" (b->bits[elem_idx (idx)])
-       : "r" (bit_mask (idx)));
+  size_t idx = elem_idx (bit_idx);
+  elem_type mask = bit_mask (bit_idx);
+
+  /* This is equivalent to `b->bits[idx] |= mask' except that it
+     is guaranteed to be atomic on a uniprocessor machine.  See
+     the description of the OR instruction in [IA32-v2b]. */
+  asm ("orl %1, %0" : "=m" (b->bits[idx]) : "r" (mask) : "cc");
 }
 
-/* Atomically sets the bit numbered IDX in B to false. */
+/* Atomically sets the bit numbered BIT_IDX in B to false. */
 void
-bitmap_reset (struct bitmap *b, size_t idx) 
+bitmap_reset (struct bitmap *b, size_t bit_idx) 
 {
-  asm ("andl %1, %0"
-       : "=m" (b->bits[elem_idx (idx)])
-       : "r" (~bit_mask (idx)));
+  size_t idx = elem_idx (bit_idx);
+  elem_type mask = bit_mask (idx);
+
+  /* This is equivalent to `b->bits[idx] &= ~mask' except that it
+     is guaranteed to be atomic on a uniprocessor machine.  See
+     the description of the AND instruction in [IA32-v2a]. */
+  asm ("andl %1, %0" : "=m" (b->bits[idx]) : "r" (~mask) : "cc");
 }
 
 /* Atomically toggles the bit numbered IDX in B;
    that is, if it is true, makes it false,
    and if it is false, makes it true. */
 void
-bitmap_flip (struct bitmap *b, size_t idx) 
+bitmap_flip (struct bitmap *b, size_t bit_idx) 
 {
-  ASSERT (b != NULL);
-  ASSERT (idx < b->bit_cnt);
-  asm ("xorl %1, %0"
-       : "=m" (b->bits[elem_idx (idx)])
-       : "r" (bit_mask (idx)));
+  size_t idx = elem_idx (bit_idx);
+  elem_type mask = bit_mask (idx);
+
+  /* This is equivalent to `b->bits[idx] ^= mask' except that it
+     is guaranteed to be atomic on a uniprocessor machine.  See
+     the description of the XOR instruction in [IA32-v2b]. */
+  asm ("xorl %1, %0" : "=m" (b->bits[idx]) : "r" (mask) : "cc");
 }
 
 /* Returns the value of the bit numbered IDX in B. */
@@ -210,15 +220,17 @@ contains (const struct bitmap *b, size_t start, size_t cnt, bool value)
 size_t
 bitmap_scan (const struct bitmap *b, size_t start, size_t cnt, bool value) 
 {
-  size_t idx, last;
-  
   ASSERT (b != NULL);
   ASSERT (start <= b->bit_cnt);
 
-  if (cnt <= b->bit_cnt)
-    for (idx = start, last = b->bit_cnt - cnt; idx <= last; idx++)
-      if (!contains (b, idx, cnt, !value))
-        return idx;
+  if (cnt <= b->bit_cnt) 
+    {
+      size_t last = b->bit_cnt - cnt;
+      size_t i;
+      for (i = start; i <= last; i++)
+        if (!contains (b, i, cnt, !value))
+          return i; 
+    }
   return BITMAP_ERROR;
 }
 
