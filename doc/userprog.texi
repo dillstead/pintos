@@ -248,10 +248,11 @@ requirements:
 @itemize @bullet
 @item
 The kernel should print out the program's name and exit status
-whenever a process exits, e.g.@: @code{shell: exit(-1)}.  The name
-printed should be the full name passed to @func{process_execute},
-except that it is acceptable to truncate it to 15 characters to allow
-for the limited space in @struct{thread}.
+whenever a process terminates, e.g.@: @code{shell: exit(-1)}, whether
+termination is due to a call to the @code{exit} system call or for
+another reason.  The name printed should be the full name passed to
+@func{process_execute}, except that it is acceptable to truncate it to
+15 characters to allow for the limited space in @struct{thread}.
 
 @item
 Aside from this, the kernel should print out no other messages that
@@ -341,10 +342,11 @@ a successful exit.  Other values may be used to indicate user-defined
 conditions (usually errors).
 
 @item SYS_exec
-@itemx pid_t exec (const char *@var{file})
-Run the executable in @var{file} and return the new process's program
-id (pid).  If there is an error loading this program, returns pid -1,
-which otherwise should not be a valid id number.
+@itemx pid_t exec (const char *@var{cmd_line})
+Runs the executable whose name is given in @var{cmd_line}, passing any
+given arguments, and returns the new process's program id (pid).  If
+there is an error loading this program, returns pid -1, which
+otherwise should not be a valid id number.
 
 @item SYS_join
 @itemx int join (pid_t @var{pid})
@@ -384,8 +386,9 @@ Returns the size, in bytes, of the file open as @var{fd}.
 @item SYS_read
 @itemx int read (int @var{fd}, void *@var{buffer}, unsigned @var{size})
 Read @var{size} bytes from the file open as @var{fd} into
-@var{buffer}.  Returns the number of bytes actually read, or -1 if the
-file could not be read.  Fd 0 reads from the keyboard using
+@var{buffer}.  Returns the number of bytes actually read (0 at end of
+file), or -1 if the file could not be read (due to a condition other
+than end of file).  Fd 0 reads from the keyboard using
 @func{kbd_getc}.
 
 @item SYS_write
@@ -399,6 +402,14 @@ not be written.   Fd 1 writes to the console.
 Changes the next byte to be read or written in open file @var{fd} to
 @var{position}, expressed in bytes from the beginning of the file.
 (Thus, a @var{position} of 0 is the file's start.)
+
+A seek past the current end of a file is not an error.  A later read
+obtains 0 bytes, indicating end of file.  A later write extends the
+file, filling any unwritten gap with zeros.  (However, in Pintos files
+have a fixed length until project 4 is complete, so writes past end of
+file will return an error.)  These semantics are implemented in the
+file system and do not require any special effort in system call
+implementation.
 
 @item SYS_tell
 @itemx unsigned tell (int @var{fd})
