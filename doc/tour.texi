@@ -303,8 +303,8 @@ grows downward from the end of the page.  It looks like this:
              |              magic              |
              |                :                |
              |                :                |
-             |               name              |
              |              status             |
+             |               tid               |
         0 kB +---------------------------------+
 @end group
 @end example
