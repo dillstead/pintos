@@ -26,12 +26,13 @@ Your submission should define @code{THREAD_JOIN_IMPLEMENTED} in
 
 @menu
 * File System New Code::        
+* File System Synchronization::  
 * Problem 4-1 Large Files::     
 * Problem 4-2 File Growth::     
 * Problem 4-3 Subdirectories::  
 * Problem 4-4 Buffer Cache::    
 * File System Design Document Requirements::  
-* File System FAQ::            
+* File System FAQ::             
 @end menu
 
 @node File System New Code

@@ -118,11 +118,11 @@ Think about what the compiler might do to your code.  Suppose you write
 the following to test your virtual memory implementation's ability to
 expand the stack:
 @example
-int main (void) {
+int main (void) @{
   int array[4096];
   array[123] = 234;
   return 0;
-}
+@}
 @end example
 @noindent The compiler is quite likely to notice that the value that you
 write to the array is never used again and thereby decide not to write

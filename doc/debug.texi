@@ -132,7 +132,7 @@ we've supplied a wrapper for it simply called @command{backtrace}.
 Give it the name of your @file{kernel.o} as the first argument and the
 hexadecimal numbers composing the backtrace (including the @samp{0x}
 prefixes) as the remaining arguments.  It outputs the function name
-and source file line numbers that correspond to each address.
+and source file line numbers that correspond to each address.  
 
 If the translated form of a backtrace is garbled, or doesn't make
 sense (e.g.@: function A is listed above function B, but B doesn't
@@ -141,6 +141,109 @@ thread's stack, because the backtrace is extracted from the stack.
 Alternatively, it could be that the @file{kernel.o} you passed to
 @command{backtrace} does not correspond to the kernel that produced
 the backtrace.
+
+@menu
+* Backtrace Example::           
+@end menu
+
+@node Backtrace Example
+@subsection Example
+
+Here's an example.  Suppose that Pintos printed out this following call
+stack, which is taken from an actual Pintos submission for the file
+system project:
+
+@example
+Call stack: 0xc0106eff 0xc01102fb 0xc010dc22 0xc010cf67 0xc0102319
+0xc010325a 0x804812c 0x8048a96 0x8048ac8.
+@end example
+
+You would then invoke the @command{backtrace} utility like shown below,
+cutting and pasting the backtrace information into the command line.
+This assumes that @file{kernel.o} is in the current directory.  You
+would of course enter all of the following on a single shell command
+line:
+
+@example
+backtrace kernel.o 0xc0106eff 0xc01102fb 0xc010dc22 0xc010cf67 0xc0102319
+0xc010325a 0x804812c 0x8048a96 0x8048ac8
+@end example
+
+The backtrace output would then look something like this:
+
+@example
+0xc0106eff: debug_panic (../../lib/debug.c:86)
+0xc01102fb: file_seek (../../filesys/file.c:405)
+0xc010dc22: seek (../../userprog/syscall.c:744)
+0xc010cf67: syscall_handler (../../userprog/syscall.c:444)
+0xc0102319: intr_handler (../../threads/interrupt.c:334)
+0xc010325a: ?? (threads/intr-stubs.S:1554)
+0x804812c: ?? (??:0)
+0x8048a96: ?? (??:0)
+0x8048ac8: ?? (??:0)
+@end example
+
+(You will probably not get the same results if you run the command above
+on your own kernel binary, because the source code you compiled from is
+different from the source code that emitted the panic message.)
+
+The first line in the backtrace refers to @func{debug_panic}, the
+function that implements kernel panics.  Because backtraces commonly
+result from kernel panics, @func{debug_panic} will often be the first
+function shown in a backtrace.
+
+The second line shows @func{file_seek} to be the function that panicked,
+in this case as the result of an assertion failure.  In the source code
+tree used for this example, line 405 of @file{filesys/file.c} is the
+assertion
+
+@example
+ASSERT (file_ofs >= )0;
+@end example
+
+@noindent
+Thus, @func{file_seek} panicked because it passed a negative file offset
+argument.
+
+The third line indicates that @func{seek} called @func{file_seek},
+presumably without validating the offset argument.  In this submission,
+@func{seek} implements the @code{seek} system call.
+
+The fourth line shows that @func{syscall_handler}, the system call
+handler, invoked @func{seek}.
+
+The fifth and sixth lines are the interrupt handler entry path.
+
+The remaining lines are for addresses below @code{PHYS_BASE}.  This
+means that they refer to addresses in the user program, not in the
+kernel.  If you know what user program was running when the kernel
+panicked, you can re-run @command{backtrace} on the user program.  You
+need to have compiled the user program with debug symbols enabled for
+this to be useful.  Instructions for doing so are included in
+@file{pintos/src/Makefile.userprog}.
+
+In this case, we rerun @command{backtrace} like so (typing the command
+on a single line, of course):
+
+@example
+~/cs140/pintos/src/utils/backtrace grow-too-big 0xc0106eff 0xc01102fb
+0xc010dc22 0xc010cf67 0xc0102319 0xc010325a 0x804812c 0x8048a96
+0x8048ac8
+@end example
+
+The results look like this:
+
+@example
+0xc0106eff: ?? (??:0)
+0xc01102fb: ?? (??:0)
+0xc010dc22: ?? (??:0)
+0xc010cf67: ?? (??:0)
+0xc0102319: ?? (??:0)
+0xc010325a: ?? (??:0)
+0x804812c: test_main (/home/blp/cs140/pintos/grading/filesys/grow-too-big.c:20)
+0x8048a96: main (/home/blp/cs140/pintos/grading/filesys/fsmain.c:10)
+0x8048ac8: _start (../../src/lib/user/entry.c:9)
+@end example
 
 @node i386-elf-gdb
 @section @command{i386-elf-gdb}
