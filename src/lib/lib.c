@@ -311,21 +311,20 @@ printf_integer (uintmax_t value, bool negative, const char *digits,
                 void (*output) (char, void *), void *aux)
 
 {
-  int base = strlen (digits);
+  char buf[64], *cp;
+  int base;
+  const char *base_name;
+  int pad_cnt;
 
-  char buf[64];
-  char *const buf_end = buf + sizeof buf;
-  char *bp;
-
-  int pad;
+  base = strlen (digits);
 
   /* Accumulate digits into buffer.
      This algorithm produces digits in reverse order, so we count
      backward from the end of the array. */
-  bp = buf_end;
+  cp = buf;
   while (value > 0) 
     {
-      *--bp = digits[value % base];
+      *cp++ = digits[value % base];
       value /= base;
     }
 
@@ -334,40 +333,43 @@ printf_integer (uintmax_t value, bool negative, const char *digits,
      null string.  Otherwise at least one digit is presented. */
   if (c->precision < 0)
     c->precision = 1;
-  while (buf_end - bp < c->precision && bp > buf + 3)
-    *--bp = '0';
+  while (cp - buf < c->precision && cp - buf > (int) sizeof buf - 8)
+    *cp++ = '0';
 
   /* Prepend sign. */
   if (c->flags & PLUS)
-    *--bp = negative ? '-' : '+';
+    *cp++ = negative ? '-' : '+';
   else if (c->flags & SPACE)
-    *--bp = negative ? '-' : ' ';
+    *cp++ = negative ? '-' : ' ';
   else if (negative)
-    *--bp = '-';
+    *cp++ = '-';
 
-  /* Prepend base. */
-  if ((c->flags & POUND) && base != 10) 
+  /* Get name of base. */
+  base_name = "";
+  if (c->flags & POUND) 
     {
-      *--bp = digits[0xa] == 'a' ? 'x' : 'X';
-      *--bp = '0'; 
+      if (base == 8)
+        base_name = "0";
+      else if (base == 16)
+        base_name = digits[0xa] == 'a' ? "0x" : "0X";
     }
 
   /* Calculate number of pad characters to fill field width. */
-  pad = c->width - (buf_end - bp);
-  if (pad < 0)
-    pad = 0;
+  pad_cnt = c->width - (cp - buf) - strlen (base_name);
+  if (pad_cnt < 0)
+    pad_cnt = 0;
 
   /* Do output. */
   if ((c->flags & (MINUS | ZERO)) == 0)
-    output_dup (' ', pad, output, aux);
-  if (bp < buf_end && strchr (digits, *bp) == NULL)
-    output (*bp++, aux);
+    output_dup (' ', pad_cnt, output, aux);
+  while (*base_name != '\0')
+    output (*base_name++, aux);
   if (c->flags & ZERO)
-    output_dup ('0', pad, output, aux);
-  while (bp < buf_end)
-    output (*bp++, aux);
+    output_dup ('0', pad_cnt, output, aux);
+  while (cp > buf)
+    output (*--cp, aux);
   if (c->flags & MINUS)
-    output_dup (' ', pad, output, aux);
+    output_dup (' ', pad_cnt, output, aux);
 }
 
 static void
