@@ -20,9 +20,7 @@ main (void)
   p--;
   p[0] = SYS_exit;
   p[1] = 42;
-  asm volatile ("mov %0, %%esp; int $0x30"
-                :
-                : "g" (p));
+  asm volatile ("mov %%esp, %0; int 0x30" :: "g" (p));
   printf ("(sc-boundary) failed\n");
   return 1;
 }

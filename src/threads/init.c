@@ -194,7 +194,7 @@ paging_init (void)
      aka PDBR (page directory base register).  This activates our
      new page tables immediately.  See [IA32-v2a] "MOV--Move
      to/from Control Registers" and [IA32-v3] 3.7.5. */
-  asm volatile ("movl %0,%%cr3" :: "r" (vtop (base_page_dir)));
+  asm volatile ("mov %%cr3, %0" :: "r" (vtop (base_page_dir)));
 }
 
 /* Parses the command line. */

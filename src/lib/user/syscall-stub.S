@@ -1,5 +1,6 @@
-.globl syscall
+	.intel_syntax noprefix
+	.globl syscall
 syscall:
-	popl %ecx
-	int $0x30
-	jmpl *%ecx
+	pop ecx
+	int 0x30
+	jmp ecx

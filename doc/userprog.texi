@@ -686,7 +686,7 @@ provide a little bit of helpful code:
    Returns true if successful, false if USRC is invalid. */
 static inline bool get_user (uint8_t *dst, const uint8_t *usrc) {
   int eax;
-  asm ("movl $1f, %%eax; movb %2, %%al; movb %%al, %0; 1:"
+  asm ("mov %%eax, offset 1f; mov %%al, %2; mov %0, %%al; 1:"
        : "=m" (*dst), "=&a" (eax) : "m" (*usrc));
   return eax != 0;
 }
@@ -695,7 +695,7 @@ static inline bool get_user (uint8_t *dst, const uint8_t *usrc) {
    Returns true if successful, false if UDST is invalid. */
 static inline bool put_user (uint8_t *udst, uint8_t byte) {
   int eax;
-  asm ("movl $1f, %%eax; movb %b2, %0; 1:"
+  asm ("mov %%eax, offset 1f; mov %0, %b2; 1:"
        : "=m" (*udst), "=&a" (eax) : "r" (byte));
   return eax != 0;
 }

@@ -4,6 +4,7 @@ print <<'EOF';
 #include "threads/loader.h"
 
 	.data
+	.intel_syntax noprefix
 .globl intr_stubs
 intr_stubs:
 EOF
@@ -22,39 +23,39 @@ for $i (0...255) {
     $x = sprintf ("%02x", $i);
     print ".globl intr${x}_stub\n";
     print "intr${x}_stub:\n";
-    print "\tpushl \$0\n"
+    print "\tpush 0\n"
 	if ($i != 8 && $i != 10 && $i != 11
 	    && $i != 13 && $i != 14 && $i != 17);
-    print "\tpushl \$0x$x\n";
+    print "\tpush 0x$x\n";
     print "\tjmp intr_entry\n";
 }
 
 print <<'EOF';
 intr_entry:
 	# Save caller's registers.
-	pushl %ds
-	pushl %es
-	pushal
+	push ds
+	push es
+	pusha
 
 	# Set up kernel environment.
 	cld
-	movl $SEL_KDSEG, %eax
-	movl %eax, %ds
-	movl %eax, %es
+	mov eax, SEL_KDSEG
+	mov ds, eax
+	mov es, eax
 
 	# Call interrupt handler.
-	pushl %esp
+	push esp
 .globl intr_handler
 	call intr_handler
-	addl $4, %esp
+	add esp, 4
 
 .globl intr_exit
 intr_exit:
 	# Restore caller's registers.
-	popal
-	popl %es
-	popl %ds
-	addl $8, %esp
+	popa
+	pop es
+	pop ds
+	add esp, 8
 
         # Return to caller.
 	iret
