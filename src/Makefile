@@ -10,3 +10,10 @@ clean::
 distclean::
 	$(MAKE) clean
 	find . -name '*~' -exec rm '{}' \;
+
+TAGS::
+	etags --members `find . -name \*.[chS]`
+
+tags::
+	ctags -T `find . -name \*.[chS]`
+
