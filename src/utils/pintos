@@ -172,8 +172,8 @@ sub run_vm {
 	print BOCHSRC "megs: $mem\n";
 	print BOCHSRC "log: bochsout.txt\n";
 	if ($vga ne 'terminal') {
-	    print BOCHSRC "com1: enabled=1, dev=/dev/tty\n"
-		if $serial_stdio;
+	    print BOCHSRC "com1: enabled=1, dev=/dev/stdout\n"
+		if $serial_out;
 	    print BOCHSRC "display_library: nogui\n"
 		if $vga eq 'none';
 	} else {
@@ -191,7 +191,7 @@ sub run_vm {
 	push (@cmd, '-hdd', $disks[3]) if defined $disks[3];
 	push (@cmd, '-m', $mem);
 	push (@cmd, '-nographic') if $vga eq 'none';
-	push (@cmd, '-serial', 'stdio') if $serial_stdio && $vga ne 'none';
+	push (@cmd, '-serial', 'stdio') if $serial_out && $vga ne 'none';
 	push (@cmd, '-S') if $debug eq 'monitor';
 	push (@cmd, '-s') if $debug eq 'gdb';
 	run_command (@cmd);
