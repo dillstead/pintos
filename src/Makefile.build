@@ -80,8 +80,8 @@ kernel.bin: kernel.o
 	../../pad 4096 < $@.tmp > $@
 	rm $@.tmp
 
-threads/loader.o: kernel.bin
-threads/loader.o: DEFINES += -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
+threads/loader.o: threads/loader.S kernel.bin
+	$(CC) -c $< -o $@ $(ASFLAGS) -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
 
 loader.bin: threads/loader.o
 	ld -N -e start -Ttext 0x7c00 --oformat binary -o $@ $<
