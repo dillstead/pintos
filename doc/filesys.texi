@@ -150,7 +150,7 @@ per line.
 @end table
 
 Also write the @command{ls} and @command{mkdir} user programs.  This
-is straightforward once the above syscalls are implemented.  If Unix,
+is straightforward once the above syscalls are implemented.  In Unix,
 these are programs rather than built-in shell commands, but
 @command{cd} is a shell command.  (Why?)
 
@@ -167,7 +167,7 @@ replacement algorithm.  Experiment to see what combination of accessed,
 dirty, and other information results in the best performance, as
 measured by the number of disk accesses.  (For example, metadata is
 generally more valuable to cache than data.)  Document your
-replacement algoritm in your design document.
+replacement algorithm in your design document.
 
 In addition to the basic file caching scheme, your implementation
 should also include the following enhancements:
@@ -191,7 +191,7 @@ to perform better than on the original file system implementation, and
 demonstrate the performance improvement.
 
 Note that write-behind makes your filesystem more fragile in the face
-of crashes.  Therefore, you should implement some manner to
+of crashes.  Therefore, you should
 periodically write all cached blocks to disk.  If you have
 @func{timer_sleep} from the first project working, this is an
 excellent application for it.
@@ -270,11 +270,10 @@ document.
 @b{What exec modes for running Pintos do I absolutely need to
 support?}
 
-You also need to support the @option{-f}, @option{-ci}, and
-@option{-ex} flags individually, and you need to handle them when
+You also need to support the @option{-f}, @option{-ci}, @option{-co},
+and @option{-ex} flags individually, and you need to handle them when
 they're combined, like this: @samp{pintos -f -ci shell 12345 -ex
-"shell"}.  Thus, you should be able to treat the above as equivalent
-to:
+"shell"}.  Thus, you should be able to treat the above as equivalent to:
 
 @example
 pintos -f
@@ -285,6 +284,9 @@ pintos -ex "shell"
 If you don't change the filesystem interface, then this should already
 be implemented properly in @file{threads/init.c} and
 @file{filesys/fsutil.c}.
+
+You must also implement the @option{-q} option and make sure that data
+gets flushed out to disk properly when it is used.
 
 @item
 @b{Will you test our file system with a different @code{DISK_SECTOR_SIZE}?}
@@ -298,6 +300,11 @@ of IDE disk hardware.
 Yes.  Anything stored in @struct{inode} takes up space on disk,
 so you must include this in your calculation of how many entires will
 fit in a single disk sector.
+
+@item
+@b{What's the directory separator character?}
+
+Forward slash (@samp{/}).
 @end enumerate
 
 @menu
