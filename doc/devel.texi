@@ -1,3 +1,51 @@
 @node Development Tools
 @appendix Development Tools
 
+Here are some tools that you might find useful while developing code.
+
+@node Tags
+@section Tags
+
+Tags are an index to the functions and global variables declared in a
+program.  Many editors, including Emacs and @command{vi}, can use
+them.  The @file{Makefile} in @file{pintos/src} produces Emacs-style
+tags with the command @code{make TAGS} or @command{vi}-style tags with
+@code{make tags}.
+
+In Emacs, use @kbd{M-.} to follow a tag in the current window,
+@kbd{C-x 4 .} in a new window, or @kbd{C-x 5 .} in a new frame.  If
+your cursor is on a symbol name for any of those commands, it becomes
+the default target.  If a tag name has multiple definitions, @kbd{M-0
+M-.} will jump to the next one.  To jump back to where you were before
+you followed the last tag, use @kbd{M-*}.
+
+@node CVS
+@section CVS
+
+CVS is a version-control system.  That is, you can use it to keep
+track of multiple versions of files.  The idea is that you do some
+work on your code and test it, then check it into the version-control
+system.  If you decide that the work you've done since your last
+check-in is no good, you can easily revert to the last checked-in
+version.  Furthermore, you can retrieve any old version of your code
+as of some given day and time.  The version control logs tell you who
+made changes and when.
+
+CVS is not the best version control system out there.  However, it's
+free, it's ubiquitous, and it's fairly easy to use.  More to the
+point, it's already available on the Leland machines you're using for
+the projects.
+
+For more information, visit the @uref{https://www.cvshome.org/, , CVS
+home page}.
+
+@node VNC
+@section VNC
+
+VNC stands for Virtual Network Computing.  It is, in essence, a remote
+display system which allows you to view a computing ``desktop''
+environment not only on the machine where it is running, but from
+anywhere on the Internet and from a wide variety of machine
+architectures.  It is already installed on the Leland machines.  For
+more information, look at the @uref{http://www.realvnc.com/, , VNC
+Home Page}.
