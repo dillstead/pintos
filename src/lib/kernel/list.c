@@ -216,15 +216,15 @@ list_push_back (struct list *list, list_elem *elem)
   list_insert (list_end (list), elem);
 }
 
-/* Removes ELEM from its list.  Undefined behavior if ELEM is not
-   in a list. */
+/* Removes ELEM from its list and returns the element that
+   followed it.  Undefined behavior if ELEM is not in a list.  */
 list_elem *
 list_remove (list_elem *elem)
 {
   ASSERT (is_interior (elem));
   elem->prev->next = elem->next;
   elem->next->prev = elem->prev;
-  return elem;
+  return elem->next;
 }
 
 /* Removes the front element from LIST and returns it.
