@@ -1,8 +1,8 @@
 #include "palloc.h"
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 #include "debug.h"
+#include "lib.h"
 #include "mmu.h"
 
 /* A free page owned by the page allocator. */
