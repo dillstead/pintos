@@ -9,11 +9,19 @@
 #include "random.h"
 #include "switch.h"
 
+/* Offset of `stack' member within `struct thread'.
+   Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
+/* List of processes in THREAD_READY state,
+   that is, processes that are ready to run but not actually
+   running. */
 static struct list run_queue;
+
+/* Thread to run when nothing else is ready. */
 static struct thread *idle_thread;
 
+/* Idle thread.  Executes when no other thread is ready to run. */
 static void
 idle (void *aux UNUSED) 
 {
@@ -29,6 +37,10 @@ idle (void *aux UNUSED)
     }
 }
 
+/* Initializes the threading system and starts an initial thread
+   which is immediately scheduled.  Never returns to the caller.
+   The initial thread is named NAME and executes FUNCTION passing
+   AUX as the argument. */
 void
 thread_init (const char *name, void (*function) (void *aux), void *aux) 
 {
@@ -36,9 +48,14 @@ thread_init (const char *name, void (*function) (void *aux), void *aux)
 
   ASSERT (intr_get_level () == IF_OFF);
 
+  /* Initialize run queue. */
   list_init (&run_queue);
-  idle_thread = thread_create ("idle", idle, NULL);
 
+  /* Create idle thread. */
+  idle_thread = thread_create ("idle", idle, NULL);
+  idle_thread->status = THREAD_BLOCKED;
+  
+  /* Create initial thread and switch to it. */
   initial_thread = thread_create (name, function, aux);
   list_remove (&initial_thread->rq_elem);
   initial_thread->status = THREAD_RUNNING;
@@ -46,7 +63,8 @@ thread_init (const char *name, void (*function) (void *aux), void *aux)
 
   NOT_REACHED ();
 }
-
+
+/* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
   {
     void *eip;                  /* Return address. */
@@ -54,16 +72,20 @@ struct kernel_thread_frame
     void *aux;                  /* Auxiliary data for function. */
   };
 
+/* Function used as the basis for a kernel thread. */
 static void
 kernel_thread (void (*function) (void *aux), void *aux) 
 {
   ASSERT (function != NULL);
 
-  intr_enable ();
-  function (aux);
-  thread_exit ();
+  intr_enable ();       /* The scheduler runs with interrupts off. */
+  function (aux);       /* Execute the thread function. */
+  thread_exit ();       /* If function() returns, kill the thread. */
 }
 
+/* Creates a new thread named NAME and initializes its fields.
+   Returns the new thread if successful or a null pointer on
+   failure. */
 static struct thread *
 new_thread (const char *name) 
 {
@@ -76,21 +98,29 @@ new_thread (const char *name)
     {
       strlcpy (t->name, name, sizeof t->name);
       t->stack = (uint8_t *) t + PGSIZE;
-      t->status = THREAD_BLOCKED;
+      t->status = THREAD_INITIALIZING;
     }
   
   return t;
 }
 
+/* Allocates a SIZE-byte frame within thread T's stack and
+   returns a pointer to the frame's base. */
 static void *
 alloc_frame (struct thread *t, size_t size) 
 {
+  /* Stack data is always allocated in word-size units. */
   ASSERT (size % sizeof (uint32_t) == 0);
 
   t->stack -= size;
   return t->stack;
 }
 
+/* Creates a new kernel thread named NAME, which executes
+   FUNCTION passing AUX as the argument.  The thread is added to
+   the ready queue.  Thus, it may be scheduled even before
+   thread_create() returns.  If you need to ensure ordering, then
+   use synchronization, such as a semaphore. */
 struct thread *
 thread_create (const char *name, void (*function) (void *aux), void *aux) 
 {
@@ -113,7 +143,7 @@ thread_create (const char *name, void (*function) (void *aux), void *aux)
   ef = alloc_frame (t, sizeof *ef);
   ef->eip = (void (*) (void)) kernel_thread;
 
-  /* Stack frame for thread_switch(). */
+  /* Stack frame for switch_threads(). */
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
 
@@ -164,7 +194,7 @@ thread_execute (const char *filename)
   ef = alloc_frame (t, sizeof *ef);
   ef->eip = intr_exit;
 
-  /* Stack frame for thread_switch(). */
+  /* Stack frame for switch_threads(). */
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
 

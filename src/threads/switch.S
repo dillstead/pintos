@@ -34,7 +34,7 @@ switch_threads:
 
 .globl switch_entry
 switch_entry:
-	# Discard thread_switch() arguments.
+	# Discard switch_threads() arguments.
 	addl $8, %esp
 
 	# Call schedule_tail(prev).
