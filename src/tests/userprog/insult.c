@@ -309,7 +309,7 @@ main (int argc, char *argv[])
 	    usage (-1, "Can't have more than one output file");
 	  if (++i >= argc)
 	    usage (-1, "Missing value for -f");
-	  create (argv[i]);
+	  create (argv[i], 0);
 	  handle = open (argv[i]);
           if (handle < 0)
             {
