@@ -22,4 +22,7 @@ static inline int ispunct (int c) {
   return isprint (c) && !isalnum (c) && !isspace (c);
 }
 
+static inline int tolower (int c) { return isupper (c) ? c - 'A' + 'a' : c; }
+static inline int toupper (int c) { return islower (c) ? c - 'a' + 'A' : c; }
+
 #endif /* lib/ctype.h */
