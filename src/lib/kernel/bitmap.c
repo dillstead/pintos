@@ -227,6 +227,7 @@ bitmap_scan (const struct bitmap *b, size_t start, size_t cnt, bool value)
    START that are all set to VALUE, flips them all to !VALUE,
    and returns the index of the first bit in the group.
    If there is no such group, returns BITMAP_ERROR.
+   If CNT is zero, returns 0.
    Bits are set atomically, but testing bits is not atomic with
    setting them. */
 size_t
