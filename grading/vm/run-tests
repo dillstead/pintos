@@ -694,6 +694,8 @@ sub xsystem {
 	$status = $?;
 	alarm 0;
     };
+
+    my ($ok);
     if ($@) {
 	die unless $@ eq "alarm\n";   # propagate unexpected errors
 	print "Timed out: ";
@@ -705,21 +707,21 @@ sub xsystem {
 	    print "Waiting for $pid to die" if $i == 0;
 	    print ".";
 	}
-	$status = 0;
-    }
+	$ok = 1;
+    } else {
+	if (WIFSIGNALED ($status)) {
+	    my ($signal) = WTERMSIG ($status);
+	    die "Interrupted\n" if $signal == SIGINT;
+	    print "Child terminated with signal $signal\n";
+	}
 
-    if (WIFSIGNALED ($status)) {
-	my ($signal) = WTERMSIG ($status);
-	die "Interrupted\n" if $signal == SIGINT;
-	print "Child terminated with signal $signal\n";
+	my ($exp_status) = !defined ($options{EXPECT}) ? 0 : $options{EXPECT};
+	$ok = WIFEXITED ($status) && WEXITSTATUS ($status) == $exp_status;
     }
-
-    my ($expected_exit) = !defined ($options{EXPECT}) ? 0 : $options{EXPECT};
-    my ($ok) = WIFEXITED ($status) && WEXITSTATUS ($status) == $expected_exit;
 
     unlink ("output/$log.err") if defined ($log) && $ok;
 
-    die $options{DIE} if $status != 0 && defined $options{DIE};
+    die $options{DIE} if !$ok && defined $options{DIE};
 
     return $ok;
 }
