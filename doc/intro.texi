@@ -1,0 +1,230 @@
+@node Introduction, Project 1--Threads, Top, Top
+@chapter Introduction
+
+Welcome to Pintos.  Pintos is a simple operating system framework for
+the 80@var{x}86 architecture.  It supports kernel threads, loading and
+running user programs, and a file system, but it implements all of
+these in a very simple way.  In the Pintos projects, you and your
+project team will strengthen its support in all three of these areas.
+You will also add a virtual memory implementation.
+
+Pintos could, theoretically, run on a regular IBM-compatible PC.  As
+fun as it might be, it is impractical to supply every student in CS
+140 with his or her own PC.  Therefore, we will run Pintos projects in
+a PC simulator, that is, a program that simulates an 80@var{x}86 CPU
+and its peripheral devices well enough that unmodified operating
+systems and software can run under it.  In class we will use the
+@uref{http://bochs.sourceforge.net, , Bochs} simulator.  Pintos has
+also been tested within @uref{http://fabrice.bellard.free.fr/qemu/, ,
+qemu} and
+@uref{http://www.vmware.com/products/server/gsx_features.html, ,
+VMware GSX Server}.
+
+These projects are hard.  CS 140 has a reputation of taking a lot of
+time, and deservedly so.  We will do what we can to ease the pain,
+such as providing a lot of support material, but to some extent there
+is simply some amount of hard work that needs to be done.  Because
+Pintos is a new system, it is also possible that some parts of the
+projects are not only difficult, but more difficult than they should
+be.  We welcome your feedback.  If you have suggestions on how we can
+reduce the unnecessary overhead of assignments, cutting them down to
+the important underlying issues, please let us know.
+
+This chapter explains how to get started working with Pintos.  You
+should read the entire chapter before you proceed to any of the
+projects.
+
+@menu
+* Getting Started::             
+* Pintos Trivia::               
+@end menu
+
+@node Getting Started
+@section Getting Started
+
+To get started, you'll have to log into a machine that Pintos can be
+built on.  For the purposes of CS 140, our ``officially supported''
+Pintos development machines are the Sun Solaris machines managed by
+Stanford ITSS, as described on the
+@uref{http://www.stanford.edu/dept/itss/services/cluster/environs/sweet/,
+, ITSS webpage}.  We will test your code on these machines, and the
+instructions given here assume this environment.  However, Pintos and
+its supporting tools are portable enough that it should build ``out of
+the box'' in other environments, including the Linux machines managed
+by ITSS.
+
+Once you've logged into one of these machines, either locally or
+remotely, start out by adding our binaries directory to your
+@env{PATH} environment.  Under @command{csh}, the Stanford default
+shell, you can do so with this command:
+@example
+set path = ( $path /usr/class/cs140/i386/bin )
+@end example
+@noindent
+It might be a good idea to add this line into the @file{.cshrc} file
+in your home directory.  Otherwise, you'll have to type it every time
+you log in.
+
+@menu
+* Source Tree Overview::        
+* Building Pintos::             
+* Running Pintos::              
+@end menu
+
+@node Source Tree Overview
+@subsection Source Tree Overview
+
+Now you can extract the source for Pintos into a directory named
+@file{pintos/src} by executing
+@example
+tar xzf /usr/class/cs140/pintos/pintos.tar.gz
+@end example
+Alternatively
+@uref{http://www.stanford.edu/class/cs140/pintos/pintos.tar.gz} and
+extract it in a similar way.
+
+Let's take a look at what's inside.  Here's the directory structure
+that you should see in @file{pintos/src}:
+
+@table @file
+@item threads/
+Source code for the base kernel, which you will modify starting with
+project 1.
+
+@item userprog/
+Source code for the user program loader, which you will modify
+starting with project 2.
+
+@item vm/
+An almost empty directory, where you will implement virtual memory in
+project 3.
+
+@item filesys/
+Source code for a basic file system, which you will use starting with
+project 2 but which you should not modify until project 4.
+
+@item devices/
+Source code for I/O device interfacing: keyboard, timer, disk, etc.
+You will improve the timer implementation in project 1, but otherwise
+you should have no need to change this code.
+
+@item lib/
+An implementation of a subset of the standard C library.  The code in
+this directory is compiled into both the Pintos kernel and, starting
+from project 2, user programs that run under it.  Headers in this
+directory can be included using the @code{#include <@dots{}>}
+notation.  You should have little need to modify this code.
+
+@item lib/kernel/
+Parts of the C library that are included only in the Pintos kernel.
+This also includes implementations of some data types that you are
+free to use in your kernel code: bitmaps, doubly linked lists, and
+hash tables.
+
+@item lib/user/
+Parts of the C library that are included only in Pintos user programs.
+
+@item tests/
+Code for testing each project.
+
+@item misc/
+@itemx utils/
+These files may come in handy if you decide to try working with Pintos
+away from ITSS's Sun Solaris machines.  Otherwise, you can ignore
+them.
+@end table
+
+@node Building Pintos
+@subsection Building Pintos
+
+The next thing to do is to try building the source code supplied for
+the first project.  First, @command{cd} into the @file{threads}
+directory.  Then, issue the @samp{make} command.  This will create a
+@file{build} directory under @file{threads}, populate it with a
+@file{Makefile} and a few subdirectories, and then build the kernel
+inside.  The entire build should take less than 30 seconds.
+
+Watch the commands executed during the build.  You should notice that
+the build tools' names begin with @samp{i386-elf-}, e.g.@:
+@code{i386-elf-gcc}, @code{i386-elf-ld}.  These are ``cross-compiler''
+tools.  That is, the build is running on a Sparc machine (called the
+@dfn{host}), but the result will run on an 80@var{x}86 machine (called
+the @dfn{target}).  The @samp{i386-elf-@var{program}} tools, which
+reside in @file{/usr/class/cs140/i386/bin}, are specially built for
+this configuration.
+
+Following the build, the following are the interesting files in the
+@file{build} directory:
+
+@table @file
+@item Makefile
+A copy of @file{pintos/src/Makefile.build}.  It describes how to build
+the kernel.  @xref{Adding c or h Files}, for more information.
+
+@item kernel.o
+Object file for the entire kernel.  This is the result of linking
+object files compiled from each individual kernel source file into a
+single object file.  It contains debug information, so you can run
+@command{gdb} or 
+
+@item kernel.bin
+Memory image of the kernel.  These are the exact bytes loaded into
+memory to run the Pintos kernel.  To simplify loading, it is always
+padded out with zero bytes so that it is an exact multiple of 4 kB in
+size.
+
+@item loader.bin
+Memory image for the kernel loader, a small chunk of code written in
+assembly language that reads the kernel from disk into memory and
+starts it up.  It is exactly 512 bytes long.  Its size is fixed by the
+PC BIOS.
+
+@item os.dsk
+Disk image for the kernel, simply @file{loader.bin} followed by
+@file{kernel.bin}.  This file is used as a ``virtual disk'' by the
+simulator.
+@end table
+
+Subdirectories of @file{build} contain object files (@file{.o}) and
+dependency files (@file{.d}), both produced by the compiler.  The
+dependency files tell @command{make} which source files need to be
+recompiled when other source or header files are changed.
+
+@node Running Pintos
+@subsection Running Pintos
+
+To start the kernel that you just built in the Bochs simulator, first
+@command{cd} into the newly created @file{build} directory.  Then
+issue the command @code{pintos run}.  This command will create a
+@file{bochsrc.txt} file, which is needed for running Bochs, and then
+invoke Bochs.
+
+Bochs opens a new window that represents the the simulated machine's
+display, and a BIOS message briefly flashes.  Then Pintos boots and
+runs a simple test program that scrolls by a few screenfuls of text.
+When it's done, you can close Bochs by clicking on the ``Power''
+button in the window's top right corner, or rerun the whole process by
+clicking on the ``Reset'' button just to its left.  The other buttons
+are not very useful for our purposes.
+
+The text printed by Pintos inside Bochs probably went by too quickly
+to read.  However, you've probably noticed by now that the same text
+was displayed 
+
+
+@node Pintos Trivia
+@section Pintos Trivia
+
+The design of Pintos is inspired by Nachos, an instructional operating
+system implemented at UC Berkeley, and even uses a few pieces of
+Nachos code.  Pintos is different from Nachos in two important ways.
+First, Nachos requires a host operating system such as Solaris,
+whereas Pintos runs on real or simulated 80@var{x}86 hardware.
+Second, Nachos is written in C++, whereas, like most real-world
+operating systems, Pintos is written in C.
+
+The name ``Pintos'' was chosen for multiple reasons.  First, it was
+named for a Mexican food to reflect that it was inspired by Nachos.
+Second, Pintos is small and a ``pint'' is a small quantity.  Third,
+like drivers of the eponymous car, students are likely to have trouble
+with blow-ups.
