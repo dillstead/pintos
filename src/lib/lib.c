@@ -114,13 +114,13 @@ strchr (const char *string, int c_)
       return NULL;
     else string++;
 }
-
+
 static void
 vprintf_core (const char *format, va_list args,
               void (*output) (char, void *), void *aux);
 
 static void
-output_console (char ch, void *aux __attribute__ ((unused))) 
+vprintk_helper (char ch, void *aux __attribute__ ((unused))) 
 {
   vga_putc (ch);
   serial_outb (ch);
@@ -130,7 +130,7 @@ void
 vprintk (const char *format, va_list args) 
 {
   enum if_level old_level = intr_disable ();
-  vprintf_core (format, args, output_console, NULL);
+  vprintf_core (format, args, vprintk_helper, NULL);
   intr_set_level (old_level);
 }
 
@@ -141,6 +141,50 @@ printk (const char *format, ...)
 
   va_start (args, format);
   vprintk (format, args);
+  va_end (args);
+}
+
+struct vsnprintf_aux 
+  {
+    char *p;
+    int length;
+    int max_length;
+  };
+
+static void
+vsnprintf_helper (char ch, void *aux_) 
+{
+  struct vsnprintf_aux *aux = aux_;
+
+  if (aux->length++ < aux->max_length)
+    *aux->p++ = ch;
+}
+
+int
+vsnprintf (char *buffer, size_t buf_size,
+           const char *format, va_list args) 
+{
+  struct vsnprintf_aux aux;
+  aux.p = buffer;
+  aux.length = 0;
+  aux.max_length = buf_size > 0 ? buf_size - 1 : 0;
+  
+  vprintf_core (format, args, vsnprintf_helper, &aux);
+
+  if (buf_size > 0)
+    *aux.p = '\0';
+
+  return aux.length;
+}
+
+int
+snprintf (char *buffer, size_t buf_size,
+          const char *format, ...) 
+{
+  va_list args;
+
+  va_start (args, format);
+  vsnprintf (buffer, buf_size, format, args);
   va_end (args);
 }
 
@@ -177,7 +221,8 @@ struct printf_conversion
   };
 
 static const char *
-parse_conversion (const char *format, struct printf_conversion *c, va_list *args) 
+parse_conversion (const char *format, struct printf_conversion *c,
+                  va_list *args) 
 {
   /* Parse flag characters. */
   c->flags = 0;

@@ -3,6 +3,7 @@
 
 #include <stdarg.h>
 #include <stddef.h>
+#include "debug.h"
 
 #define ROUND_UP(X, STEP) (((X) + (STEP) - 1) / (STEP) * (STEP))
 #define DIV_ROUND_UP(X, STEP) (((X) + (STEP) - 1) / (STEP))
@@ -19,8 +20,9 @@ size_t strlcpy (char *, const char *, size_t);
 size_t strlen (const char *);
 
 void vprintk (const char *, va_list);
-void printk (const char *, ...)
-     __attribute__ ((format (printf, 1, 2)));
+void printk (const char *, ...) PRINTF_FORMAT (1, 2);
+int vsnprintf (char *, size_t, const char *, va_list);
+int snprintf (char *, size_t, const char *, ...) PRINTF_FORMAT (3, 4);
 
 static inline int
 isdigit (int c) 
