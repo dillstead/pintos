@@ -2,8 +2,12 @@ include ../../Make.config
 
 SHELL = /bin/sh
 
-LDFLAGS = -nostdlib -static -Wl,-T,elf.x
+LDFLAGS = -nostdlib -static
 LDLIBS = $(shell $(CC) -print-libgcc-file-name)
+
+# Uncomment the line below to round up segment sizes to full pages for
+# testing purposes only.
+LDFLAGS += -Wl,-T,fullpage.x
 
 VPATH = ../..
 
