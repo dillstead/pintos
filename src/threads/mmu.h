@@ -43,6 +43,8 @@
 #include "debug.h"
 #endif
 
+#include "loader.h"
+
 #define MASK(SHIFT, CNT) (((1ul << (CNT)) - 1) << (SHIFT))
 
 /* Page offset (bits 0:11). */
@@ -86,8 +88,7 @@ static inline void *pg_round_down (void *va) {
   return (void *) ((uintptr_t) va & ~PGMASK);
 }
 
-#define	PHYS_BASE ((void *) 0xc0000000) /* Physical memory mapped here. */
-#define KERN_BASE ((void *) 0xc0100000) /* Kernel loaded here. */
+#define	PHYS_BASE ((void *) LOADER_PHYS_BASE)
 
 /* Returns kernel virtual address at which physical address PADDR
    is mapped. */
