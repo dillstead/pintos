@@ -68,6 +68,7 @@ enum intr_level
 intr_enable (void) 
 {
   enum intr_level old_level = intr_get_level ();
+  ASSERT (!intr_context ());
   asm volatile ("sti");
   return old_level;
 }
@@ -93,7 +94,7 @@ intr_init (void)
 
   /* Initialize IDT. */
   for (i = 0; i < INTR_CNT; i++)
-    idt[i] = make_trap_gate (intr_stubs[i], 0);
+    idt[i] = make_intr_gate (intr_stubs[i], 0);
 
   /* Load IDT register. */
   idtr_operand = make_idtr_operand (sizeof idt - 1, idt);
@@ -303,6 +304,10 @@ intr_handler (struct intr_frame *frame)
   bool external;
   intr_handler_func *handler;
 
+  /* External interrupts are special.
+     We only handle one at a time (so interrupts must be off)
+     and they need to be acknowledged on the PIC (see below).
+     An external interrupt handler cannot sleep. */
   external = frame->vec_no >= 0x20 && frame->vec_no < 0x30;
   if (external) 
     {
