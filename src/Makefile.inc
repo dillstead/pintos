@@ -3,7 +3,6 @@
 SHELL = /bin/sh
 
 CC = gcc
-CPP = $(CC) -E
 
 VPATH := $(TOP_SRCDIR)/threads
 VPATH := $(VPATH):$(TOP_SRCDIR)/devices
@@ -12,7 +11,7 @@ VPATH := $(VPATH):$(TOP_SRCDIR)/filesys
 VPATH := $(VPATH):$(TOP_SRCDIR)/userprog
 
 WARNINGS = -Wall -W -Wstrict-prototypes -Wmissing-prototypes
-CFLAGS = -g -O3 -MMD $(WARNINGS) $(INCLUDES) $(DEFINES)
+CFLAGS = -g -O3 -MMD -msoft-float $(WARNINGS) $(INCLUDES) $(DEFINES)
 ASFLAGS = -Wa,--gstabs+ $(INCLUDES) $(DEFINES)
 
 # Core kernel.
@@ -58,11 +57,11 @@ all: diskimage.bin
 intr-stubs.S: $(TOP_SRCDIR)/threads/intr-stubs.pl
 	$< > $@
 
-kernel.lds: $(TOP_SRCDIR)/threads/kernel.lds.in $(TOP_SRCDIR)/threads/loader.h
+kernel.lds.s: $(TOP_SRCDIR)/threads/kernel.lds.S $(TOP_SRCDIR)/threads/loader.h
 	$(CPP) -x assembler-with-cpp -P $< -o $@
 
-kernel.o: $(OBJECTS) kernel.lds
-	ld -T kernel.lds -o $@ $(OBJECTS) `$(CC) -print-libgcc-file-name`
+kernel.o: $(OBJECTS) kernel.lds.s
+	ld -T kernel.lds.s -o $@ $(OBJECTS) `$(CC) -print-libgcc-file-name`
 
 kernel.bin: kernel.o
 	objcopy -O binary -R .note -R .comment -S $< $@.tmp
@@ -77,6 +76,6 @@ diskimage.bin: loader.bin kernel.bin
 
 clean:
 	rm -f *.o *.d *.bin
-	rm -f kernel.bin.data kernel.bin.pad intr-stubs.S kernel.lds
+	rm -f kernel.bin.data kernel.bin.pad intr-stubs.S kernel.lds.s
 
 -include *.d

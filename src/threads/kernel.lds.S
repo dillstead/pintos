@@ -10,9 +10,7 @@ SECTIONS
   _start = .;
 
   .text : { *(.text) } = 0x9090
-
   .rodata : { *(.rodata) *(.rodata.*) }
-
   .data : { *(.data) }
 
   _start_bss = .;
