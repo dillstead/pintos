@@ -4,15 +4,21 @@
 #include <inttypes.h>
 #include <stdint.h>
 
+/* Size of a disk sector in bytes. */
 #define DISK_SECTOR_SIZE 512
 
-typedef uint32_t disk_sector_no;
-#define PRDSNu PRIu32   /* For use with printk(). */
+/* Index of a disk sector within a disk.
+   Good enough for disks up to 2 TB. */
+typedef uint32_t disk_sector_t;
+
+/* Format specifier for printk(), e.g.:
+   printk ("sector=%"PRDSNu"\n", sector); */
+#define PRDSNu PRIu32
 
 void disk_init (void);
 struct disk *disk_get (int chan_no, int dev_no);
-disk_sector_no disk_size (struct disk *);
-void disk_read (struct disk *, disk_sector_no, void *);
-void disk_write (struct disk *, disk_sector_no, const void *);
+disk_sector_t disk_size (struct disk *);
+void disk_read (struct disk *, disk_sector_t, void *);
+void disk_write (struct disk *, disk_sector_t, const void *);
 
 #endif /* disk.h */

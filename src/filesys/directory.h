@@ -19,7 +19,7 @@ struct dir_entry
   {
     bool in_use;
     char name[FILENAME_LEN_MAX + 1];
-    disk_sector_no filehdr_sector;
+    disk_sector_t filehdr_sector;
   };
 
 struct file;
@@ -27,8 +27,8 @@ bool dir_init (struct dir *, size_t entry_cnt);
 void dir_destroy (struct dir *);
 void dir_read (struct dir *, struct file *);
 void dir_write (struct dir *, struct file *);
-bool dir_lookup (const struct dir *, const char *name, disk_sector_no *);
-bool dir_add (struct dir *, const char *name, disk_sector_no);
+bool dir_lookup (const struct dir *, const char *name, disk_sector_t *);
+bool dir_add (struct dir *, const char *name, disk_sector_t);
 bool dir_remove (struct dir *, const char *name);
 void dir_list (const struct dir *);
 void dir_dump (const struct dir *);

@@ -7,7 +7,7 @@
 #include "filesys.h"
 
 bool
-file_open (struct file *file, disk_sector_no hdr_sector) 
+file_open (struct file *file, disk_sector_t hdr_sector) 
 {
   file->hdr = filehdr_read (hdr_sector);
   file->bounce = malloc (DISK_SECTOR_SIZE);

@@ -58,7 +58,7 @@ lookup (const struct dir *d, const char *name)
 
 bool
 dir_lookup (const struct dir *d, const char *name,
-            disk_sector_no *filehdr_sector) 
+            disk_sector_t *filehdr_sector) 
 {
   const struct dir_entry *e;
 
@@ -77,7 +77,7 @@ dir_lookup (const struct dir *d, const char *name,
 }
 
 bool
-dir_add (struct dir *d, const char *name, disk_sector_no filehdr_sector) 
+dir_add (struct dir *d, const char *name, disk_sector_t filehdr_sector) 
 {
   size_t i;
   

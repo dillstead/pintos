@@ -90,7 +90,7 @@ filesys_create (const char *name, off_t initial_size)
 {
   struct dir dir;
   struct bitmap free_map;
-  disk_sector_no hdr_sector;
+  disk_sector_t hdr_sector;
   struct filehdr *filehdr;
   bool success = false;
 
@@ -139,7 +139,7 @@ bool
 filesys_open (const char *name, struct file *file)
 {
   struct dir dir;
-  disk_sector_no hdr_sector;
+  disk_sector_t hdr_sector;
   bool success = false;
 
   if (!dir_init (&dir, NUM_DIR_ENTRIES))
@@ -156,7 +156,7 @@ bool
 filesys_remove (const char *name) 
 {
   struct dir dir;
-  disk_sector_no hdr_sector;
+  disk_sector_t hdr_sector;
   struct filehdr *filehdr;
   struct bitmap free_map;
   bool success = false;

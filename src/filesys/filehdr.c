@@ -47,7 +47,7 @@ filehdr_deallocate (struct filehdr *h, struct bitmap *b)
 }
 
 struct filehdr *
-filehdr_read (disk_sector_no filehdr_sector) 
+filehdr_read (disk_sector_t filehdr_sector) 
 {
   struct filehdr *h = calloc (1, sizeof *h);
   if (h == NULL)
@@ -60,7 +60,7 @@ filehdr_read (disk_sector_no filehdr_sector)
 }
 
 void
-filehdr_write (const struct filehdr *h, disk_sector_no filehdr_sector) 
+filehdr_write (const struct filehdr *h, disk_sector_t filehdr_sector) 
 {
   ASSERT (h != NULL);
   ASSERT (sizeof *h == DISK_SECTOR_SIZE);
@@ -73,7 +73,7 @@ filehdr_destroy (struct filehdr *h)
   free (h);
 }
 
-disk_sector_no
+disk_sector_t
 filehdr_byte_to_sector (const struct filehdr *h, off_t pos) 
 {
   size_t idx;
@@ -81,7 +81,7 @@ filehdr_byte_to_sector (const struct filehdr *h, off_t pos)
   ASSERT (h != NULL);
 
   idx = pos / DISK_SECTOR_SIZE;
-  return idx < h->sector_cnt ? h->sectors[idx] : (disk_sector_no) -1;
+  return idx < h->sector_cnt ? h->sectors[idx] : (disk_sector_t) -1;
 }
 
 off_t

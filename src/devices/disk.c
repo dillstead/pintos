@@ -51,7 +51,7 @@ struct disk
     int dev_no;                 /* Device 0 or 1 for master or slave. */
 
     bool is_ata;                /* 1=This device is an ATA disk. */
-    disk_sector_no capacity;    /* Capacity in sectors (if is_ata is true). */
+    disk_sector_t capacity;    /* Capacity in sectors (if is_ata is true). */
   };
 
 /* An ATA channel (aka controller).
@@ -78,7 +78,7 @@ static void reset_channel (struct channel *);
 static bool check_device_type (struct disk *);
 static void identify_ata_device (struct disk *);
 
-static void select_sector (struct disk *, disk_sector_no);
+static void select_sector (struct disk *, disk_sector_t);
 static void issue_pio_command (struct channel *, uint8_t command);
 static void input_sector (struct channel *, void *);
 static void output_sector (struct channel *, const void *);
@@ -167,7 +167,7 @@ disk_get (int chan_no, int dev_no)
 
 /* Returns the size of disk D, measured in DISK_SECTOR_SIZE-byte
    sectors. */
-disk_sector_no
+disk_sector_t
 disk_size (struct disk *d) 
 {
   ASSERT (d != NULL);
@@ -178,7 +178,7 @@ disk_size (struct disk *d)
 /* Reads sector SEC_NO from disk D into BUFFER, which must have
    room for DISK_SECTOR_SIZE bytes. */
 void
-disk_read (struct disk *d, disk_sector_no sec_no, void *buffer) 
+disk_read (struct disk *d, disk_sector_t sec_no, void *buffer) 
 {
   struct channel *c;
   
@@ -200,7 +200,7 @@ disk_read (struct disk *d, disk_sector_no sec_no, void *buffer)
    DISK_SECTOR_SIZE bytes.  Returns after the disk has
    acknowledged receiving the data. */
 void
-disk_write (struct disk *d, disk_sector_no sec_no, const void *buffer)
+disk_write (struct disk *d, disk_sector_t sec_no, const void *buffer)
 {
   struct channel *c;
   
@@ -383,7 +383,7 @@ printk_ata_string (char *string, size_t size)
    writes SEC_NO to the disk's sector selection registers.  (We
    use LBA mode.) */
 static void
-select_sector (struct disk *d, disk_sector_no sec_no) 
+select_sector (struct disk *d, disk_sector_t sec_no) 
 {
   struct channel *c = d->channel;
 

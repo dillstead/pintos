@@ -14,7 +14,7 @@ struct file
     off_t pos;
   };
 
-bool file_open (struct file *, disk_sector_no);
+bool file_open (struct file *, disk_sector_t);
 void file_close (struct file *);
 off_t file_read (struct file *, void *, off_t);
 off_t file_read_at (struct file *, void *, off_t size, off_t start);

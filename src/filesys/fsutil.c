@@ -18,7 +18,7 @@ copy (const char *filename, off_t size)
 {
   struct disk *src;
   struct file dst;
-  disk_sector_no sector;
+  disk_sector_t sector;
   void *buffer;
 
   /* Open source disk. */
