@@ -19,3 +19,4 @@
 @c @include devel.texi
 @include mlfqs.texi
 @include standards.texi
+@include doc.texi
