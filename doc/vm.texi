@@ -247,6 +247,18 @@ system should allocate additional pages for the stack as necessary
 (unless those pages are unavailable because they are in use by another
 segment).
 
+It is impossible to predict how large the stack will grow at compile
+time, so we must allocate pages as necessary.  You should only
+allocate additional pages if they ``appear'' to be stack accesses.
+You must devise a heuristic that attempts to distinguish stack
+accesses from other accesses.  Document and explain the heuristic in
+your design documentation.
+
+The first stack page need not be loaded lazily.  You can initialize it
+with the command line at load time, with no need to wait for it to be
+faulted in.  Even if you did wait, the very first instruction in the
+user program is likely to be one that faults in the page.
+
 @node Problem 3-1 Page Table Management
 @section Problem 3-1: Page Table Management
 
@@ -261,14 +273,14 @@ physical page frames.  Consider using a hash table (@pxref{Hash
 Table}).
 
 @item
-Some way of translating from physical page frames back to virtual
-page frames, so that when you replace a page, you can invalidate
-its translation(s).
+Some way of translating from physical page frames back to virtual page
+frames, so that when you evict a physical page from its frame, you can
+invalidate its translation(s).
 
 @item
 Some way of finding a page on disk if it is not in memory.  You won't
-need this data structure until part 2, but planning ahead is a good
-idea.
+need this data structure until problem 3-2, but planning ahead is a
+good idea.
 @end itemize
 
 The page fault handler, @func{page_fault} in
@@ -276,19 +288,20 @@ The page fault handler, @func{page_fault} in
 
 @enumerate 1
 @item
-Determine the location of the physical page backing the virtual
+Locate the page backing the virtual
 address that faulted.  It might be in the file system, in swap,
 already be in physical memory and just not set up in the page table,
 or it might be an invalid virtual address.
 
-If the virtual address is invalid, that is, if there's no physical
-page backing it, or if the virtual address is above @code{PHYS_BASE},
-meaning that it belongs to the kernel instead of the user, then the
-process's memory access must be disallowed.  You should terminate the
-process at this point, being sure to free all of its resources.
+If the virtual address is invalid, that is, if there's nothing
+assigned to go there, or if the virtual address is above
+@code{PHYS_BASE}, meaning that it belongs to the kernel instead of the
+user, then the process's memory access must be disallowed.  You should
+terminate the process at this point, being sure to free all of its
+resources.
 
 @item
-If the physical page is not in physical memory, bring it into memory.
+If the page is not in physical memory, fetch it by appropriate means.
 If necessary to make room, first evict some other page from memory.
 (When you do that you need to first remove references to the page from
 any page table that refers to it.)
@@ -331,14 +344,14 @@ You will need a way to track pages which are used by a process but
 which are not in physical memory, to fully handle page faults.  Pages
 that you write to swap should not be constrained to be in sequential
 order.  You will also need a way to track all of the physical memory
-pages, in order to find an unused one when needed, or to evict a page
+pages, to find an unused one when needed, or to evict a page
 when memory is needed but no empty pages are available.  The data
-structures that you designed in part 1 should do most of the work for
+structures that you designed for problem 3-1 should do most of the work for
 you.
 
 You will need a page replacement algorithm.  The hardware sets the
 accessed and dirty bits when it accesses memory.  You can gain access
-this information using the functions prototyped in
+to this information using the functions prototyped in
 @file{userprog/pagedir.h}.  You should be able to take advantage of
 this information to implement some algorithm which attempts to achieve
 LRU-type behavior.  We expect that your algorithm perform at least as
@@ -399,7 +412,7 @@ For extra credit, you may implement sharing: when multiple processes
 are created that use the same executable file, share read-only pages
 among those processes instead of creating separate copies of read-only
 segments for each process.  If you carefully designed your data
-structures in part 1, sharing of read-only pages should not make this
+structures in problem 3-1, sharing of read-only pages should not make this
 part significantly harder.
 
 @node Problem 3-3 Memory Mapped Files
@@ -415,31 +428,76 @@ You will need to implement the following system calls:
 
 Maps the file open as @var{fd} into the process's address space
 starting at @var{addr} for @var{length} bytes.  Returns true if
-successful, false on failure.  
+successful, false on failure.  Failure cases include the following:
+
+@itemize @bullet
+@item
+@var{addr} is not page-aligned.
+
+@item
+@var{length} is not positive.
+
+@item
+The range of pages mapped overlaps any existing set of mapped pages,
+including the stack or pages mapped at executable load time.
+@end itemize
+
+@var{length} is treated as if it were rounded up to the nearest
+multiple of the page size, that is, as if the first statement in the
+system call's implementation were
+@example
+length = ROUND_UP (length, PGSIZE);
+@end example
+The remainder of this description assumes that this has been done.
+
+If @var{length} is less than @var{fd}'s length, you should only map
+the first part of the file.  If @var{length} is greater than
+@var{fd}'s length, when the file's length is also rounded up to the
+nearest multiple of the page size, the call should fail.  Ideally it
+would extend the file, but our file system does not yet support
+growing files.
+
+If @var{length} is greater than @var{fd}'s unrounded length, then some
+bytes in the final mapped page ``stick out'' beyond the end of the
+file.  These bytes are set to zero when the page is faulted in from
+disk.  They are discarded when the page is written back to disk.
+
+Your VM system should be able to use the @code{mmap}'d file itself as
+backing store for the mapped segment.  That is, if a page mapped by
+@code{mmap} must be evicted, write it to the file it was mapped from.
+(In fact, you may choose to implement executable mappings as a special
+case of file mappings.)
 
 @item SYS_munmap
 @itemx bool munmap (void *addr, unsigned length)
 
-Unmaps the segment specified by id.  This cannot be used to unmap
-segments mapped by the executable loader.  Returns 0 on success, -1 on
-failure.  When a file is unmapped, all outstanding changes are written
-to the file, and the segment's pages are removed from the process's
-list of used virtual pages.
+Unmaps @var{length} bytes starting at @var{addr}.  Returns true on
+success, false on failure.  Failure cases include the following:
+
+@itemize @bullet
+@item
+@var{addr} is not page-aligned.
+
+@item
+@var{length} is not positive.
+
+@item
+One or more pages within the range to be unmapped were not mapped
+using the @code{mmap} system call.
+@end itemize
+
+As with @code{mmap}, @var{length} is treated as if it were rounded up
+to the nearest multiple of the page size
+
+It is valid to unmap only some of the pages that were mapped in a
+previous system call.
 @end table
 
-Calls to @code{mmap} must fail if the address is not page-aligned, if
-the length is not positive, or if the length is not a multiple of
-@code{PGSIZE}.  You also must error check to make sure that the new
-segment does not overlap already existing segments, and fail if it
-does.  If the length passed to @code{mmap} is less than the file's
-length, you should only map the first part of the file.  If the length
-passed to @code{mmap} is longer than the file, the call should fail.
-(Ideally it should extend the file, but our file system does not yet
-support growing files.)  Similar to the code segment, your VM system
-should be able to use the @code{mmap}'d file itself as backing store
-for the mapped segment, since the changes to the @code{mmap} segment
-will eventually be written to the file.  (In fact, you may choose to
-implement executable mappings as a special case of file mappings.)
+All mappings are implicitly unmapped when a process exits, whether via
+@code{exit} or by any other means.  When a file is unmapped, whether
+implicitly or explicitly, all outstanding changes are written to the
+file, and the pages are removed from the process's list of used
+virtual pages.
 
 @node Virtual Memory FAQ
 @section FAQ
@@ -569,24 +627,6 @@ the linker manual, accessible via @samp{info ld}.
 
 @enumerate 1
 @item
-@b{Does the virtual memory system need to support growth of the stack
-segment?}
-
-Yes. If a page fault appears just below the last stack segment page,
-you must add a new page to the bottom of the stack. It is impossible
-to predict how large the stack will grow at compile time, so we must
-allocate pages as necessary. You should only allocate additional pages
-if they ``appear'' to be stack accesses.
-
-@item
-@b{Does the first stack page need to be loaded lazily?}
-
-No, you can initialize the first stack page with the command line at
-load time.  There's no need to wait for it to be faulted in.  Even if
-you did wait, the very first instruction in the user program is likely
-to be one that faults in the page.
-
-@item
 @b{Does the virtual memory system need to support growth of the data
 segment?}
 
@@ -595,19 +635,6 @@ still have no dynamic allocation in Pintos (although it is possible to
 ``fake'' it at the user level by using memory-mapped files).  However,
 implementing it would add little additional complexity to a
 well-designed system.
-
-@item
-@b{But what do you mean by ``appear'' to be stack accesses? How big can a
-stack growth be?  Under what circumstances do we grow the stack?}
-
-If it looks like a stack request, then you grow the stack. Yes, that's
-ambiguous. You need to make a reasonable decision about what looks
-like a stack request. For example, you could decide a page, or two
-pages, or ten pages, or more@enddots{}  Or, you could use some other
-heuristic to figure this out.
-
-Make a reasonable decision and document it in your code and in
-your design document.  Please make sure to justify your decision.
 
 @item
 @b{Why do I need to pass @code{PAL_USER} to @func{palloc_get_page}
@@ -672,7 +699,7 @@ When you're done using the memory-mapped file, you simply unmap
 it:
 
 @example
-munmap (addr);
+munmap (addr, length);
 @end example
 
 @item

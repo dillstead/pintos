@@ -832,7 +832,7 @@ After we push all of the strings onto the stack, we adjust the stack
 pointer so that it is word-aligned: that is, we move it down to the
 next 4-byte boundary.  This is required because we will next be
 placing several words of data on the stack, and they must be aligned
-in order to be read correctly.  In our example, as you'll see below,
+to be read correctly.  In our example, as you'll see below,
 the strings start at address @t{0xffed}.  One word below that would be
 at @t{0xffe9}, so we could in theory put the next word on the stack
 there.  However, since the stack pointer should always be

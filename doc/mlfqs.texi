@@ -22,7 +22,7 @@ waiting in higher priority queues are always scheduled over those in
 lower priority queues.  Processes at the same priority are usually
 scheduled in a round-robin fashion.
 
-Such schedulers tend to be preemptible in order to support interactive
+Such schedulers tend to be preemptible to support interactive
 processes.  That is, a higher priority process is immediately
 scheduled if a lower priority process is running on the CPU.
 
@@ -279,7 +279,7 @@ typedef struct tsproc @{
 
 The @code{kthread_t} structure tracks the necessary information to
 context-switch to and from this process.  This structure is kept
-separate from the time-sharing class in order to separate the
+separate from the time-sharing class to separate the
 mechanisms of the dispatcher from the policies of the scheduler.
 
 There are seven interesting routines in the TS class:
