@@ -256,7 +256,7 @@ backtrace kernel.o Call stack: 0xc0106eff 0xc01102fb 0xc010dc22
 You can run the Pintos kernel under the supervision of the
 @command{i386-elf-gdb} debugger.@footnote{If you're using an
 80@var{x}86 system for development, it's probably just called
-@command{addr2line}.}  There are two steps in the process.  First,
+@command{gdb}.}  There are two steps in the process.  First,
 start Pintos with the @option{--gdb} option, e.g.@: @command{pintos
 --gdb run}.  Second, in a second terminal, invoke @command{gdb} on
 @file{kernel.o}:
