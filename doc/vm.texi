@@ -131,6 +131,7 @@ address.
 @end enumerate
 
 @example
+@group
 32                    22                     12                      0
 +--------------------------------------------------------------------+
 | Page Directory Index |   Page Table Index   |    Page Offset       |
@@ -158,6 +159,7 @@ address.
        1|____________|  |   1|____________|  |     |____________|
        0|____________|  \__\0|____________|  \____\|____________|
                            /                      /
+@end group
 @end example
 
 Header @file{threads/mmu.h} has useful functions for various
@@ -471,7 +473,7 @@ true if the first is less than the second.  These two functions have
 to be compatible with the prototypes for @code{hash_hash_func} and
 @code{hash_less_func} in @file{lib/kernel/hash.h}.
 
-Here's a quick example.  Suppose you want to put @code{struct thread}s
+Here's a quick example.  Suppose you want to put @struct{thread}s
 in a hash table.  First, add a @code{hash_elem} to the thread
 structure by adding a line to its definition:
 
@@ -479,7 +481,7 @@ structure by adding a line to its definition:
 hash_elem h_elem;               /* Hash table element. */
 @end example
 
-We'll choose the @code{tid} member in @code{struct thread} as the key,
+We'll choose the @code{tid} member in @struct{thread} as the key,
 and write a hash function and a comparison function:
 
 @example
@@ -493,7 +495,8 @@ thread_hash (const hash_elem *e, void *aux UNUSED)
 
 /* Returns true if A's tid is less than B's tid. */
 bool
-thread_less (const hash_elem *a_, const hash_elem *b_, void *aux UNUSED)
+thread_less (const hash_elem *a_, const hash_elem *b_, 
+             void *aux UNUSED)
 @{
   struct thread *a = hash_entry (a_, struct thread, h_elem);
   struct thread *b = hash_entry (b_, struct thread, h_elem);
@@ -509,7 +512,7 @@ struct hash threads;
 hash_init (&threads, thread_hash, thread_less, NULL);
 @end example
 
-Finally, if @code{@var{t}} is a pointer to a @code{struct thread},
+Finally, if @code{@var{t}} is a pointer to a @struct{thread},
 then we can insert it into the hash table with:
 
 @example

@@ -37,7 +37,9 @@
 @end macro
 
 @titlepage
-@title Pintos Projects
+@title Pintos
+@author by Ben Pfaff
+@author based on past contributions of CS 140 TAs
 @end titlepage
 
 @contents

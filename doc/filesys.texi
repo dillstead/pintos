@@ -91,7 +91,7 @@ Modify the file system to allow the maximum size of a file to be as
 large as the disk.  You can assume that the disk will not be larger
 than 8 MB.  In the basic file system, each file is limited to a file
 size of just under 64 kB.  Each file has a header called an index node
-or @dfn{inode} (represented by @code{struct inode}) that is a table of
+or @dfn{inode} (represented by @struct{inode}) that is a table of
 direct pointers to the disk blocks for that file.  Since the inode is
 stored in one disk sector, the maximum size of a file is limited by
 the number of pointers that will fit in one disk sector.  Increasing
@@ -293,9 +293,9 @@ No, @code{DISK_SECTOR_SIZE} is fixed at 512.  This is a fixed property
 of IDE disk hardware.
 
 @item
-@b{Will the @code{struct inode} take up space on the disk too?}
+@b{Will the @struct{inode} take up space on the disk too?}
 
-Yes.  Anything stored in @code{struct inode} takes up space on disk,
+Yes.  Anything stored in @struct{inode} takes up space on disk,
 so you must include this in your calculation of how many entires will
 fit in a single disk sector.
 @end enumerate
@@ -315,7 +315,7 @@ fit in a single disk sector.
 
 The disk we create will be 8 MB or smaller.  However, individual files
 will have to be smaller than the disk to accommodate the metadata.
-You'll need to consider this when deciding your @code{struct inode}
+You'll need to consider this when deciding your @struct{inode}
 organization.
 @end enumerate
 
@@ -385,22 +385,22 @@ only be deleted if they are empty, as in Unix.
 @enumerate 1
 @item
 @b{We're limited to a 64-block cache, but can we also keep a copy of
-each @code{struct inode} for an open file inside @code{struct file},
+each @struct{inode} for an open file inside @struct{file},
 the way the stub code does?}
 
 No, you shouldn't keep any disk sectors stored anywhere outside the
 cache.  That means you'll have to change the way the file
 implementation accesses its corresponding inode right now, since it
-currently just creates a new @code{struct inode} in its constructor
+currently just creates a new @struct{inode} in its constructor
 and reads the corresponding sector in from disk when it's created.
 
-There are two reasons for not storing inodes in @code{struct file}.
+There are two reasons for not storing inodes in @struct{file}.
 First, keeping extra copies of inodes would be cheating the 64-block
 limitation that we place on your cache.  Second, if two processes have
 the same file open, you will create a huge synchronization headache
-for yourself if each @code{struct file} has its own copy of the inode.
+for yourself if each @struct{file} has its own copy of the inode.
 
-Note that you can store pointers to inodes in @code{struct file} if
+Note that you can store pointers to inodes in @struct{file} if
 you want, and you can store some other small amount of information to
 help you find the inode when you need it.
 
@@ -408,13 +408,13 @@ Similarly, if you want to store one block of data plus some small
 amount of metadata for each of your 64 cache entries, that's fine.
 
 @item
-@b{But why can't we store copies of inodes in @code{struct file}? We
+@b{But why can't we store copies of inodes in @struct{file}? We
 don't understand the answer to the previous question.}
 
-The issue regarding storing @code{struct inode}s has to do with
+The issue regarding storing @struct{inode}s has to do with
 implementation of the buffer cache.  Basically, you can't store a
-@code{struct inode *} in @code{struct inode}.  Each time you need
-to read a @code{struct inode}, you'll have to get it either from the
+@code{struct inode *} in @struct{inode}.  Each time you need
+to read a @struct{inode}, you'll have to get it either from the
 buffer cache or from disk.
 
 If you look at @func{file_read_at}, it uses the inode directly

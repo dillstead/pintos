@@ -16,7 +16,7 @@ introduces you to a few of them.
 @end menu
 
 @node printf
-@section @func{printf}
+@section @code{@code{printf()}}
 
 Don't underestimate the value of @func{printf}.  The way
 @func{printf} is implemented in Pintos, you can call it from

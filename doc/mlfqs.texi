@@ -356,7 +356,12 @@ consumes its timeslice, its priority is lowered about ten levels Since
 the coarse job runs more frequently, it drops in priority at a faster
 rate than the other two jobs.
 
+@ifnottex
 @image{mlfqs1}
+@end ifnottex
+@iftex
+@image{mlfqs1, 3in}
+@end iftex
 
 The impact of this policy on the relative execution times of the three
 applications is shown in the next graph below.  Because the coarse
@@ -364,7 +369,12 @@ application acquires more CPU time, it finishes its work earlier than
 the other applications, even though all three jobs require the same
 amount of time in a dedicated environment.
 
+@ifnottex
 @image{mlfqs2}
+@end ifnottex
+@iftex
+@image{mlfqs2, 3in}
+@end iftex
 
 @node Project Requirements
 @section Project Requirements

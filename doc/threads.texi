@@ -15,9 +15,8 @@ Before you read the description of this project, you should read all
 of the following sections: @ref{Introduction}, @ref{Coding Standards},
 @ref{Project Documentation}, @ref{Debugging Tools}, and
 @ref{Development Tools}.  You should at least skim the material in
-@ref{Threads Tour}, but there's no need to fret over the details.  To
-complete this project you will also need to read @ref{Multilevel
-Feedback Scheduling}.
+@ref{Threads Tour}.  To complete this project you will also need to
+read @ref{Multilevel Feedback Scheduling}.
 
 @menu
 * Understanding Threads::       
@@ -131,7 +130,7 @@ gets initialized.
 @item thread.c
 @itemx thread.h
 Basic thread support.  Much of your work will take place in these
-files.  @file{thread.h} defines @code{struct thread}, which you will
+files.  @file{thread.h} defines @struct{thread}, which you will
 modify in the first three projects.
 
 @item switch.S
@@ -407,7 +406,7 @@ should implement @func{thread_join} to have the same restriction.
 That is, a thread may only join its immediate children.
 
 A thread need not ever be joined.  Your solution should properly free
-all of a thread's resources, including its @code{struct thread},
+all of a thread's resources, including its @struct{thread},
 whether it is ever joined or not, and regardless of whether the child
 exits before or after its parent.  That is, a thread should be freed
 exactly once in all cases.

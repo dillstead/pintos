@@ -204,7 +204,7 @@ threads to continue running.
 @end menu
 
 @node struct thread
-@subsection @struct{thread}
+@subsection @code{struct thread}
 
 The main Pintos data structure for threads is @struct{thread},
 declared in @file{threads/thread.h}.  @struct{thread} has these
@@ -283,6 +283,7 @@ memory.  The rest of the page is used for the thread's stack, which
 grows downward from the end of the page.  It looks like this:
 
 @example
+@group
         4 kB +---------------------------------+
              |          kernel stack           |
              |                |                |
@@ -304,6 +305,7 @@ grows downward from the end of the page.  It looks like this:
              |               name              |
              |              status             |
         0 kB +---------------------------------+
+@end group
 @end example
 
 The upshot of this is twofold.  First, @struct{thread} must not be
@@ -346,8 +348,8 @@ called early in Pintos initialization.
 Called by @func{main} to start the scheduler.  Creates the idle
 thread, that is, the thread that is scheduled when no other thread is
 ready.  Then enables interrupts, which enables the scheduler because
-processes are rescheduled in the return path from the timer
-interrupt.  FIXME
+processes are rescheduled on return from the timer interrupt, using
+@func{intr_yield_on_return} (@pxref{External Interrupt Handling}).
 @end deftypefun
 
 @deftypefun void thread_create (const char *@var{name}, int @var{priority}, thread_func *@var{func}, void *@var{aux})

@@ -9,10 +9,10 @@ project team will strengthen its support in all three of these areas.
 You will also add a virtual memory implementation.
 
 Pintos could, theoretically, run on a regular IBM-compatible PC.  As
-fun as it might be, it is impractical to supply every student in CS
-140 with his or her own PC.  Therefore, we will run Pintos projects in
-a PC simulator, that is, a program that simulates an 80@var{x}86 CPU
-and its peripheral devices well enough that unmodified operating
+much fun as it might be, it is impractical to supply every student in
+CS 140 with his or her own PC.  Therefore, we will run Pintos projects
+in a PC simulator, that is, a program that simulates an 80@var{x}86
+CPU and its peripheral devices well enough that unmodified operating
 systems and software can run under it.  In class we will use the
 @uref{http://bochs.sourceforge.net, , Bochs} simulator.  Pintos has
 also been tested within @uref{http://fabrice.bellard.free.fr/qemu/, ,
