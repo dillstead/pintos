@@ -1,0 +1,45 @@
+CORRECTNESS [[total]]
+---------------------
+
+Small files (< 63 kB)
+  sm-create: create small file, verify initialization to zeros
+  sm-full: write small file in single system call, reread to verify
+  sm-seq-block: write small file one block at a time, reread to verify
+  sm-seq-random: write small file a random amount at a time, reread to verify
+  sm-random: write small file randomly, reread randomly to verify
+Score: /5
+
+Large files (>= 63 kB)
+  lg-create: create large file, verify initialization to zeros
+  lg-full: write large file in single system call, reread to verify
+  lg-seq-block: write large file one block at a time, reread to verify
+  lg-seq-random: write large file a random amount at a time, reread to verify
+  lg-random: write large file randomly, reread randomly to verify
+Score: /
+
+File growth
+  grow-create: create empty file, verify
+  grow-seq-sm: extend empty file sequentially to small size, verify
+  grow-seq-lg: extend empty file sequentially to large size, verify
+  grow-sparse: create empty file, seek to 128 kB, write byte, verify zeroing
+  grow-dir-sm: create 20 small files in a directory, 
+  grow-dir-lg: create 200 small files in a directory
+Score: /
+
+Subdirectories and file management
+  dir-mkdir: create directory and chdir into it
+  dir-rmdir: create directory, remove directory, chdir into it must now fail
+  dir-hier: create deep hierarchy of directories
+  dir-rel-mkdir: mkdir /a, chdir /a, mkdir b, chdir b, create /a/b/c, open c
+  dir-rel-open: mkdir /a, mkdir /a/b, create /a/b/c, chdir /a, open b/c
+  dir-rel-rmdir: mkdir a, mkdir /a/b, chdir a, rmdir b
+  dir-rel-remove: mkdir a, create /a/b, chdir a, remove b
+  dir-abs-mkdir: mkdir /a, chdir /a, mkdir /b, create /b/c, chdir /b, open c
+  dir-lsdir: lsdir must do something reasonable
+Score: /
+
+Synchronization
+  syn-remove: read and write deleted file
+  syn-mult-read: one process writes file, many read from it
+  syn-mult-write: many processes write different parts of file, then verify
+Score: /
