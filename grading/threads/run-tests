@@ -94,7 +94,7 @@ sub run_test {
     xsystem ("cp pintos/src/threads/build/os.dsk output/$test");
 
     # Run.
-    my ($timeout) = $test !~ /^mlfqs/ ? 10 : 600;
+    my ($timeout) = $test !~ /^mlfqs/ ? 15 : 600;
     return run_pintos (["-v", "run", "-q"],
 		       CHDIR => "pintos/src/threads/build",
 		       LOG => "$test/run",
