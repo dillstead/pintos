@@ -125,7 +125,7 @@ sub verify_alarm {
 
     local ($_);
     foreach (@output) {
-	die $_ if /Out of order/;
+	die $_ if /out of order/i;
 
 	my ($p) = /product=(\d+)$/;
 	next if !defined $p;
