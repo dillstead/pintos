@@ -19,6 +19,9 @@ pagedir_destroy (uint32_t *pd)
 {
   uint32_t *pde;
 
+  if (pd == NULL)
+    return;
+
   for (pde = pd; pde < pd + pd_no (PHYS_BASE); pde++)
     if (*pde & PG_P) 
       {
