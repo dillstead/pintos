@@ -94,7 +94,7 @@ inl (uint16_t port)
 {
   /* See [IA32-v2a] "IN". */
   uint32_t data;
-  asm volatile ("inl %0, %w1" : "=a" (data) : "d" (port));
+  asm volatile ("ind %0, %w1" : "=a" (data) : "d" (port));
   return data;
 }
 
@@ -104,7 +104,7 @@ static inline void
 insl (uint16_t port, void *addr, size_t cnt)
 {
   /* See [IA32-v2a] "INS". */
-  asm volatile ("cld; repne insl"
+  asm volatile ("cld; repne insd"
                 : "=D" (addr), "=c" (cnt)
                 : "d" (port), "0" (addr), "1" (cnt)
                 : "memory", "cc");
@@ -155,7 +155,7 @@ static inline void
 outl (uint16_t port, uint32_t data)
 {
   /* See [IA32-v2b] "OUT". */
-  asm volatile ("outl %w1, %0" : : "a" (data), "d" (port));
+  asm volatile ("outd %w1, %0" : : "a" (data), "d" (port));
 }
 
 /* Writes to PORT each 32-bit unit (word) of data in the CNT-word
@@ -164,7 +164,7 @@ static inline void
 outsl (uint16_t port, const void *addr, size_t cnt)
 {
   /* See [IA32-v2b] "OUTS". */
-  asm volatile ("cld; repne outsl"
+  asm volatile ("cld; repne outsd"
                 : "=S" (addr), "=c" (cnt)
                 : "d" (port), "0" (addr), "1" (cnt)
                 : "cc");
