@@ -31,7 +31,6 @@ for $i (0...255) {
 
 print <<'EOF';
 intr_entry:
-	# FIXME: build a fake stack frame to improve backtraces.
 	# Save caller's registers.
 	pushl %ds
 	pushl %es

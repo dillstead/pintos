@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+/* Interrupts on or off? */
 enum intr_level 
   {
     INTR_OFF,             /* Interrupts disabled. */
@@ -15,30 +16,36 @@ enum intr_level intr_set_level (enum intr_level);
 enum intr_level intr_enable (void);
 enum intr_level intr_disable (void);
 
+/* Interrupt stack frame. */
 struct intr_frame
   {
-    /* Pushed by the stubs. */
-    uint32_t edi;
-    uint32_t esi;
-    uint32_t ebp;
-    uint32_t esp_dummy;
-    uint32_t ebx;
-    uint32_t edx;
-    uint32_t ecx;
-    uint32_t eax;
-    uint16_t es, :16;
-    uint16_t ds, :16;
-    uint32_t vec_no;
+    /* Pushed by intr_entry in intr-stubs.S (see intr-stubs.pl).
+       These are the interrupted task's saved registers. */
+    uint32_t edi;               /* Saved EDI. */
+    uint32_t esi;               /* Saved ESI. */
+    uint32_t ebp;               /* Saved EBP. */
+    uint32_t esp_dummy;         /* Not used. */
+    uint32_t ebx;               /* Saved EBX. */
+    uint32_t edx;               /* Saved EDX. */
+    uint32_t ecx;               /* Saved ECX. */
+    uint32_t eax;               /* Saved EAX. */
+    uint16_t es, :16;           /* Saved ES segment register. */
+    uint16_t ds, :16;           /* Saved DS segment register. */
 
-    /* Sometimes pushed by the CPU, otherwise by the stubs. */
-    uint32_t error_code;
+    /* Pushed by intrXX_stub in intr-stubs.S (see intr-stubs.pl). */
+    uint32_t vec_no;            /* Interrupt vector number. */
 
-    /* Pushed by the CPU. */
-    void (*eip) (void);
-    uint16_t cs, :16;
-    uint32_t eflags;
-    void *esp;
-    uint16_t ss, :16;
+    /* Sometimes pushed by the CPU,
+       otherwise by intrXX_stub for consistency. */
+    uint32_t error_code;        /* Error code. */
+
+    /* Pushed by the CPU.
+       These are the interrupted task's saved registers. */
+    void (*eip) (void);         /* Current or next instruction. */
+    uint16_t cs, :16;           /* Code segment for eip. */
+    uint32_t eflags;            /* Saved CPU flags. */
+    void *esp;                  /* Saved stack pointer. */
+    uint16_t ss, :16;           /* Data segment for esp. */
   };
 
 typedef void intr_handler_func (struct intr_frame *);
