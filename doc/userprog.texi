@@ -125,7 +125,46 @@ interfaces to understand how to use the file system, and especially
 its many limitations.  @strong{You should not modify the file system
 code for this project}.  Proper use of the file system routines now
 will make life much easier for project 4, when you improve the file
-system implementation.
+system implementation.  Until then, you will have to put up with the
+following limitations:
+
+@itemize @bullet
+@item
+No synchronization.  Concurrent accesses will interfere with one
+another, so external synchronization is needed.  @xref{Synchronizing
+File Access}, for more details.
+
+@item
+File size is fixed at creation time.  Because the root directory is
+represented as a file, the number of files that may be created is also
+limited.
+
+@item
+File data is allocated as a single extent, so that external
+fragmentation can become a serious problem as a file system is used over
+time.
+
+@item
+No subdirectories.
+
+@item
+File names are limited to 14 characters.
+
+@item
+A system crash mid-operation may corrupt the disk in a way
+that cannot be repaired automatically.  No `fsck' tool is
+provided in any case.
+@end itemize
+
+However one important feature is included:
+
+@itemize @bullet
+Unix-like semantics for filesys_remove() are implemented.
+That is, if a file is open when it is removed, its blocks
+are not deallocated and it may still be accessed by the
+threads that have it open until the last one closes it.  @xref{Removing
+an Open File}, for more information.
+@end itemize
 
 You need to be able to create and format simulated disks.  The
 @command{pintos} program provides this functionality with its
@@ -456,6 +495,7 @@ on the user's stack in the user's virtual address space.  We recommend
 writing and testing this code before implementing any other system
 call functionality.
 
+@anchor{Synchronizing File Access}
 You must make sure that system calls are properly synchronized so that
 any number of user processes can make them at once.  In particular, it
 is not safe to call into the filesystem code provided in the
@@ -507,14 +547,22 @@ Here are the most common causes:
 The disk hasn't yet been formatted (with @samp{pintos run -f}).
 
 @item
-The filename specified is too long.  The file system limits file names
+The file name specified is too long.  The file system limits file names
 to 14 characters.  If you're using a command like @samp{pintos put
 ../../tests/userprog/echo}, that overflows the limit.  Use
 @samp{pintos put ../../tests/userprog/echo echo} to put the file under
 the name @file{echo} instead.
 
 @item
-The file is too big.  The file system has a 63 kB limit.
+The file system is full.
+
+@item
+The file system already contains 10 files.  (There's a 10-file limit for
+the base Pintos file system.)
+
+@item
+The file system is so fragmented that there's not enough contiguous
+space for your file.
 @end itemize
 
 @item

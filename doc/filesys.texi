@@ -27,7 +27,7 @@ Your submission should define @code{THREAD_JOIN_IMPLEMENTED} in
 @menu
 * File System New Code::        
 * File System Synchronization::  
-* Problem 4-1 Large Files::     
+* Problem 4-1 Indexed Files::     
 * Problem 4-2 File Growth::     
 * Problem 4-3 Subdirectories::  
 * Problem 4-4 Buffer Cache::    
@@ -124,19 +124,22 @@ file system doesn't have to maintain full serialization as long as it
 follows the rules above.
 @end itemize
 
-@node Problem 4-1 Large Files
-@section Problem 4-1: Large Files
+@node Problem 4-1 Indexed Files
+@section Problem 4-1: Indexed Files
 
-Modify the file system to allow the maximum size of a file to be as
-large as the disk.  You can assume that the disk will not be larger
-than 8 MB.  In the basic file system, each file is limited to a file
-size of just under 64 kB.  Each file has a header called an index node
-or @dfn{inode} (represented by @struct{inode}) that is a table of
-direct pointers to the disk blocks for that file.  Since the inode is
-stored in one disk sector, the maximum size of a file is limited by
-the number of pointers that will fit in one disk sector.  Increasing
-the limit to 8 MB will require you to implement doubly-indirect
-blocks.
+The basic file system allocates files as a single extent, making it
+vulnerable to external fragmentation.  Eliminate this problem by
+modifying the inode structure.  In practice, this probably means using
+an index structure with direct, indirect, and doubly indirect blocks.
+(You are welcome to choose a different scheme as long as you explain the
+rationale for it in your design documentation, and as long as it does
+not suffer from external fragmentation.)
+
+You can assume that the disk will not be larger than 8 MB.  You must
+support files as large as the disk (minus metadata).  Each inode is
+stored in one disk sector, limiting the number of block pointers that it
+can contain.  Supporting 8 MB files will require you to implement
+doubly-indirect blocks.
 
 @node Problem 4-2 File Growth
 @section Problem 4-2: File Growth

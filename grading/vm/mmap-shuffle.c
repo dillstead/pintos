@@ -8,7 +8,11 @@
 #include "../lib/arc4.h"
 #include "../lib/cksum.h"
 
-#define SIZE (63 * 1024)        /* Max file size. */
+/* This is the max file size for an older version of the Pintos
+   file system that had 126 direct blocks each pointing to a
+   single disk sector.  We could raise it now. */
+#define SIZE (126 * 512)
+
 static char *buf = (char *) 0x10000000;
 
 static struct arc4 *

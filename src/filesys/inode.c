@@ -2,21 +2,18 @@
 #include <bitmap.h>
 #include <list.h>
 #include <debug.h>
+#include <round.h>
 #include <stdio.h>
 #include "filesys/filesys.h"
 #include "threads/malloc.h"
 
-/* Number of direct sector pointers in an inode. */
-#define DIRECT_CNT ((DISK_SECTOR_SIZE - sizeof (off_t) - sizeof (size_t)) \
-                    / sizeof (disk_sector_t))
-
 /* On-disk inode.
-   It is exactly DISK_SECTOR_SIZE bytes long. */
+   Must be exactly DISK_SECTOR_SIZE bytes long. */
 struct inode_disk
   {
     off_t length;                       /* File size in bytes. */
-    size_t sector_cnt;                  /* File size in sectors. */
-    disk_sector_t sectors[DIRECT_CNT];  /* Sectors allocated for file. */
+    disk_sector_t first_sector;         /* Starting sector. */
+    uint32_t unused[126];               /* Unused padding. */
   };
 
 /* In-memory inode. */
@@ -58,39 +55,26 @@ inode_create (struct bitmap *b, disk_sector_t sector, off_t length)
   ASSERT (b != NULL);
   ASSERT (length >= 0);
 
-  /* Calculate number of sectors to allocate for file data. */
-  sector_cnt = (length / DISK_SECTOR_SIZE) + (length % DISK_SECTOR_SIZE > 0);
-  if (sector_cnt > DIRECT_CNT)
-    return NULL;
-
   /* Allocate inode. */
   idx = alloc_inode (sector);
   if (idx == NULL)
     return NULL;
 
   /* Allocate disk sectors. */
+  sector_cnt = DIV_ROUND_UP (length, DISK_SECTOR_SIZE);
   idx->data.length = length;
-  while (idx->data.sector_cnt < sector_cnt)
-    {
-      size_t sector = bitmap_scan_and_flip (b, 0, 1, false);
-      if (sector == BITMAP_ERROR)
-        goto error;
-
-      idx->data.sectors[idx->data.sector_cnt++] = sector;
-    }
+  idx->data.first_sector = bitmap_scan_and_flip (b, 0, sector_cnt, false);
+  if (idx->data.first_sector == BITMAP_ERROR)
+    return NULL;
 
   /* Zero out the file contents. */
   if (sector_cnt > 0) 
     {
-      void *zero_sector;
-      size_t i;
+      static const char zero_sector[DISK_SECTOR_SIZE];
+      disk_sector_t i;
       
-      zero_sector = calloc (1, DISK_SECTOR_SIZE);
-      if (zero_sector == NULL)
-        goto error;
       for (i = 0; i < sector_cnt; i++)
-        disk_write (filesys_disk, idx->data.sectors[i], zero_sector);
-      free (zero_sector);
+        disk_write (filesys_disk, idx->data.first_sector + i, zero_sector);
     }
 
   return idx;
@@ -151,16 +135,21 @@ inode_close (struct inode *idx)
       if (idx->removed) 
         {
           struct bitmap *free_map;
-          size_t i;
 
           free_map = bitmap_create (disk_size (filesys_disk));
           if (free_map != NULL)
             {
-              bitmap_read (free_map, free_map_file);
+              disk_sector_t start, end;
               
+              bitmap_read (free_map, free_map_file);
+
+              /* Reset inode sector bit. */
               bitmap_reset (free_map, idx->sector);
-              for (i = 0; i < idx->data.sector_cnt; i++)
-                bitmap_reset (free_map, idx->data.sectors[i]);
+
+              /* Reset inode data sector bits. */
+              start = idx->data.first_sector;
+              end = start + DIV_ROUND_UP (idx->data.length, DISK_SECTOR_SIZE);
+              bitmap_set_multiple (free_map, start, end, false);
 
               bitmap_write (free_map, free_map_file);
               bitmap_destroy (free_map);
@@ -198,12 +187,12 @@ inode_remove (struct inode *idx)
 disk_sector_t
 inode_byte_to_sector (const struct inode *idx, off_t pos) 
 {
-  size_t i;
-
   ASSERT (idx != NULL);
 
-  i = pos / DISK_SECTOR_SIZE;
-  return i < idx->data.sector_cnt ? idx->data.sectors[i] : (disk_sector_t) -1;
+  if (pos < idx->data.length)
+    return idx->data.first_sector + pos / DISK_SECTOR_SIZE;
+  else
+    return (disk_sector_t) -1;
 }
 
 /* Returns the length, in bytes, of the file with inode IDX. */
@@ -218,20 +207,11 @@ inode_length (const struct inode *idx)
 void
 inode_print (const struct inode *idx) 
 {
-  size_t i;
-  
-  printf ("Inode %"PRDSNu": %"PRDSNu" bytes, %zu sectors (",
-          idx->sector, idx->data.length, idx->data.sector_cnt);
-
-  /* This loop could be unsafe for large idx->data.sector_cnt, can
-     you see why? */
-  for (i = 0; i < idx->data.sector_cnt; i++) 
-    {
-      if (i != 0)
-        printf (", ");
-      printf ("%"PRDSNu, idx->data.sectors[i]); 
-    }
-  printf (")\n");
+  printf ("Inode %"PRDSNu": %"PRDSNu" bytes, "
+          "%zu sectors starting at %"PRDSNu"\n",
+          idx->sector, idx->data.length,
+          (size_t) DIV_ROUND_UP (idx->data.length, DISK_SECTOR_SIZE),
+          idx->data.first_sector);
 }
 
 /* Returns a newly allocated and initialized inode. */

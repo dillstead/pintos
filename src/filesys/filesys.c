@@ -74,10 +74,9 @@
        directory is represented as a file, the number of files
        that may be created is also limited.
 
-     - No indirect blocks.  This limits maximum file size to the
-       number of sector pointers that fit in a single inode
-       times the size of a sector, or 126 * 512 == 63 kB given
-       32-bit sizes and 512-byte sectors.
+     - File data is allocated as a single extent, so that
+       external fragmentation can become a serious problem as a
+       file system is used over time.
 
      - No subdirectories.
 

@@ -77,10 +77,8 @@ single-step from there.@footnote{@command{gdb} might tell you that
 @func{schedule} doesn't exist, which is arguably a @command{gdb} bug.
 You can work around this by setting the breakpoint by filename and
 line number, e.g.@: @code{break thread.c:@var{ln}} where @var{ln} is
-the line number of the first declaration in @func{schedule}.
-Alternatively you can recompile with optimization turned off, by
-removing @samp{-O3} from the @code{CFLAGS} line in
-@file{Make.config}.}  Be sure to keep track of each thread's address
+the line number of the first declaration in @func{schedule}.}  Be sure
+to keep track of each thread's address
 and state, and what procedures are on the call stack for each thread.
 You will notice that when one thread calls @func{switch_threads},
 another thread starts running, and the first thing the new thread does
@@ -339,7 +337,8 @@ assignment.  Furthermore, resist the temptation to directly disable
 interrupts in your solution by calling @func{intr_disable} or
 @func{intr_set_level}, although you may find doing so to be useful
 while debugging.  Instead, use semaphores, locks and condition
-variables to solve synchronization problems.  Hint: read the comments
+variables to solve synchronization problems.  Read the tour section on
+synchronization (@pxref{Synchronization}) or the comments
 in @file{threads/synch.h} if you're unsure what synchronization
 primitives may be used in what situations.
 

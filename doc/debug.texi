@@ -217,13 +217,8 @@ The fifth and sixth lines are the interrupt handler entry path.
 The remaining lines are for addresses below @code{PHYS_BASE}.  This
 means that they refer to addresses in the user program, not in the
 kernel.  If you know what user program was running when the kernel
-panicked, you can re-run @command{backtrace} on the user program.  You
-need to have compiled the user program with debug symbols enabled for
-this to be useful.  Instructions for doing so are included in
-@file{pintos/src/Makefile.userprog}.
-
-In this case, we rerun @command{backtrace} like so (typing the command
-on a single line, of course):
+panicked, you can re-run @command{backtrace} on the user program, like
+so: (typing the command on a single line, of course):
 
 @example
 ~/cs140/pintos/src/utils/backtrace grow-too-big 0xc0106eff 0xc01102fb
@@ -304,14 +299,6 @@ Prints the name of the function or variable that occupies the given
 address.
 (Use a @samp{0x} prefix to specify an address in hex.)
 @end table
-
-You might notice that @command{gdb} tends to show code being executed
-in an order different from the order in the source.  That is, the
-current statement jumps around seemingly randomly.  This is due to
-GCC's optimizer, which does tend to reorder code.  If it bothers you,
-you can turn off optimization by editing
-@file{pintos/src/Make.config}, removing @option{-O3} from the
-@code{CFLAGS} definition.
 
 If you notice other strange behavior while using @command{gdb}, there
 are three possibilities.  The first is that there is a bug in your
