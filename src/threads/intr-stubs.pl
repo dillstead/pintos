@@ -35,6 +35,8 @@ intr_entry:
 	# Save caller's registers.
 	push ds
 	push es
+	push fs
+	push gs
 	pusha
 
 	# Set up kernel environment.
@@ -53,6 +55,8 @@ intr_entry:
 intr_exit:
 	# Restore caller's registers.
 	popa
+	pop gs
+	pop fs
 	pop es
 	pop ds
 	add esp, 8

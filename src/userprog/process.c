@@ -54,6 +54,8 @@ execute_thread (void *filename_)
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
+  if_.gs = SEL_UDSEG;
+  if_.fs = SEL_UDSEG;
   if_.es = SEL_UDSEG;
   if_.ds = SEL_UDSEG;
   if_.cs = SEL_UCSEG;

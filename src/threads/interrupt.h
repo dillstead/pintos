@@ -29,6 +29,8 @@ struct intr_frame
     uint32_t edx;               /* Saved EDX. */
     uint32_t ecx;               /* Saved ECX. */
     uint32_t eax;               /* Saved EAX. */
+    uint16_t gs, :16;           /* Saved GS segment register. */
+    uint16_t fs, :16;           /* Saved FS segment register. */
     uint16_t es, :16;           /* Saved ES segment register. */
     uint16_t ds, :16;           /* Saved DS segment register. */
 
