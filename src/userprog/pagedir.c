@@ -121,7 +121,9 @@ void *
 pagedir_get_page (uint32_t *pd, const void *uaddr) 
 {
   uint32_t *pte = lookup_page (pd, (void *) uaddr, false);
-  return pte != NULL && *pte != 0 ? pte_get_page (*pte) : NULL;
+  return (pte != NULL && *pte != 0
+          ? (uint8_t *) pte_get_page (*pte) + pg_ofs (uaddr)
+          : NULL);
 }
 
 /* Clears any mapping for user virtual address UPAGE in page
