@@ -527,7 +527,9 @@ than the currently running thread, the current thread should
 immediately yield the processor to the new thread.  Similarly, when
 threads are waiting for a lock, semaphore or condition variable, the
 highest priority waiting thread should be woken up first.  A thread
-may set its priority at any time.
+may raise or lower its own priority at any time, but lowering its
+priority such that it no longer has the highest priority must cause it
+to immediately yield the CPU.
 
 One issue with priority scheduling is ``priority inversion'': if a
 high priority thread needs to wait for a low priority thread (for
