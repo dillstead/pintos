@@ -429,8 +429,8 @@ Incidentally, we don't use @code{struct thread *} as
 @func{thread_join}'s parameter type because a thread pointer is not
 unique over time.  That is, when a thread dies, its memory may be,
 whether immediately or much later, reused for another thread.  If
-thread A over time had two children B and C that were stored at the
-same address, then @code{thread_join(@var{B})} and
+thread @var{A} over time had two children @var{B} and @var{C} that
+were stored at the same address, then @code{thread_join(@var{B})} and
 @code{thread_join(@var{C})} would be ambiguous.  Introducing a thread
 id or @dfn{tid}, represented by type @code{tid_t}, that is
 intentionally unique over time solves the problem.  The provided code
