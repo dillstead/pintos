@@ -7,6 +7,7 @@
 #include "io.h"
 #include "kbd.h"
 #include "lib.h"
+#include "loader.h"
 #include "malloc.h"
 #include "mmu.h"
 #include "paging.h"
@@ -27,7 +28,9 @@ size_t kernel_pages;
 /* Amount of physical memory, in 4 kB pages. */
 size_t ram_pages;
 
+static void ram_init (void);
 static void gdt_init (void);
+static void argv_init (void);
 void power_off (void);
 
 static void
@@ -44,32 +47,29 @@ main_thread (void *aux UNUSED)
 int
 main (void)
 {
-  extern char _text, _end, __bss_start;
   struct thread *t;
 
-  /* Clear out the BSS segment. */
-  memset (&__bss_start, 0, &_end - &__bss_start);
-
   /* Initialize components needed by printk() very early. */
+  ram_init ();
   vga_init ();
   serial_init ();
   printk ("Booting cnachos86...\n");
 
   /* Calculate how much RAM the kernel uses, and find out from
      the bootloader how much RAM this machine has. */
-  kernel_pages = (&_end - &_text + 4095) / 4096;
-  ram_pages = *(uint32_t *) (0x7e00 - 6);
   printk ("ram: detected %'d kB main memory.\n", ram_pages * 4);
 
   /* Memory from the end of the kernel through the end of memory
      is free.  Give it to the page allocator. */
-  palloc_init ((void *) (KERN_BASE + kernel_pages * PGSIZE),
-               (void *) (PHYS_BASE + ram_pages * PGSIZE));
+  palloc_init (ptov (LOADER_KERN_BASE + kernel_pages * PGSIZE),
+               ptov (ram_pages * PGSIZE));
   paging_init ();
   gdt_init ();
 
   malloc_init ();
   random_init ();
+
+  argv_init ();
 
   intr_init ();
   timer_init ();
@@ -158,6 +158,31 @@ gdt_init (void)
   gdtr_operand = make_dtr_operand (sizeof gdt - 1, gdt);
   asm volatile ("lgdt %0" :: "m" (gdtr_operand));
   asm volatile ("ltr %w0" :: "r" (SEL_TSS));
+}
+
+static void
+ram_init (void) 
+{
+  /* Start and end of kernel image,
+     and start and end of BSS segment.
+     These are created by kernel.lds. */
+  extern char _start, _end;
+  extern char _start_bss, _end_bss;
+
+  /* The "BSS" is a segment that should be initialized to zeros.
+     It isn't actually stored on disk or zeroed by the kernel
+     loader, so we have to zero it ourselves. */
+  memset (&_start_bss, 0, &_end_bss - &_start_bss);
+
+  /* Calculate how much RAM the kernel uses, and find out from
+     the bootloader how much RAM this machine has. */
+  kernel_pages = (&_end - &_start + 4095) / 4096;
+  ram_pages = *(uint32_t *) (LOADER_BASE + LOADER_RAM_PAGES);
+}
+
+void
+argv_init (void) 
+{
 }
 
 void
