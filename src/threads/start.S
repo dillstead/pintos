@@ -61,7 +61,6 @@ start:
 	
 	mov ah, 0x88
 	int 0x15
-	jc panic
 	cli			# BIOS might have enabled interrupts
 	add eax, 1024		# Total kB memory
 	cmp eax, 64 * 1024
@@ -169,20 +168,3 @@ gdt:
 gdtdesc:
 	.word	0x17			# sizeof (gdt) - 1
 	.long	gdt + LOADER_PHYS_BASE	# address gdt
-
-#### Fatal error.
-#### Print panicmsg (with help from the BIOS) and spin.
-
-panic:  .code16			# We only panic in real mode.
-	mov si, offset panicmsg
-	mov ah, 0xe
-	sub bh, bh
-1:	lodsb
-	test al, al
-2:	jz 2b			# Spin.
-	int 0x10
-	jmp 1b
-
-panicmsg:
-	.ascii "Panic!"
-	.byte 0
