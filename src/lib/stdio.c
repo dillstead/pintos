@@ -150,7 +150,7 @@ static void format_integer (uintmax_t value, bool is_signed, bool negative,
                             void (*output) (char, void *), void *aux);
 static void output_dup (char ch, size_t cnt,
                         void (*output) (char, void *), void *aux);
-static void format_string (const char *string, size_t length,
+static void format_string (const char *string, int length,
                            struct printf_conversion *,
                            void (*output) (char, void *), void *aux);
 
@@ -214,6 +214,8 @@ __vprintf (const char *format, va_list args,
                 break;
               case SIZET:
                 value = va_arg (args, size_t);
+                if (value > SIZE_MAX / 2)
+                  value = value - SIZE_MAX - 1;
                 break;
               default:
                 NOT_REACHED ();
@@ -255,6 +257,9 @@ __vprintf (const char *format, va_list args,
                 break;
               case PTRDIFFT:
                 value = va_arg (args, ptrdiff_t);
+#if UINTMAX_MAX != PTRDIFF_MAX
+                value &= ((uintmax_t) PTRDIFF_MAX << 1) | 1;
+#endif
                 break;
               case SIZET:
                 value = va_arg (args, size_t);
@@ -538,16 +543,16 @@ output_dup (char ch, size_t cnt, void (*output) (char, void *), void *aux)
    the conversion specified in C.  Writes output to OUTPUT with
    auxiliary data AUX. */
 static void
-format_string (const char *string, size_t length,
+format_string (const char *string, int length,
                struct printf_conversion *c,
                void (*output) (char, void *), void *aux) 
 {
-  if (c->width > 1 && (c->flags & MINUS) == 0)
-    output_dup (' ', c->width - 1, output, aux);
+  if (c->width > length && (c->flags & MINUS) == 0)
+    output_dup (' ', c->width - length, output, aux);
   while (length-- > 0)
     output (*string++, aux);
-  if (c->width > 1 && (c->flags & MINUS) != 0)
-    output_dup (' ', c->width - 1, output, aux);
+  if (c->width > length && (c->flags & MINUS) != 0)
+    output_dup (' ', c->width - length, output, aux);
 }
 
 /* Wrapper for __vprintf() that converts varargs into a
