@@ -78,7 +78,7 @@ medium_thread_func (void *locks_)
   lock_acquire (locks->b);
   lock_acquire (locks->a);
 
-  printf (" 3. Medium thread should have priority %d.  Actual priority: %d\n",
+  printf (" 3. Medium thread should have priority %d.  Actual priority: %d.\n",
           PRI_DEFAULT + 2, thread_get_priority ());
   printf (" 4. Medium thread got the lock.\n");
 

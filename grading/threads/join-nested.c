@@ -32,7 +32,7 @@ nested_test (void)
           "and finish in reverse order.\n");
   tid0 = thread_create ("0", PRI_DEFAULT, nested_thread_func, &zero);
   thread_join (tid0);
-  printf ("Simple join test done.\n");
+  printf ("Nested join test done.\n");
 }
 
 void 

@@ -31,7 +31,7 @@ no_test (void)
           "Should just not crash.\n");
   tid0 = thread_create ("0", PRI_DEFAULT, simple_thread_func, "0");
   simple_thread_func ("1");
-  printf ("Simple join test done.\n");
+  printf ("No join test done.\n");
 }
 
 void 

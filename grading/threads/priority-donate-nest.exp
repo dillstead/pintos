@@ -1,0 +1,13 @@
+Testing nested priority donation.
+If the statements printed below are all true, you pass.
+ 1. Low thread should have priority 30.  Actual priority: 30.
+ 2. Low thread should have priority 31.  Actual priority: 31.
+ 3. Medium thread should have priority 31.  Actual priority: 31.
+ 4. Medium thread got the lock.
+ 5. High thread got the lock.
+ 6. High thread finished.
+ 7. High thread should have just finished.
+ 8. Middle thread finished.
+ 9. Medium thread should just have finished.
+10. Low thread should have priority 29.  Actual priority: 29.
+Nested priority priority donation test finished.

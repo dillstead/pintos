@@ -34,7 +34,7 @@ dummy_test (void)
   thread_join (tid0);
   simple_thread_func ("1");
   thread_join (tid0);
-  printf ("Simple join test done.\n");
+  printf ("Dummy join test done.\n");
 }
 
 void 

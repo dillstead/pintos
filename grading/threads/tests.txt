@@ -1,32 +1,36 @@
-CORRECTNESS [[/40]]
+CORRECTNESS [[total]]
 -------------------
 
 Points are taken off for tests that failed.  Only failing tests are
 listed.
 
-Problem 1-1: Alarm Clock [[/8]]
-[[-3]] alarm-single: Multiple threads each sleep once (public)
-[[-3]] alarm-multiple: Multiple threads each sleep many times (public)
-[[-1]] alarm-zero: Zero wait time must not crash or hang
-[[-1]] alarm-negative: Negative wait time must not crash or hang
+Problem 1-1: Alarm Clock
+  -3 alarm-single: Multiple threads each sleep once (public)
+  -3 alarm-multiple: Multiple threads each sleep many times (public)
+  -1 alarm-zero: Zero wait time must not crash or hang
+  -1 alarm-negative: Negative wait time must not crash or hang
+Score: /8
 
-Problem 1-2: Join [[/14]]
-[[-2]] join-simple: A creates B, A joins B (public)
-[[-2]] join-quick: A creates B, A joins B, with different details (public)
-[[-2]] join-multiple: A creates B and C, A joins B, A joins C (public)
-[[-2]] join-nested: A creates B, B creates C, ..., B joins C, A joins B
-[[-2]] join-dummy: A creates B, A joins B, A joins B
-[[-2]] join-invalid: Joining an invalid tid must not crash or hang
-[[-2]] join-no: Creating a thread and never joining it must not crash or hang
+Problem 1-2: Join
+  -2 join-simple: A creates B, A joins B (public)
+  -2 join-quick: A creates B, A joins B, with different details (public)
+  -2 join-multiple: A creates B and C, A joins B, A joins C (public)
+  -2 join-nested: A creates B, B creates C, ..., B joins C, A joins B
+  -2 join-dummy: A creates B, A joins B, A joins B
+  -2 join-invalid: Joining an invalid tid must not crash or hang
+  -2 join-no: Creating a thread and never joining it must not crash or hang
+Score: /14
 
-Problem 1-3: Priority Scheduler [[/10]]
-[[-2]] priority-preempt: Higher-priority thread preempts others (public)
-[[-2]] priority-fifo: Threads of equal priority run round-robin (public)
-[[-2]] priority-donate-one: Priority donation with single lock (public)
-[[-2]] priority-donate-multiple: Priority donation with multiple locks
-[[-2]] priority-donate-nest: Nested priority donation with single lock
+Problem 1-3: Priority Scheduler
+  -2 priority-preempt: Higher-priority thread preempts others (public)
+  -2 priority-fifo: Threads of equal priority run round-robin (public)
+  -2 priority-donate-one: Priority donation with single lock (public)
+  -2 priority-donate-multiple: Priority donation with multiple locks
+  -2 priority-donate-nest: Nested priority donation with single lock
+Score: /10
 
-Problem 1-4: Advanced Scheduler [[/8]
-[[-2]] Public testcase doesn't run faster with MLFQS
-[[-2]] Group's own testcase doesn't run faster with MLFQS
-[[-4]] Priorities don't change properly
+Problem 1-4: Advanced Scheduler
+  -2 Public testcase doesn't run faster with MLFQS
+  -2 Group's own testcase doesn't run faster with MLFQS
+  -4 Priorities don't change properly
+Score: /8
