@@ -162,7 +162,54 @@ sub run_vm {
 	push (@cmd, '-S') if $debug eq 'monitor';
 	push (@cmd, '-s') if $debug eq 'gdb';
 	run_command (@cmd);
-    } 
+    } elsif ($sim eq 'vmware') {
+	print "warning: --$debug not supported by VMware Workstation, ignoring"
+	    if $debug ne '';
+
+	open (VMX, ">pintos.vmx") or die "pintos.vmx: create: $!\n";
+	chmod 0777 & ~umask, "pintos.vmx";
+	print VMX "#! /usr/bin/vmware -G\n";
+	print VMX "config.version = 6\n";
+	print VMX "gui.powerOnAtStartUp = TRUE\n";
+	print VMX "gui.exitAtPowerOff = TRUE\n";
+	print VMX "guestOS = \"linux\"\n";
+	print VMX "floppy0.fileName = \"null.bin\"\n";
+	print VMX "floppy0.fileType = \"file\"\n";
+
+	if (! -e 'null.bin') {
+	    open (NULL, ">null.bin") or die "null.bin: create: $!\n";
+	    close (NULL);
+	}
+
+	for (my ($i) = 0; $i < 4; $i++) {
+	    my ($dsk) = $disks[$i];
+	    next if !defined $dsk;
+	    $device = "ide" . int ($i / 2) . ":" . ($i % 2);
+
+	    my ($pln) = $dsk;
+	    $pln =~ s/\.dsk//;
+	    $pln .= ".pln";
+
+	    print VMX "\n$device.present = TRUE\n";
+	    print VMX "$device.deviceType = \"plainDisk\"\n";
+	    print VMX "$device.fileName = \"$pln\"\n";
+
+	    my (%geom) = disk_geometry ($dsk);
+	    open (PLN, ">$pln") or die "$pln: create: $!\n";
+	    print PLN "DRIVETYPE	ide\n";
+	    print PLN "#vm|VERSION	2\n";
+	    print PLN "#vm|TOOLSVERSION	2\n";
+	    print PLN "CYLINDERS	$geom{C}\n";
+	    print PLN "HEADS		$geom{H}\n";
+	    print PLN "SECTORS		$geom{S}\n";
+	    print PLN "#vm|CAPACITY	$geom{CAPACITY}\n";
+	    print PLN "ACCESS \"$dsk\" 0 $geom{CAPACITY}\n";
+	    close (PLN);
+	}
+	close (VMX);
+
+	run_command ("./pintos.vmx");
+    }
 }
 
 sub write_cmd_line {
@@ -196,11 +243,22 @@ sub search_path {
 sub bochs_disk_line {
     my ($device, $file) = @_;
     return "" if !defined $file;
+    my (%geom) = disk_geometry ($file);
+    return "$device: type=disk, path=$file, mode=flat, "
+	. " cylinders=$geom{C}, heads=$geom{H}, spt=$geom{S}, "
+	. "translation=none\n";
+}
+
+sub disk_geometry {
+    my ($file) = @_;
     my ($size) = -s $file;
     die "$file: stat: $!\n" if !defined $size;
     die "$file: size not a multiple of 512 bytes\n" if $size % 512;
     $cylinders = int ($size / (512 * 16 * 63));
     $cylinders++ if $size % (512 * 16 * 63);
-    return "$device: type=disk, path=$file, mode=flat, cylinders=$cylinders, "
-	. "heads=16, spt=63, translation=none\n";
+
+    return (CAPACITY => $size / 512,
+	    C => $cylinders,
+	    H => 16,
+	    S => 63);
 }
