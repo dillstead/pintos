@@ -171,7 +171,8 @@ sub really_run_test {
     # If there's residue from an earlier test, move it to .old.
     # If there's already a .old, delete it.
     xsystem ("rm -rf output/$test.old", VERBOSE => 1) if -d "output/$test.old";
-    rename "output/$test", "output/$test.old" or die "rename: $!\n";
+    rename "output/$test", "output/$test.old" or die "rename: $!\n"
+	if -d "output/$test";
 
     # Make output directory.
     mkdir "output/$test";
