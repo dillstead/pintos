@@ -87,10 +87,11 @@ EOF
 # applies any patches providing in the grading directory,
 # and installs a default pintos/src/constants.h
 sub extract_sources {
-    # Nothing to do if we already have a source tree.
-    return if -d "pintos";
-
+    # Make sure the output dir exists.
     -d ("output") || mkdir ("output") or die "output: mkdir: $!\n";
+
+    # Nothing else to do if we already have a source tree.
+    return if -d "pintos";
 
     my ($tarball) = choose_tarball ();
 
