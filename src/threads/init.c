@@ -94,13 +94,13 @@ make_seg_desc (uint32_t base,
   uint32_t e0 = ((limit & 0xffff)             /* Limit 15:0. */
                  | (base << 16));             /* Base 15:0. */
   uint32_t e1 = (((base >> 16) & 0xff)        /* Base 23:16. */
-                 | ( system << 12)  /* 0=system, 1=code/data. */
-                 | ( type << 8)     /* Segment type. */
+                 | (system << 12)             /* 0=system, 1=code/data. */
+                 | (type << 8)                /* Segment type. */
                  | (dpl << 13)                /* Descriptor privilege. */
                  | (1 << 15)                  /* Present. */
                  | (limit & 0xf0000)          /* Limit 16:19. */
                  | (1 << 22)                  /* 32-bit segment. */
-                 | ( granularity << 23) /* Byte/page granularity. */
+                 | (granularity << 23)        /* Byte/page granularity. */
                  | (base & 0xff000000));      /* Base 31:24. */
   return e0 | ((uint64_t) e1 << 32);
 }
