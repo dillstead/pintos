@@ -49,7 +49,8 @@ do_format (void)
 
   /* Write out the free map now that we have space reserved
      for it. */
-  file_open (&free_map_file, FREE_MAP_SECTOR);
+  if (!file_open (&free_map_file, FREE_MAP_SECTOR))
+    panic ("can't open free map file");
   bitmap_write (&free_map, &free_map_file);
   bitmap_destroy (&free_map);
   file_close (&free_map_file);
@@ -74,8 +75,10 @@ filesys_init (bool format)
   if (format) 
     do_format ();
   
-  file_open (&free_map_file, FREE_MAP_SECTOR);
-  file_open (&root_dir_file, ROOT_DIR_SECTOR);
+  if (!file_open (&free_map_file, FREE_MAP_SECTOR))
+    panic ("can't open free map file");
+  if (!file_open (&root_dir_file, ROOT_DIR_SECTOR))
+    panic ("can't open root dir file");
 }
 
 bool
@@ -88,7 +91,8 @@ filesys_create (const char *name, off_t initial_size)
   bool success = false;
 
   /* Read the root directory. */
-  dir_init (&dir, NUM_DIR_ENTRIES);
+  if (!dir_init (&dir, NUM_DIR_ENTRIES))
+    return false;
   dir_read (&dir, &root_dir_file);
   if (dir_lookup (&dir, name, NULL)) 
     goto exit1;
@@ -134,7 +138,8 @@ filesys_open (const char *name, struct file *file)
   disk_sector_no hdr_sector;
   bool success = false;
 
-  dir_init (&dir, NUM_DIR_ENTRIES);
+  if (!dir_init (&dir, NUM_DIR_ENTRIES))
+    return false;
   dir_read (&dir, &root_dir_file);
   if (dir_lookup (&dir, name, &hdr_sector))
     success = file_open (file, hdr_sector);
@@ -153,7 +158,8 @@ filesys_remove (const char *name)
   bool success = false;
 
   /* Read the root directory. */
-  dir_init (&dir, NUM_DIR_ENTRIES);
+  if (!dir_init (&dir, NUM_DIR_ENTRIES))
+    return false;
   dir_read (&dir, &root_dir_file);
   if (!dir_lookup (&dir, name, &hdr_sector))
     goto exit1;
