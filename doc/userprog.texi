@@ -520,7 +520,8 @@ isn't properly set up yet, this causes a page fault.
 @samp{system call!}.}
 
 Every reasonable program tries to make at least one system call
-(@func{exit}) and most programs make more than that.  The default
+(@func{exit}) and most programs make more than that.  Notably,
+@func{printf} invokes the @code{write} system call.  The default
 system call handler just prints @samp{system call!} and terminates the
 program.  You'll have to implement 2-2 before you see anything more
 interesting.  Until then, you can use @func{hex_dump} to convince
