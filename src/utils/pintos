@@ -182,7 +182,7 @@ sub run_vm {
 	    print BOCHSRC "display_library: term\n";
 	}
 	close (BOCHSRC);
-	run_command ($bin, '-q');
+	run_command_no_die ($bin, '-q');
     } elsif ($sim eq 'qemu') {
 	print "warning: qemu doesn't support --terminal\n"
 	    if $vga eq 'terminal';
@@ -271,6 +271,11 @@ sub write_cmd_line {
 sub run_command {
     print join (' ', @_), "\n";
     die "command failed\n" if system (@_);
+}
+
+sub run_command_no_die {
+    print join (' ', @_), "\n";
+    system (@_);
 }
 
 sub search_path {
