@@ -19,14 +19,14 @@ use Algorithm::Diff;
 sub parse_cmd_line {
     GetOptions ("v|verbose+" => \$verbose,
 		"h|help" => sub { usage (0) },
-		"T|tests=s" => \@TESTS,
+		"tests=s" => \@TESTS,
 		"c|clean" => sub { set_action ('clean'); },
 		"x|extract" => sub { set_action ('extract'); },
 		"b|build" => sub { set_action ('build'); },
 		"t|test" => sub { set_action ('test'); },
 		"a|assemble" => sub { set_action ('assemble'); })
 	or die "Malformed command line; use --help for help.\n";
-    die "Non-option argument not supported; use --help for help.\n"
+    die "Non-option arguments not supported; use --help for help.\n"
 	if @ARGV > 0;
     @TESTS = split(/,/, join (',', @TESTS)) if defined @TESTS;
 
@@ -70,7 +70,7 @@ Workflow:
 
 Options:
   -c, --clean        Delete test results and temporary files, then exit.
-  -T, --tests=TESTS  Run only the specified comma-separated tests.
+  --tests=TESTS      Run only the specified comma-separated tests.
   -x, --extract      Stop after step 1.
   -b, --build        Stop after step 2.
   -t, --test         Stop after step 3 (default if "review.txt" not present).
@@ -185,7 +185,7 @@ sub run_and_grade_tests {
 	    if $grade eq 'ok' && defined $details{$test};
 	print "$msg\n";
 	
-	$result{$test} = $result;
+	$result{$test} = $grade;
     }
 }
 
@@ -539,7 +539,7 @@ sub look_for_panic {
 	}
 	my ($kernel_o);
 	if ($hw eq 'threads') {
-	    $kernel_o = "pintos/src/filesys/build/kernel.o";
+	    $kernel_o = "output/$test/kernel.o";
 	} else {
 	    $kernel_o = "pintos/src/$hw/build/kernel.o";
 	}
