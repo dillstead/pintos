@@ -29,7 +29,7 @@ System calls: create
   -1 create-long: pass long file name to create system call
   -1 create-exists: pass name of an existing file to create system call
   -1 create-bound: pass name of file crossing page boundary
-Score: /7
+Score: /8
 
 System calls: open
   -2 open-normal: open a file in the most normal way
@@ -38,7 +38,7 @@ System calls: open
   -1 open-empty: pass empty string to open system call
   -1 open-null: pass null pointer to open system call
   -1 open-twice: open the same file twice
-Score: /7
+Score: /9
 
 System calls: close
   -2 close-normal: close an open file in the most normal way
@@ -55,7 +55,7 @@ System calls: read
   -1 read-zero: try to read zero bytes
   -1 read-stdout: try to read from stdout
   -1 read-bad-fd: try to read from invalid file descriptor
-Score: /7
+Score: /9
 
 System calls: write
   -2 write-normal: write to open file in most normal way
@@ -64,7 +64,7 @@ System calls: write
   -1 write-zero: try to write zero bytes
   -1 write-stdin: try to write to stdin
   -1 write-bad-fd: try to write to invalid file descriptor
-Score: /7
+Score: /9
 
 System calls: exec
   -2 exec-once: call exec/join once

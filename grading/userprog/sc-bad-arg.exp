@@ -1,0 +1,2 @@
+(sc-bad-arg) begin
+sc-bad-arg: exit(-1)
