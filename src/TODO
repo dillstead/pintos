@@ -1,6 +1,9 @@
 * Write, test VM.
 
+* Handling of read-only pages?
+
 * Test list, hash ADTs.
+  - Finish comments for hash.[ch].
 
 * Compile and install gdb, dbg versions.
   - Test gdb version.
