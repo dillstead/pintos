@@ -1,8 +1,10 @@
-TESTS = \
-	pt-grow-stack pt-big-stk-obj pt-bad-addr pt-write-code \
-	page-linear page-parallel page-merge-seq page-merge-par \
-	page-shuffle mmap-read mmap-close mmap-unmap mmap-overlap \
-	mmap-twice mmap-write mmap-exit mmap-shuffle
+# -*- makefile -*-
+
+TESTS = pt-grow-stack pt-big-stk-obj pt-bad-addr pt-write-code		\
+page-linear page-parallel page-merge-seq page-merge-par page-shuffle	\
+mmap-read mmap-close mmap-unmap mmap-overlap mmap-twice mmap-write	\
+mmap-exit mmap-shuffle
+
 pt_grow_stack_SRC = pt-grow-stack.c ../lib/arc4.c ../lib/cksum.c
 pt_big_stk_obj_SRC = pt-big-stk-obj.c ../lib/arc4.c ../lib/cksum.c
 pt_bad_addr_SRC = pt-bad-addr.c
