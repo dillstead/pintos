@@ -4,6 +4,8 @@ echo
 halt
 insult
 lineup
+ls
 matmult
+mkdir
 recursor
 shell
