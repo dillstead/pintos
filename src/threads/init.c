@@ -62,27 +62,33 @@ int main (void) NO_RETURN;
 int
 main (void)
 {
-  /* Initialize everything needed for printf() first. */
+  /* Clear BSS and get machine's RAM size. */  
   ram_init ();
+
+  /* Initialize ourselves as a thread so we can use locks. */
   thread_init ();
+
+  /* Initialize the console so we can use printf(). */
   vga_init ();
   serial_init_poll ();
   console_init ();
 
   /* Greet user. */
-  printf ("Pintos booting with %'zd kB RAM...\n", ram_pages * (PGSIZE / 1024));
+  printf ("Pintos booting with %'zd kB RAM...\n", ram_pages * PGSIZE / 1024);
 
   /* Parse command line. */
   argv_init ();
 
-  /* Initialize memory system, segments, paging. */
+  /* Initialize memory system. */
   palloc_init ();
+  malloc_init ();
   paging_init ();
+
+  /* Segmentation. */
 #ifdef USERPROG
   tss_init ();
   gdt_init ();
 #endif
-  malloc_init ();
 
   /* Set random seed if argv_init() didn't. */
   random_init (0);
@@ -122,14 +128,15 @@ main (void)
 #endif
     }
 #else
+  /* Run the compiled-in test function. */
   test ();
 #endif
 
+  /* Finish up. */
   if (do_power_off) 
     power_off ();
-
-  /* Terminate this thread. */
-  thread_exit ();
+  else 
+    thread_exit ();
 }
 
 /* Clear BSS and obtain RAM size from loader. */
