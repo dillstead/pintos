@@ -272,7 +272,7 @@ sub really_run_test {
 			    TIMEOUT => $timeout,
 			    EXPECT => 1)
 	? "ok" : "Bochs error";
-    remove ("output/$test/fs.dsk", "output/$test/swap.dsk");
+    unlink ("output/$test/fs.dsk", "output/$test/swap.dsk");
     return $result;
 }
 
