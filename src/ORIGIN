@@ -1,0 +1,12 @@
+Source file origins:
+
+threads/loader.S: From MIT class code but heavily modified.
+threads/mmu.h: Ditto.
+threads/io.h: Also from MIT class code but less modified.
+
+threads/synch.c: More or less transliterated from Nachos' synch.cc.
+filesys/filesys.c: Ditto.
+filesys/filehdr.c: Ditto.
+
+All other files written by me, although inspiration is often due to
+Nachos or in some cases Linux.
