@@ -242,7 +242,7 @@ filesys_remove (const char *name)
   if (!dir_lookup (dir, name, &inode_sector))
     goto done;
 
-  /* Open the inode and delete it it. */
+  /* Open the inode and delete it. */
   inode = inode_open (inode_sector);
   if (inode == NULL)
     goto done;
