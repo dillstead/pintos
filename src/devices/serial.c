@@ -9,7 +9,9 @@
 
 /* Register definitions for the 16550A UART used in PCs.
    The 16550A has a lot more going on than shown here, but this
-   is all we need. */
+   is all we need.
+
+   Refer to [PC16650D] for hardware information. */
 
 /* I/O port base address for the first serial port. */
 #define IO_BASE 0x3f8
