@@ -1,5 +1,5 @@
 #include "list.h"
-#include "debug.h"
+#include "../debug.h"
 
 /* Our doubly linked lists have two header elements: the "head"
    just before the first element and the "tail" just after the

@@ -1,10 +1,10 @@
-#include "paging.h"
+#include "threads/paging.h"
 #include <stdbool.h>
 #include <stddef.h>
-#include "init.h"
-#include "mmu.h"
-#include "palloc.h"
-#include "lib/lib.h"
+#include <string.h>
+#include "threads/init.h"
+#include "threads/mmu.h"
+#include "threads/palloc.h"
 
 static uint32_t *base_page_dir;
 

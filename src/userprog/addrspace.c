@@ -1,10 +1,12 @@
-#include "addrspace.h"
+#include "userprog/addrspace.h"
+#include <debug.h>
 #include <inttypes.h>
-#include "tss.h"
+#include <round.h>
+#include <stdio.h>
+#include <string.h>
+#include "userprog/tss.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
-#include "lib/debug.h"
-#include "lib/lib.h"
 #include "threads/init.h"
 #include "threads/mmu.h"
 #include "threads/paging.h"
@@ -18,7 +20,7 @@
 typedef uint32_t Elf32_Word, Elf32_Addr, Elf32_Off;
 typedef uint16_t Elf32_Half;
 
-/* For use with ELF types in printk(). */
+/* For use with ELF types in printf(). */
 #define PE32Wx PRIx32   /* Print Elf32_Word in hexadecimal. */
 #define PE32Ax PRIx32   /* Print Elf32_Addr in hexadecimal. */
 #define PE32Ox PRIx32   /* Print Elf32_Off in hexadecimal. */
@@ -81,9 +83,9 @@ static bool setup_stack (struct thread *);
 /* Aborts loading an executable, with an error message. */
 #define LOAD_ERROR(MSG)                                         \
         do {                                                    \
-                printk ("addrspace_load: %s: ", filename);      \
-                printk MSG;                                     \
-                printk ("\n");                                  \
+                printf ("addrspace_load: %s: ", filename);      \
+                printf MSG;                                     \
+                printf ("\n");                                  \
                 goto done;                                     \
         } while (0)
 
@@ -152,7 +154,7 @@ addrspace_load (struct thread *t, const char *filename, void (**start) (void))
           LOAD_ERROR (("unsupported ELF segment type %d\n", phdr.p_type));
           break;
         default:
-          printk ("unknown ELF segment type %08x\n", phdr.p_type);
+          printf ("unknown ELF segment type %08x\n", phdr.p_type);
           break;
         case PT_LOAD:
           if (!load_segment (t, &file, &phdr))
@@ -230,7 +232,7 @@ load_segment (struct thread *t, struct file *file,
      modulo PGSIZE. */
   if (phdr->p_offset % PGSIZE != phdr->p_vaddr % PGSIZE) 
     {
-      printk ("%#08"PE32Ox" and %#08"PE32Ax" not congruent modulo %#x\n",
+      printf ("%#08"PE32Ox" and %#08"PE32Ax" not congruent modulo %#x\n",
               phdr->p_offset, phdr->p_vaddr, (unsigned) PGSIZE);
       return false; 
     }
@@ -239,7 +241,7 @@ load_segment (struct thread *t, struct file *file,
      p_filesz. */
   if (phdr->p_memsz < phdr->p_filesz) 
     {
-      printk ("p_memsz (%08"PE32Wx") < p_filesz (%08"PE32Wx")\n",
+      printf ("p_memsz (%08"PE32Wx") < p_filesz (%08"PE32Wx")\n",
               phdr->p_memsz, phdr->p_filesz);
       return false; 
     }
@@ -252,7 +254,7 @@ load_segment (struct thread *t, struct file *file,
   end = pg_round_up ((void *) (phdr->p_vaddr + phdr->p_memsz));
   if (start >= PHYS_BASE || end >= PHYS_BASE || end < start) 
     {
-      printk ("bad virtual region %08lx...%08lx\n",
+      printf ("bad virtual region %08lx...%08lx\n",
               (unsigned long) start, (unsigned long) end);
       return false; 
     }
@@ -306,7 +308,7 @@ setup_stack (struct thread *t)
         palloc_free (kpage);
     }
   else
-    printk ("failed to allocate process stack\n");
+    printf ("failed to allocate process stack\n");
 
   return success;
 }

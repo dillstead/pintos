@@ -1,22 +1,24 @@
-#include "init.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "threads/init.h"
+#include <debug.h>
 #include <limits.h>
-#include "interrupt.h"
-#include "io.h"
-#include "loader.h"
-#include "malloc.h"
-#include "mmu.h"
-#include "paging.h"
-#include "palloc.h"
-#include "thread.h"
+#include <random.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "devices/kbd.h"
 #include "devices/serial.h"
 #include "devices/timer.h"
 #include "devices/vga.h"
-#include "lib/debug.h"
-#include "lib/lib.h"
-#include "lib/random.h"
+#include "threads/interrupt.h"
+#include "threads/io.h"
+#include "threads/loader.h"
+#include "threads/malloc.h"
+#include "threads/mmu.h"
+#include "threads/paging.h"
+#include "threads/palloc.h"
+#include "threads/thread.h"
 #ifdef USERPROG
 #include "userprog/exception.h"
 #include "userprog/gdt.h"
@@ -50,13 +52,13 @@ int main (void) NO_RETURN;
 int
 main (void)
 {
-  /* Needed by printk(), so initialize them very early. */
+  /* Needed by printf(), so initialize them very early. */
   ram_init ();
   vga_init ();
   serial_init ();
 
   /* Greet user. */
-  printk ("Booting cnachos86 with %'d kB RAM...\n", ram_pages * 4);
+  printf ("Booting cnachos86 with %'d kB RAM...\n", ram_pages * 4);
 
   /* Parse command line. */
   argv_init ();
@@ -93,13 +95,13 @@ main (void)
   fsutil_run ();
 #endif
 
-  printk ("Boot complete.\n");
+  printf ("Boot complete.\n");
 
 #ifdef USERPROG
   /* Run a user program. */
   if (initial_program != NULL)
     {
-      printk ("\nExecuting '%s':\n", initial_program);
+      printf ("\nExecuting '%s':\n", initial_program);
       thread_execute (initial_program); 
     }
 #endif
@@ -173,7 +175,7 @@ argv_init (void)
 #endif
     else if (!strcmp (argv[i], "-u"))
       {
-        printk (
+        printf (
           "Kernel options:\n"
           " -rs SEED            Seed random seed to SEED.\n"
           " -d CLASS[,...]      Enable the given classes of debug messages.\n"

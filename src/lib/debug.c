@@ -1,7 +1,14 @@
-#include "debug.h"
+#include <debug.h>
 #include <stdarg.h>
-#include "lib.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+#ifdef KERNEL
 #include "threads/interrupt.h"
+#else
+#include <syscall.h>
+#endif
 
 #define MAX_CLASSES 16
 static bool all_enabled;
@@ -39,13 +46,17 @@ debug_message (const char *file, int line, const char *function,
     {
       va_list args;
 
+#ifdef KERNEL
       enum intr_level old_level = intr_disable ();
-      printk ("%s:%d: %s(): ", file, line, function);
+#endif
+      printf ("%s:%d: %s(): ", file, line, function);
       va_start (args, message);
-      vprintk (message, args);
-      printk ("\n");
+      vprintf (message, args);
+      printf ("\n");
       va_end (args);
+#ifdef KERNEL
       intr_set_level (old_level);
+#endif
     }
 }
 
@@ -57,34 +68,40 @@ debug_panic (const char *file, int line, const char *function,
 {
   va_list args;
 
+#ifdef KERNEL
   intr_disable ();
+#endif
 
-  printk ("PANIC at %s:%d in %s(): ", file, line, function);
+  printf ("PANIC at %s:%d in %s(): ", file, line, function);
   va_start (args, message);
-  vprintk (message, args);
-  printk ("\n");
+  vprintf (message, args);
+  printf ("\n");
   va_end (args);
 
   debug_backtrace ();
 
+#ifdef KERNEL
   for (;;);
+#else
+  exit (1);
+#endif
 }
 
-/* Prints the call stack, that is, a list of addresses in each of
-   the functions we are nested within.  gdb or addr2line may be
-   applied to kernel.o to translate these into file names, line
-   numbers, and function names.  */
+/* Prints the call stack, that is, a list of addresses, one in
+   each of the functions we are nested within.  gdb or addr2line
+   may be applied to kernel.o to translate these into file names,
+   line numbers, and function names.  */
 void
 debug_backtrace (void) 
 {
   void **frame;
   
-  printk ("Call stack:");
+  printf ("Call stack:");
   for (frame = __builtin_frame_address (0);
        frame != NULL && frame[0] != NULL;
        frame = frame[0]) 
-    printk (" %p", frame[1]);
-  printk (".\n");
+    printf (" %p", frame[1]);
+  printf (".\n");
 }
 
 

@@ -1,7 +1,8 @@
-#include "vga.h"
+#include "devices/vga.h"
+#include <round.h>
 #include <stdint.h>
 #include <stddef.h>
-#include "lib/lib.h"
+#include <string.h>
 #include "threads/io.h"
 #include "threads/mmu.h"
 

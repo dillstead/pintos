@@ -1,9 +1,9 @@
-#include "file.h"
-#include "directory.h"
-#include "filehdr.h"
-#include "filesys.h"
-#include "lib/debug.h"
-#include "lib/lib.h"
+#include "filesys/file.h"
+#include <debug.h>
+#include <string.h>
+#include "filesys/directory.h"
+#include "filesys/filehdr.h"
+#include "filesys/filesys.h"
 #include "threads/malloc.h"
 
 bool

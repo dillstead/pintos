@@ -1,9 +1,9 @@
 #ifndef HEADER_16550A_H
 #define HEADER_16550A_H 1
 
+#include <debug.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "lib/debug.h"
 
 /* Register definitions for the 16550A UART used in PCs.  This is
    a full definition of all the registers and their bits.  We

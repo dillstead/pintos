@@ -6,13 +6,13 @@ SHELL = /bin/sh
 
 CC = gcc
 
-SRC_ROOT = ../..
-VPATH = $(SRC_ROOT)
+VPATH = ../..
 
+DEFINES += -DKERNEL
 WARNINGS = -Wall -W -Wstrict-prototypes -Wmissing-prototypes
-INCLUDES = -I$(SRC_ROOT)
+INCLUDES = -nostdinc -I../.. -I- -I../../lib -I../../lib/kernel
 CFLAGS = -g -O3 -MMD -msoft-float $(INCLUDES) $(WARNINGS) $(DEFINES)
-ASFLAGS = -Wa,--gstabs $(INCLUDES) $(DEFINES)
+ASFLAGS = -Wa,--gstabs -MMD $(INCLUDES) $(DEFINES)
 
 # Core kernel.
 threads_SRC  = threads/init.c		# Main program.
@@ -33,13 +33,18 @@ devices_SRC += devices/vga.c		# Video device.
 devices_SRC += devices/serial.c		# Serial port device.
 devices_SRC += devices/disk.c		# IDE disk device.
 
-# Library code.
+# Library code shared between kernel and user programs.
 lib_SRC  = lib/debug.c		# Debug helpers.
-lib_SRC += lib/lib.c		# Standard C library.
 lib_SRC += lib/random.c		# Pseudo-random numbers.
-lib_SRC += lib/list.c		# Doubly-linked lists.
-lib_SRC += lib/bitmap.c		# Bitmaps.
-lib_SRC += lib/hash.c		# Hash tables.
+lib_SRC += lib/stdio.c		# I/O library.
+lib_SRC += lib/stdlib.c		# Utility functions.
+lib_SRC += lib/string.c		# String functions.
+
+# Kernel-specific library code.
+lib_kernel_SRC += lib/kernel/list.c	# Doubly-linked lists.
+lib_kernel_SRC += lib/kernel/bitmap.c	# Bitmaps.
+lib_kernel_SRC += lib/kernel/hash.c	# Hash tables.
+lib_kernel_SRC += lib/kernel/printf.c	# Kernel printf().
 
 # Filesystem code.
 filesys_SRC  = filesys/filesys.c	# Filesystem core.
@@ -55,7 +60,7 @@ userprog_SRC += userprog/syscall.c	# System call handler.
 userprog_SRC += userprog/gdt.c		# GDT initialization.
 userprog_SRC += userprog/tss.c		# TSS management.
 
-SOURCES = $(foreach dir,$(SUBDIRS),$($(dir)_SRC))
+SOURCES = $(foreach dir,$(SUBDIRS),$($(subst /,_,$(dir))_SRC))
 OBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))
 DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
 
@@ -72,11 +77,11 @@ kernel.o: threads/kernel.lds.s $(OBJECTS)
 
 kernel.bin: kernel.o
 	objcopy -O binary -R .note -R .comment -S $< $@.tmp
-	$(SRC_ROOT)/pad 4096 < $@.tmp > $@
+	../../pad 4096 < $@.tmp > $@
 	rm $@.tmp
 
-threads/loader.o: threads/loader.S threads/loader.h kernel.bin
-	gcc -c $< -o $@ -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
+threads/loader.o: kernel.bin
+threads/loader.o: DEFINES += -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
 
 loader.bin: threads/loader.o
 	ld -N -e start -Ttext 0x7c00 --oformat binary -o $@ $<

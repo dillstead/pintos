@@ -1,8 +1,8 @@
 #ifndef HEADER_SYNCH_H
 #define HEADER_SYNCH_H 1
 
+#include <list.h>
 #include <stdbool.h>
-#include "lib/list.h"
 
 /* A counting semaphore. */
 struct semaphore 

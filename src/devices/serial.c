@@ -1,7 +1,7 @@
-#include "serial.h"
-#include "16550a.h"
-#include "timer.h"
-#include "lib/debug.h"
+#include "devices/serial.h"
+#include <debug.h>
+#include "devices/16550a.h"
+#include "devices/timer.h"
 #include "threads/io.h"
 
 static void set_serial (int bps, int bits, enum parity_type parity, int stop);

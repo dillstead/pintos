@@ -1,7 +1,8 @@
-#include "directory.h"
-#include "file.h"
-#include "fsutil.h"
-#include "lib/lib.h"
+#include "filesys/directory.h"
+#include <stdio.h>
+#include <string.h>
+#include "filesys/file.h"
+#include "filesys/fsutil.h"
 #include "threads/malloc.h"
 
 /* Initializes D as a directory that holds ENTRY_CNT entries. */
@@ -160,7 +161,7 @@ dir_list (const struct dir *d)
   
   for (e = d->entries; e < d->entries + d->entry_cnt; e++)
     if (e->in_use)
-      printk ("%s\n", e->name);
+      printf ("%s\n", e->name);
 }
 
 /* Dumps the contents of D, including its files' names and their
@@ -173,8 +174,8 @@ dir_dump (const struct dir *d)
   for (e = d->entries; e < d->entries + d->entry_cnt; e++)
     if (e->in_use) 
       {
-        printk ("Contents of %s:\n", e->name);
+        printf ("Contents of %s:\n", e->name);
         fsutil_print (e->name);
-        printk ("\n");
+        printf ("\n");
       }
 }

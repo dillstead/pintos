@@ -1,5 +1,6 @@
-#include "syscall.h"
-#include "lib/lib.h"
+#include "userprog/syscall.h"
+#include <stdio.h>
+#include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
@@ -14,6 +15,6 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
-  printk ("system call!\n");
+  printf ("system call!\n");
   thread_exit ();
 }

@@ -11,8 +11,8 @@
    Good enough for disks up to 2 TB. */
 typedef uint32_t disk_sector_t;
 
-/* Format specifier for printk(), e.g.:
-   printk ("sector=%"PRDSNu"\n", sector); */
+/* Format specifier for printf(), e.g.:
+   printf ("sector=%"PRDSNu"\n", sector); */
 #define PRDSNu PRIu32
 
 void disk_init (void);

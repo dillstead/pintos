@@ -1,7 +1,8 @@
 #include "bitmap.h"
+#include <debug.h>
 #include <limits.h>
-#include "debug.h"
-#include "lib.h"
+#include <round.h>
+#include <stdio.h>
 #include "threads/malloc.h"
 #ifdef FILESYS
 #include "filesys/file.h"

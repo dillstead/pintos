@@ -1,13 +1,13 @@
-#include "interrupt.h"
+#include "threads/interrupt.h"
+#include <debug.h>
 #include <inttypes.h>
 #include <stdint.h>
-#include "intr-stubs.h"
-#include "io.h"
-#include "mmu.h"
-#include "thread.h"
+#include <stdio.h>
+#include "threads/intr-stubs.h"
+#include "threads/io.h"
+#include "threads/mmu.h"
+#include "threads/thread.h"
 #include "devices/timer.h"
-#include "lib/debug.h"
-#include "lib/lib.h"
 
 /* Number of x86 interrupts. */
 #define INTR_CNT 256
@@ -346,14 +346,14 @@ intr_dump_frame (const struct intr_frame *f)
   asm ("movl %%cr2, %0" : "=r" (cr2));
   asm ("movl %%ss, %0" : "=r" (ss));
 
-  printk ("Interrupt %#04x (%s) at eip=%p\n",
+  printf ("Interrupt %#04x (%s) at eip=%p\n",
           f->vec_no, intr_names[f->vec_no], f->eip);
-  printk (" cr2=%08"PRIx32" error=%08"PRIx32"\n", cr2, f->error_code);
-  printk (" eax=%08"PRIx32" ebx=%08"PRIx32" ecx=%08"PRIx32" edx=%08"PRIx32"\n",
+  printf (" cr2=%08"PRIx32" error=%08"PRIx32"\n", cr2, f->error_code);
+  printf (" eax=%08"PRIx32" ebx=%08"PRIx32" ecx=%08"PRIx32" edx=%08"PRIx32"\n",
           f->eax, f->ebx, f->ecx, f->edx);
-  printk (" esi=%08"PRIx32" edi=%08"PRIx32" esp=%08"PRIx32" ebp=%08"PRIx32"\n",
+  printf (" esi=%08"PRIx32" edi=%08"PRIx32" esp=%08"PRIx32" ebp=%08"PRIx32"\n",
           f->esi, f->edi, (uint32_t) f->esp, f->ebp);
-  printk (" cs=%04"PRIx16" ds=%04"PRIx16" es=%04"PRIx16" ss=%04"PRIx16"\n",
+  printf (" cs=%04"PRIx16" ds=%04"PRIx16" es=%04"PRIx16" ss=%04"PRIx16"\n",
           f->cs, f->ds, f->es, f->cs != SEL_KCSEG ? f->ss : ss);
 }
 

@@ -26,14 +26,15 @@
    MODIFICATIONS.
 */
 
-#include "filesys.h"
-#include "file.h"
-#include "filehdr.h"
-#include "directory.h"
+#include "filesys/filesys.h"
+#include <bitmap.h>
+#include <debug.h>
+#include <stdio.h>
+#include <string.h>
+#include "filesys/file.h"
+#include "filesys/filehdr.h"
+#include "filesys/directory.h"
 #include "devices/disk.h"
-#include "lib/bitmap.h"
-#include "lib/debug.h"
-#include "lib/lib.h"
 
 /* Filesystem.
 
@@ -276,13 +277,13 @@ filesys_dump (void)
   struct bitmap free_map;
   struct dir dir;  
 
-  printk ("Free map:\n");
+  printf ("Free map:\n");
   if (!bitmap_init (&free_map, disk_size (filesys_disk)))
     return false;
   bitmap_read (&free_map, &free_map_file);
   bitmap_dump (&free_map);
   bitmap_destroy (&free_map);
-  printk ("\n");
+  printf ("\n");
   
   if (!dir_init (&dir, NUM_DIR_ENTRIES))
     return false;
@@ -322,7 +323,7 @@ filesys_self_test (void)
 
   MUST_SUCCEED (filesys_remove ("foo"));
 
-  printk ("filesys: self test ok\n");
+  printf ("filesys: self test ok\n");
 }
 
 /* Formats the filesystem. */
@@ -333,7 +334,7 @@ do_format (void)
   struct filehdr *map_hdr, *dir_hdr;
   struct dir dir;
 
-  printk ("Formatting filesystem...");
+  printf ("Formatting filesystem...");
 
   /* Create the initial bitmap and reserve sectors for the
      free map and root directory file headers. */
@@ -375,7 +376,7 @@ do_format (void)
   dir_destroy (&dir);
   file_close (&free_map_file);
 
-  printk ("done.\n");
+  printf ("done.\n");
 }
 
 /* If SUCCESS is false, panics with an error complaining about

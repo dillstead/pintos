@@ -1,9 +1,9 @@
 #ifndef HEADER_THREAD_H
 #define HEADER_THREAD_H 1
 
+#include <debug.h>
+#include <list.h>
 #include <stdint.h>
-#include "lib/debug.h"
-#include "lib/list.h"
 
 #ifdef USERPROG
 #include "userprog/addrspace.h"

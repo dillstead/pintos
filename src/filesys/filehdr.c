@@ -1,8 +1,8 @@
-#include "filehdr.h"
-#include "filesys.h"
-#include "lib/bitmap.h"
-#include "lib/debug.h"
-#include "lib/lib.h"
+#include "filesys/filehdr.h"
+#include <bitmap.h>
+#include <debug.h>
+#include <stdio.h>
+#include "filesys/filesys.h"
 #include "threads/malloc.h"
 
 /* Allocates sectors from bitmap B for the content of a file
@@ -122,7 +122,7 @@ filehdr_print (const struct filehdr *h)
 {
   size_t i;
   
-  printk ("File header: %jd bytes, %zd sectors (",
+  printf ("File header: %jd bytes, %zd sectors (",
           (intmax_t) h->length, h->sector_cnt);
 
   /* This loop could be unsafe for large h->sector_cnt, can you
@@ -130,8 +130,8 @@ filehdr_print (const struct filehdr *h)
   for (i = 0; i < h->sector_cnt; i++) 
     {
       if (i != 0)
-        printk (", ");
-      printk ("%jd", (intmax_t) h->sectors[i]); 
+        printf (", ");
+      printf ("%jd", (intmax_t) h->sectors[i]); 
     }
-  printk (")\n");
+  printf (")\n");
 }

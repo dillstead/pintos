@@ -26,10 +26,11 @@
    MODIFICATIONS.
 */
 
-#include "synch.h"
-#include "interrupt.h"
-#include "thread.h"
-#include "lib/lib.h"
+#include "threads/synch.h"
+#include <stdio.h>
+#include <string.h>
+#include "threads/interrupt.h"
+#include "threads/thread.h"
 
 /* Initializes semaphore SEMA to VALUE and names it NAME (for
    debugging purposes only).  A semaphore is a nonnegative
@@ -105,7 +106,7 @@ sema_name (const struct semaphore *sema)
 static void sema_test_helper (void *sema_);
 
 /* Self-test for semaphores that makes control "ping-pong"
-   between a pair of threads.  Insert calls to printk() to see
+   between a pair of threads.  Insert calls to printf() to see
    what's going on. */
 void
 sema_self_test (void) 
@@ -114,7 +115,7 @@ sema_self_test (void)
   struct semaphore sema[2];
   int i;
 
-  printk ("Testing semaphores...");
+  printf ("Testing semaphores...");
   sema_init (&sema[0], 0, "ping");
   sema_init (&sema[1], 0, "pong");
   thread = thread_create ("sema-test", sema_test_helper, &sema);
@@ -123,7 +124,7 @@ sema_self_test (void)
       sema_up (&sema[0]);
       sema_down (&sema[1]);
     }
-  printk ("done.\n");
+  printf ("done.\n");
 }
 
 /* Thread function used by sema_self_test(). */

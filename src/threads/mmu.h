@@ -2,11 +2,11 @@
 #define HEADER_MMU_H 1
 
 #ifndef __ASSEMBLER__
+#include <debug.h>
 #include <stdint.h>
-#include "lib/debug.h"
 #endif
 
-#include "loader.h"
+#include "threads/loader.h"
 
 #define MASK(SHIFT, CNT) (((1ul << (CNT)) - 1) << (SHIFT))
 

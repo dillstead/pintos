@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "off_t.h"
+#include "filesys/off_t.h"
 
 /* Disk used for filesystem. */
 extern struct disk *filesys_disk;

@@ -1,13 +1,13 @@
-#include "thread.h"
+#include "threads/thread.h"
+#include <debug.h>
 #include <stddef.h>
-#include "interrupt.h"
-#include "intr-stubs.h"
-#include "mmu.h"
-#include "palloc.h"
-#include "switch.h"
-#include "lib/debug.h"
-#include "lib/lib.h"
-#include "lib/random.h"
+#include <random.h>
+#include <string.h>
+#include "threads/interrupt.h"
+#include "threads/intr-stubs.h"
+#include "threads/mmu.h"
+#include "threads/palloc.h"
+#include "threads/switch.h"
 #ifdef USERPROG
 #include "userprog/gdt.h"
 #endif

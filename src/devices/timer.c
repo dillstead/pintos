@@ -1,5 +1,5 @@
-#include "timer.h"
-#include "lib/debug.h"
+#include "devices/timer.h"
+#include <debug.h>
 #include "threads/interrupt.h"
 #include "threads/io.h"
   

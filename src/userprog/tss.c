@@ -1,7 +1,7 @@
-#include "tss.h"
+#include "userprog/tss.h"
+#include <debug.h>
 #include <stddef.h>
-#include "gdt.h"
-#include "lib/debug.h"
+#include "userprog/gdt.h"
 #include "threads/mmu.h"
 #include "threads/palloc.h"
 

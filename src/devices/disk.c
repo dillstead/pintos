@@ -1,8 +1,9 @@
-#include "disk.h"
+#include "devices/disk.h"
+#include <ctype.h>
+#include <debug.h>
 #include <stdbool.h>
-#include "timer.h"
-#include "lib/debug.h"
-#include "lib/lib.h"
+#include <stdio.h>
+#include "devices/timer.h"
 #include "threads/io.h"
 #include "threads/interrupt.h"
 #include "threads/synch.h"
@@ -220,7 +221,7 @@ disk_write (struct disk *d, disk_sector_t sec_no, const void *buffer)
 
 /* Disk detection and identification. */
 
-static void printk_ata_string (char *string, size_t size);
+static void print_ata_string (char *string, size_t size);
 
 /* Resets an ATA channel and waits for any devices present on it
    to finish the reset. */
@@ -341,28 +342,28 @@ identify_ata_device (struct disk *d)
   d->capacity = id[60] | ((uint32_t) id[61] << 16);
 
   /* Print identification message. */
-  printk ("%s: detected %'"PRDSNu" sector (", d->name, d->capacity);
+  printf ("%s: detected %'"PRDSNu" sector (", d->name, d->capacity);
   if (d->capacity > 1024 / DISK_SECTOR_SIZE * 1024 * 1024)
-    printk ("%"PRDSNu" GB",
+    printf ("%"PRDSNu" GB",
             d->capacity / (1024 / DISK_SECTOR_SIZE * 1024 * 1024));
   else if (d->capacity > 1024 / DISK_SECTOR_SIZE * 1024)
-    printk ("%"PRDSNu" MB", d->capacity / (1024 / DISK_SECTOR_SIZE * 1024));
+    printf ("%"PRDSNu" MB", d->capacity / (1024 / DISK_SECTOR_SIZE * 1024));
   else if (d->capacity > 1024 / DISK_SECTOR_SIZE)
-    printk ("%"PRDSNu" kB", d->capacity / (1024 / DISK_SECTOR_SIZE));
+    printf ("%"PRDSNu" kB", d->capacity / (1024 / DISK_SECTOR_SIZE));
   else
-    printk ("%"PRDSNu" byte", d->capacity * DISK_SECTOR_SIZE);
-  printk (") disk, model \"");
-  printk_ata_string ((char *) &id[27], 40);
-  printk ("\", serial \"");
-  printk_ata_string ((char *) &id[10], 20);
-  printk ("\"\n");
+    printf ("%"PRDSNu" byte", d->capacity * DISK_SECTOR_SIZE);
+  printf (") disk, model \"");
+  print_ata_string ((char *) &id[27], 40);
+  printf ("\", serial \"");
+  print_ata_string ((char *) &id[10], 20);
+  printf ("\"\n");
 }
 
 /* Prints STRING, which consists of SIZE bytes in a funky format:
    each pair of bytes is in reverse order.  Does not print
    trailing whitespace and/or nulls. */
 static void
-printk_ata_string (char *string, size_t size) 
+print_ata_string (char *string, size_t size) 
 {
   size_t i;
 
@@ -376,7 +377,7 @@ printk_ata_string (char *string, size_t size)
 
   /* Print. */
   for (i = 0; i < size; i++)
-    printk ("%c", string[i ^ 1]);
+    printf ("%c", string[i ^ 1]);
 }
 
 /* Selects device D, waiting for it to become ready, and then
@@ -447,7 +448,7 @@ wait_until_idle (const struct disk *d)
       timer_usleep (10);
     }
 
-  printk ("%s: idle timeout\n", d->name);
+  printf ("%s: idle timeout\n", d->name);
 }
 
 /* Wait up to 30 seconds for disk D to clear BSY,
@@ -463,17 +464,17 @@ wait_while_busy (const struct disk *d)
   for (i = 0; i < 3000; i++)
     {
       if (i == 700)
-        printk ("%s: busy, waiting...", d->name);
+        printf ("%s: busy, waiting...", d->name);
       if (!(inb (reg_alt_status (c)) & STA_BSY)) 
         {
           if (i >= 700)
-            printk ("ok\n");
+            printf ("ok\n");
           return (inb (reg_alt_status (c)) & STA_DRQ) != 0;
         }
       timer_msleep (10);
     }
 
-  printk ("failed\n");
+  printf ("failed\n");
   return false;
 }
 
@@ -515,7 +516,7 @@ interrupt_handler (struct intr_frame *f)
             sema_up (&c->completion_wait);      /* Wake up waiter. */
           }
         else
-          printk ("%s: unexpected interrupt\n", c->name);
+          printf ("%s: unexpected interrupt\n", c->name);
         return;
       }
 

@@ -1,6 +1,6 @@
-#include "gdt.h"
-#include "tss.h"
-#include "lib/debug.h"
+#include "userprog/gdt.h"
+#include <debug.h>
+#include "userprog/tss.h"
 #include "threads/mmu.h"
 #include "threads/palloc.h"
 

@@ -1,7 +1,7 @@
-#include "exception.h"
+#include "userprog/exception.h"
 #include <inttypes.h>
-#include "gdt.h"
-#include "lib/lib.h"
+#include <stdio.h>
+#include "userprog/gdt.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
@@ -73,7 +73,7 @@ kill (struct intr_frame *f)
     case SEL_UCSEG:
       /* User's code segment, so it's a user exception, as we
          expected.  Kill the user process.  */
-      printk ("%s: dying due to interrupt %#04x (%s).\n",
+      printf ("%s: dying due to interrupt %#04x (%s).\n",
               thread_name (thread_current ()),
               f->vec_no, intr_name (f->vec_no));
       intr_dump_frame (f);
@@ -90,7 +90,7 @@ kill (struct intr_frame *f)
     default:
       /* Some other code segment?  Shouldn't happen.  Panic the
          kernel. */
-      printk ("Interrupt %#04x (%s) in unknown segment %04x\n",
+      printf ("Interrupt %#04x (%s) in unknown segment %04x\n",
              f->vec_no, intr_name (f->vec_no), f->cs);
       thread_exit ();
     }
@@ -137,7 +137,7 @@ page_fault (struct intr_frame *f)
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
-  printk ("Page fault at %08"PRIx32": %s error %s page in %s context.\n",
+  printf ("Page fault at %08"PRIx32": %s error %s page in %s context.\n",
           fault_addr,
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",

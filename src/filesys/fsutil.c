@@ -1,9 +1,11 @@
-#include "fsutil.h"
+#include "filesys/fsutil.h"
+#include <debug.h>
 #include <stdbool.h>
-#include "file.h"
-#include "filesys.h"
-#include "lib/debug.h"
-#include "lib/lib.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "filesys/file.h"
+#include "filesys/filesys.h"
 #include "threads/mmu.h"
 #include "threads/palloc.h"
 
@@ -88,7 +90,7 @@ fsutil_run (void)
   if (fsutil_remove_file != NULL) 
     {
       if (filesys_remove (fsutil_remove_file))
-        printk ("%s: removed\n", fsutil_remove_file);
+        printf ("%s: removed\n", fsutil_remove_file);
       else
         PANIC ("%s: remove failed\n", fsutil_remove_file);
     }

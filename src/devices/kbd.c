@@ -1,13 +1,13 @@
-#include "kbd.h"
-#include "lib/debug.h"
-#include "lib/lib.h"
+#include "devices/kbd.h"
+#include <debug.h>
+#include <stdio.h>
 #include "threads/interrupt.h"
 #include "threads/io.h"
 
 static void
 irq21_keyboard (struct intr_frame *args UNUSED) 
 {
-  printk ("Keyboard!\n");
+  printf ("Keyboard!\n");
   inb (0x60);
 }
 

@@ -38,8 +38,8 @@
  * the copyright notices, if any, listed below.
  */
 
-#include "loader.h"
-#include "mmu.h"
+#include "threads/loader.h"
+#include "threads/mmu.h"
 	
 ##############################################################################
 # Kernel loader.

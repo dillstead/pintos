@@ -1,11 +1,12 @@
-#include "malloc.h"
+#include "threads/malloc.h"
+#include <debug.h>
+#include <list.h>
 #include <stdint.h>
-#include "mmu.h"
-#include "palloc.h"
-#include "synch.h"
-#include "lib/debug.h"
-#include "lib/lib.h"
-#include "lib/list.h"
+#include <stdio.h>
+#include <string.h>
+#include "threads/mmu.h"
+#include "threads/palloc.h"
+#include "threads/synch.h"
 
 /* A simple implementation of malloc().
 
@@ -97,7 +98,7 @@ malloc (size_t size)
       break;
   if (d == descs + desc_cnt) 
     {
-      printk ("malloc: %zu byte allocation too big\n", size);
+      printf ("malloc: %zu byte allocation too big\n", size);
       return NULL; 
     }
 
