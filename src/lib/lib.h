@@ -24,10 +24,14 @@ void printk (const char *, ...) PRINTF_FORMAT (1, 2);
 int vsnprintf (char *, size_t, const char *, va_list);
 int snprintf (char *, size_t, const char *, ...) PRINTF_FORMAT (3, 4);
 
-static inline int
-isdigit (int c) 
-{
-  return c >= '0' && c <= '9';
-}
+void hex_dump (const void *, size_t size);
+
+static inline int isdigit (int c) { return c >= '0' && c <= '9'; }
+static inline int isprint (int c) { return c >= 32 && c < 127; }
+static inline int isgraph (int c) { return c >= 33 && c < 127; }
+static inline int isspace (int c) { return strchr (" \t\n\r\v", c) != NULL; }
+static inline int islower (int c) { return c >= 'a' && c <= 'z'; }
+static inline int isupper (int c) { return c >= 'A' && c <= 'Z'; }
+static inline int isalpha (int c) { return islower (c) || isupper (c); }
 
 #endif /* lib.h */
