@@ -7,7 +7,7 @@
 #define DISK_SECTOR_SIZE 512
 
 typedef uint32_t disk_sector_no;
-#define PRDSNu PRId32   /* For use with printk(). */
+#define PRDSNu PRIu32   /* For use with printk(). */
 
 void disk_init (void);
 struct disk *disk_get (int chan_no, int dev_no);
