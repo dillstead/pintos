@@ -13,6 +13,7 @@ side.  Compilation should be done in the @file{threads} directory.
 
 @menu
 * Understanding Threads::       
+* Project 1 Code::              
 * Debugging versus Testing::    
 * Tips::                        
 * Problem 1-1 Alarm Clock::     
@@ -86,6 +87,94 @@ in @file{threads/malloc.c}.  Note that the page allocator doles out
 @w{4 kB} chunks and that @code{malloc()} has a @w{2 kB} block size
 limit.  If you need larger chunks, consider using a linked structure
 instead.
+
+@node Project 1 Code
+@section Code
+
+Here is a brief overview of the files in the @file{threads}
+directory.  You will not need to modify most of this code, but the
+hope is that presenting this overview will give you a start on what
+code to look at.
+
+@table @file
+@item loader.S
+@itemx loader.h
+The kernel loader.  Assembles to 512 bytes of code and data that the
+PC BIOS loads into memory and which in turn loads the kernel into
+memory, does basic processor initialization, and jumps to the
+beginning of the kernel.  You should not need to look at this code or
+modify it.
+
+@item kernel.lds.S
+The linker script used to link the kernel.  Sets the load address of
+the kernel and arranges for @file{start.S} to be at the very beginning
+of the kernel image.  Again, you should not need to look at this code
+or modify it, but it's here in case you're curious.
+
+@item start.S
+Jumps to @code{main()}.
+
+@item init.c
+@itemx init.h
+Kernel initialization, including @code{main()}, the kernel's ``main
+program.''  You should look over @code{main()} at least to see what
+gets initialized.
+
+@item thread.c
+@itemx thread.h
+Basic thread support.  Much of your work will take place in these
+files.  @file{thread.h} defines @code{struct thread}, which you will
+modify in the first three projects.
+
+@item switch.S
+@itemx switch.h
+Assembly language routine for switching threads.  Already discussed
+above.
+
+@item palloc.c
+@itemx palloc.h
+Page allocator, which hands out system memory one 4 kB page at a time.
+
+@item paging.c
+@itemx paging.h
+Initializes the kernel page table.  FIXME
+
+@item malloc.c
+@itemx malloc.h
+A very simple implementation of @code{malloc()} and @code{free()} for
+the kernel.  The largest block that can be allocated is 2 kB.
+
+@item interrupt.c
+@itemx interrupt.h
+Basic interrupt handling and functions for turning interrupts on and
+off.
+
+@item intr-stubs.pl
+@itemx intr-stubs.h
+A Perl program that outputs assembly for low-level interrupt handling.
+
+@item synch.c
+@itemx synch.h
+Basic synchronization primitives: semaphores, locks, and condition
+variables.  You will need to use these for synchronization through all
+four projects.
+
+@item test.c
+@itemx test.h
+Test code.  For project 1, you will replace this file with your test
+cases.
+
+@item io.h
+Functions for I/O port access.  This is mostly used by source code in
+the @file{devices} directory that you won't have to touch.
+
+@item mmu.h
+Functions and macros related to memory management, including page
+directories and page tables.  This will be more important to you in
+project 3.  For now, you can ignore it.
+@end table
+
+
 
 @node Debugging versus Testing
 @section Debugging versus Testing
@@ -162,7 +251,7 @@ such that you have Problem 3 fully working before you begin to tackle
 Problem 4.
 
 @node Problem 1-1 Alarm Clock
-@section Problem 1-2: Alarm Clock
+@section Problem 1-1: Alarm Clock
 
 Improve the implementation of the timer device defined in
 @file{devices/timer.c} by reimplementing @code{timer_sleep()}.

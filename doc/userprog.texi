@@ -33,12 +33,11 @@ this illusion.
 FIXME
 Before we delve into the details of the new code that you'll be
 working with, you should probably undo the test cases from project 1.
-All you need to do is make sure the original
-@file{threads/pintostest.c} is in place.  This will stop the tests
-from being run.
+All you need to do is make sure the original @file{threads/test.c} is
+in place.  This will stop the tests from being run.
 
 @menu
-* Project 2 Code to Hack::      
+* Project 2 Code::              
 * Using the File System::       
 * How User Programs Work::      
 * Global Requirements::         
@@ -49,8 +48,8 @@ from being run.
 * System Calls::                
 @end menu
 
-@node Project 2 Code to Hack
-@section Code to Hack
+@node Project 2 Code
+@section Code
 
 The easiest way to get an overview of the programming you will be
 doing is to simply go over each part you'll be working with.  In
@@ -128,7 +127,7 @@ of the file system routines now will make life much easier for project
 
 You need to be able to create and format simulated disks.  The
 @command{pintos} program provides this functionality with its
-@option{make-disk} command.  From the @filesys{build} directory,
+@option{make-disk} command.  From the @file{filesys/build} directory,
 execute @code{pintos make-disk fs.dsk 2}.  This command creates a 2 MB
 simulated disk named @file{fs.dsk}.  (It does not actually start
 Pintos.)  Then format the disk by passing the @option{-f} option to
