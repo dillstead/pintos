@@ -30,7 +30,8 @@ static void
 thread_root (void (*function) (void *aux), void *aux) 
 {
   ASSERT (function != NULL);
-  
+
+  intr_enable ();
   function (aux);
   thread_exit ();
 }
@@ -247,6 +248,7 @@ thread_start (struct thread *t)
     list_remove (&t->rq_elem);
   t->status = THREAD_RUNNING;
   switch_threads (NULL, t);
+  NOT_REACHED ();
 }
 
 void
