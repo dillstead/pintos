@@ -198,6 +198,38 @@ strtok_r (char *s, const char *delimiters, char **save_ptr)
     *save_ptr = s;
   return token;
 }
+
+int
+atoi (const char *s) 
+{
+  bool negative;
+  int value;
+
+  /* Skip white space. */
+  while (isspace (*s))
+    s++;
+
+  /* Parse sign. */
+  negative = false;
+  if (*s == '+')
+    s++;
+  else if (*s == '-')
+    {
+      negative = true;
+      s++;
+    }
+
+  /* Parse digits.  We always initially parse the value as
+     negative, and then make it positive later, because the
+     negative range of an int is bigger than the positive range
+     on a 2's complement system. */
+  for (value = 0; isdigit (*s); s++)
+    value = value * 10 - (*s - '0');
+  if (!negative)
+    value = -value;
+
+  return value;
+}
 
 static void
 vprintf_core (const char *format, va_list args,
@@ -734,7 +766,7 @@ vprintf_core (const char *format, va_list args,
 }
 
 void
-hex_dump (const void *buffer, size_t size) 
+hex_dump (const void *buffer, size_t size, bool ascii)
 {
   const size_t n_per_line = 16;
   const uint8_t *p = buffer;
@@ -747,15 +779,20 @@ hex_dump (const void *buffer, size_t size)
       printk ("%08zx", ofs);
       n = size >= n_per_line ? n_per_line : size;
       for (i = 0; i < n; i++) 
-        printk ("%c%02x", i == n / 2 ? '-' : ' ', (unsigned) p[i]);
-      for (; i < n_per_line; i++)
-        printk ("   ");
-      printk (" |");
-      for (i = 0; i < n; i++)
-        printk ("%c", isprint (p[i]) ? p[i] : '.');
-      for (; i < n_per_line; i++)
-        printk (" ");
-      printk ("|\n");
+        printk ("%c%02x", i == n_per_line / 2 ? '-' : ' ', (unsigned) p[i]);
+
+      if (ascii) 
+        {
+          for (; i < n_per_line; i++)
+            printk ("   ");
+          printk (" |");
+          for (i = 0; i < n; i++)
+            printk ("%c", isprint (p[i]) ? p[i] : '.');
+          for (; i < n_per_line; i++)
+            printk (" ");
+          printk ("|");
+        }
+      printk ("\n");
 
       p += n;
       ofs += n;

@@ -2,6 +2,7 @@
 #define HEADER_LIB_H 1
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include "debug.h"
 
@@ -21,12 +22,14 @@ size_t strlen (const char *);
 int strcmp (const char *, const char *);
 char *strtok_r (char *, const char *, char **);
 
-void vprintk (const char *, va_list);
+int atoi (const char *);
+
+void vprintk (const char *, va_list) PRINTF_FORMAT (1, 0);
 void printk (const char *, ...) PRINTF_FORMAT (1, 2);
-int vsnprintf (char *, size_t, const char *, va_list);
+int vsnprintf (char *, size_t, const char *, va_list) PRINTF_FORMAT (3, 0);
 int snprintf (char *, size_t, const char *, ...) PRINTF_FORMAT (3, 4);
 
-void hex_dump (const void *, size_t size);
+void hex_dump (const void *, size_t size, bool ascii);
 
 static inline int isdigit (int c) { return c >= '0' && c <= '9'; }
 static inline int isprint (int c) { return c >= 32 && c < 127; }
