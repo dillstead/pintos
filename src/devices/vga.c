@@ -1,8 +1,8 @@
 #include "vga.h"
 #include <stdint.h>
 #include <stddef.h>
-#include <string.h>
 #include "io.h"
+#include "lib.h"
 #include "mmu.h"
 
 static size_t vga_cols, vga_rows;
