@@ -48,8 +48,17 @@ sub usage {
 
 # Default set of tests.
 @TESTS = qw (sm-create sm-full sm-seq-block sm-seq-random sm-random
+
 	     grow-create grow-seq-sm grow-seq-lg grow-file-size grow-tell
-	     grow-sparse grow-root-sm grow-root-lg grow-dir-lg grow-two-files
+	     grow-sparse grow-too-big grow-root-sm grow-root-lg grow-dir-lg 
+	     grow-two-files
+
+	     dir-mkdir dir-rmdir dir-mk-vine dir-rm-vine dir-mk-tree
+	     dir-rm-tree dir-lsdir dir-rm-cwd dir-rm-cwd-cd
+	     dir-rm-parent dir-rm-root dir-over-file dir-under-file
+	     dir-empty-name dir-open
+
+	     syn-remove syn-read
 	     ) unless @TESTS > 0;
 
 our (%args);
@@ -251,7 +260,8 @@ sub really_run_test {
 
     # Make output directory.
     mkdir "output/$test";
-    xsystem ("pintos make-disk output/$test/fs.dsk 2 >/dev/null 2>&1",
+    my ($fs_size) = $test ne 'grow-too-big' ? 2 : .25;
+    xsystem ("pintos make-disk output/$test/fs.dsk $fs_size >/dev/null 2>&1",
 	     DIE => "failed to create file system disk");
     xsystem ("pintos make-disk output/$test/swap.dsk 2 >/dev/null 2>&1",
 	     DIE => "failed to create swap disk");
@@ -268,6 +278,14 @@ sub really_run_test {
 	if !xsystem ("$pintos_base_cmd put -f $GRADES_DIR/$test $test",
 		     LOG => "$test/put", TIMEOUT => 60, EXPECT => 1);
 
+    my (@extra_files);
+    push (@extra_files, "child-syn-read") if $test eq 'syn-read';
+    for my $fn (@extra_files) {
+	return "format/put error" 
+	    if !xsystem ("$pintos_base_cmd put $GRADES_DIR/$fn $fn",
+			 LOG => "$test/put-$fn", TIMEOUT => 60, EXPECT => 1);
+    }
+    
     # Run.
     my ($timeout) = 60;
     my ($testargs) = defined ($args{$test}) ? " $args{$test}" : "";

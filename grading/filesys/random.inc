@@ -15,13 +15,11 @@
 char buf[TEST_SIZE];
 int order[BLOCK_CNT];
 
-int
-main (void) 
+void
+test_main (void) 
 {
   int fd;
   size_t i;
-
-  msg ("begin");
 
   random_init (57);
   random_bytes (buf, sizeof buf);
@@ -64,7 +62,4 @@ main (void)
 
   fail ("close \"bazzle\"");
   close (fd);
-
-  msg ("end");
-  return 0;
 }

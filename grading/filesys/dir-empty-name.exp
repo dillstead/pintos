@@ -1,0 +1,3 @@
+(dir-empty-name) begin
+(dir-empty-name) create "" (must return false)
+(dir-empty-name) end

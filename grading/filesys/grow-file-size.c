@@ -21,12 +21,10 @@ check_file_size (int fd, long ofs)
           ofs, size);
 }
 
-int
-main (void) 
+void
+test_main (void) 
 {
-  msg ("begin");
-  seq_test ("testfile", buf, sizeof buf, 0, 0,
+  seq_test ("testfile",
+            buf, sizeof buf, 0,
             return_block_size, check_file_size);
-  msg ("end");
-  return 0;
 }

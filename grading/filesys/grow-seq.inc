@@ -10,11 +10,10 @@ return_block_size (void)
   return 1234;
 }
 
-int
-main (void) 
+void
+test_main (void) 
 {
-  msg ("begin");
-  seq_test ("testme", buf, sizeof buf, 0, 3, return_block_size, NULL);
-  msg ("end");
-  return 0;
+  seq_test ("testme",
+            buf, sizeof buf, 0,
+            return_block_size, NULL);
 }

@@ -11,12 +11,11 @@ return_random (void)
   return random_ulong () % 1031 + 1;
 }
 
-int
-main (void) 
+void
+test_main (void) 
 {
-  msg ("begin");
   random_init (-1);
-  seq_test ("nibble", buf, sizeof buf, sizeof buf, 5, return_random, NULL);
-  msg ("end");
-  return 0;
+  seq_test ("nibble",
+            buf, sizeof buf, sizeof buf,
+            return_random, NULL);
 }

@@ -1,0 +1,11 @@
+(dir-open) begin
+(dir-open) mkdir "xyzzy"
+(dir-open) open "xyzzy"
+(dir-open) open returned -1 -- ok
+(dir-open) end
+--OR--
+(dir-open) begin
+(dir-open) mkdir "xyzzy"
+(dir-open) open "xyzzy"
+(dir-open) write "xyzzy" (must return -1, actually -1)
+(dir-open) end

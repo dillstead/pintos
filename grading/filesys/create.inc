@@ -6,12 +6,9 @@
 
 static char buf[TEST_SIZE];
 
-int
-main (void) 
+void
+test_main (void) 
 {
-  msg ("begin");
   check (create ("testfile", TEST_SIZE), "create testfile");
   check_file ("testfile", buf, TEST_SIZE);
-  msg ("end");
-  return 0;
 }

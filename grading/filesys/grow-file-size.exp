@@ -6,4 +6,3 @@
 (grow-file-size) open "testfile" for verification
 (grow-file-size) close "testfile"
 (grow-file-size) end
-

@@ -10,12 +10,10 @@ return_block_size (void)
   return BLOCK_SIZE;
 }
 
-int
-main (void) 
+void
+test_main (void) 
 {
-  msg ("begin");
-  seq_test ("noodle", buf, sizeof buf, sizeof buf, 4,
+  seq_test ("noodle",
+            buf, sizeof buf, sizeof buf,
             return_block_size, NULL);
-  msg ("end");
-  return 0;
 }

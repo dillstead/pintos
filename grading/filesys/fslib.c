@@ -4,21 +4,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <syscall.h>
-#include "../lib/arc4.h"
 
 bool quiet = false;
 
 static void
-vmsg (const char *format, va_list args, bool failure) 
+vmsg (const char *format, va_list args) 
 {
-  if (quiet && !failure)
-    return;
-  
   printf ("(%s) ", test_name);
   vprintf (format, args);
-  if (failure)
-    printf (": FAILED");
-  printf ("\n");
 }
 
 void
@@ -26,8 +19,11 @@ msg (const char *format, ...)
 {
   va_list args;
 
+  if (quiet)
+    return;
   va_start (args, format);
-  vmsg (format, args, false);
+  vmsg (format, args);
+  printf ("\n");
   va_end (args);
 }
 
@@ -36,10 +32,9 @@ fail (const char *format, ...)
 {
   va_list args;
 
-  quiet = false;
-  
   va_start (args, format);
-  vmsg (format, args, true);
+  vmsg (format, args);
+  printf (": FAILED\n");
   va_end (args);
 
   exit (1);
@@ -53,30 +48,30 @@ check (bool success, const char *format, ...)
   va_start (args, format);
   if (success) 
     {
-      if (!quiet)
-        vmsg (format, args, false); 
+      if (!quiet) 
+        {
+          vmsg (format, args); 
+          printf ("\n"); 
+        }
     }
   else 
     {
-      vmsg (format, args, true);
+      vmsg (format, args); 
+      printf (": FAILED\n");
       exit (1);
     }
   va_end (args);
 }
 
 void 
-seq_test (const char *filename, void *buf, size_t size,
-          size_t initial_size, int seed,
+seq_test (const char *filename, void *buf, size_t size, size_t initial_size,
           size_t (*block_size_func) (void),
           void (*check_func) (int fd, long ofs)) 
 {
-  static struct arc4 arc4;
   size_t ofs;
   int fd;
   
-  arc4_init (&arc4, &seed, sizeof seed);
-  arc4_crypt (&arc4, buf, size);
-
+  random_bytes (buf, size);
   check (create (filename, initial_size), "create \"%s\"", filename);
   check ((fd = open (filename)) > 1, "open \"%s\"", filename);
 

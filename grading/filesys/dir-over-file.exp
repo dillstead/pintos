@@ -1,0 +1,4 @@
+(dir-dir-as-file) begin
+(dir-dir-as-file) mkdir "abc"
+(dir-dir-as-file) create "abc" (must return false)
+(dir-dir-as-file) end

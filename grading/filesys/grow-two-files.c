@@ -24,8 +24,8 @@ write_some_bytes (const char *filename, int fd, const char *buf, size_t *ofs)
     }
 }
 
-int
-main (void) 
+void
+test_main (void) 
 {
   int fd_a, fd_b;
   size_t ofs_a, ofs_b;
@@ -55,6 +55,4 @@ main (void)
 
   check_file ("a", buf_a, FILE_SIZE);
   check_file ("b", buf_b, FILE_SIZE);
-
-  return 0;
 }

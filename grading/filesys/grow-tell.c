@@ -21,11 +21,10 @@ check_tell (int fd, long ofs)
           ofs, pos);
 }
 
-int
-main (void) 
+void
+test_main (void) 
 {
-  msg ("begin");
-  seq_test ("foobar", buf, sizeof buf, 0, 1, return_block_size, check_tell);
-  msg ("end");
-  return 0;
+  seq_test ("foobar",
+            buf, sizeof buf, 0,
+            return_block_size, check_tell);
 }

@@ -12,12 +12,11 @@ return_block_size (void)
   return sizeof buf;
 }
 
-int
-main (void) 
+void
+test_main (void) 
 {
   size_t i;
   
-  msg ("begin");
 #ifdef DIRECTORY
   check (mkdir (DIRECTORY), "mkdir %s", DIRECTORY);
 #define DIR_PREFIX DIRECTORY "/"
@@ -32,10 +31,9 @@ main (void)
       msg ("creating and checking \"%s\"", filename);
 
       quiet = true;
-      seq_test (filename, buf, sizeof buf, sizeof buf, 0,
+      seq_test (filename,
+                buf, sizeof buf, sizeof buf,
                 return_block_size, NULL); 
       quiet = false;
     }
-  msg ("end");
-  return 0;
 }

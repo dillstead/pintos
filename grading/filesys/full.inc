@@ -10,11 +10,10 @@ return_test_size (void)
   return TEST_SIZE;
 }
 
-int
-main (void) 
+void
+test_main (void) 
 {
-  msg ("begin");
-  seq_test ("quux", buf, sizeof buf, sizeof buf, 2, return_test_size, NULL);
-  msg ("end");
-  return 0;
+  seq_test ("quux",
+            buf, sizeof buf, sizeof buf,
+            return_test_size, NULL);
 }
