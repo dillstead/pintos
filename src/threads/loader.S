@@ -1,4 +1,5 @@
 #include "mmu.h"
+#include "loader.h"
 	
 ##############################################################################
 # Kernel loader.
@@ -60,9 +61,10 @@ start:	.code16				# This runs in real mode
 	movl %cr0, %eax		# turn on protected mode
 	orl $CR0_PE, %eax	# 
 	movl %eax, %cr0		# 
-	### CPU magic: jump to relocation, flush prefetch queue, and reload %cs
-	### Has the effect of just jmp to the next instruction, but simultaneous
-	### loads CS with $PROT_MODE_CSEG.
+	### CPU magic: jump to relocation, flush prefetch queue, and
+	### reload %cs Has the effect of just jmp to the next
+	### instruction, but simultaneous loads CS with
+	### $PROT_MODE_CSEG.
 	ljmp $SEL_KCSEG, $protcseg
 	
 #### We are in protected mode in a 32-bit segment (hence the .code32)
@@ -75,10 +77,11 @@ protcseg:
 	movw %ax, %gs		
 	movw %ax, %ss
 
-#### Load kernel at 1 MB by frobbing the IDE controller directly.
+#### Load kernel starting at physical address LOADER_KERN_BASE by
+#### frobbing the IDE controller directly.
 
 	movl $1, %ebx
-	movl $0x100000, %edi
+	movl $LOADER_KERN_BASE, %edi
 read_sector:
 
 	### Poll status register while controller busy.
@@ -130,25 +133,33 @@ read_sector:
 	cmpl $KERNEL_LOAD_PAGES*8 + 1, %ebx
 	jnz read_sector
 
-##### Create temporary PDE and PTE and set page directory pointer
+##### Create temporary PDE and PTE, set page directory pointer, and turn
+##### on paging.
 ##### FIXME? We could use a single 4 MB page instead of 1024 4 kB pages.
 
-	movl $0x10000, %edi
+	# Create PDE at 64 kB.
+	movl $0x10000, %edi		
 	movl %edi, %cr3
+
+	# Fill PDE with zeroes.
 	subl %eax, %eax
 	movl $0x400, %ecx
 	rep stosl
+
+	# Set PDE entries for 0 and LOADER_PHYS_BASE to point to the
+	# PTE.
 	movl $0x11000 | PG_U | PG_W | PG_P, %eax
 	movl %eax, 0x10000
-	movl %eax, 0x10c00
+	movl %eax, 0x10000 | (LOADER_PHYS_BASE >> 20)
+
+	# Initialize PTE.
 	movl $PG_U | PG_W | PG_P, %eax
 	movl $0x400, %ecx
 1:	stosl
 	addl $0x1000, %eax
 	loop 1b
 
-##### Enable paging.
-
+	# Enable paging.
 	movl %cr0, %eax
 	orl $CR0_PG, %eax
 	movl %eax, %cr0
@@ -164,8 +175,8 @@ read_sector:
 	
 ##### Jump to kernel entry point.
 
-	movl $0xc0007c00, %esp
-	movl $0xc0100000, %eax
+	movl $LOADER_PHYS_BASE + LOADER_BASE, %esp
+	movl $LOADER_PHYS_BASE + LOADER_KERN_BASE, %eax
 	jmp *%eax
 
 ##### GDT
@@ -194,17 +205,18 @@ panicmsg:
 	.ascii "Loader panic!\r\n"
 	.byte 0
 
-##### Command-line arguments inserted by another utility.
-##### The loader doesn't use these, but we note their
-##### location here for easy reference.
-	.org 0x200 - 0x80
-cmd_line:	
-
 ##### Memory size in 4 kB pages.
-	.org 0x200 - 6
+	.org LOADER_RAM_PAGES
 ram_pages:
 	.long 0
 
+##### Command-line arguments inserted by another utility.
+##### The loader doesn't use these, but we note their
+##### location here for easy reference.
+	.org LOADER_CMD_LINE
+cmd_line:
+	.fill 0x80, 1, 0
+
 ##### Boot-sector signature for BIOS inspection.
-	.org 0x200 - 2
+	.org LOADER_BIOS_SIG
 	.word 0xaa55
