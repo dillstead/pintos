@@ -16,6 +16,11 @@ use POSIX;
 use Getopt::Long qw(:config no_ignore_case);
 use Algorithm::Diff;
 
+# We execute lots of subprocesses.
+# Without this, our stdout output can get flushed multiple times,
+# which is harmless but looks bizarre.
+$| = 1;
+
 sub parse_cmd_line {
     my ($do_regex, $no_regex);
     GetOptions ("v|verbose+" => \$verbose,
