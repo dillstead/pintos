@@ -140,9 +140,10 @@ represented as a file, the number of files that may be created is also
 limited.
 
 @item
-File data is allocated as a single extent, so that external
-fragmentation can become a serious problem as a file system is used over
-time.
+File data is allocated as a single extent, that is, data in a single
+file must occupy a contiguous range of sectors on disk.  External
+fragmentation can therefore become a serious problem as a file system is
+used over time.
 
 @item
 No subdirectories.
@@ -159,6 +160,7 @@ provided in any case.
 However one important feature is included:
 
 @itemize @bullet
+@item
 Unix-like semantics for filesys_remove() are implemented.
 That is, if a file is open when it is removed, its blocks
 are not deallocated and it may still be accessed by the
