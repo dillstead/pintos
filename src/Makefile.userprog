@@ -1,3 +1,5 @@
+# -*- makefile -*-
+
 include $(SRCDIR)/Make.config
 
 SHELL = /bin/sh
@@ -49,7 +51,7 @@ libc.a: $(LIB_OBJ)
 	ar r $@ $^
 	ranlib $@
 
-clean:
+clean::
 	rm -f $(PROGS) $(PROGS_OBJ) $(PROGS_DEP)
 	rm -f $(LIB_DEP) $(LIB_OBJ) lib/user/entry.[do] libc.a 
 

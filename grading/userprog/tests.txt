@@ -1,0 +1,96 @@
+CORRECTNESS [[total]]
+---------------------
+
+Argument passing
+  -5 args-argc: argc is not set correctly
+  -5 args-argv0: executable name not passed as argv[0]
+  -5 args-multiple: passing multiple arguments fails
+  -5 args-dblspace: using multiple spaces between arguments fails
+
+System calls: halt, exec 
+  -1 halt: halt system call fails
+  -2 exit: exit system call malfunctions
+Score: /3
+
+System calls: create
+  -2 create-normal: create a file in the most normal way
+  -1 create-empty: pass empty string to create system call
+  -1 create-null: pass null pointer to create system call
+  -1 create-bad-ptr: pass invalid pointer to create system call
+  -1 create-long: pass long file name to create system call
+  -1 create-exists: pass name of an existing file to create system call
+Score: /7
+
+System calls: open
+  -2 open-normal: open a file in the most normal way
+  -2 open-missing: try to open a file that doesn't exist
+  -1 open-empty: pass empty string to open system call
+  -1 open-null: pass null pointer to open system call
+  -1 open-twice: open the same file twice
+Score: /7
+
+System calls: close
+  -2 close-normal: close an open file in the most normal way
+  -2 close-twice: try to close an open file twice
+  -1 close-stdin: try to close stdin
+  -1 close-stdout: try to close stdout
+  -1 close-bad-fd: try to close invalid file descriptor
+Score: /7
+
+System calls: read
+  -2 read-normal: read from open file in most normal way
+  -2 read-bad-ptr: pass invalid pointer to read system call
+  -1 read-zero: try to read zero bytes
+  -1 read-stdout: try to read from stdout
+  -1 read-bad-fd: try to read from invalid file descriptor
+Score: /7
+
+System calls: write
+  -2 write-normal: write to open file in most normal way
+  -2 write-bad-ptr: pass invalid pointer to write system call
+  -1 write-zero: try to write zero bytes
+  -1 write-stdin: try to write to stdin
+  -1 write-bad-fd: try to write to invalid file descriptor
+Score: /7
+
+System calls: exec
+  -2 exec-once: call exec/join once
+  -2 exec-multiple: call exec/join multiple times
+  -2 exec-missing: exec of nonexistent file must return -1
+  -1 exec-bad-ptr: pass invalid pointer to exec system call
+Score: /7
+
+System calls: join
+  -2 join-simple: join must return proper value
+  -2 join-twice: join a subprocess two times
+  -2 join-killed: join must return -1 if subprocess killed by kernel
+  -1 join-bad-pid: join must return if passed bad pid
+Score: /7
+
+Multiprogramming
+  -
+
+3. Multiprogramming / Page boundary checking (/50 points)
+        Multiprogramming: Exec'ing two simple programs                  -30 
+                          from another program doesn't work
+        Open/Create fails on page boundary                              -5
+        Read/Write fails on page boundary                               -5
+        Can close file opened by parent                                 -5
+        Running out of physical memory crashes OS                       -5
+        Shell test doesn't work with normal page size                   -5 
+        Shell test doesn't work with smaller page size                  -5
+        Exec/Join tests 0 and 1 fail when we substitute a new 
+        bitmap.cc that returns pages in a random order.                 -5 
+
+-----------
+Notes on the shell tests :
+
+Large page size echo/matmult test
+  -5 if nothing works no matter what you do
+  -4 if shell works in either case but matmult doesn't work in either case
+
+Small page size echo/matmult test
+  -5 if nothing works no matter what you do
+  -4 if shell works in either case but matmult doesn't work in either case
+------------
+

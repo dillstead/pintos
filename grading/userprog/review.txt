@@ -1,0 +1,65 @@
+Design (/120 points)
+--------------------
+
+a) DESIGNDOC (/60 pts)
+    a) Arg passing                                          (/10)
+    b) System calls                                         (/20)
+         Didn't discuss global vs local allocation of fileID's
+         How to handle exceptions & why (ie killing processes
+           that do bad things)
+         Explaining choice of openFileID's & ASIDS
+    c) Multiprogramming                                     (/30)
+         How to find a free page.
+         Explaining how new processes are executed.
+         How they deal with running out of memory error on loading.
+
+b) Other Design (/60 pts)
+
+   1. Argument passing
+      No checking for page boundaries in argument passing               -10
+      Uses memcpy/bcopy/memmove or file reading/writing for             +5
+        copying up to/starting from page boundaries -- good job!
+        (Search for memcpy/bcopy, not just extern, make sure they call it
+        with the possibility of copying more than 4 bytes at a time. ALSO if
+        they do File Read/Writes then that is not byte-by-byte but they will
+        fail page crossing only take off for failing the pagecrossing test.)
+      Don't decomp / reuse translation code                             -5
+      Using strtok instead of strtok_r or strsep                        -1
+        (strtok is not thread-safe)
+
+   2. System calls
+      No checking for page boundaries in system calls                   -20
+        (-5 if they only forgot for some system calls but did it somewhere)
+      Interrupts turned off for all system calls                        -10
+      Doesn't close open files after process exits                      -2
+      table/when file is closed, it is not removed from file table
+      Uses printf/fscanf/putc/getc when interacting                     -5
+        with StandardInput / StandardOutput
+      Using fixed length buffer for Read/Write                          -5
+      Using pointer to int casts as ASID/FileId without justifying      -5
+
+   3. Multiprogramming
+      Don't use the bitmap object                                       -5
+      Bitmap is not cleared when process dies                           -5
+      Access to bitmap is not sychronized                               -5
+      getting next ASID is not synchronized                             -5
+        ...or (mututally exclusive, depending on their solution)...
+      Doesn't use ASID's at all, but their system for identifying       -5
+        processes has synchronization or uniqueness problems (e.g. 
+        careless use of AddrSpace*'s)
+      Multiple translations for a page                                  -10
+        (One vaddr maps to two paddr's, or vice versa)
+
+Style (/30 points)
+------------------
+0) Had to modify code to get to compile the first                       -10
+   time
+1) Minor changes to machine code                                        -10
+2) Extraneous output                                                    -5
+3) Unexplained dependencies                                             -5
+4) Not Decomposing Exception handler                                    -5
+
+TESTCASEs (/30 points)
+----------------------
+    Don't write own testcases                                           -15
+    Not sufficient testing                                        up to -10
