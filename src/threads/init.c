@@ -120,9 +120,10 @@ make_data_desc (int dpl)
 }
 
 static uint64_t
-make_tss_desc (uint32_t base)
+make_tss_desc (void *vaddr)
 {
-  return make_seg_desc (base, 0x67, SYS_SYSTEM, TYPE_TSS_32_A, 0, GRAN_BYTE);
+  return make_seg_desc ((uint32_t) vaddr,
+                        0x67, SYS_SYSTEM, TYPE_TSS_32_A, 0, GRAN_BYTE);
 }
 
 uint64_t gdt[SEL_CNT];
@@ -150,7 +151,7 @@ gdt_init (void)
   gdt[SEL_KDSEG / sizeof *gdt] = make_data_desc (0);
   gdt[SEL_UCSEG / sizeof *gdt] = make_code_desc (3);
   gdt[SEL_UDSEG / sizeof *gdt] = make_data_desc (3);
-  gdt[SEL_TSS / sizeof *gdt] = make_tss_desc (vtop (tss));
+  gdt[SEL_TSS / sizeof *gdt] = make_tss_desc (tss);
 
   /* Load GDTR, TR. */
   gdtr_operand = make_dtr_operand (sizeof gdt - 1, gdt);
