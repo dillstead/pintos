@@ -40,7 +40,8 @@ sub usage {
 	  "join-dummy", "join-invalid", "join-no",
 	  "priority-preempt", "priority-fifo", "priority-donate-one",
 	  "priority-donate-multiple", "priority-donate-nest",
-	  "mlfqs-on", "mlfqs-off")
+	  #"mlfqs-on", "mlfqs-off"
+	  )
     unless @TESTS > 0;
 
 # Find the directory that contains the grading files.
@@ -72,16 +73,13 @@ our %result;
 our %details;
 our %extra;
 for $test (@TESTS) {
-    my ($result);
-    do {
-	print "$test: ";
-	$result = run_test ($test);
-	if ($result eq 'ok') {
-	    $result = grade_test ($test);
-	    $result =~ s/\n$//;
-	}
-	print "$result\n";
-    } while ($result eq 'rerun');
+    print "$test: ";
+    my ($result) = run_test ($test);
+    if ($result eq 'ok') {
+	$result = grade_test ($test);
+	$result =~ s/\n$//;
+    }
+    print "$result\n";
     
     $result{$test} = $result;
 }
@@ -146,8 +144,39 @@ sub test_constants {
 
 sub run_test {
     my ($test) = @_;
-    return "ok" if -f "output/$test.run.out";
+    return "ok" if -f "output/$test/done";
 
+    # Reuse older results if any.
+    if (open (DONE, "<output/$test/done")) {
+	my ($status);
+	$status = <DONE>;
+	chomp $status;
+	close (DONE);
+	return $status;
+    }
+
+    # Really run the test.
+    $status = really_run_test ($test);
+
+    # Save the results for later.
+    open (DONE, ">output/$test/done") or die "output/$test/done: create: $!\n";
+    print DONE "$status\n";
+    close (DONE);
+
+    return $status;
+}
+
+sub really_run_test {
+    # Need to run it.
+    # If there's residue from an earlier test, move it to .old.
+    # If there's already a .old, delete it.
+    xsystem ("rm -rf output/$test.old", VERBOSE => 1) if -d "output/$test.old";
+    rename "output/$test", "output/$test.old" or die "rename: $!\n";
+
+    # Make output directory.
+    mkdir "output/$test";
+
+    # Change constants.h if necessary.
     my ($defines) = test_constants ($test);
     if ($defines ne snarf ("pintos/src/constants.h")) {
 	open (CONSTANTS, ">pintos/src/constants.h");
@@ -155,28 +184,37 @@ sub run_test {
 	close (CONSTANTS);
     }
 
+    # Copy in the new test.c and delete enough files to ensure a full rebuild.
     my ($src) = test_source ($test);
     xsystem ("cp $src pintos/src/threads/test.c", DIE => "cp failed\n");
     unlink ("pintos/src/threads/build/threads/test.o");
     unlink ("pintos/src/threads/build/kernel.o");
     unlink ("pintos/src/threads/build/kernel.bin");
     unlink ("pintos/src/threads/build/os.dsk");
-    xsystem ("cd pintos/src/threads && make", LOG => "$test.make")
+
+    # Build.
+    xsystem ("cd pintos/src/threads && make", LOG => "$test/make")
 	or return "compile error";
 
+    # Copy out files for backtraces later.
+    xsystem ("cp pintos/src/threads/build/kernel.o output/$test");
+    xsystem ("cp pintos/src/threads/build/os.dsk output/$test");
+
+    # Run.
     my ($timeout) = 10;
     $timeout = 600 if $test =~ /^mlfqs/;
     xsystem ("cd pintos/src/threads/build && pintos -v run -q",
-	     LOG => "$test.run",
+	     LOG => "$test/run",
 	     TIMEOUT => $timeout)
 	or return "Bochs error";
+    
     return "ok";
 }
 
 sub grade_test {
     my ($test) = @_;
 
-    my (@output) = snarf ("output/$test.run.out");
+    my (@output) = snarf ("output/$test/run.out");
 
     if (-e "$GRADES_DIR/$test.exp") {
 	eval {
@@ -380,10 +418,9 @@ sub verify_common {
 
 	my (@stack_line) = grep (/Call stack:/, @output);
 	if (@stack_line != 0) {
-	    get_binaries ();
 	    $details .= "  $stack_line[0]\n\n";
 	    $details .= "Translation of backtrace:\n";
-	    my ($addrs) = $stack_line[0] =~ /Call stack:((?: 0x[0-9a-f]+)+)/;
+	    my (@addrs) = $stack_line[0] =~ /Call stack:((?: 0x[0-9a-f]+)+)/;
 
 	    my ($A2L);
 	    if (`uname -m`
@@ -392,7 +429,7 @@ sub verify_common {
 	    } else {
 		$A2L = "i386-elf-addr2line";
 	    }
-	    open (A2L, "$A2L -fe pintos/src/threads/build/kernel.o $addrs|");
+	    open (A2L, "$A2L -fe output/$test/kernel.o @addrs|");
 	    while (my $function = <A2L>) {
 		my ($line) = <A2L>;
 		chomp $function;
@@ -413,16 +450,6 @@ sub verify_common {
         if !grep (/Timer: \d+ ticks/, @output);
     die "Didn't shut down properly: no \"Powering off\" shutdown message\n"
 	if !grep (/Powering off/, @output);
-}
-
-sub get_binaries {
-    if (!files_equal ("pintos/src/threads/test.c", test_source ($test))
-	|| !file_contains ("pintos/src/constants.h",
-			   test_constants ($test))) {
-	unlink ("output/$test.run.out")
-	    or die "output/$test.run.out: unlink: $!\n";
-	die "rerun\n";
-    }
 }
 
 sub compare_output {
@@ -536,14 +563,14 @@ sub write_details {
 	next if $result{$test} eq 'ok';
 	
 	my ($details) = $details{$test};
-	next if !defined ($details) && ! -e "output/$test.run.out";
+	next if !defined ($details) && ! -e "output/$test/run.out";
 
 	print DETAILS "\n" if $n++;
 	print DETAILS "--- $test details ", '-' x (50 - length ($test));
 	print DETAILS "\n\n";
 
 	if (!defined $details) {
-	    $details = "Output:\n\n" . snarf ("output/$test.run.out");
+	    $details = "Output:\n\n" . snarf ("output/$test/run.out");
 	}
 	print DETAILS $details;
 
