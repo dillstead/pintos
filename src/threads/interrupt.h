@@ -36,7 +36,7 @@ struct intr_frame
     uint32_t vec_no;            /* Interrupt vector number. */
 
     /* Sometimes pushed by the CPU,
-       otherwise by intrXX_stub for consistency. */
+       otherwise for consistency pushed as 0 by intrXX_stub. */
     uint32_t error_code;        /* Error code. */
 
     /* Pushed by the CPU.

@@ -12,6 +12,9 @@ struct vprintf_aux
     int char_cnt;       /* Total characters written so far. */
   };
 
+/* The standard vprintf() function,
+   which is like printf() but uses a va_list.
+   Writes its output to the STDOUT_FILENO handle. */
 int
 vprintf (const char *format, va_list args) 
 {
