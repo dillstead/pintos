@@ -30,13 +30,24 @@ idle (void *aux UNUSED)
 }
 
 void
-thread_init (void) 
+thread_init (const char *name, void (*function) (void *aux), void *aux) 
 {
+  struct thread *initial_thread;
+
+  ASSERT (intr_get_level () == IF_OFF);
+
   list_init (&run_queue);
   idle_thread = thread_create ("idle", idle, NULL);
+
+  initial_thread = thread_create (name, function, aux);
+  list_remove (&initial_thread->rq_elem);
+  initial_thread->status = THREAD_RUNNING;
+  switch_threads (NULL, initial_thread);
+
+  NOT_REACHED ();
 }
 
-struct thread_root_frame 
+struct kernel_thread_frame 
   {
     void *eip;                  /* Return address. */
     void (*function) (void *);  /* Function to call. */
@@ -44,7 +55,7 @@ struct thread_root_frame
   };
 
 static void
-thread_root (void (*function) (void *aux), void *aux) 
+kernel_thread (void (*function) (void *aux), void *aux) 
 {
   ASSERT (function != NULL);
 
@@ -84,7 +95,7 @@ struct thread *
 thread_create (const char *name, void (*function) (void *aux), void *aux) 
 {
   struct thread *t;
-  struct thread_root_frame *rf;
+  struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
 
@@ -92,15 +103,15 @@ thread_create (const char *name, void (*function) (void *aux), void *aux)
 
   t = new_thread (name);
 
-  /* Stack frame for thread_root(). */
-  rf = alloc_frame (t, sizeof *rf);
-  rf->eip = NULL;
-  rf->function = function;
-  rf->aux = aux;
+  /* Stack frame for kernel_thread(). */
+  kf = alloc_frame (t, sizeof *kf);
+  kf->eip = NULL;
+  kf->function = function;
+  kf->aux = aux;
 
   /* Stack frame for switch_entry(). */
   ef = alloc_frame (t, sizeof *ef);
-  ef->eip = (void (*) (void)) thread_root;
+  ef->eip = (void (*) (void)) kernel_thread;
 
   /* Stack frame for thread_switch(). */
   sf = alloc_frame (t, sizeof *sf);
@@ -197,14 +208,10 @@ void schedule_tail (struct thread *prev);
 void
 schedule_tail (struct thread *prev) 
 {
-#ifdef USERPROG
-  struct thread *cur = thread_current ();
-#endif
-
   ASSERT (intr_get_level () == IF_OFF);
 
 #ifdef USERPROG
-  addrspace_activate (&cur->addrspace);
+  addrspace_activate (&thread_current ()->addrspace);
 #endif
 
   if (prev != NULL && prev->status == THREAD_DYING) 
@@ -252,18 +259,6 @@ thread_yield (void)
 }
 
 void
-thread_start (struct thread *t) 
-{
-  ASSERT (intr_get_level () == IF_OFF);
-
-  if (t->status == THREAD_READY) 
-    list_remove (&t->rq_elem);
-  t->status = THREAD_RUNNING;
-  switch_threads (NULL, t);
-  NOT_REACHED ();
-}
-
-void
 thread_exit (void) 
 {
   ASSERT (!intr_context ());
@@ -282,38 +277,4 @@ thread_sleep (void)
 
   thread_current ()->status = THREAD_BLOCKED;
   thread_schedule ();
-}
-
-static void
-tfunc (void *aux UNUSED) 
-{
-  for (;;) 
-    {
-      size_t count, i;
-      if (random_ulong () % 5 == 0)
-        {
-          printk ("%s exiting\n", thread_current ()->name);
-          break;
-        }
-      count = random_ulong () % 25 * 10000;
-      printk ("%s waiting %zu: ", thread_current ()->name, count);
-      for (i = 0; i < count; i++);
-      printk ("%s\n", thread_current ()->name);
-    }
-}
-
-void
-thread_self_test (void)
-{
-  struct thread *t;
-  int i;
-    
-  for (i = 0; i < 4; i++) 
-    {
-      char name[2];
-      name[0] = 'a' + i;
-      name[1] = 0;
-      t = thread_create (name, tfunc, NULL); 
-    }
-  thread_start (t); 
 }

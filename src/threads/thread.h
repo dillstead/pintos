@@ -28,10 +28,8 @@ struct thread
 #endif
   };
 
-void thread_init (void);
-
-struct thread *thread_create (const char *name,
-                              void (*function) (void *aux), void *aux);
+void thread_init (const char *name, void (*) (void *aux), void *) NO_RETURN;
+struct thread *thread_create (const char *name, void (*) (void *aux), void *);
 void thread_destroy (struct thread *);
 struct thread *thread_current (void);
 
@@ -39,13 +37,10 @@ struct thread *thread_current (void);
 bool thread_execute (const char *filename);
 #endif
 
-void thread_start (struct thread *) NO_RETURN;
 void thread_ready (struct thread *);
 void thread_exit (void) NO_RETURN;
 
 void thread_yield (void);
 void thread_sleep (void);
-
-void thread_self_test (void);
 
 #endif /* thread.h */

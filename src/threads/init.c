@@ -28,7 +28,6 @@ size_t ram_pages;
 static void ram_init (void);
 static void gdt_init (void);
 static void argv_init (void);
-void power_off (void);
 
 static void
 main_thread (void *aux UNUSED) 
@@ -66,8 +65,7 @@ main (void)
   kbd_init ();
 
   /* Do everything else in a system thread. */
-  thread_init ();
-  thread_start (thread_create ("main", main_thread, NULL));
+  thread_init ("main", main_thread, NULL);
 }
 
 static uint64_t
@@ -113,7 +111,7 @@ make_tss_desc (void *vaddr)
                         0x67, SYS_SYSTEM, TYPE_TSS_32_A, 0, GRAN_BYTE);
 }
 
-uint64_t gdt[SEL_CNT];
+static uint64_t gdt[SEL_CNT];
 
 struct tss *tss;
 
@@ -182,16 +180,4 @@ argv_init (void)
       argv[argc++] = arg;
     }
   argv[argc] = NULL;
-}
-
-void
-power_off (void) 
-{
-  const char s[] = "Shutdown";
-  const char *p;
-
-  printk ("Powering off...\n");
-  for (p = s; *p != '\0'; p++)
-    outb (0x8900, *p);
-  for (;;);
 }
