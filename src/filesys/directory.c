@@ -1,5 +1,6 @@
 #include "directory.h"
 #include "file.h"
+#include "fsutil.h"
 #include "lib.h"
 #include "malloc.h"
 
@@ -116,5 +117,26 @@ dir_remove (struct dir *d, const char *name)
     return false;
 }
 
-void dir_list (const struct dir *);
-void dir_print (const struct dir *);
+void
+dir_list (const struct dir *d)
+{
+  struct dir_entry *e;
+  
+  for (e = d->entries; e < d->entries + d->entry_cnt; e++)
+    if (e->in_use)
+      printk ("%s\n", e->name);
+}
+
+void
+dir_dump (const struct dir *d) 
+{
+  struct dir_entry *e;
+  
+  for (e = d->entries; e < d->entries + d->entry_cnt; e++)
+    if (e->in_use) 
+      {
+        printk ("Contents of %s:\n", e->name);
+        fsutil_print (e->name);
+        printk ("\n");
+      }
+}
