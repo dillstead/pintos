@@ -696,8 +696,15 @@ sub xsystem {
     };
     if ($@) {
 	die unless $@ eq "alarm\n";   # propagate unexpected errors
-	print "Timed out $pid.\n";
-	kill ('SIGTERM', $pid);
+	print "Timed out: ";
+	for (my ($i) = 0; $i < 10; $i++) {
+	    kill ('SIGTERM', $pid);
+	    sleep (1);
+	    my ($retval) = waitpid ($pid, WNOHANG);
+	    last if $retval == $pid || $retval == -1;
+	    print "Waiting for $pid to die" if $i == 0;
+	    print ".";
+	}
 	$status = 0;
     }
 
