@@ -1,6 +1,6 @@
-* Write, test join.
-
 * Write, test user programs.
+  - addrspace_load() should return thread's esp.
+  - thread_execute() shouldn't panic on failure (!).
 
 * Figure out PD/PT management API.
   - We should document what's in mmu.h.  
@@ -14,6 +14,9 @@
 
 * Compile and install gdb, dbg versions.
   - Test gdb version.
+
+* References/bibliography.
+  - Userprog refers to [SysV-i386].
 
 * Write "tour".
 
