@@ -28,6 +28,7 @@ int hprintf (int, const char *, ...) PRINTF_FORMAT (2, 3);
 int vhprintf (int, const char *, va_list) PRINTF_FORMAT (2, 0);
 #endif
 void hex_dump (uintptr_t ofs, const void *, size_t size, bool ascii);
+void print_human_readable_size (uint64_t size);
 
 /* Internal functions. */
 void __vprintf (const char *format, va_list args,
