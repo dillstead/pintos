@@ -13,13 +13,14 @@
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
-/* List of processes in THREAD_READY state,
-   that is, processes that are ready to run but not actually
-   running. */
+/* List of processes in THREAD_READY state, that is, processes
+   that are ready to run but not actually running. */
 static struct list run_queue;
 
 /* Thread to run when nothing else is ready. */
 static struct thread *idle_thread;
+
+static struct thread *find_next_to_run (void);
 
 /* Idle thread.  Executes when no other thread is ready to run. */
 static void
@@ -28,6 +29,7 @@ idle (void *aux UNUSED)
   for (;;) 
     {
       /* Wait for an interrupt. */
+      DEBUG (idle, "idle");
       asm ("hlt");
 
       /* Let someone else run. */
@@ -42,10 +44,8 @@ idle (void *aux UNUSED)
    The initial thread is named NAME and executes FUNCTION passing
    AUX as the argument. */
 void
-thread_init (const char *name, void (*function) (void *aux), void *aux) 
+thread_init (void) 
 {
-  struct thread *initial_thread;
-
   ASSERT (intr_get_level () == IF_OFF);
 
   /* Initialize run queue. */
@@ -54,12 +54,16 @@ thread_init (const char *name, void (*function) (void *aux), void *aux)
   /* Create idle thread. */
   idle_thread = thread_create ("idle", idle, NULL);
   idle_thread->status = THREAD_BLOCKED;
-  
-  /* Create initial thread and switch to it. */
-  initial_thread = thread_create (name, function, aux);
-  list_remove (&initial_thread->rq_elem);
-  initial_thread->status = THREAD_RUNNING;
-  switch_threads (NULL, initial_thread);
+}
+
+void
+thread_start (void) 
+{
+  struct thread *t = find_next_to_run ();
+  if (t->status == THREAD_READY)
+    list_remove (&t->rq_elem);
+  t->status = THREAD_RUNNING;
+  switch_threads (NULL, t);
 
   NOT_REACHED ();
 }
@@ -178,7 +182,7 @@ thread_execute (const char *filename)
     return false;
   
   if (!addrspace_load (&t->addrspace, filename, &start)) 
-    panic ("%s: program load failed", filename);
+    PANIC ("%s: program load failed", filename);
 
   /* Interrupt frame. */
   if_ = alloc_frame (t, sizeof *if_);
@@ -219,7 +223,7 @@ static struct thread *
 find_next_to_run (void) 
 {
   if (list_empty (&run_queue))
-    return NULL;
+    return idle_thread;
   else
     return list_entry (list_pop_front (&run_queue), struct thread, rq_elem);
 }
@@ -259,8 +263,6 @@ thread_schedule (void)
   ASSERT (cur->status != THREAD_RUNNING);
 
   next = find_next_to_run ();
-  if (next == NULL)
-    next = idle_thread;
 
   next->status = THREAD_RUNNING;
   if (cur != next)

@@ -29,7 +29,8 @@ struct thread
 #endif
   };
 
-void thread_init (const char *name, void (*) (void *aux), void *) NO_RETURN;
+void thread_init (void);
+void thread_start (void) NO_RETURN;
 
 struct thread *thread_create (const char *name, void (*) (void *aux), void *);
 #ifdef USERPROG
