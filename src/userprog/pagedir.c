@@ -99,7 +99,7 @@ pagedir_set_page (uint32_t *pd, void *upage, void *kpage,
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (pg_ofs (kpage) == 0);
   ASSERT (upage < PHYS_BASE);
-  ASSERT (lookup_page (pd, upage, false) == NULL);
+  ASSERT (pagedir_get_page (pd, upage) == NULL);
 
   pte = lookup_page (pd, upage, true);
   if (pte != NULL) 
