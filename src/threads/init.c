@@ -1,3 +1,4 @@
+#include "init.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <limits.h>
@@ -8,6 +9,7 @@
 #include "lib.h"
 #include "malloc.h"
 #include "mmu.h"
+#include "paging.h"
 #include "palloc.h"
 #include "random.h"
 #include "serial.h"
@@ -24,34 +26,20 @@ size_t kernel_pages;
 /* Amount of physical memory, in 4 kB pages. */
 size_t ram_pages;
 
-static void init_page_table (void);
-static void setup_gdt (void);
+static void gdt_init (void);
 void power_off (void);
 
-struct thread *a, *b;
-
 static void
-tfunc (void *aux UNUSED) 
+main_thread (void *aux UNUSED) 
 {
-  for (;;) 
-    {
-      size_t count, i;
-      if (random_ulong () % 5 == 0)
-        {
-          printk ("%s exiting\n", thread_current ()->name);
-          break;
-        }
-      count = random_ulong () % 25 * 10000;
-      printk ("%s waiting %zu: ", thread_current ()->name, count);
-      for (i = 0; i < count; i++);
-      printk ("%s\n", thread_current ()->name);
-    }
+  thread_execute ("a.out");
 }
 
 int
 main (void)
 {
   extern char _text, _end, __bss_start;
+  struct thread *t;
 
   /* Clear out the BSS segment. */
   memset (&__bss_start, 0, &_end - &__bss_start);
@@ -71,9 +59,8 @@ main (void)
      is free.  Give it to the page allocator. */
   palloc_init ((void *) (KERN_BASE + kernel_pages * NBPG),
                (void *) (PHYS_BASE + ram_pages * NBPG));
-
-  init_page_table ();
-  setup_gdt ();
+  paging_init ();
+  gdt_init ();
 
   malloc_init ();
   random_init ();
@@ -84,55 +71,16 @@ main (void)
 
 #ifdef FILESYS
   filesys_init (false);
+  filesys_self_test ();
 #endif
 
   thread_init ();
 
-  {
-    struct thread *t;
-    int i;
-    
-    for (i = 0; i < 4; i++) 
-      {
-        char name[2];
-        name[0] = 'a' + i;
-        name[1] = 0;
-        t = thread_create (name, tfunc, NULL); 
-      }
-    thread_start (t); 
-  }
+  t = thread_create ("main", main_thread, NULL);
+  thread_start (t);
 
   printk ("Done!\n");
   return 0;
-}
-
-/* Populates the page directory and page table with the kernel
-   virtual mapping. */
-static void
-init_page_table (void)
-{
-  uint32_t *pd, *pt;
-  uint32_t paddr;
-
-  pd = palloc_get (PAL_ASSERT | PAL_ZERO);
-  pt = NULL;
-  for (paddr = 0; paddr < NBPG * ram_pages; paddr += NBPG)
-    {
-      uint32_t vaddr = paddr + PHYS_BASE;
-      size_t pde_idx = PDENO(vaddr);
-      size_t pte_idx = PTENO(vaddr);
-
-      if (pd[pde_idx] == 0)
-        {
-          pt = palloc_get (PAL_ASSERT | PAL_ZERO);
-          pd[pde_idx] = (uint32_t) vtop (pt) | PG_U | PG_W | PG_P;
-        }
-
-      pt[pte_idx] = paddr | PG_U | PG_W | PG_P;
-    }
-
-  /* Set the page table. */
-  asm volatile ("movl %0,%%cr3" :: "r" (vtop (pd)));
 }
 
 static uint64_t
@@ -184,7 +132,7 @@ struct tss *tss;
 /* Sets up a proper GDT.  The bootstrap loader's GDT didn't
    include user-mode selectors or a TSS. */
 static void
-setup_gdt (void)
+gdt_init (void)
 {
   uint64_t gdtr_operand;
 
@@ -192,7 +140,7 @@ setup_gdt (void)
      few fields of it are ever referenced, and those are the only
      ones we initialize. */
   tss = palloc_get (PAL_ASSERT | PAL_ZERO);
-  tss->esp0 = (uint32_t) ptov(0xc0020000);
+  tss->esp0 = (uint32_t) ptov(0x20000);
   tss->ss0 = SEL_KDSEG;
   tss->bitmap = 0xdfff;
 

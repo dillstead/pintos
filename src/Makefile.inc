@@ -5,6 +5,7 @@ VPATH := $(TOP_SRCDIR)/threads
 VPATH := $(VPATH):$(TOP_SRCDIR)/devices
 VPATH := $(VPATH):$(TOP_SRCDIR)/lib
 VPATH := $(VPATH):$(TOP_SRCDIR)/filesys
+VPATH := $(VPATH):$(TOP_SRCDIR)/userprog
 
 -include *.d
 
@@ -21,6 +22,7 @@ THREADS_SRC += switch.S		# Thread switch routine.
 THREADS_SRC += interrupt.c	# Interrupt core.
 THREADS_SRC += intr-stubs.S	# Interrupt stubs.
 THREADS_SRC += synch.c		# Synchronization.
+THREADS_SRC += paging.c		# Page tables.
 THREADS_SRC += palloc.c		# Page allocator.
 THREADS_SRC += malloc.c		# Subpage allocator.
 
@@ -42,6 +44,9 @@ LIB_SRC += backdoor.c		# Backdoor IPC.
 FILESYS_SRC  = filesys.c	# Filesystem core.
 FILESYS_SRC += file.c		# Individual files.
 FILESYS_SRC += filesys-stub.c	# Stub helper code.
+
+# User process code.
+USERPROG_SRC  = addrspace.c	# Address spaces.
 
 # Objects.
 OBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))

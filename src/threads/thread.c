@@ -5,6 +5,7 @@
 #include "lib.h"
 #include "mmu.h"
 #include "palloc.h"
+#include "random.h"
 
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
@@ -70,6 +71,18 @@ thread_current (void)
   asm ("movl %%esp, %0\n" : "=g" (esp));
   return stack_to_thread (esp);
 }
+
+#ifdef USERPROG
+void
+thread_execute (const char *filename) 
+{
+  struct thread *t = thread_current ();
+  
+  if (!addrspace_load (&t->addrspace, filename)) 
+    panic ("%s: program load failed", filename);
+  panic ("%s: loaded", filename);
+}
+#endif
 
 void
 thread_ready (struct thread *t) 
@@ -172,4 +185,38 @@ thread_sleep (void)
 
   thread_current ()->status = THREAD_BLOCKED;
   thread_schedule ();
+}
+
+static void
+tfunc (void *aux UNUSED) 
+{
+  for (;;) 
+    {
+      size_t count, i;
+      if (random_ulong () % 5 == 0)
+        {
+          printk ("%s exiting\n", thread_current ()->name);
+          break;
+        }
+      count = random_ulong () % 25 * 10000;
+      printk ("%s waiting %zu: ", thread_current ()->name, count);
+      for (i = 0; i < count; i++);
+      printk ("%s\n", thread_current ()->name);
+    }
+}
+
+void
+thread_self_test (void)
+{
+  struct thread *t;
+  int i;
+    
+  for (i = 0; i < 4; i++) 
+    {
+      char name[2];
+      name[0] = 'a' + i;
+      name[1] = 0;
+      t = thread_create (name, tfunc, NULL); 
+    }
+  thread_start (t); 
 }
