@@ -4,11 +4,12 @@
 #include <stdbool.h>
 #include "list.h"
 
+/* A counting semaphore. */
 struct semaphore 
   {
-    char name[16];
-    unsigned value;
-    struct list waiters;
+    char name[16];              /* Name (for debugging purposes only). */
+    unsigned value;             /* Current value. */
+    struct list waiters;        /* List of waiting threads. */
   };
 
 void sema_init (struct semaphore *, unsigned value, const char *);
@@ -17,11 +18,12 @@ void sema_up (struct semaphore *);
 const char *sema_name (const struct semaphore *);
 void sema_self_test (void);
 
+/* Lock. */
 struct lock 
   {
-    char name[16];
-    struct thread *holder;
-    struct semaphore semaphore;
+    char name[16];              /* Name (for debugging purposes only). */
+    struct thread *holder;      /* Thread holding lock (for debugging). */
+    struct semaphore semaphore; /* Binary semaphore controlling access. */
   };
 
 void lock_init (struct lock *, const char *);
@@ -30,10 +32,11 @@ void lock_release (struct lock *);
 bool lock_held_by_current_thread (const struct lock *);
 const char *lock_name (const struct lock *);
 
+/* Condition variable. */
 struct condition 
   {
-    char name[16];
-    struct list waiters;
+    char name[16];              /* Name (for debugging purposes only). */
+    struct list waiters;        /* List of waiting threads. */
   };
 
 void cond_init (struct condition *, const char *);
