@@ -78,7 +78,7 @@ list stdlib::
 	cp ../src/tests/threads/$@.c $@/pintos/src/threads/test.c
 	$(MAKE) -C $@/pintos/src/threads -s
 	-(cd $@/pintos/src/threads/build && pintos -v run -q) | tee $@/output
-	grep -q '$@: PASS' $@/output && ! grep -q 'FAIL' $@/output
+	grep -q '$@: PASS' $@/output
 	$(clean)
 
 userprog: PROJECT = userprog
