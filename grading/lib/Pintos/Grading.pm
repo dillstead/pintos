@@ -345,11 +345,8 @@ sub xsystem {
 	    print "Child terminated with signal $signal\n";
 	}
 
-	my ($exp_status) = !defined ($options{EXPECT}) ? 0 : $options{EXPECT};
-	$result = WIFEXITED ($status) && WEXITSTATUS ($status) == $exp_status
-	    ? "ok" : "error";
+	$result = $status == 0 ? "ok" : "error";
     }
-
 
     if ($result eq 'error' && defined $options{DIE}) {
 	my ($msg) = $options{DIE};
@@ -402,7 +399,6 @@ sub get_test_result {
 
 sub run_pintos {
     my ($cmd_line, %args) = @_;
-    $args{EXPECT} = 1 unless defined $args{EXPECT};
     my ($retval) = xsystem ($cmd_line, %args);
     return 'ok' if $retval eq 'ok';
     return "Timed out after $args{TIMEOUT} seconds" if $retval eq 'timeout';

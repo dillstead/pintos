@@ -1,6 +1,7 @@
 #! /usr/bin/perl -w
 
 use strict;
+use POSIX;
 
 our ($mem) = 4;
 our ($serial_out) = 1;
@@ -89,7 +90,7 @@ die "no command specified; use --help for help\n"
     if @ARGV < 1;
 my ($cmd) = shift @ARGV;
 if ($cmd eq 'run') {
-    run_vm ('EXEC', @ARGV);
+    run_vm (@ARGV);
 } elsif ($cmd eq 'make-disk') {
     usage () if @ARGV != 2;
     my ($file, $mb) = @ARGV;
@@ -123,9 +124,7 @@ if ($cmd eq 'run') {
     # Do copy.
     my (@cmd) = ("-ci", $guestfn, $size, "-q");
     unshift (@cmd, "-f") if $format;
-    run_vm ('EXEC', @cmd);
-
-    exit 1;
+    run_vm (@cmd);
 } elsif ($cmd eq 'get') {
     usage () if @ARGV != 1 && @ARGV != 2;
     my ($guestfn, $hostfn) = @ARGV;
@@ -142,7 +141,7 @@ if ($cmd eq 'run') {
 	if $scratch_size < $fs_size + 16384;
 
     # Do copy.
-    run_vm ('FORK', "-co", $guestfn, "-q");
+    run_vm ("-co", $guestfn, "-q");
 
     # Read out scratch disk.
     print "copying $guestfn from $disks[2] to $hostfn...\n";
@@ -157,8 +156,6 @@ if ($cmd eq 'run') {
     print DST $src or die "$hostfn: write error\n";
     close (DST);
     close (SRC);
-
-    exit 1;
 } elsif ($cmd eq 'help') {
     usage (0);
 } else {
@@ -212,8 +209,7 @@ sub create_disk {
 }
 
 sub run_vm {
-    my ($fork) = shift;
-    $fork eq 'FORK' || $fork eq 'EXEC' or die;
+    my (@args) = @_;
 
     our (@disks);
 
@@ -234,7 +230,7 @@ sub run_vm {
 	}
     }
 
-    write_cmd_line ($disks[0], @_);
+    write_cmd_line ($disks[0], @args);
 
     if ($sim eq 'bochs') {
 	my ($bin);
@@ -281,7 +277,16 @@ sub run_vm {
 	my (@cmd) = ($bin, '-q');
 	push (@cmd, '-j', $jitter) if defined $jitter;
 	print join (' ', @cmd), "\n";
-	$fork eq 'EXEC' ? exec (@cmd) : system (@cmd);
+	my ($exit) = xsystem (@cmd);
+	if (WIFEXITED ($exit)) {
+	    # Bochs exited normally.
+	    # Ignore the exit code; Bochs normally exits with status 1,
+	    # which is weird.
+	} elsif (WIFSIGNALED ($exit)) {
+	    die "Bochs died with signal ", WTERMSIG ($exit), "\n";
+	} else {
+	    die "Bochs died: code $exit\n";
+	}
     } elsif ($sim eq 'qemu') {
 	print "warning: qemu doesn't support --terminal\n"
 	    if $vga eq 'terminal';
@@ -298,7 +303,6 @@ sub run_vm {
 	push (@cmd, '-S') if $debug eq 'monitor';
 	push (@cmd, '-s') if $debug eq 'gdb';
 	run_command (@cmd);
-	exit 1;
     } elsif ($sim eq 'gsx') {
 	print "warning: VMware GSX Server doesn't support --$debug\n"
 	    if $debug ne 'no-debug';
@@ -353,14 +357,36 @@ sub run_vm {
 	}
 	close (VMX);
 
-	use Cwd;
 	my ($vmx) = getcwd () . "/pintos.vmx";
 	system ("vmware-cmd -s register $vmx >&/dev/null");
 	system ("vmware-cmd $vmx stop hard >&/dev/null");
 	system ("vmware -l -G -x -q $vmx");
 	system ("vmware-cmd $vmx stop hard >&/dev/null");
+    }
+}
 
-	exit 1;
+sub relay_signal {
+    my ($pid, $signal) = @_;
+    kill $signal, $pid;
+    $SIG{$signal} = 'DEFAULT';
+    kill $signal, getpid ();
+}
+
+sub xsystem {
+    my ($pid) = fork;
+    if (!defined ($pid)) {
+	# Fork failed.
+	die "fork: $!\n";
+    } elsif (!$pid) {
+	# Running in child process.
+	exec (@_);
+	exit (1);
+    } else {
+	# Running in parent process.
+	local $SIG{INT} = sub { relay_signal ($pid, "INT"); };
+	local $SIG{TERM} = sub { relay_signal ($pid, "TERM"); };
+	waitpid ($pid, 0);
+	return $?;
     }
 }
 
@@ -381,7 +407,7 @@ sub write_cmd_line {
 
 sub run_command {
     print join (' ', @_), "\n";
-    die "command failed\n" if system (@_);
+    die "command failed\n" if xsystem (@_);
 }
 
 sub search_path {

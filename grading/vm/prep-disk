@@ -28,7 +28,7 @@ if (! -e $os_disk) {
 our ($formatted) = 0;
 
 unlink $fs_disk;
-xsystem (0, "$pintos make-disk '$fs_disk' 2");
+xsystem ("$pintos make-disk '$fs_disk' 2");
 while (@ARGV) {
     put_file (shift (@ARGV));
 }
@@ -38,13 +38,11 @@ sub put_file {
     my ($cmd) = "$pintos -v --os-disk='$os_disk' --fs-disk='$fs_disk' put";
     $cmd .= " -f", $formatted = 1 if !$formatted;
     $cmd .= " '$fn'";
-    xsystem (1, $cmd);
+    xsystem ($cmd);
 }
 
 sub xsystem {
-    my ($expect, $cmd) = @_;
+    my ($cmd) = @_;
     print "$cmd\n";
-    my ($code) = system ($cmd);
-    WIFEXITED ($code) && WEXITSTATUS ($code) == $expect
-	or die "command failed\n";
+    system ($cmd) == 0 or die "command failed\n";
 }

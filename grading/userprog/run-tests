@@ -169,8 +169,7 @@ sub get_file {
 			       . "--fs-disk=output/$test/fs.dsk.keep "
 			       . "-v get $guest_fn $host_fn",
 			       LOG => "$test/get-$guest_fn",
-			       TIMEOUT => 10,
-			       EXPECT => 1);
+			       TIMEOUT => 10);
     die "`pintos get $guest_fn' failed - $result\n"
 	if $result ne 'ok';
 }
