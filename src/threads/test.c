@@ -25,7 +25,7 @@ struct sleep_thread_data
     int *product;               /* Largest product so far. */
     struct lock *lock;          /* Lock on access to `product'. */
     struct semaphore done;      /* Completion semaphore. */
-    struct thread *thread;      /* Thread. */
+    tid_t tid;                  /* Thread ID. */
   };
 
 static void sleeper (void *);
@@ -63,14 +63,14 @@ test_sleep (int iterations)
       t->product = &product;
       t->lock = &lock;
       sema_init (&t->done, 0, name);
-      t->thread = thread_create (name, sleeper, t);
+      t->tid = thread_create (name, sleeper, t);
     }
   
   /* Wait for all the threads to finish. */
   for (i = 0; i < thread_cnt; i++) 
     {
 #ifdef THREAD_JOIN_IMPLEMENTED
-      thread_join (threads[i].thread);
+      thread_join (threads[i].tid);
 #else
       sema_down (&threads[i].done);
 #endif
@@ -98,13 +98,11 @@ sleeper (void *t_)
       lock_release (t->lock);
 
       printf ("%s: duration=%d, iteration=%d, product=%d\n",
-              thread_name (thread_current ()),
-              t->duration, i, new_product);
+              thread_name (), t->duration, i, new_product);
 
       if (old_product > new_product)
         printf ("%s: Out of order sleep completion (%d > %d)!\n",
-                thread_name (thread_current ()),
-                old_product, new_product);
+                thread_name (), old_product, new_product);
     }
   
   /* Signal completion. */

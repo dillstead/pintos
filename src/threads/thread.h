@@ -18,6 +18,11 @@ enum thread_status
     THREAD_DYING        /* About to be destroyed. */
   };
 
+/* Thread identifier type.
+   You can redefine this to whatever type you like. */
+typedef int tid_t;
+#define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -76,14 +81,17 @@ enum thread_status
    blocked state is on a semaphore wait list. */
 struct thread
   {
-    /* These members are owned by the thread_*() functions. */
+    /* These members are owned by thread.c. */
+    tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
+
+    /* Shared between thread.c and synch.c. */
     list_elem elem;                     /* List element. */
 
 #ifdef USERPROG
-    /* These members are owned by the addrspace_*() functions. */
+    /* These members are owned by userprog/addrspace.c. */
     uint32_t *pagedir;                  /* Page directory. */
 #endif
 
@@ -95,21 +103,23 @@ void thread_init (void);
 void thread_start (void);
 
 typedef void thread_func (void *aux);
-struct thread *thread_create (const char *name, thread_func *, void *);
+tid_t thread_create (const char *name, thread_func *, void *);
 #ifdef USERPROG
-bool thread_execute (const char *filename);
+tid_t thread_execute (const char *filename);
 #endif
 
 void thread_unblock (struct thread *);
-const char *thread_name (struct thread *);
 
 struct thread *thread_current (void);
+tid_t thread_tid (void);
+const char *thread_name (void);
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
 void thread_block (void);
 
-void thread_join (struct thread *);
-void thread_set_priority (struct thread *, int);
-int thread_get_priority (const struct thread *);
+/* These functions will be implemented in project 1. */
+void thread_join (tid_t);
+void thread_set_priority (tid_t, int);
+int thread_get_priority (tid_t);
 
 #endif /* threads/thread.h */

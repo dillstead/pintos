@@ -8,26 +8,28 @@
 #include "threads/mmu.h"
 #include "threads/palloc.h"
 #include "threads/switch.h"
+#include "threads/synch.h"
 #ifdef USERPROG
 #include "userprog/gdt.h"
 #endif
 
-/* Value for struct thread's `magic' member.
+/* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
-#define THREAD_MAGIC 0x1234abcdu
+#define THREAD_MAGIC 0xcd6abf4b
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
 
 /* Idle thread. */
-static struct thread *idle_thread;      /* Thread. */
-static void idle (void *aux UNUSED);    /* Thread function. */
+static struct thread *idle_thread;
 
-/* Initial thread.
-   This is the thread running main(). */
+/* Initial thread, the thread running init.c:main(). */
 static struct thread *initial_thread;
+
+/* Lock used by allocate_tid(). */
+static struct lock tid_lock;
 
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
@@ -39,6 +41,7 @@ struct kernel_thread_frame
 
 static void kernel_thread (thread_func *, void *aux);
 
+static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
 static struct thread *new_thread (const char *name);
@@ -48,6 +51,7 @@ static void *alloc_frame (struct thread *, size_t size);
 static void destroy_thread (struct thread *);
 static void schedule (void);
 void schedule_tail (struct thread *prev);
+static tid_t allocate_tid (void);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  Note that this is
@@ -63,10 +67,13 @@ thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
+  lock_init (&tid_lock, "tid");
+
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main");
   initial_thread->status = THREAD_RUNNING;
+  initial_thread->tid = allocate_tid ();
 
   /* Initialize run queue. */
   list_init (&ready_list);
@@ -77,31 +84,33 @@ thread_init (void)
 void
 thread_start (void) 
 {
-  /* Create idle thread. */
-  idle_thread = thread_create ("idle", idle, NULL);
-  idle_thread->status = THREAD_BLOCKED;
-
-  /* Enable interrupts. */
+  thread_create ("idle", idle, NULL);
   intr_enable ();
 }
 
 /* Creates a new kernel thread named NAME, which executes
    FUNCTION passing AUX as the argument, and adds it to the ready
    queue.  If thread_start() has been called, then the new thread
-   may be scheduled before thread_create() returns.  Use a
-   semaphore or some other form of synchronization if you need to
-   ensure ordering. */
-struct thread *
+   may be scheduled before thread_create() returns.  It could
+   even exit before thread_create() returns.  Use a semaphore or
+   some other form of synchronization if you need to ensure
+   ordering.  Returns the thread identifier for the new thread,
+   or TID_ERROR if creation fails. */
+tid_t
 thread_create (const char *name, thread_func *function, void *aux) 
 {
   struct thread *t;
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
+  tid_t tid;
 
   ASSERT (function != NULL);
 
   t = new_thread (name);
+  if (t == NULL)
+    return TID_ERROR;
+  tid = t->tid = allocate_tid ();
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -120,7 +129,7 @@ thread_create (const char *name, thread_func *function, void *aux)
   /* Add to run queue. */
   thread_unblock (t);
 
-  return t;
+  return tid;
 }
 
 #ifdef USERPROG
@@ -128,7 +137,7 @@ thread_create (const char *name, thread_func *function, void *aux)
    FILENAME, and adds it to the ready queue.  If thread_start()
    has been called, then new thread may be scheduled before
    thread_execute() returns.*/
-bool
+tid_t
 thread_execute (const char *filename) 
 {
   struct thread *t;
@@ -136,12 +145,14 @@ thread_execute (const char *filename)
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
   void (*start) (void);
+  tid_t tid;
 
   ASSERT (filename != NULL);
 
   t = new_thread (filename);
   if (t == NULL)
-    return false;
+    return TID_ERROR;
+  tid = t->tid = allocate_tid ();
   
   if (!addrspace_load (t, filename, &start)) 
     PANIC ("%s: program load failed", filename);
@@ -167,7 +178,7 @@ thread_execute (const char *filename)
   /* Add to run queue. */
   thread_unblock (t);
 
-  return true;
+  return tid;
 }
 #endif
 
@@ -190,12 +201,11 @@ thread_unblock (struct thread *t)
   intr_set_level (old_level);
 }
 
-/* Returns the name of thread T. */
+/* Returns the name of the running thread. */
 const char *
-thread_name (struct thread *t) 
+thread_name (void) 
 {
-  ASSERT (is_thread (t));
-  return t->name;
+  return thread_current ()->name;
 }
 
 /* Returns the running thread.
@@ -215,6 +225,13 @@ thread_current (void)
   ASSERT (t->status == THREAD_RUNNING);
 
   return t;
+}
+
+/* Returns the running thread's tid. */
+tid_t
+thread_tid (void) 
+{
+  return thread_current ()->tid;
 }
 
 /* Deschedules the current thread and destroys it.  Never
@@ -269,16 +286,17 @@ thread_block (void)
 static void
 idle (void *aux UNUSED) 
 {
+  idle_thread = thread_current ();
+
   for (;;) 
     {
-      /* Wait for an interrupt. */
-      DEBUG (idle, "idle");
-      asm ("hlt");
-
       /* Let someone else run. */
       intr_disable ();
       thread_block ();
       intr_enable ();
+
+      /* Use CPU `hlt' instruction to wait for interrupt. */
+      asm ("hlt");
     }
 }
 
@@ -336,9 +354,9 @@ static void
 init_thread (struct thread *t, const char *name)
 {
   memset (t, 0, sizeof *t);
+  t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->status = THREAD_BLOCKED;
   t->magic = THREAD_MAGIC;
 }
 
@@ -437,6 +455,20 @@ schedule (void)
   if (cur != next)
     prev = switch_threads (cur, next);
   schedule_tail (prev); 
+}
+
+/* Returns a tid to use for a new thread. */
+static tid_t
+allocate_tid (void) 
+{
+  static tid_t next_tid = 1;
+  tid_t tid;
+
+  lock_acquire (&tid_lock);
+  tid = next_tid++;
+  lock_release (&tid_lock);
+
+  return tid;
 }
 
 /* Offset of `stack' member within `struct thread'.
