@@ -1,0 +1,146 @@
+#! /usr/bin/perl
+
+$sim = "bochs";
+while (@ARGV) {
+    my ($arg) = shift (@ARGV);
+    if ($arg eq '--bochs' || $arg eq '--bochs-dbg' || $arg eq '--bochs-gdb'
+	|| $arg eq '--qemu' || $arg eq '--vmware') {
+	$sim = substr ($arg, 2);
+    } elsif ($arg eq 'run') {
+	run_vm (@ARGV);
+	exit 0;
+    } elsif ($arg eq 'make-disk') {
+	usage () if @ARGV != 2;
+	my ($file, $kb) = @ARGV;
+	usage () if $kb =~ /^\d+$/;
+	die "$file: already exists\n" if -e $file;
+
+	create_disk ($file, $kb);
+	exit 0;
+    } elsif ($arg eq 'put') {
+	usage () if @ARGV != 1 && @ARGV != 2;
+	my ($hostfn, $guestfn) = @ARGV;
+	$guestfn = $hostfn if !defined $guestfn;
+
+	# Create scratch disk from file.
+	die "$hostfn: $!\n" if ! -e $hostfn;
+	my ($size) = -s _;
+	copy_pad ($hostfn, "scratch.dsk", 512);
+
+	# Do copy.
+	run_vm ("-ci", $hostfn, $size, "-q");
+	exit 0;
+    } elsif ($arg eq 'get') {
+	usage () if @ARGV != 1 && @ARGV != 2;
+	my ($guestfn, $hostfn) = @ARGV;
+	$hostfn = $guestfn if !defined $hostfn;
+	die "$hostfn: already exists\n" if -e $file;
+
+	# Create scratch disk big enough for any file in the filesystem
+	# (modulo sparse files).
+	die "fs.dsk: $!\n" if ! -e "fs.dsk";
+	my ($fs_size) = -s _;
+	my ($scratch_size) = -s "scratch.dsk";
+	$scratch_size = 0 if !defined $scratch_size;
+	create_disk ("scratch.dsk", $fs_size / 1024 + 16)
+	    if $scratch_size < $fs_size + 16384;
+
+	# Do copy.
+	run_vm ("-co", $guestfn, $hostfn, "-q");
+
+	# Read out scratch disk.
+	open (SRC, "<scratch.dsk") or die "scratch.dsk: open: $!\n";
+	open (DST, ">$hostfn") or die "$hostfn: create: $!\n";
+	my ($input);
+	read (SRC, $input, 512) == 512 or die "scratch.dsk: read error\n";
+	my ($size) = unpack ("%V", $input);
+	$size != 0xffffffff or die "$guestfn: too big for scratch.dsk?";
+	read (SRC, $src, $size) == $src or die "scratch.dsk: read error\n";
+	print DST $src or die "$hostfn: write error\n";
+	close (DST);
+	close (SRC);
+
+	exit 0;
+    }
+}
+usage ();
+
+sub usage {
+    my ($exitcode) = @_;
+    $exitcode = 1 unless defined $exitcode;
+    print "pintos, a utility for invoking Pintos in a simulator\n";
+    print "Usage: pintos [OPTION...] COMMAND [ARG...]\n";
+    print "where COMMAND is one of the following:\n";
+    print "  run [CMDLINE...]        run a VM in the simulator\n";
+    print "  make-disk FILE.DSK KB   create FILE.DSK as empty KB-kB disk\n";
+    print "  put HOSTFN [GUESTFN]    copy HOSTFN into VM (as GUESTFN)\n";
+    print "  get GUESTFN [HOSTFN]    copy GUESTFN out of VM (to HOSTFN)\n";
+    print "  help                    print this help message and exit\n";
+    print "Available options:\n";
+    print "  --bochs       Use Bochs as simulator (default)\n";
+    print "  --bochs-dbg   Use Bochs with debugger as simulator\n";
+    print "  --bochs-gdb   Use Bochs with gdb as simulator\n";
+    print "  --qemu        Use qemu as simulator\n";
+    print "  --vmware      Use VMware Workstation as simulator\n";
+    exit $exitcode;
+}
+
+sub copy_pad {
+    my ($src, $dst, $blocksize) = @_;
+    open (SRC, "<$src") or die "$src: open: $!\n";
+    open (DST, ">$dst") or die "$dst: create: $!\n";
+    my ($size) = 0;
+    my ($input);
+    while (read (SRC, $input, 4096)) {
+	$size += length ($input);
+	print DST $input;
+    }
+    my ($rem) = $size % $blocksize;
+    print DST "\0" x ($blocksize - $rem) if $rem != 0;
+    close (DST);
+    close (SRC);
+}
+
+sub create_disk {
+    my ($disk, $kb) = @_;
+    open (DISK, ">$disk") or die "$disk: create: $!\n";
+    for (my ($i) = 0; $i < $kb; $i++) {
+	print DISK "\0" x 1024;
+    }
+    close (DISK);
+}
+
+sub run_vm {
+    my (@disks) = (undef, undef, undef, undef);
+
+    $disks[0] = "os.dsk";
+    $disks[1] = "fs.dsk" if -e "fs.dsk";
+    $disks[2] = "scratch.dsk" if -e "scratch.dsk";
+    $disks[3] = "swap.dsk" if -e "swap.dsk";
+
+    die "$disks[0]: can't find OS disk\n" if ! -e $disks[0];
+    write_cmd_line ($disks[0], @_);
+
+    if ($sim eq 'qemu') {
+	my (@cmd) = ('qemu');
+	push (@cmd, '-hda', $disks[0]) if defined $disks[0];
+	push (@cmd, '-hdb', $disks[1]) if defined $disks[1];
+	push (@cmd, '-hdc', $disks[2]) if defined $disks[2];
+	push (@cmd, '-hdd', $disks[3]) if defined $disks[3];
+	system (@cmd);
+    }
+}
+
+sub write_cmd_line {
+    my ($disk, @args) = @_;
+
+    die "command line includes empty string" if grep (/^$/, @args);
+    $args = join ("\0", @args) . "\0\0";
+    die "command line exceeds 128 bytes" if length ($args) > 128;
+    $args .= "\0" x (128 - length ($args));
+
+    open (DISK, "+<$disk") or die "$disk: open: $!\n";
+    seek (DISK, 0x17e, 0) or die "$disk: seek: $!\n";
+    syswrite (DISK, $args) or die "$disk: write: $!\n";
+    close (DISK) or die "$disk: close: $!\n";
+}
