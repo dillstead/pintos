@@ -33,18 +33,12 @@ void power_off (void);
 static void
 main_thread (void *aux UNUSED) 
 {
-  struct disk *hda;
   disk_init ();
-  hda = disk_get (1);
-  if (hda != NULL) 
-    {
-      char buf[DISK_SECTOR_SIZE];
-      disk_read (hda, 0, buf);
-      //hex_dump (buf, sizeof buf);
-    }
-  else
-    printk ("no hda\n");
-  thread_execute ("a.out");
+
+#ifdef FILESYS
+  filesys_init (true);
+#endif
+  filesys_self_test ();
 }
 
 int
@@ -80,10 +74,6 @@ main (void)
   intr_init ();
   timer_init ();
   kbd_init ();
-
-#ifdef FILESYS
-  filesys_init (false);
-#endif
 
   thread_init ();
 

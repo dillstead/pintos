@@ -97,6 +97,23 @@ malloc (size_t size)
   return get_free_slot (d);
 }
 
+void *
+calloc (size_t a, size_t b) 
+{
+  void *p;
+  size_t size;
+
+  size = a * b;
+  if (size < a || size < b)
+    return NULL;
+
+  p = malloc (size);
+  if (p != NULL)
+    memset (p, 0, size);
+
+  return p;
+}
+
 void
 free (void *p) 
 {
