@@ -490,6 +490,10 @@ for a lock held by a lower-priority thread.  You do not need to
 implement this fix for semaphores, condition variables or joins.
 However, you do need to implement priority scheduling in all cases.
 
+You may assume a static priority for priority donation, that is, it is
+not necessary to ``re-donate'' a thread's priority if it changes
+(although you are free to do so).
+
 @node Problem 1-4 Advanced Scheduler
 @section Problem 1-4: Advanced Scheduler
 
@@ -502,10 +506,6 @@ Demonstrate that your scheduling algorithm reduces response time
 relative to the original Pintos scheduling algorithm (round robin) for
 at least one workload of your own design (i.e.@: in addition to the
 provided test).
-
-You may assume a static priority for this problem. It is not necessary
-to ``re-donate'' a thread's priority if it changes (although you are
-free to do so).
 
 You must write your code so that we can turn the MLFQS on and off at
 compile time.  By default, it must be off, but we must be able to turn
