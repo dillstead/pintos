@@ -46,7 +46,7 @@
 /* An ATA device. */
 struct disk 
   {
-    char name[8];               /* e.g. "hd0:1". */
+    char name[8];               /* Name, e.g. "hd0:1". */
     struct channel *channel;    /* Channel disk is on. */
     int dev_no;                 /* Device 0 or 1 for master or slave. */
 
@@ -58,8 +58,8 @@ struct disk
    Each channel can control up to two disks. */
 struct channel 
   {
-    char name[8];               /* e.g. "hd0" */
-    uint16_t reg_base;          /* 0x1f0 for hd0, 0x170 for hd1. */
+    char name[8];               /* Name, e.g. "hd0". */
+    uint16_t reg_base;          /* Base I/O port. */
     uint8_t irq;                /* Interrupt in use. */
 
     struct lock lock;           /* Must acquire to access the controller. */
@@ -71,8 +71,8 @@ struct channel
   };
 
 /* We support the two "legacy" ATA channels found in a standard PC. */
-#define CHANNEL_CNT (sizeof channels / sizeof *channels)
-static struct channel channels[2];
+#define CHANNEL_CNT 2
+static struct channel channels[CHANNEL_CNT];
 
 static void reset_channel (struct channel *);
 static bool check_device_type (struct disk *);
