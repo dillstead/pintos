@@ -253,9 +253,9 @@ read_sector:
 
 # Transfer sector.
 
-	movl $512 / 4, %ecx
+	movl $256, %ecx
 	movl $0x1f0, %edx
-	rep insl
+	rep insw
 
 # Next sector.
 
