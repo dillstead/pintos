@@ -53,6 +53,7 @@ test (void)
     }
   
   printf (" done\n");
+  printf ("stdlib: PASS\n");
 }
 
 /* Shuffles the CNT elements in ARRAY into random order. */

@@ -104,6 +104,7 @@ test (void)
     }
   
   printf (" done\n");
+  printf ("list: PASS\n");
 }
 
 /* Shuffles the CNT elements in ARRAY into random order. */
