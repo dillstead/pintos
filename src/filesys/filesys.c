@@ -35,7 +35,7 @@ do_format (void)
 
   /* Allocate data sector(s) for the free map file
      and write its file header to disk. */
-  map_hdr = filehdr_allocate (&free_map, bitmap_storage_size (&free_map));
+  map_hdr = filehdr_allocate (&free_map, bitmap_file_size (&free_map));
   if (map_hdr == NULL)
     PANIC ("free map creation failed--disk is too large");
   filehdr_write (map_hdr, FREE_MAP_SECTOR);

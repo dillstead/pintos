@@ -4,19 +4,31 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+/* Bitmap abstract data type. */
+
+/* Element type.
+
+   This must be an unsigned integer type at least as wide as int.
+
+   Each bit represents one bit in the bitmap.
+   If bit 0 in an element represents bit K in the bitmap,
+   then bit 1 in the element represents bit K+1 in the bitmap,
+   and so on. */
 typedef unsigned long elem_type;
 
+/* From the outside, a bitmap is an array of bits.  From the
+   inside, it's an array of elem_type (defined above) that
+   simulates an array of bits. */
 struct bitmap
   {
-    size_t bit_cnt;
-    elem_type *bits;
+    size_t bit_cnt;     /* Number of bits. */
+    elem_type *bits;    /* Elements that represent bits. */
   };
 
 bool bitmap_init (struct bitmap *, size_t bit_cnt);
 void bitmap_destroy (struct bitmap *);
 
 size_t bitmap_size (const struct bitmap *);
-size_t bitmap_storage_size (const struct bitmap *);
 
 void bitmap_set (struct bitmap *, size_t idx, bool);
 void bitmap_set_all (struct bitmap *, bool);
@@ -41,6 +53,7 @@ bool bitmap_all (const struct bitmap *);
 
 #ifdef FILESYS
 struct file;
+size_t bitmap_file_size (const struct bitmap *);
 void bitmap_read (struct bitmap *, struct file *);
 void bitmap_write (const struct bitmap *, struct file *);
 #endif
