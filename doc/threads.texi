@@ -494,7 +494,7 @@ A partial fix for this problem is to have the waiting thread
 the lock, then recall the donation once it has acquired the lock.
 Implement this fix.
 
-You will need to account for all different orders that priority
+You will need to account for all different orders in which priority
 donation and inversion can occur.  Be sure to handle multiple
 donations, in which multiple priorities are donated to a thread.  You
 must also handle nested donation: given high, medium, and low priority
