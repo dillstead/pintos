@@ -22,7 +22,7 @@ recursor_SRC = recursor.c
 shell_SRC = shell.c
 
 # Linker flags.
-LDFLAGS = -nostdlib -static
+LDFLAGS = -nostdlib -static -s
 LDLIBS = $(shell $(CC) -print-libgcc-file-name)
 
 # Uncomment the line below to round up segment sizes to full pages for
