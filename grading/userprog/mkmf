@@ -58,6 +58,7 @@ child-arg
 child-bad
 child-close
 child-simple
+null
 EOF
 print CVSIGNORE join ("\n", @tests), "\n";
 close (CVSIGNORE);

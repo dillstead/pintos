@@ -8,6 +8,7 @@ child-arg
 child-bad
 child-close
 child-simple
+null
 args-argc
 args-argv0
 args-argvn
