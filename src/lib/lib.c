@@ -369,7 +369,7 @@ printf_integer (uintmax_t value, bool negative, const char *digits,
   char buf[64], *cp;
   int base;
   const char *base_name;
-  int pad_cnt;
+  int pad_cnt, group_cnt;
 
   base = strlen (digits);
 
@@ -378,10 +378,14 @@ printf_integer (uintmax_t value, bool negative, const char *digits,
      will output the buffer's content in reverse.  This is also
      the reason that later we append zeros and the sign. */
   cp = buf;
+  group_cnt = 0;
   while (value > 0) 
     {
-      if ((c->flags & GROUP) && cp > buf && (cp - buf) % 3 == 0)
-        *cp++ = ',';
+      if ((c->flags & GROUP) && group_cnt++ == 3) 
+        {
+          *cp++ = ',';
+          group_cnt = 0; 
+        }
       *cp++ = digits[value % base];
       value /= base;
     }
