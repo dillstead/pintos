@@ -17,7 +17,10 @@ projects
 
 * The projects are derived from those designed for Nachos by current
   and former CS140 teaching assistants at Stanford University,
-  including at least the following people: Kelly Shaw <kashaw (at)
-  cs.stanford.edu>, Sameer Qureshi <squreshi@cs.stanford.edu>.
+  including at least the following people: Yu Ping
+  <yph@cs.stanford.edu>, Greg Hutchins, Kelly Shaw <kashaw (at)
+  cs.stanford.edu>, Paul Twohey <twohey AT cs DOT stanford DOT edu>,
+  Sameer Qureshi <squreshi@cs.stanford.edu>.  (If you're not on this
+  list but should be, please let me know.)
 
 * Updates for Pintos by Ben Pfaff <blp@cs.stanford.edu>.
