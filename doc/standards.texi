@@ -47,6 +47,11 @@ specifications by writing a name inside square brackets, like this:
 @code{[IA32-v3]}.  These names refer to the reference names used in
 this documentation (@pxref{References}).
 
+If you remove existing Pintos code, please delete it from your source
+file entirely.  Don't just put it into a comment or a conditional
+compilation directive, because that makes the resulting code hard to
+read.  If you're worried about 
+
 @node Conditional Compilation
 @section Conditional Compilation
 
@@ -80,6 +85,13 @@ Problem 1-4, the advanced scheduler.  We must be able to turn this on
 and off with a compile-time directive.  You must use the macro name we
 specify for that part.  @xref{Problem 1-4 Advanced Scheduler}, for
 details.
+
+@item
+Problem 3-2, paging to and from disk.  Your page replacement policy must
+default to LRU-like replacement, but we must be able to choose a random
+replacement policy with a compile-time directive.  You must use the
+macro name we specify for that part.  @xref{Problem 3-2 Paging To and
+From Disk}, for details.
 
 @item
 Code written for extra credit may be included conditionally.  If the
