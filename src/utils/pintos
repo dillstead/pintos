@@ -216,6 +216,17 @@ sub run_vm {
 	undef $disks[$i] if ! -e $disks[$i];
     }
 
+    my ($project) = `pwd` =~ /\b(threads|userprog|vm|filesys)\b/;
+    if (($project eq 'userprog' || $project eq 'vm' || $project eq 'filesys')
+	&& !defined $disks[1]) {
+	print STDERR "warning: it looks like you're running the $project project, "
+	    . "but no file system disk is present\n";
+    }
+    if ($project eq 'vm' && !defined $disks[3]) {
+	print STDERR "warning: it looks like you're running the $project project, "
+	    . "but no swap disk is present\n";
+    }
+
     write_cmd_line ($disks[0], @_);
 
     if ($sim eq 'bochs') {
