@@ -11,6 +11,8 @@ our ($vga);
 our ($jitter, $realtime);
 
 use Getopt::Long qw(:config require_order bundling);
+unshift (@ARGV, split (' ', $ENV{PINTOSOPTS}))
+    if defined $ENV{PINTOSOPTS};
 GetOptions ("sim=s" => sub { set_sim (@_) },
 	    "bochs" => sub { set_sim ("bochs") },
 	    "qemu" => sub { set_sim ("qemu") },
@@ -122,6 +124,8 @@ if ($cmd eq 'run') {
     my (@cmd) = ("-ci", $guestfn, $size, "-q");
     unshift (@cmd, "-f") if $format;
     run_vm ('EXEC', @cmd);
+
+    exit 1;
 } elsif ($cmd eq 'get') {
     usage () if @ARGV != 1 && @ARGV != 2;
     my ($guestfn, $hostfn) = @ARGV;
@@ -153,6 +157,8 @@ if ($cmd eq 'run') {
     print DST $src or die "$hostfn: write error\n";
     close (DST);
     close (SRC);
+
+    exit 1;
 } elsif ($cmd eq 'help') {
     usage (0);
 } else {
@@ -216,15 +222,16 @@ sub run_vm {
 	undef $disks[$i] if ! -e $disks[$i];
     }
 
-    my ($project) = `pwd` =~ /\b(threads|userprog|vm|filesys)\b/;
-    if (($project eq 'userprog' || $project eq 'vm' || $project eq 'filesys')
-	&& !defined $disks[1]) {
-	print STDERR "warning: it looks like you're running the $project project, "
-	    . "but no file system disk is present\n";
-    }
-    if ($project eq 'vm' && !defined $disks[3]) {
-	print STDERR "warning: it looks like you're running the $project project, "
-	    . "but no swap disk is present\n";
+    if (my ($project) = `pwd` =~ /\b(threads|userprog|vm|filesys)\b/) {
+	if ((grep ($project eq $_, qw (userprog vm filesys)))
+	    && !defined ($disks[1])) {
+	    print STDERR "warning: it looks like you're running the $project ";
+	    print STDERR "project, but no file system disk is present\n";
+	}
+	if ($project eq 'vm' && !defined $disks[3]) {
+	    print STDERR "warning: it looks like you're running the $project ";
+	    print STDERR "project, but no swap disk is present\n";
+	}
     }
 
     write_cmd_line ($disks[0], @_);
@@ -291,6 +298,7 @@ sub run_vm {
 	push (@cmd, '-S') if $debug eq 'monitor';
 	push (@cmd, '-s') if $debug eq 'gdb';
 	run_command (@cmd);
+	exit 1;
     } elsif ($sim eq 'gsx') {
 	print "warning: VMware GSX Server doesn't support --$debug\n"
 	    if $debug ne 'no-debug';
@@ -307,6 +315,11 @@ sub run_vm {
 	print VMX "config.version = 6\n";
 	print VMX "guestOS = \"linux\"\n";
 	print VMX "floppy0.present = FALSE\n";
+
+	unlink ("pintos.out");
+	print VMX "serial0.present = TRUE\n";
+	print VMX "serial0.fileType = \"file\"\n";
+	print VMX "serial0.fileName = \"pintos.out\"\n";
 
 	if (! -e 'null.bin') {
 	    open (NULL, ">null.bin") or die "null.bin: create: $!\n";
@@ -346,6 +359,8 @@ sub run_vm {
 	system ("vmware-cmd $vmx stop hard >&/dev/null");
 	system ("vmware -l -G -x -q $vmx");
 	system ("vmware-cmd $vmx stop hard >&/dev/null");
+
+	exit 1;
     }
 }
 
