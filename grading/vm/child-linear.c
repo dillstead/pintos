@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "arc4.h"
+#include "../lib/arc4.h"
 
 #define SIZE (128 * 1024)
 

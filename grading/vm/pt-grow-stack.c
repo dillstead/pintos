@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
-#include "arc4.h"
-#include "cksum.h"
+#include "../lib/arc4.h"
+#include "../lib/cksum.h"
 
 int
 main (void) 

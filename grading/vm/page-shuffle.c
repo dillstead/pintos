@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
-#include "arc4.h"
-#include "cksum.h"
+#include "../lib/arc4.h"
+#include "../lib/cksum.h"
 
 #define SIZE (128 * 1024)
 

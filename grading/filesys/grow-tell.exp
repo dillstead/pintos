@@ -1,0 +1,8 @@
+(grow-tell) begin
+(grow-tell) create "foobar"
+(grow-tell) open "foobar"
+(grow-tell) writing "foobar"
+(grow-tell) close "foobar"
+(grow-tell) open "foobar" for verification
+(grow-tell) close "foobar"
+(grow-tell) end

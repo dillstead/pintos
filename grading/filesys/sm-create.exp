@@ -1,0 +1,5 @@
+(sm-create) begin
+(sm-create) create testfile
+(sm-create) open "testfile" for verification
+(sm-create) close "testfile"
+(sm-create) end

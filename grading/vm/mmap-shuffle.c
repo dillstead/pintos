@@ -5,8 +5,8 @@
 #else
 #include "posix-compat.h"
 #endif
-#include "arc4.h"
-#include "cksum.h"
+#include "../lib/arc4.h"
+#include "../lib/cksum.h"
 
 #define SIZE (63 * 1024)        /* Max file size. */
 static char *buf = (char *) 0x10000000;

@@ -23,7 +23,7 @@ File growth
   grow-seq-lg: extend empty file sequentially to large size, verify
   grow-file-size: filesize must return proper value as file grows
   grow-tell: tell must return proper value as file grows
-  grow-sparse: create empty file, seek to 128 kB, write byte, verify zeroing
+  grow-sparse: create empty file, seek past 64 kB, write byte, verify zeroing
   grow-root-sm: create 20 small files in root directory
   grow-root-lg: create 50 small files in root directory
   grow-dir-lg: create subdirectory, create 50 small files in it

@@ -1,0 +1,5 @@
+(grow-create) begin
+(grow-create) create testfile
+(grow-create) open "testfile" for verification
+(grow-create) close "testfile"
+(grow-create) end

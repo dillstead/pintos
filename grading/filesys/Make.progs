@@ -1,0 +1,20 @@
+PROGS = sm-create sm-full sm-seq-block sm-seq-random sm-random \
+	grow-create grow-seq-sm grow-seq-lg grow-file-size grow-tell \
+	grow-sparse grow-root-sm grow-root-lg grow-dir-lg grow-two-files
+
+sm_create_SRC = sm-create.c fslib.c ../lib/arc4.c
+sm_full_SRC = sm-full.c fslib.c ../lib/arc4.c
+sm_seq_block_SRC = sm-seq-block.c fslib.c ../lib/arc4.c
+sm_seq_random_SRC = sm-seq-random.c fslib.c ../lib/arc4.c
+sm_random_SRC = sm-random.c fslib.c ../lib/arc4.c
+
+grow_create_SRC = grow-create.c fslib.c ../lib/arc4.c
+grow_seq_sm_SRC = grow-seq-sm.c fslib.c ../lib/arc4.c
+grow_seq_lg_SRC = grow-seq-lg.c fslib.c ../lib/arc4.c
+grow_file_size_SRC = grow-file-size.c fslib.c ../lib/arc4.c
+grow_tell_SRC = grow-tell.c fslib.c ../lib/arc4.c
+grow_sparse_SRC = grow-sparse.c fslib.c ../lib/arc4.c
+grow_root_sm_SRC = grow-root-sm.c fslib.c ../lib/arc4.c
+grow_root_lg_SRC = grow-root-lg.c fslib.c ../lib/arc4.c
+grow_dir_lg_SRC = grow-dir-lg.c fslib.c ../lib/arc4.c
+grow_two_files_SRC = grow-two-files.c fslib.c ../lib/arc4.c

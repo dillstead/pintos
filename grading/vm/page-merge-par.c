@@ -5,7 +5,7 @@
 #else
 #include "posix-compat.h"
 #endif
-#include "arc4.h"
+#include "../lib/arc4.h"
 
 #define CHUNK_SIZE (63 * 1024)                  /* Max file size. */
 #define CHUNK_CNT 8                             /* Number of chunks. */
