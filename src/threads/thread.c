@@ -183,7 +183,7 @@ thread_execute (const char *filename)
 #endif
 
 /* Transitions a blocked thread T from its current state to the
-   ready-to-run state.  If T is not blocked, there is no effect.
+   ready-to-run state.  This is an error if T is not blocked.
    (Use thread_yield() to make the running thread ready.) */
 void
 thread_unblock (struct thread *t) 
@@ -193,11 +193,9 @@ thread_unblock (struct thread *t)
   ASSERT (is_thread (t));
 
   old_level = intr_disable ();
-  if (t->status == THREAD_BLOCKED) 
-    {
-      list_push_back (&ready_list, &t->elem);
-      t->status = THREAD_READY;
-    }
+  ASSERT (t->status == THREAD_BLOCKED);
+  list_push_back (&ready_list, &t->elem);
+  t->status = THREAD_READY;
   intr_set_level (old_level);
 }
 
