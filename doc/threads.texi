@@ -1,4 +1,4 @@
-@node Project 1--Threads, Project 2--User Programs, Introduction, Top
+@node Project 1--Threads, Project 2--User Programs, Pintos Tour, Top
 @chapter Project 1: Threads
 
 In this assignment, we give you a minimally functional thread system.
@@ -10,6 +10,12 @@ assignments.
 You will be working in primarily in the @file{threads} directory for
 this assignment, with some work in the @file{devices} directory on the
 side.  Compilation should be done in the @file{threads} directory.
+
+Before you read the description of this project, you should read all
+of the following sections: @ref{Introduction}, @ref{Threads Tour},
+@ref{Coding Standards}, @ref{Project Documentation}, @ref{Debugging
+Tools}, and @ref{Development Tools}.  To complete this project you
+will also need to read @ref{Multilevel Feedback Scheduling}.
 
 @menu
 * Understanding Threads::       
@@ -35,7 +41,7 @@ However, there's a lot of magic going on in some of this code, so if
 you haven't already compiled and run the base system, as described in
 the introduction (@pxref{Introduction}), you should do so now.  You
 can read through parts of the source code by hand to see what's going
-on.  If you like, you can add calls to @code{printf()} almost
+on.  If you like, you can add calls to @func{printf} almost
 anywhere, then recompile and run to see what happens and in what
 order.  You can also run the kernel in a debugger and set breakpoints
 at interesting spots, single-step through code and examine data, and
@@ -43,12 +49,12 @@ so on.  @xref{i386-elf-gdb}, for more information.
 
 When a thread is created, you are creating a new context to be
 scheduled. You provide a function to be run in this context as an
-argument to @code{thread_create()}. The first time the thread is
+argument to @func{thread_create}. The first time the thread is
 scheduled and runs, it will start from the beginning of that function
 and execute it in the context. When that function returns, that thread
 completes. Each thread, therefore, acts like a mini-program running
-inside Pintos, with the function passed to @code{thread_create()}
-acting like @code{main()}.
+inside Pintos, with the function passed to @func{thread_create}
+acting like @func{main}.
 
 At any given time, Pintos is running exactly one thread, with the
 others switched out.  The scheduler decides which thread to run next
@@ -65,16 +71,16 @@ thread we're switching to.
 
 Using the @command{gdb} debugger, slowly trace through a context
 switch to see what happens (@pxref{i386-elf-gdb}).  You can set a
-breakpoint on the @code{schedule()} function to start out, and then
+breakpoint on the @func{schedule} function to start out, and then
 single-step from there.  Be sure to keep track of each thread's
 address and state, and what procedures are on the call stack for each
 thread.  You will notice that when one thread calls
-@code{switch_threads()}, another thread starts running, and the first
+@func{switch_threads}, another thread starts running, and the first
 thing the new thread does is to return from
-@code{switch_threads()}.  We realize this comment will seem cryptic to
+@func{switch_threads}.  We realize this comment will seem cryptic to
 you at this point, but you will understand threads once you understand
-why the @code{switch_threads()} that gets called is different from the
-@code{switch_threads()} that returns.
+why the @func{switch_threads} that gets called is different from the
+@func{switch_threads} that returns.
 
 @strong{Warning}: In Pintos, each thread is assigned a small,
 fixed-size execution stack just under @w{4 kB} in size.  The kernel
@@ -84,7 +90,7 @@ declare large data structures as non-static local variables,
 e.g. @samp{int buf[1000];}.  Alternatives to stack allocation include
 the page allocator in @file{threads/palloc.c} and the block allocator
 in @file{threads/malloc.c}.  Note that the page allocator doles out
-@w{4 kB} chunks and that @code{malloc()} has a @w{2 kB} block size
+@w{4 kB} chunks and that @func{malloc} has a @w{2 kB} block size
 limit.  If you need larger chunks, consider using a linked structure
 instead.
 
@@ -112,12 +118,12 @@ of the kernel image.  Again, you should not need to look at this code
 or modify it, but it's here in case you're curious.
 
 @item start.S
-Jumps to @code{main()}.
+Jumps to @func{main}.
 
 @item init.c
 @itemx init.h
-Kernel initialization, including @code{main()}, the kernel's ``main
-program.''  You should look over @code{main()} at least to see what
+Kernel initialization, including @func{main}, the kernel's ``main
+program.''  You should look over @func{main} at least to see what
 gets initialized.
 
 @item thread.c
@@ -138,7 +144,7 @@ pages.
 
 @item malloc.c
 @itemx malloc.h
-A very simple implementation of @code{malloc()} and @code{free()} for
+A very simple implementation of @func{malloc} and @func{free} for
 the kernel.
 
 @item interrupt.c
@@ -191,13 +197,13 @@ modify this code in Problem 1-1.
 @item vga.c
 @itemx vga.h
 VGA display driver.  Responsible for writing text to the screen.
-You should have no need to look at this code.  @code{printf()} will
+You should have no need to look at this code.  @func{printf} will
 call into the VGA display driver for you, so there's little reason to
 call this code yourself.
 
 @item serial.c
 @itemx serial.h
-Serial port driver.  Again, @code{printf()} calls this code for you,
+Serial port driver.  Again, @func{printf} calls this code for you,
 so you don't need to do so yourself.  Feel free to look through it if
 you're curious.
 
@@ -271,7 +277,7 @@ Hash table implementation.  Likely to come in handy for project 3.
 
 @item kernel/console.c
 @itemx kernel/console.h
-Implements @code{printf()} and a few other functions.
+Implements @func{printf} and a few other functions.
 @end table
 
 @node Debugging versus Testing
@@ -314,8 +320,8 @@ degree of confidence you should test your code with many seed values.
 
 There should be no busy-waiting in any of your solutions to this
 assignment.  Furthermore, resist the temptation to directly disable
-interrupts in your solution by calling @code{intr_disable()} or
-@code{intr_set_level()}, although you may find doing so to be useful
+interrupts in your solution by calling @func{intr_disable} or
+@func{intr_set_level}, although you may find doing so to be useful
 while debugging.  Instead, use semaphores, locks and condition
 variables to solve synchronization problems.  Hint: read the comments
 in @file{threads/synch.h} if you're unsure what synchronization
@@ -334,7 +340,7 @@ right.  We don't give out solutions, so you're stuck with your Join
 code for the whole quarter.  Problem 1-1 (Alarm Clock) could be very
 handy, but not strictly required in the future.  The upshot of all
 this is that you should focus heavily on making sure that your
-implementation of @code{thread_join()} works correctly, since if it's
+implementation of @func{thread_join} works correctly, since if it's
 broken, you will need to fix it for future assignments.  The other
 parts can be turned off in the future if you find you can't make them
 work quite right.
@@ -349,7 +355,7 @@ Problem 1-4.
 @section Problem 1-1: Alarm Clock
 
 Improve the implementation of the timer device defined in
-@file{devices/timer.c} by reimplementing @code{timer_sleep()}.
+@file{devices/timer.c} by reimplementing @func{timer_sleep}.
 Threads call @code{timer_sleep(@var{x})} to suspend execution until
 time has advanced by at least @w{@var{x} timer ticks}.  This is
 useful for threads that operate in real-time, for example, for
@@ -365,8 +371,10 @@ advanced far enough.  This is undesirable because it wastes time that
 could potentially be used more profitably by another thread.  Your
 solution should not busy wait.
 
-The argument to @code{timer_sleep()} is expressed in timer ticks, not
-in milliseconds or some other unit.
+The argument to @func{timer_sleep} is expressed in timer ticks, not
+in milliseconds or another unit.  There are @code{TIMER_FREQ} timer
+ticks per second, where @code{TIMER_FREQ} is a macro defined in
+@code{devices/timer.h}.
 
 @node Problem 1-2 Join
 @section Problem 1-2: Join
@@ -375,25 +383,25 @@ Implement @code{thread_join(tid_t)} in @file{threads/thread.c}.  There
 is already a prototype for it in @file{threads/thread.h}, which you
 should not change.  This function causes the currently running thread
 to block until the thread whose thread id is passed as an argument
-exits.  If A is the running thread and B is the argument, then we say
-that ``A joins B'' in this case.
+exits.  If @var{A} is the running thread and @var{B} is the argument,
+then we say that ``@var{A} joins @var{B}.''
 
 Incidentally, we don't use @code{struct thread *} as
-@file{thread_join()}'s parameter type because a thread pointer is not
+@func{thread_join}'s parameter type because a thread pointer is not
 unique over time.  That is, when a thread dies, its memory may be,
 whether immediately or much later, reused for another thread.  If
 thread A over time had two children B and C that were stored at the
-same address, then @code{thread_join(@r{B})} and
-@code{thread_join(@r{C})} would be ambiguous.  Introducing a thread id
-or @dfn{tid}, represented by type @code{tid_t}, that is intentionally
-unique over time solves the problem.  The provided code uses an
-@code{int} for @code{tid_t}, but you may decide you prefer to use some
-other type.
+same address, then @code{thread_join(@var{B})} and
+@code{thread_join(@var{C})} would be ambiguous.  Introducing a thread
+id or @dfn{tid}, represented by type @code{tid_t}, that is
+intentionally unique over time solves the problem.  The provided code
+uses an @code{int} for @code{tid_t}, but you may decide you prefer to
+use some other type.
 
-The model for @code{thread_join()} is the @command{wait} system call
+The model for @func{thread_join} is the @command{wait} system call
 in Unix-like systems.  (Try reading the manpages.)  That system call
 can only be used by a parent process to wait for a child's death.  You
-should implement @code{thread_join()} to have the same restriction.
+should implement @func{thread_join} to have the same restriction.
 That is, a thread may only join its immediate children.
 
 A thread need not ever be joined.  Your solution should properly free
@@ -407,20 +415,21 @@ multiple times is equivalent to joining it once, because T has already
 exited at the time of the later joins.  Thus, joins on T after the
 first should return immediately.
 
-Calling @code{thread_join()} on an thread that is not the caller's
+Calling @func{thread_join} on an thread that is not the caller's
 child should cause the caller to return immediately.
 
-Consider all the ways a join can occur: nested joins (A joins B when B
-is joined on C), multiple joins (A joins B, then A joins C), and so
-on.  Does your join work if @code{thread_join()} is called on a thread
-that has not yet been scheduled for the first time?  You should handle
-all of these cases.  Write test code that demonstrates the cases your
-join works for.  Don't overdo the output volume, please!
+Consider all the ways a join can occur: nested joins (@var{A} joins
+@var{B}, then @var{B} joins @var{C}), multiple joins (@var{A} joins
+@var{B}, then @var{A} joins @var{C}), and so on.  Does your join work
+if @func{thread_join} is called on a thread that has not yet been
+scheduled for the first time?  You should handle all of these cases.
+Write test code that demonstrates the cases your join works for.
+Don't overdo the output volume, please!
 
 Be careful to program this function correctly.  You will need its
 functionality for project 2.
 
-Once you've implemented @code{thread_join()}, define
+Once you've implemented @func{thread_join}, define
 @code{THREAD_JOIN_IMPLEMENTED} in @file{constants.h}.
 @xref{Conditional Compilation}, for more information.
 
@@ -429,15 +438,15 @@ Once you've implemented @code{thread_join()}, define
 
 Implement priority scheduling in Pintos.  Priority scheduling is a key
 building block for real-time systems.  Implement functions
-@code{thread_set_priority()} to set the priority of the running thread
-and @code{thread_get_priority()} to get the running thread's priority.
+@func{thread_set_priority} to set the priority of the running thread
+and @func{thread_get_priority} to get the running thread's priority.
 (A thread can examine and modify only its own priority.)  There are
 already prototypes for these functions in @file{threads/thread.h},
 which you should not change.
 
 Thread priority ranges from @code{PRI_MIN} (0) to @code{PRI_MAX} (59).
 The initial thread priority is passed as an argument to
-@code{thread_create()}.  If there's no reason to choose another
+@func{thread_create}.  If there's no reason to choose another
 priority, use @code{PRI_DEFAULT} (29).  The @code{PRI_} macros are
 defined in @file{threads/thread.h}, and you should not change their
 values.
@@ -453,7 +462,7 @@ on a lock, semaphore, or condition variable.
 One issue with priority scheduling is ``priority inversion'': if a
 high priority thread needs to wait for a low priority thread (for
 instance, for a lock held by a low priority thread, or in
-@code{thread_join()} for a thread to complete), and a middle priority
+@func{thread_join} for a thread to complete), and a middle priority
 thread is on the ready list, then the high priority thread will never
 get the CPU because the low priority thread will not get any CPU time.
 A partial fix for this problem is to have the waiting thread
@@ -465,9 +474,10 @@ You will need to account for all different orders that priority
 donation and inversion can occur.  Be sure to handle multiple
 donations, in which multiple priorities are donated to a thread.  You
 must also handle nested donation: given high, medium, and low priority
-threads H, M, and L, respectively, if H is waiting on a lock that M
-holds and M is waiting on a lock that L holds, then both M and L
-should be boosted to H's priority.
+threads @var{H}, @var{M}, and @var{L}, respectively, if @var{H} is
+waiting on a lock that @var{M} holds and @var{M} is waiting on a lock
+that @var{L} holds, then both @var{M} and @var{L} should be boosted to
+@var{H}'s priority.
 
 You only need to implement priority donation when a thread is waiting
 for a lock held by a lower-priority thread.  You do not need to
@@ -599,22 +609,22 @@ handler?}
 As you've discovered, you cannot sleep in an external interrupt
 handler.  Since many lock, semaphore, and condition variable functions
 attempt to sleep, you won't be able to call those in
-@code{timer_interrupt()}.  You may still use those that never sleep.
+@func{timer_interrupt}.  You may still use those that never sleep.
 
 Having said that, you need to make sure that global data does not get
 updated by multiple threads simultaneously executing
-@code{timer_sleep()}.  Here are some pieces of information to think
+@func{timer_sleep}.  Here are some pieces of information to think
 about:
 
 @enumerate a
 @item
-Interrupts are turned off while @code{timer_interrupt()} runs.  This
-means that @code{timer_interrupt()} will not be interrupted by a
-thread running in @code{timer_sleep()}.
+Interrupts are turned off while @func{timer_interrupt} runs.  This
+means that @func{timer_interrupt} will not be interrupted by a
+thread running in @func{timer_sleep}.
 
 @item
-A thread in @code{timer_sleep()}, however, can be interrupted by a
-call to @code{timer_interrupt()}, except when that thread has turned
+A thread in @func{timer_sleep}, however, can be interrupted by a
+call to @func{timer_interrupt}, except when that thread has turned
 off interrupts.
 
 @item
@@ -676,13 +686,13 @@ scheduler should then run the highest priority thread on the ready
 list.
 
 @item
-@b{If a thread calls @code{thread_yield()} and then it turns out that
+@b{If a thread calls @func{thread_yield} and then it turns out that
 it has higher priority than any other threads, does the high-priority
 thread continue running?}
 
 Yes.  If there is a single highest-priority thread, it continues
 running until it blocks or finishes, even if it calls
-@code{thread_yield()}.
+@func{thread_yield}.
 
 @item
 @b{If the highest priority thread is added to the ready to run list it
@@ -745,10 +755,10 @@ Thread 1 goes.
 @end example
 
 This happens because context switches are being invoked by the test
-when it explicitly calls @code{thread_yield()}.  However, the time
+when it explicitly calls @func{thread_yield}.  However, the time
 slice timer is still alive and so, every tick (by default), thread 1
-gets switched out (caused by @code{timer_interrupt()} calling
-@code{intr_yield_on_return()}) before it gets a chance to run its
+gets switched out (caused by @func{timer_interrupt} calling
+@func{intr_yield_on_return}) before it gets a chance to run its
 mainline.  It is by coincidence that Thread 1 is the one that gets
 skipped in our example.  If we use a different jitter value, the same
 behavior is seen where a thread gets started and switched out
@@ -766,7 +776,7 @@ The correct behavior is to immediately yield the processor.  Your
 solution must act this way.
 
 @item
-@b{What should @code{thread_get_priority()} return in a thread while
+@b{What should @func{thread_get_priority} return in a thread while
 its priority has been increased by a donation?}
 
 The higher (donated) priority.

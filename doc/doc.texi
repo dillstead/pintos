@@ -14,8 +14,8 @@ characters per line, with a hard limit of 80.
 
 @menu
 * README::                      
-* DESIGNDOC 	::              
-* TESTCASE 	::              
+* DESIGNDOC::                   
+* TESTCASE::                    
 @end menu
 
 @node README
@@ -30,7 +30,7 @@ dependencies, and so on.
 If you added extra credit features to your project, explain them
 concisely in the @file{README}.  Otherwise, we're likely to miss them.
 
-@node DESIGNDOC 	
+@node DESIGNDOC
 @section @file{DESIGNDOC}
 
 This file is our primary tool for assessing your design.  Therefore,
@@ -65,7 +65,7 @@ Finally, please keep your @file{DESIGNDOC} as short as you can,
 without sacrificing key design decisions.  You should be brief, yet
 complete.  We don't want to read novels.
 
-@node TESTCASE 	
+@node TESTCASE
 @section @file{TESTCASE}
 
 The @file{TESTCASE} file should contain all the information about how
@@ -94,13 +94,13 @@ Show us that you tested each part of your assignment.
 Clearly state in your @file{TESTCASE} file what each test is supposed
 to test.  You should be testing not only the common case, but testing
 corner cases.  Specify what criteria or issue is being tested.  For
-example, in testing @code{thread_join()} you would have specified that
-you test @code{thread_join()} when it is called multiple times on the
+example, in testing @func{thread_join} you would have specified that
+you test @func{thread_join} when it is called multiple times on the
 same child thread.
 
 @item
 Make your tests as succinct as possible.  Most students in the past
-have done a great job with the testing of @code{thread_join()},
+have done a great job with the testing of @func{thread_join},
 creating very succinct short tests.  We like that.
 
 @item

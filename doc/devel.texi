@@ -1,7 +1,13 @@
-@node Development Tools
+@node Development Tools, , Debugging Tools, Top
 @appendix Development Tools
 
 Here are some tools that you might find useful while developing code.
+
+@menu
+* Tags::                        
+* CVS::                         
+* VNC::                         
+@end menu
 
 @node Tags
 @section Tags

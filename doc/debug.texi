@@ -1,4 +1,4 @@
-@node Debugging Tools, , Project Documentation, Top
+@node Debugging Tools, Development Tools, Project Documentation, Top
 @appendix Debugging Tools
 
 Many tools lie at your disposal for debugging Pintos.  This appendix
@@ -15,23 +15,23 @@ introduces you to a few of them.
 @end menu
 
 @node printf
-@section @code{printf()}
+@section @func{printf}
 
-Don't underestimate the value of @code{printf()}.  The way
-@code{printf()} is implemented in Pintos, you can call it from
+Don't underestimate the value of @func{printf}.  The way
+@func{printf} is implemented in Pintos, you can call it from
 practically anywhere in the kernel, whether it's in a kernel thread or
 an interrupt handler, almost regardless of what locks are held.
 
-@code{printf()} isn't useful just because it can print data members.
+@func{printf} isn't useful just because it can print data members.
 It can also help figure out when and where something goes wrong, even
 when the kernel crashes or panics without a useful error message.  The
-strategy is to sprinkle calls to @code{print()} with different strings
+strategy is to sprinkle calls to @func{print} with different strings
 (e.g.@: @code{"1\n"}, @code{"2\n"}, @dots{}) throughout the pieces of
 code you suspect are failing.  If you don't even see @code{1} printed,
 then something bad happened before that point, if you see @code{1}
 but not @code{2}, then something bad happened between those two
 points, and so on.  Based on what you learn, you can then insert more
-@code{printf()} calls in the new, smaller region of code you suspect.
+@func{printf} calls in the new, smaller region of code you suspect.
 Eventually you can narrow the problem down to a single statement.
 
 @node ASSERT
@@ -55,8 +55,8 @@ backtraces below for more information.
 @section @code{DEBUG}
 
 The @code{DEBUG} macro, also defined in @code{<debug.h>}, is a sort of
-conditional @code{printf()}.  It takes as its arguments the name of a
-``message class'' and a @code{printf()}-like format string and
+conditional @func{printf}.  It takes as its arguments the name of a
+``message class'' and a @func{printf}-like format string and
 arguments.  The message class is used to filter the messages that are
 actually displayed.  You select the messages to display on the Pintos
 command line using the @option{-d} option.  This allows you to easily
@@ -82,7 +82,7 @@ pintos run -d thread
 When the kernel panics, it prints a ``backtrace,'' that is, a summary
 of how your program got where it is, as a list of addresses inside the
 functions that were running at the time of the panic.  You can also
-insert a call to @code{debug_backtrace()}, prototyped in
+insert a call to @func{debug_backtrace}, prototyped in
 @file{<debug.h>}, at any point in your code.
 
 The addresses in a backtrace are listed as raw hexadecimal numbers,
@@ -131,7 +131,7 @@ commands.  If you issue the @samp{c} command, the Bochs BIOS will take
 control, load Pintos, and then Pintos will run in the usual way.  You
 can pause the process at any point with @key{Ctrl+C}.  If you want
 @command{gdb} to stop when Pintos starts running, set a breakpoint on
-@code{main()} with the command @code{break main} before @samp{c}.
+@func{main} with the command @code{break main} before @samp{c}.
 
 You can read the @command{gdb} manual by typing @code{info gdb} at a
 terminal command prompt, or you can view it in Emacs with the command
@@ -203,8 +203,8 @@ put it in your @env{PATH}, and make sure that it is earlier than
 Of course, to get any good out of this you'll have to actually modify
 Bochs.  Instructions for doing this are firmly out of the scope of
 this document.  However, if you want to debug page faults as suggested
-above, a good place to start adding @code{printf()}s is
-@code{BX_CPU_C::dtranslate_linear()} in @file{cpu/paging.cc}.
+above, a good place to start adding @func{printf}s is
+@func{BX_CPU_C::dtranslate_linear} in @file{cpu/paging.cc}.
 
 @node Debugging Tips
 @section Tips
@@ -222,4 +222,4 @@ Similarly, the block allocator in @file{threads/malloc.c} clears all
 the bytes in freed blocks to @t{0xcd}.  The two bytes @t{0xcdcd} are
 a CPU opcode for ``invoke interrupt @t{0xcd},'' so @code{Interrupt
 0xcd (unknown)} is a good sign that you tried to execute code in a
-block freed with @code{free()}.
+block freed with @func{free}.

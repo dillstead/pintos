@@ -193,7 +193,7 @@ demonstrate the performance improvement.
 Note that write-behind makes your filesystem more fragile in the face
 of crashes.  Therefore, you should implement some manner to
 periodically write all cached blocks to disk.  If you have
-@code{timer_sleep()} from the first project working, this is an
+@func{timer_sleep} from the first project working, this is an
 excellent application for it.
 
 Likewise, read-ahead is only really useful when done asynchronously.
@@ -372,7 +372,7 @@ End of directory
 Yes.  Implementing @file{.} and @file{..} is extra credit, though.
 
 @item
-@b{Should @code{remove()} also be able to remove directories?}
+@b{Should @func{remove} also be able to remove directories?}
 
 Yes.  The @code{remove} system call should handle removal of both
 regular files and directories.  You may assume that directories can
@@ -417,7 +417,7 @@ implementation of the buffer cache.  Basically, you can't store a
 to read a @code{struct inode}, you'll have to get it either from the
 buffer cache or from disk.
 
-If you look at @code{file_read_at()}, it uses the inode directly
+If you look at @func{file_read_at}, it uses the inode directly
 without having first read in that sector from wherever it was in the
 storage hierarchy.  You are no longer allowed to do this.  You will
 need to change @code{file_read_at} (and similar functions) so that it

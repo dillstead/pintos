@@ -77,7 +77,7 @@ table contained all the virtual-to-physical translations for the
 process.  Whenever the processor needed to look up a translation, it
 consulted the page table.  As long as the process only accessed
 memory that it didn't own, all was well.  If the process accessed
-memory it didn't own, it ``page faulted'' and @code{page_fault()}
+memory it didn't own, it ``page faulted'' and @func{page_fault}
 terminated the process.
 
 When we implement virtual memory, the rules have to change.  A page
@@ -269,7 +269,7 @@ need this data structure until part 2, but planning ahead is a good
 idea.
 @end itemize
 
-The page fault handler, @code{page_fault()} in
+The page fault handler, @func{page_fault} in
 @file{threads/exception.c}, needs to do roughly the following:
 
 @enumerate 1
@@ -304,11 +304,11 @@ probably want to leave the code that reads the pages from disk, but
 use your new page table management code to construct the page tables
 only as page faults occur for them.
 
-You should use the @code{palloc_get_page()} function to get the page
+You should use the @func{palloc_get_page} function to get the page
 frames that you use for storing user virtual pages.  Be sure to pass
 the @code{PAL_USER} flag to this function when you do so, because that
 allocates pages from a ``user pool'' separate from the ``kernel pool''
-that other calls to @code{palloc_get_page()} make.
+that other calls to @func{palloc_get_page} make.
 
 There are many possible ways to implement virtual memory.  The above
 is simply an outline of our suggested implementation.
@@ -359,7 +359,7 @@ file itself as backing store for read-only segments, since these
 segments won't change.
 
 There are a few special cases.  Look at the loop in
-@code{load_segment()} in @file{userprog/process.c}.  Each time
+@func{load_segment} in @file{userprog/process.c}.  Each time
 around the loop, @code{read_bytes} represents the number of bytes to
 read from the executable file and @code{zero_bytes} represents the number
 of bytes to initialize to zero following the bytes read.  The two
@@ -525,7 +525,7 @@ to any of the TA's office hours for further clarification.
 for?}
 
 In simple cases you won't have any need for the @var{aux} parameters.
-In these cases you can just pass a null pointer to @code{hash_init()}
+In these cases you can just pass a null pointer to @func{hash_init}
 for @var{aux} and ignore the values passed to the hash function and
 comparison functions.  (You'll get a compiler warning if you don't use
 the @var{aux} parameter, but you can turn that off with the
@@ -607,10 +607,10 @@ Make a reasonable decision and document it in your code and in
 your design document.  Please make sure to justify your decision.
 
 @item
-@b{Why do I need to pass @code{PAL_USER} to @code{palloc_get_page()}
+@b{Why do I need to pass @code{PAL_USER} to @func{palloc_get_page}
 when I allocate physical page frames?}
 
-You can layer some other allocator on top of @code{palloc_get_page()}
+You can layer some other allocator on top of @func{palloc_get_page}
 if you like, but it should be the underlying mechanism, directly or
 indirectly, for two reasons.  First, running out of pages in the user
 pool just causes user programs to page, but running out of pages in

@@ -70,7 +70,7 @@ There are a few exceptions:
 
 @itemize @bullet
 @item
-Problem 1-2, @code{thread_join()}.  Some other code expects
+Problem 1-2, @func{thread_join}.  Some other code expects
 @code{THREAD_JOIN_IMPLEMENTED} to be defined once you've implemented
 this function.
 
@@ -131,7 +131,7 @@ macro giving its maximum value.
 
 @item <inttypes.h>
 @file{<stdint.h>} is useful on its own, but it provides no way to pass
-the types it defines to @code{printf()} and related functions.  This
+the types it defines to @func{printf} and related functions.  This
 header provides macros to help with that.  For every
 @code{int@var{n}_t} defined by @file{<stdint.h>}, it provides macros
 @code{PRId@var{n}} and @code{PRIi@var{n}} for formatting values of
@@ -153,7 +153,7 @@ above, you supply it yourself and follow it by any flags, field
 widths, etc.
 
 @item <stdio.h>
-The @file{printf()} function has some new type modifiers for printing
+The @func{printf} function has some new type modifiers for printing
 standard types:
 
 @table @samp
@@ -167,6 +167,9 @@ For @code{size_t} (e.g.@: @samp{%zu}).
 @item t
 For @code{ptrdiff_t} (e.g.@: @samp{%td}).
 @end table
+
+Pintos @func{printf} also implements a nonstandard @samp{'} flag that
+group large numbers with commas to make them easier to read.
 @end table
 
 @node Unsafe String Functions
@@ -177,37 +180,37 @@ A few of the string functions declared in the standard
 The worst offenders are intentionally not included in the Pintos C
 library:
 
-@table @code
-@item strcpy()
+@table @func
+@item strcpy
 When used carelessly this function can overflow the buffer reserved
-for its output string.  Use @code{strlcpy()} instead.  Refer to
+for its output string.  Use @func{strlcpy} instead.  Refer to
 comments in its source code in @code{lib/string.c} for documentation.
 
-@item strncpy()
+@item strncpy
 This function can leave its destination buffer without a null string
 terminator and it has performance problems besides.  Again, use
-@code{strlcpy()}.
+@func{strlcpy}.
 
-@item strcat()
-Same issue as @code{strcpy()}, but substitute @code{strlcat()}.
+@item strcat
+Same issue as @func{strcpy}, but substitute @func{strlcat}.
 Again, refer to comments in its source code in @code{lib/string.c} for
 documentation.
 
-@item strncat()
+@item strncat
 The meaning of its buffer size argument often leads to problems.
-Again, use @code{strlcat()}.
+Again, use @func{strlcat}.
 
-@item strtok()
+@item strtok
 Uses global data, so it is unsafe in threaded programs such as
-kernels.  Use @code{strtok_r()} instead, and see its source code in
+kernels.  Use @func{strtok_r} instead, and see its source code in
 @code{lib/string.c} for documentation and an example.
 
-@item sprintf()
-Same issue as @code{strcpy()}.  Use @code{snprintf()} instead.  Refer
+@item sprintf
+Same issue as @func{strcpy}.  Use @func{snprintf} instead.  Refer
 to comments in @code{lib/stdio.h} for documentation.
 
-@item vsprintf()
-Same issue as @code{strcpy()}.  Use @code{vsnprintf()} instead.
+@item vsprintf
+Same issue as @func{strcpy}.  Use @func{vsnprintf} instead.
 @end table
 
 If you try to use any of these functions, you should get a hint from

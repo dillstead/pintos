@@ -14,7 +14,7 @@ assignment.  However, you will also be interacting with almost every
 other part of the code for this assignment. We will describe the
 relevant parts below. If you are confident in your HW1 code, you can
 build on top of it.  However, if you wish you can start with a fresh
-copy of the code and re-implement @code{thread_join()}, which is the
+copy of the code and re-implement @func{thread_join}, which is the
 only part of project #1 required for this assignment.  Your submission
 should define @code{THREAD_JOIN_IMPLEMENTED} in @file{constants.h}
 (@pxref{Conditional Compilation}).
@@ -68,7 +68,7 @@ Loads ELF binaries and starts processes.
 A simple manager for 80@var{x} page directories and page tables.
 Although you probably won't want to modify this code for this project,
 you may want to call some of its functions.  In particular,
-@code{pagedir_get_page()} may be helpful for accessing user memory.
+@func{pagedir_get_page} may be helpful for accessing user memory.
 
 @item syscall.c
 @itemx syscall.h
@@ -87,7 +87,7 @@ distinction between them, although the Intel processor manuals define
 them slightly differently on 80@var{x}86.}  These files handle
 exceptions.  Currently all exceptions simply print a message and
 terminate the process.  Some, but not all, solutions to project 2
-require modifying @code{page_fault()} in this file.
+require modifying @func{page_fault} in this file.
 
 @item gdt.c
 @itemx gdt.c
@@ -163,7 +163,7 @@ Also, @option{-ls} lists the files in the file system and @option{-p
 
 Pintos can run normal C programs.  In fact, it can run any program you
 want, provided it's compiled into the proper file format, and uses
-only the system calls you implement.  (For example, @code{malloc()}
+only the system calls you implement.  (For example, @func{malloc}
 makes use of functionality that isn't provided by any of the syscalls
 we require you to support.)  The only other limitation is that Pintos
 can't run programs using floating point operations, since it doesn't
@@ -203,7 +203,7 @@ User virtual memory is per-process.  Conceptually, each process is
 free to use the entire space of user virtual memory however it
 chooses.  When the kernel switches from one process to another, it
 also switches user virtual address spaces by switching the processor's
-page directory base register (see @code{pagedir_activate() in
+page directory base register (see @func{pagedir_activate in
 @file{userprog/pagedir.c}}.
 
 Kernel virtual memory is global.  It is always mapped the same way,
@@ -216,7 +216,7 @@ physical memory.
 
 User programs can only access user virtual memory.  An attempt to
 access kernel virtual memory will cause a page fault, handled by
-@code{page_fault()} in @file{userprog/exception.c}, and the process
+@func{page_fault} in @file{userprog/exception.c}, and the process
 will be terminated.  Kernel threads can access both kernel virtual
 memory and, if a user process is running, the user virtual memory of
 the running process.  However, even in the kernel, an attempt to
@@ -243,11 +243,11 @@ first process.
 @node Problem 2-1 Argument Passing
 @section Problem 2-1: Argument Passing
 
-Currently, @code{process_execute()} does not support passing arguments
+Currently, @func{process_execute} does not support passing arguments
 to new processes.  UNIX and other operating systems do allow passing
 command line arguments to a program, which accesses them via the argc,
 argv arguments to main.  You must implement this functionality by
-extending @code{process_execute()} so that instead of simply taking a
+extending @func{process_execute} so that instead of simply taking a
 program file name, it can take a program name with arguments as a
 single string.  That is, @code{process_execute("grep foo *.c")} should
 be a legal call.  @xref{80x86 Calling Convention}, for information on
@@ -371,7 +371,7 @@ is not safe to call into the filesystem code provided in the
 recommend adding a single lock that controls access to the filesystem
 code.  You should acquire this lock before calling any functions in
 the @file{filesys} directory, and release it afterward.  Don't forget
-that @file{process_execute()} also accesses files.  @strong{For now, we
+that @func{process_execute} also accesses files.  @strong{For now, we
 recommend against modifying code in the @file{filesys} directory.}
 
 We have provided you a function for each system call in
@@ -394,7 +394,7 @@ exception is a call to the @code{halt} system call.
 @item
 @b{Do we need a working project 1 to implement project 2?}
 
-You may find the code for @code{thread_join()} to be useful in
+You may find the code for @func{thread_join} to be useful in
 implementing the join syscall, but besides that, you can use
 the original code provided for project 1.
 
@@ -427,8 +427,8 @@ You need to modify @file{tests/Makefile}.
 @b{What's the difference between @code{tid_t} and @code{pid_t}?}
 
 A @code{tid_t} identifies a kernel thread, which may have a user
-process running in it (if created with @code{process_execute()}) or not
-(if created with @code{thread_create()}).  It is a data type used only
+process running in it (if created with @func{process_execute}) or not
+(if created with @func{thread_create}).  It is a data type used only
 in the kernel.
 
 A @code{pid_t} identifies a user process.  It is used by user
@@ -463,7 +463,7 @@ simplest way to handle user memory access.
 The second method is to ``assume and react'': directly dereference
 user pointers, after checking that they point below @code{PHYS_BASE}.
 Invalid user pointers will then cause a ``page fault'' that you can
-handle by modifying the code for @code{page_fault()} in
+handle by modifying the code for @func{page_fault} in
 @file{userprog/exception.cc}.  This technique is normally faster
 because it takes advantage of the processor's MMU, so it tends to be
 used in real kernels (including Linux).
@@ -500,7 +500,7 @@ static inline bool put_user (uint8_t *udst, uint8_t byte) @{
 
 Each of these functions assumes that the user address has already been
 verified to be below @code{PHYS_BASE}.  They also assume that you've
-modified @code{page_fault()} so that a page fault in the kernel causes
+modified @func{page_fault} so that a page fault in the kernel causes
 @code{eax} to be set to 0 and its former value copied into @code{eip}.
 
 @item
@@ -557,7 +557,7 @@ defend it in your @file{DESIGNDOC}.
 @b{How do I parse all these argument strings?}
 
 You're welcome to use any technique you please, as long as it works.
-If you're lost, look at @code{strtok_r()}, prototyped in
+If you're lost, look at @func{strtok_r}, prototyped in
 @file{lib/string.h} and implemented with thorough comments in
 @file{lib/string.c}.  You can find more about it by looking at the man
 page (run @code{man strtok_r} at the prompt).
@@ -586,10 +586,10 @@ simply via recompilation.
 
 @enumerate 1
 @item
-@b{What should I do with the parameter passed to @code{exit()}?}
+@b{What should I do with the parameter passed to @func{exit}?}
 
 This value, the exit status of the process, must be returned to the
-thread's parent when @code{join()} is called.
+thread's parent when @func{join} is called.
 
 @item
 @b{Can I just cast a pointer to a @code{struct file} object to get a
@@ -688,20 +688,20 @@ some of your caches.  This is why inlining code can be much faster.
 @end menu
 
 @node Argument Passing to main
-@subsection Argument Passing to @code{main()}
+@subsection Argument Passing to @func{main}
 
-In @code{main()}'s case, there is no caller to prepare the stack
+In @func{main}'s case, there is no caller to prepare the stack
 before it runs.  Therefore, the kernel needs to do it.  Fortunately,
 since there's no caller, there are no registers to save, no return
 address to deal with, etc.  The only difficult detail to take care of,
-after loading the code, is putting the arguments to @code{main()} on
+after loading the code, is putting the arguments to @func{main} on
 the stack.
 
 (The above is a small lie: most compilers will emit code where main
 isn't strictly speaking the first function.  This isn't an important
 detail.  If you want to look into it more, try disassembling a program
 and looking around a bit.  However, you can just act as if
-@code{main()} is the very first function called.)
+@func{main} is the very first function called.)
 
 Pintos is written for the 80@var{x}86 architecture.  Therefore, we
 need to adhere to the 80@var{x}86 calling convention.  Basically, you
@@ -712,7 +712,7 @@ have a caller, its stack frame must have the same layout as any other
 function's.  The program will assume that the stack has been laid out
 this way when it begins running.
 
-So, what are the arguments to @code{main()}? Just two: an @samp{int}
+So, what are the arguments to @func{main}? Just two: an @samp{int}
 (@code{argc}) and a @samp{char **} (@code{argv}).  @code{argv} is an
 array of strings, and @code{argc} is the number of strings in that
 array.  However, the hard part isn't these two things.  The hard part
@@ -762,7 +762,7 @@ Then we push @code{argv} (that is, the address of the first element of
 the @code{argv} array) onto the stack, along with the length of the
 argument vector (@code{argc}, 4 in this example).  This must also be
 done in this order, since @code{argc} is the first argument to
-@code{main()} and therefore is on first (smaller address) on the
+@func{main} and therefore is on first (smaller address) on the
 stack.  Finally, we push a fake ``return address'' and leave the stack
 pointer to point to its location.
 
@@ -802,7 +802,7 @@ As shown above, your code should start the stack at the very top of
 the user virtual address space, in the page just below virtual address
 @code{PHYS_BASE} (defined in @file{threads/mmu.h}).
 
-You may find the non-standard @code{hex_dump()} function, declared in
+You may find the non-standard @func{hex_dump} function, declared in
 @file{<stdio.h>}, useful for debugging your argument passing code.
 Here's what it would show in the above example, given that
 @code{PHYS_BASE} is @t{0xc0000000}:
@@ -838,11 +838,11 @@ interrupt.
 
 The normal calling convention pushes function arguments on the stack
 from right to left and the stack grows downward.  Thus, when the
-system call handler @code{syscall_handler()} gets control, the system
+system call handler @func{syscall_handler} gets control, the system
 call number is in the 32-bit word at the caller's stack pointer, the
 first argument is in the 32-bit word at the next higher address, and
 so on.  The caller's stack pointer is accessible to
-@code{syscall_handler()} as the @samp{esp} member of the @code{struct
+@func{syscall_handler} as the @samp{esp} member of the @code{struct
 intr_frame} passed to it.
 
 Here's an example stack frame for calling a system call numbered 10

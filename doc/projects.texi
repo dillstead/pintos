@@ -28,6 +28,14 @@
 @end macro
 @end ifhtml
 
+@macro func{name}
+@code{\name\()}
+@end macro
+
+@macro struct{name}
+@code{struct \name\}
+@end macro
+
 @titlepage
 @title Pintos Projects
 @end titlepage
@@ -41,6 +49,7 @@
 
 @menu
 * Introduction::                
+* Pintos Tour::
 * Project 1--Threads::          
 * Project 2--User Programs::    
 * Project 3--Virtual Memory::   
@@ -50,9 +59,11 @@
 * Coding Standards::            
 * Project Documentation::       
 * Debugging Tools::             
+* Development Tools::
 @end menu
 
 @include intro.texi
+@include tour.texi
 @include threads.texi
 @include userprog.texi
 @include vm.texi
@@ -62,5 +73,6 @@
 @include standards.texi
 @include doc.texi
 @include debug.texi
+@include devel.texi
 
 @bye

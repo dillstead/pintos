@@ -1,4 +1,4 @@
-@node Introduction, Project 1--Threads, Top, Top
+@node Introduction, Pintos Tour, Top, Top
 @chapter Introduction
 
 Welcome to Pintos.  Pintos is a simple operating system framework for
