@@ -570,13 +570,13 @@ length, and then use Mmap:
 #include <syscall.h>
 
 int main (void)
-{
+@{
     void *addr = (void *) 0x10000000;
     int fd = open ("foo");
     int length = filesize (fd);
     if (mmap (fd, addr, length))
         printf ("success!\n");
-}
+@}
 @end example
 
 Suppose @file{foo} is a text file and you want to print the first 64

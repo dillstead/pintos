@@ -516,6 +516,10 @@ restore registers before and after a function call, you need to write
 the stack pointer, you have a couple of jumps which probably wrecks
 some of your caches.  This is why inlining code can be much faster.
 
+@menu
+* Argument Passing to main::    
+@end menu
+
 @node Argument Passing to main
 @subsection Argument Passing to @code{main()}
 
