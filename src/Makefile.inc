@@ -63,8 +63,8 @@ all: diskimage.bin
 intr-stubs.S: $(TOP_SRCDIR)/threads/intr-stubs.pl $(TOP_SRCDIR)/threads/loader.h
 	$< > $@
 
+kernel.lds.s: CPPFLAGS += -P -C
 kernel.lds.s: $(TOP_SRCDIR)/threads/kernel.lds.S $(TOP_SRCDIR)/threads/loader.h
-	$(CPP) -x assembler-with-cpp -P $< -o $@
 
 kernel.o: $(OBJECTS) kernel.lds.s
 	ld -T kernel.lds.s -o $@ $(OBJECTS) `$(CC) -print-libgcc-file-name`
