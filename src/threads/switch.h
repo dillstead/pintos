@@ -2,7 +2,7 @@
 #define HEADER_SWITCH_H 1
 
 #ifndef __ASSEMBLER__
-/* thread_switch()'s stack frame. */
+/* switch_thread()'s stack frame. */
 struct switch_frame 
   {
     uint32_t ebx;               /*  0: Saved %ebx. */
@@ -17,7 +17,16 @@ struct switch_frame
 /* Switches from CUR, which must be the running thread, to NEXT,
    which must also be running thread_switch(), returning CUR in
    NEXT's context. */
-struct thread *thread_switch (struct thread *cur, struct thread *next);
+struct thread *switch_threads (struct thread *cur, struct thread *next);
+
+struct switch_thunk_frame 
+  {
+    void (*eip) (void);
+  };
+
+/* Pops the CUR and NEXT arguments off the stack, for use in
+   initializing threads. */
+void switch_thunk (void);
 #endif
 
 /* Offsets used by switch.S. */

@@ -1,7 +1,7 @@
 #include "switch.h"
 
-        .globl thread_switch 
-thread_switch:
+        .globl switch_threads 
+switch_threads:
 	# Save caller's register state.
 	# Note that the SVR4 ABI allows us to destroy %eax, %ecx, %edx.
 	# This stack frame must match the one set up by thread_create().
@@ -31,3 +31,8 @@ thread_switch:
 	popl %ebp
 	popl %ebx
         ret
+
+	.globl switch_thunk
+switch_thunk:
+	addl $8, %esp
+	ret

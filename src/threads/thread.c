@@ -26,8 +26,7 @@ struct thread_root_frame
   };
 
 static void
-thread_root (struct thread *cur UNUSED, struct thread *next UNUSED,
-             void (*function) (void *aux), void *aux) 
+thread_root (void (*function) (void *aux), void *aux) 
 {
   ASSERT (function != NULL);
   
@@ -67,6 +66,7 @@ thread_create (const char *name, void (*function) (void *aux), void *aux)
 {
   struct thread *t;
   struct thread_root_frame *rf;
+  struct switch_thunk_frame *tf;
   struct switch_frame *sf;
 
   ASSERT (function != NULL);
@@ -79,9 +79,13 @@ thread_create (const char *name, void (*function) (void *aux), void *aux)
   rf->function = function;
   rf->aux = aux;
 
+  /* Stack frame for switch_thunk(). */
+  tf = alloc_frame (t, sizeof *tf);
+  tf->eip = (void (*) (void)) thread_root;
+
   /* Stack frame for thread_switch(). */
   sf = alloc_frame (t, sizeof *sf);
-  sf->eip = (void (*) (void)) thread_root;
+  sf->eip = (void (*) (void)) switch_thunk;
 
   /* Add to run queue. */
   thread_ready (t);
@@ -162,7 +166,7 @@ thread_schedule (void)
     idle ();
 
   next->status = THREAD_RUNNING;
-  prev = thread_switch (cur, next);
+  prev = switch_threads (cur, next);
 
   /* Prevent GCC from reordering anything around the thread
      switch. */
@@ -196,7 +200,7 @@ thread_start (struct thread *t)
   if (t->status == THREAD_READY) 
     list_remove (&t->rq_elem);
   t->status = THREAD_RUNNING;
-  thread_switch (NULL, t);
+  switch_threads (NULL, t);
 }
 
 void
