@@ -12,7 +12,8 @@ LDLIBS = $(shell $(CC) -print-libgcc-file-name)
 VPATH = ../..
 
 DEFINES = -DUSER
-CPPFLAGS = -nostdinc -I../.. -I- -I../../lib -I../../lib/user
+CPPFLAGS = -nostdinc -I../.. -I- -I../../lib -I../../lib/user \
+	   -include constants.h
 
 # C library sources linked into every test program.
 LIB_SRC  = lib/debug.c			# Debug code.
