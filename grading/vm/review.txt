@@ -16,7 +16,6 @@ DESIGNDOC (per problem):
   -5 Doesn't explain how memory mapping works
 
 Overall:
-  -3 Holds a global lock while accessing the disk
   -1 Gratuitous use of malloc() (e.g. for allocating a list or a lock)
   -1 Inappropriate use of ASSERT (e.g. to verify that malloc() succeeded)
 

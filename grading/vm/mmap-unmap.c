@@ -31,7 +31,7 @@ main (void)
 
   munmap (ACTUAL, strlen (sample));
 
-  printf ("(mmap-unmap) fail: unmapped memory is readable (%d)\n",
+  printf ("(mmap-unmap) FAIL: unmapped memory is readable (%d)\n",
           *(int *) ACTUAL);
   
   /* Done. */

@@ -298,86 +298,30 @@ sub grade_test {
     return "ok";
 }
 
-sub grade_write_normal {
-    my (@output) = @_;
+sub grade_process_death {
+    my ($proc_name, @output) = @_;
+
     verify_common (@output);
-    compare_output ("$GRADES_DIR/write-normal.exp", @output);
-    my ($test_txt) = "output/$test/test.txt";
-    get_file ("test.txt", $test_txt) if ! -e $test_txt;
-
-    my (@actual) = snarf ($test_txt);
-    my (@expected) = snarf ("$GRADES_DIR/sample.txt");
-
-    my ($eq);
-    if ($#actual == $#expected) {
-	$eq = 1;
-	for my $i (0...$#actual) {
-	    $eq = 0 if $actual[$i] ne $expected[$i];
-	}
-    } else {
-	$eq = 0;
-    }
-    if (!$eq) {
-	my ($details);
-	$details = "Expected file content:\n";
-	$details .= join ('', map ("  $_\n", @expected));
-	$details .= "Actual file content:\n";
-	$details .= join ('', map ("  $_\n", @actual));
-	$extra{$test} = $details;
-
-	die "File written didn't have expected content.\n";
-    }
+    @output = get_core_output (@output);
+    die "First line of output is not `($proc_name) begin' message.\n"
+	if $output[0] ne "($proc_name) begin";
+    die "Output contains `FAIL' message.\n"
+	if grep (/FAIL/, @output);
+    die "Output contains spurious ($proc_name) message.\n"
+	if grep (/\($proc_name\)/, @output) > 1;
 }
 
-sub grade_multi_oom {
-    my (@output) = @_;
-    verify_common (@output);
-
-    @output = fix_exit_codes (get_core_output (@output));
-    my ($n) = 0;
-    while (my ($m) = $output[0] =~ /^\(multi-oom\) begin (\d+)$/) {
-	die "Child process $m started out of order.\n" if $m != $n;
-	$n = $m + 1;
-	shift @output;
-    }
-    die "Only $n child process(es) started.\n" if $n < 15;
-
-    # There could be a death notice for a process that didn't get
-    # fully loaded, and/or notices from the loader.
-    while (@output > 0
-	   && ($output[0] =~ /^multi-oom: exit\(-1\)$/
-	       || $output[0] =~ /^load: /)) {
-	shift @output;
-    }
-
-    while (--$n >= 0) {
-	die "Output ended unexpectedly before process $n finished.\n"
-	    if @output < 2;
-
-	local ($_);
-	chomp ($_ = shift @output);
-	die "Found '$_' expecting 'end' message.\n" if !/^\(multi-oom\) end/;
-	die "Child process $n ended out of order.\n"
-	    if !/^\(multi-oom\) end $n$/;
-
-	chomp ($_ = shift @output);
-	die "Kernel didn't print proper exit message for process $n.\n"
-	    if !/^multi-oom: exit\($n\)$/;
-    }
-    die "Spurious output at end: '$output[0]'.\n" if @output;
+sub grade_pt_bad_addr {
+    grade_process_death ('pt-bad-addr', @_);
 }
 
-sub get_file {
-    my ($guest_fn, $host_fn) = @_;
-    xsystem ("pintos "
-	     . "--os-disk=pintos/src/vm/build/os.dsk "
-	     . "--fs-disk=output/$test/fs.dsk "
-	     . "-v get $guest_fn $host_fn",
-	     LOG => "$test/get-$guest_fn",
-	     TIMEOUT => 10)
-	or die "get $guest_fn failed\n";
+sub grade_pt_write_code {
+    grade_process_death ('pt-write-code', @_);
 }
 
+sub grade_mmap_unmap {
+    grade_process_death ('mmap-unmap', @_);
+}
 
 sub verify_common {
     my (@output) = @_;

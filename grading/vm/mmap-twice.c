@@ -21,12 +21,12 @@ main (void)
       fd[i] = open ("sample.txt");
       if (fd[i] < 0) 
         {
-          printf ("(mmap-twice) open() %zu failed\n", i);
+          printf ("(mmap-twice) open() #%zu failed\n", i);
           return 1;
         }
       if (!mmap (fd[i], actual[i], 8192))
         {
-          printf ("(mmap-twice) mmap() %zu failed\n", i);
+          printf ("(mmap-twice) mmap() #%zu failed\n", i);
           return 1; 
         }
     }
