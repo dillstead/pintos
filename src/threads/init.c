@@ -19,6 +19,7 @@
 #include "vga.h"
 #ifdef USERPROG
 #include "exception.h"
+#include "syscall.h"
 #include "gdt.h"
 #include "tss.h"
 #endif
@@ -79,6 +80,7 @@ main (void)
   kbd_init ();
 #ifdef USERPROG
   exception_init ();
+  syscall_init ();
 #endif
 
   /* Start thread scheduler and enable interrupts. */

@@ -51,6 +51,7 @@ FILESYS_SRC += fsutil.c		# Utilities.
 # User process code.
 USERPROG_SRC  = addrspace.c	# Address spaces.
 USERPROG_SRC += exception.c	# User exception handler.
+USERPROG_SRC += syscall.c	# System call handler.
 USERPROG_SRC += gdt.c		# GDT initialization.
 USERPROG_SRC += tss.c		# TSS management.
 
