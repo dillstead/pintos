@@ -333,14 +333,14 @@ and options @option{-j} and @option{-r} are mutually exclusive.
 @section Tips
 
 There should be no busy-waiting in any of your solutions to this
-assignment.  Furthermore, resist the temptation to directly disable
-interrupts in your solution by calling @func{intr_disable} or
-@func{intr_set_level}, although you may find doing so to be useful
-while debugging.  Instead, use semaphores, locks and condition
-variables to solve synchronization problems.  Read the tour section on
-synchronization (@pxref{Synchronization}) or the comments
-in @file{threads/synch.h} if you're unsure what synchronization
-primitives may be used in what situations.
+assignment.  Furthermore, to the greatest extent possible, resist the
+temptation to directly disable interrupts in your solution by calling
+@func{intr_disable} or @func{intr_set_level}, although you may find
+doing so to be useful while debugging.  Instead, use semaphores, locks
+and condition variables to solve synchronization problems.  Read the
+tour section on synchronization (@pxref{Synchronization}) or the
+comments in @file{threads/synch.h} if you're unsure what
+synchronization primitives may be used in what situations.
 
 Given some designs of some problems, there may be one or two instances
 in which it is appropriate to directly change the interrupt levels
