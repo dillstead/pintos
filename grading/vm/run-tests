@@ -263,17 +263,17 @@ sub really_run_test {
     # Run.
     my ($timeout) = 600;
     my ($testargs) = defined ($args{$test}) ? " $args{$test}" : "";
-    xsystem ("pintos "
-	     . "--os-disk=pintos/src/vm/build/os.dsk "
-	     . "--fs-disk=output/$test/fs.dsk "
-	     . "--swap-disk=output/$test/swap.dsk "
-	     . "-v run -q -ex \"$test$testargs\"",
-	     LOG => "$test/run",
-	     TIMEOUT => $timeout,
-	     EXPECT => 1)
-	or return "Bochs error";
-    
-    return "ok";
+    my ($result) = xsystem ("pintos "
+			    . "--os-disk=pintos/src/vm/build/os.dsk "
+			    . "--fs-disk=output/$test/fs.dsk "
+			    . "--swap-disk=output/$test/swap.dsk "
+			    . "-v run -q -ex \"$test$testargs\"",
+			    LOG => "$test/run",
+			    TIMEOUT => $timeout,
+			    EXPECT => 1)
+	? "ok" : "Bochs error";
+    remove ("output/$test/fs.dsk", "output/$test/swap.dsk");
+    return $result;
 }
 
 sub grade_test {
