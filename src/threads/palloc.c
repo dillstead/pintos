@@ -11,7 +11,14 @@
 
 /* Page allocator.  Hands out memory in page-size chunks.
    See malloc.h for an allocator that hands out smaller
-   chunks. */
+   chunks.
+
+   We simply use a linked list of free pages.  It would be
+   straightforward to add all available memory to this free list
+   at initialization time.  In practice, though, that's really
+   slow because it causes the emulator we're running under to
+   have to fault in every page of memory.  So instead we only add
+   pages to the free list as needed. */
 
 /* A free page owned by the page allocator. */
 struct page
@@ -19,19 +26,27 @@ struct page
     list_elem free_elem;        /* Free list element. */
   };
 
+/* Keeps multiple threads away from free_pages and
+   uninit_start. */
 static struct lock lock;
+
+/* List of free pages. */
 static struct list free_pages;
+
+/* Range of pages (expressed as byte pointers to the beginnings
+   of pages) that we haven't added to the free list yet. */
 static uint8_t *uninit_start, *uninit_end;
 
+/* Initializes the page allocator. */
 void
 palloc_init (void) 
 {
+  extern char _start, _end;
+
   /* Kernel static code and data, in 4 kB pages.
-     
      We can figure this out because the linker records the start
      and end of the kernel as _start and _end.  See
-     kernel.lds. */
-  extern char _start, _end;
+     kernel.lds.S. */
   size_t kernel_pages = (&_end - &_start + 4095) / 4096;
 
   /* Then we know how much is available to allocate. */
