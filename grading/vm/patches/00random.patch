@@ -1,5 +1,9 @@
---- bitmap.c.~1.5.~	2004-10-06 14:29:56.000000000 -0700
-+++ bitmap.c	2004-11-03 14:35:22.000000000 -0800
+Modifies bitmap_scan() to return a random set of bits instead of the
+first set.  Helps to stress-test VM implementation.
+
+diff -u pintos/src/lib/kernel/bitmap.c~ pintos/src/lib/kernel/bitmap.c
+--- pintos/src/lib/kernel/bitmap.c~	2004-10-06 14:29:56.000000000 -0700
++++ pintos/src/lib/kernel/bitmap.c	2004-11-03 14:35:22.000000000 -0800
 @@ -1,6 +1,7 @@
  #include "bitmap.h"
  #include <debug.h>

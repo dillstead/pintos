@@ -12,39 +12,16 @@ BEGIN {
 
 use warnings;
 use strict;
-use POSIX;
-use Algorithm::Diff;
-use Getopt::Long;
+use Pintos::Grading;
 
-our ($VERBOSE) = 0;	# Verbosity of output
+our ($hw) = "threads";
 our (@TESTS);		# Tests to run.
-my ($clean) = 0;
-my ($grade) = 0;
+our ($test);
+our (%details);
+our (%result);
+our ($action);
 
-GetOptions ("v|verbose+" => \$VERBOSE,
-	    "h|help" => sub { usage (0) },
-	    "t|test=s" => \@TESTS,
-	    "c|clean" => \$clean,
-	    "g|grade" => \$grade)
-    or die "Malformed command line; use --help for help.\n";
-die "Non-option argument not supported; use --help for help.\n"
-    if @ARGV > 0;
-
-sub usage {
-    my ($exitcode) = @_;
-    print "run-tests, for grading Pintos thread projects.\n\n";
-    print "Invoke from a directory containing a student tarball named by\n";
-    print "the submit script, e.g. username.MMM.DD.YY.hh.mm.ss.tar.gz.\n";
-    print "In normal usage, no options are needed.\n\n";
-    print "Output is produced in tests.out and details.out.\n\n";
-    print "Options:\n";
-    print "  -c, --clean     Remove old output files before starting\n";
-    print "  -t, --test=TEST Execute TEST only (allowed multiple times)\n";
-    print "  -g, --grade     Instead of running tests, compose grade.out\n";
-    print "  -v, --verbose   Print commands before executing them\n";
-    print "  -h, --help      Print this help message\n";
-    exit $exitcode;
-}
+parse_cmd_line ();
 
 # Default set of tests.
 @TESTS = ("alarm-single", "alarm-multiple", "alarm-zero", "alarm-negative",
@@ -56,191 +33,31 @@ sub usage {
 	  "mlfqs-on", "mlfqs-off")
     unless @TESTS > 0;
 
-# Handle final grade mode.
-if ($grade) {
-    open (OUT, ">grade.out") or die "grade.out: create: $!\n";
+clean_dir (), exit if $action eq 'clean';
 
-    open (GRADE, "<grade.txt") or die "grade.txt: open: $!\n";
-    while (<GRADE>) {
-	last if /^\s*$/;
-	print OUT;
-    }
-    close (GRADE);
-    
-    my (@tests) = snarf ("tests.out");
-    my ($p_got, $p_pos) = $tests[0] =~ m%\((\d+)/(\d+)\)% or die;
+extract_sources (); 
+exit if $action eq 'extract';
 
-    my (@review) = snarf ("review.txt");
-    my ($part_lost) = (0, 0);
-    for (my ($i) = $#review; $i >= 0; $i--) {
-	local ($_) = $review[$i];
-	if (my ($loss) = /^\s*([-+]\d+)/) {
-	    $part_lost += $loss;
-	} elsif (my ($out_of) = m%\[\[/(\d+)\]\]%) {
-	    my ($got) = $out_of + $part_lost;
-	    $got = 0 if $got < 0;
-	    $review[$i] =~ s%\[\[/\d+\]\]%($got/$out_of)% or die;
-	    $part_lost = 0;
+build (); 
+exit if $action eq 'build';
 
-	    $p_got += $got;
-	    $p_pos += $out_of;
-	}
-    }
-    die "Lost points outside a section\n" if $part_lost;
-
-    for (my ($i) = 1; $i <= $#review; $i++) {
-	if ($review[$i] =~ /^-{3,}\s*$/ && $review[$i - 1] !~ /^\s*$/) {
-	    $review[$i] = '-' x (length ($review[$i - 1]));
-	}
-    }
-
-    print OUT "\nOVERALL SCORE\n";
-    print OUT "-------------\n";
-    print OUT "$p_got points out of $p_pos total\n\n";
-
-    print OUT map ("$_\n", @tests), "\n";
-    print OUT map ("$_\n", @review), "\n";
-
-    print OUT "DETAILS\n";
-    print OUT "-------\n\n";
-    print OUT map ("$_\n", snarf ("details.out"));
-
-    exit 0;
-}
-
-if ($clean) {
-    # Verify that we're roughly in the correct directory
-    # before we go blasting away files.
-    choose_tarball ();
-
-    xsystem ("rm -rf output pintos", VERBOSE => 1);
-    xsystem ("rm -f details.out tests.out", VERBOSE => 1);
-}
-
-# Create output directory, if it doesn't already exist.
--d ("output") || mkdir ("output") or die "output: mkdir: $!\n";
-
-# Extract submission.
-extract_tarball () if ! -d "pintos";
-
-# Verify that the proper directory was submitted.
--d "pintos/src/threads" or die "pintos/src/threads: stat: $!\n";
-
-# Run and grade the tests.
-our $test;
-our %result;
-our %details;
-our %extra;
-for $test (@TESTS) {
-    print "$test: ";
-    my ($result) = run_test ($test);
-    if ($result eq 'ok') {
-	$result = grade_test ($test);
-	$result =~ s/\n$//;
-    }
-    print "$result\n";
-    
-    $result{$test} = $result;
-}
-
-# MLFQS takes results from mlfqs-on and mlfqs-off.
+run_and_grade_tests (); 
 grade_mlfqs_speedup ();
 grade_mlfqs_priority ();
-
-# Write output.
-write_grades ();
+write_grades (); 
 write_details ();
-
-sub choose_tarball {
-    my (@tarballs)
-	= grep (/^[a-z0-9]+\.[A-Za-z]+\.\d+\.\d+\.\d+\.\d+.\d+\.tar\.gz$/,
-		glob ("*.tar.gz"));
-    die "no pintos dir and no source tarball\n" if scalar (@tarballs) == 0;
+exit if $action eq 'test';
 
-    # Sort tarballs in reverse order by time.
-    @tarballs = sort { ext_mdyHMS ($b) cmp ext_mdyHMS ($a) } @tarballs;
+assemble_final_grade ();
+exit if $action eq 'assemble';
 
-    print "Multiple tarballs: choosing $tarballs[0]\n"
-	if scalar (@tarballs) > 1;
-    return $tarballs[0];
-}
+die "Don't know how to '$action'";
 
-sub extract_tarball {
-    my ($tarball) = choose_tarball ();
-
-    mkdir "pintos" or die "pintos: mkdir: $!\n";
-    mkdir "pintos/src" or die "pintos: mkdir: $!\n";
-
-    print "Extracting $tarball...\n";
-    xsystem ("cd pintos/src && tar xzf ../../$tarball",
-	     DIE => "extraction failed\n");
-
-    print "Patching...\n";
-    xsystem ("patch -fs pintos/src/lib/debug.c < $GRADES_DIR/panic.diff",
-	     LOG => "patch",
-	     DIE => "patch failed\n");
-}
-
-sub ext_mdyHMS {
-    my ($s) = @_;
-    my ($ms, $d, $y, $H, $M, $S) =
-	$s =~ /.([A-Za-z]+)\.(\d+)\.(\d+)\.(\d+)\.(\d+).(\d+)\.tar\.gz$/
-	or die;
-    my ($m) = index ("janfebmaraprmayjunjulaugsepoctnovdec", lc $ms) / 3
-	or die;
-    return sprintf "%02d-%02d-%02d %02d:%02d:%02d", $y, $m, $d, $H, $M, $S;
-}
-
-sub test_source {
-    my ($test) = @_;
-    my ($src) = "$GRADES_DIR/$test.c";
-    $src = "$GRADES_DIR/mlfqs.c" if $test =~ /^mlfqs/;
-    -e $src or die "$src: stat: $!\n";
-    return $src;
-}
-
-sub test_constants {
-   my ($defines) = "";
-   $defines .= "#define MLFQS 1\n" if $test eq 'mlfqs-on';
-   return $defines;
- }
-
+# Runs $test in directory output/$test.
+# Returns 'ok' if it went ok, otherwise an explanation.
 sub run_test {
-    my ($test) = @_;
-
-    # Reuse older results if any.
-    if (open (DONE, "<output/$test/done")) {
-	my ($status);
-	$status = <DONE>;
-	chomp $status;
-	close (DONE);
-	return $status;
-    }
-
-    # Really run the test.
-    my ($status) = really_run_test ($test);
-
-    # Save the results for later.
-    open (DONE, ">output/$test/done") or die "output/$test/done: create: $!\n";
-    print DONE "$status\n";
-    close (DONE);
-
-    return $status;
-}
-
-sub really_run_test {
-    # Need to run it.
-    # If there's residue from an earlier test, move it to .old.
-    # If there's already a .old, delete it.
-    xsystem ("rm -rf output/$test.old", VERBOSE => 1) if -d "output/$test.old";
-    rename "output/$test", "output/$test.old" or die "rename: $!\n"
-	if -d "output/$test";
-
-    # Make output directory.
-    mkdir "output/$test";
-
     # Change constants.h if necessary.
-    my ($defines) = test_constants ($test);
+    my ($defines) = $test ne 'mlfqs-on' ? "" : "#define MLFQS 1\n";
     if ($defines ne snarf ("pintos/src/constants.h")) {
 	open (CONSTANTS, ">pintos/src/constants.h");
 	print CONSTANTS $defines;
@@ -259,7 +76,8 @@ sub really_run_test {
     }
 
     # Copy in the new test.c and delete enough files to ensure a full rebuild.
-    my ($src) = test_source ($test);
+    my ($src) = "$GRADES_DIR/" . ($test !~ /^mlfqs/ ? "$test.c" : "mlfqs.c");
+    -e $src or die "$src: stat: $!\n";
     xsystem ("cp $src pintos/src/threads/test.c", DIE => "cp failed\n");
     unlink ("pintos/src/threads/build/threads/test.o");
     unlink ("pintos/src/threads/build/kernel.o");
@@ -267,44 +85,21 @@ sub really_run_test {
     unlink ("pintos/src/threads/build/os.dsk");
 
     # Build.
-    xsystem ("cd pintos/src/threads && make", LOG => "$test/make")
-	or return "compile error";
+    if (xsystem ("cd pintos/src/threads && make",
+		 LOG => "$test/make") ne 'ok') {
+	$details{$test} = snarf ("output/$test/make.err");
+	return "Compile error";
+    }
 
     # Copy out files for backtraces later.
     xsystem ("cp pintos/src/threads/build/kernel.o output/$test");
     xsystem ("cp pintos/src/threads/build/os.dsk output/$test");
 
     # Run.
-    my ($timeout) = 10;
-    $timeout = 600 if $test =~ /^mlfqs/;
-    xsystem ("cd pintos/src/threads/build && pintos -v run -q",
-	     LOG => "$test/run",
-	     TIMEOUT => $timeout)
-	or return "Bochs error";
-    
-    return "ok";
-}
-
-sub grade_test {
-    my ($test) = @_;
-
-    my (@output) = snarf ("output/$test/run.out");
-
-    if (-e "$GRADES_DIR/$test.exp") {
-	eval {
-	    verify_common (@output);
-	    compare_output ("$GRADES_DIR/$test.exp", @output);
-	}
-    } else {
-	my ($grade_func);
-	($grade_func = $test) =~ s/-/_/g;
-	eval "grade_$grade_func (\@output)";
-    }
-    if ($@) {
-	die $@ if $@ =~ /at \S+ line \d+$/;
-	return $@;
-    }
-    return "ok";
+    my ($timeout) = $test !~ /^mlfqs/ ? 10 : 600;
+    return run_pintos ("cd pintos/src/threads/build && pintos -v run -q",
+		       LOG => "$test/run",
+		       TIMEOUT => $timeout);
 }
 
 sub grade_alarm_single {
@@ -538,250 +333,4 @@ sub mlfqs_stats {
     }
 
     return (\%stats, $ticks);
-}
-
-sub verify_common {
-    my (@output) = @_;
-
-    my (@assertion) = grep (/PANIC/, @output);
-    if (@assertion != 0) {
-	my ($details) = "Kernel panic:\n  $assertion[0]\n";
-
-	my (@stack_line) = grep (/Call stack:/, @output);
-	if (@stack_line != 0) {
-	    $details .= "  $stack_line[0]\n\n";
-	    $details .= "Translation of backtrace:\n";
-	    my (@addrs) = $stack_line[0] =~ /Call stack:((?: 0x[0-9a-f]+)+)/;
-
-	    my ($A2L);
-	    if (`uname -m`
-		=~ /i.86|pentium.*|[pk][56]|nexgen|viac3|6x86|athlon.*/) {
-		$A2L = "addr2line";
-	    } else {
-		$A2L = "i386-elf-addr2line";
-	    }
-	    open (A2L, "$A2L -fe output/$test/kernel.o @addrs|");
-	    for (;;) {
-		my ($function, $line);
-		last unless defined ($function = <A2L>);
-		$line = <A2L>;
-		chomp $function;
-		chomp $line;
-		$details .= "  $function ($line)\n";
-	    }
-	}
-	$extra{$test} = $details;
-	die "Kernel panic.  Details at end of file.\n"
-    }
-
-    die "No output at all\n" if @output == 0;
-    die "Didn't start up properly: no \"Pintos booting\" startup message\n"
-	if !grep (/Pintos booting with.*kB RAM\.\.\./, @output);
-    die "Didn't start up properly: no \"Boot complete\" startup message\n"
-	if !grep (/Boot complete/, @output);
-    die "Didn't shut down properly: no \"Timer: # ticks\" shutdown message\n"
-        if !grep (/Timer: \d+ ticks/, @output);
-    die "Didn't shut down properly: no \"Powering off\" shutdown message\n"
-	if !grep (/Powering off/, @output);
-}
-
-sub compare_output {
-    my ($exp_file, @actual) = @_;
-    my (@expected) = snarf ($exp_file);
-
-    @actual = map ("$_\n", @actual);
-    @expected = map ("$_\n", @expected);
-
-    # Trim header and trailer from @actual.
-    while (scalar (@actual) && $actual[0] ne $expected[0]) {
-	shift (@actual);
-    }
-    die "First line of expected output was not present.\n" if !@actual;
-    while (scalar (@actual) && $actual[$#actual] ne $expected[$#expected]) {
-	pop (@actual);
-    }
-    die "Final line of expected output was not present.\n" if !@actual;
-    
-    # Check whether they're the same.
-    if ($#actual == $#expected) {
-	my ($eq) = 1;
-	for (my ($i) = 0; $i <= $#expected; $i++) {
-	    $eq = 0 if $actual[$i] ne $expected[$i];
-	}
-	return if $eq;
-    }
-
-    # They differ.  Output a diff.
-    my (@diff) = "";
-    my ($d) = Algorithm::Diff->new (\@expected, \@actual);
-    while ($d->Next ()) {
-	my ($ef, $el, $af, $al) = $d->Get (qw (min1 max1 min2 max2));
-	if ($d->Same ()) {
-	    push (@diff, map ("  $_", $d->Items (1)));
-	} else {
-	    push (@diff, map ("- $_", $d->Items (1))) if $d->Items (1);
-	    push (@diff, map ("+ $_", $d->Items (2))) if $d->Items (2);
-	}
-    }
-
-    my ($details) = "";
-    $details .= "$test actual output:\n";
-    $details .= join ('', map ("  $_", @actual));
-    $details .= "\n$test expected output:\n";
-    $details .= join ('', map ("  $_", @expected));
-    $details .= "\nOutput differences in `diff -u' format:\n";
-    $details .= join ('', @diff) . "\n";
-    $details{$test} = $details;
-    die "Output differs from expected.  Details at end of file.\n";
-}
-
-sub write_grades {
-    my (@summary) = snarf ("$GRADES_DIR/tests.txt");
-
-    my ($ploss) = 0;
-    my ($tloss) = 0;
-    my ($total) = 0;
-    for (my ($i) = 0; $i <= $#summary; $i++) {
-	local ($_) = $summary[$i];
-	if (my ($loss, $test) = /^  -(\d+) ([-a-zA-Z0-9]+):/) {
-	    my ($result) = $result{$test} || "Not tested.";
-
-	    if ($result eq 'ok') {
-		splice (@summary, $i, 1);
-		$i--;
-	    } else {
-		$ploss += $loss;
-		$tloss += $loss;
-		splice (@summary, $i + 1, 0,
-			map ("     $_", split ("\n", $result)));
-	    }
-	} elsif (my ($ptotal) = /^Score: \/(\d+)$/) {
-	    $total += $ptotal;
-	    $summary[$i] = "Score: " . ($ptotal - $ploss) . "/$ptotal";
-	    splice (@summary, $i, 0, "  All tests passed.") if $ploss == 0;
-	    $ploss = 0;
-	    $i++;
-	}
-    }
-    my ($ts) = "(" . ($total - $tloss) . "/" . $total . ")";
-    $summary[0] =~ s/\[\[total\]\]/$ts/;
-
-    open (SUMMARY, ">tests.out");
-    print SUMMARY map ("$_\n", @summary);
-    close (SUMMARY);
-}
-
-sub write_details {
-    open (DETAILS, ">details.out");
-    my ($n) = 0;
-    for my $test (@TESTS) {
-	next if $result{$test} eq 'ok';
-	
-	my ($details) = $details{$test};
-	next if !defined ($details) && ! -e "output/$test/run.out";
-
-	print DETAILS "\n" if $n++;
-	print DETAILS "--- $test details ", '-' x (50 - length ($test));
-	print DETAILS "\n\n";
-
-	if (!defined $details) {
-	    $details = "Output:\n\n" . snarf ("output/$test/run.out");
-	}
-	print DETAILS $details;
-
-	print DETAILS "\n", "-" x 10, "\n\n$extra{$test}"
-	    if defined $extra{$test};
-    }
-    close (DETAILS);
-
-}
-
-sub xsystem {
-    my ($command, %options) = @_;
-    print "$command\n" if $VERBOSE || $options{VERBOSE};
-
-    my ($log) = $options{LOG};
-    if (defined ($log)) {
-	$command = "($command) >output/$log.out 2>output/$log.err";
-    }
-
-    my ($pid, $status);
-    eval {
-	local $SIG{ALRM} = sub { die "alarm\n" };
-	alarm $options{TIMEOUT} if defined $options{TIMEOUT};
-	$pid = fork;
-	die "fork: $!\n" if !defined $pid;
-	exec ($command), die "$command: exec: $!\n" if !$pid;
-	waitpid ($pid, 0);
-	$status = $?;
-	alarm 0;
-    };
-    if ($@) {
-	die unless $@ eq "alarm\n";   # propagate unexpected errors
-	print "Timed out.\n";
-	kill SIGTERM, $pid;
-	$status = 0;
-    }
-
-    if (WIFSIGNALED ($status)) {
-	my ($signal) = WTERMSIG ($status);
-	die "Interrupted\n" if $signal == SIGINT;
-	print "Child terminated with signal $signal\n";
-    }
-
-    unlink ("output/$log.err") if defined ($log) && $status == 0;
-
-    die $options{DIE} if $status != 0 && defined $options{DIE};
-
-    return $status == 0;
-}
-
-sub snarf {
-    my ($file) = @_;
-    open (OUTPUT, $file) or die "$file: open: $!\n";
-    my (@lines) = <OUTPUT>;
-    chomp (@lines);
-    close (OUTPUT);
-    return wantarray ? @lines : join ('', map ("$_\n", @lines));
-}
-
-sub files_equal {
-    my ($a, $b) = @_;
-    my ($equal);
-    open (A, "<$a") or die "$a: open: $!\n";
-    open (B, "<$b") or die "$b: open: $!\n";
-    if (-s A != -s B) {
-	$equal = 0;
-    } else {
-	my ($sa, $sb);
-	for (;;) {
-	    sysread (A, $sa, 1024);
-	    sysread (B, $sb, 1024);
-	    $equal = 0, last if $sa ne $sb;
-	    $equal = 1, last if $sa eq '';
-	}
-    }
-    close (A);
-    close (B);
-    return $equal;
-}
-
-sub file_contains {
-    my ($file, $expected) = @_;
-    open (FILE, "<$file") or die "$file: open: $!\n";
-    my ($actual);
-    sysread (FILE, $actual, -s FILE);
-    my ($equal) = $actual eq $expected;
-    close (FILE);
-    return $equal;
-}
-
-sub number_lines {
-    my ($ln, $lines) = @_;
-    my ($out);
-    for my $line (@$lines) {
-	chomp $line;
-	$out .= sprintf "%4d  %s\n", $ln++, $line;
-    }
-    return $out;
 }

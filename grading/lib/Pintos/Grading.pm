@@ -5,13 +5,11 @@ our ($test);
 
 our ($GRADES_DIR);
 our ($verbose);
-our (%args);
 our %result;
 our %details;
 our %extra;
 our @TESTS;
-our $clean;
-our $grade;
+our $action;
 our $hw;
 
 use POSIX;
@@ -21,27 +19,65 @@ use Algorithm::Diff;
 sub parse_cmd_line {
     GetOptions ("v|verbose+" => \$verbose,
 		"h|help" => sub { usage (0) },
-		"t|test=s" => \@TESTS,
-		"c|clean" => \$clean,
-		"g|grade" => \$grade)
+		"T|tests=s" => \@TESTS,
+		"c|clean" => sub { set_action ('clean'); },
+		"x|extract" => sub { set_action ('extract'); },
+		"b|build" => sub { set_action ('build'); },
+		"t|test" => sub { set_action ('test'); },
+		"a|assemble" => sub { set_action ('assemble'); })
 	or die "Malformed command line; use --help for help.\n";
     die "Non-option argument not supported; use --help for help.\n"
 	if @ARGV > 0;
+    @TESTS = split(/,/, join (',', @TESTS)) if defined @TESTS;
+
+    if (!defined $action) {
+	$action = -e 'review.txt' ? 'assemble' : 'test';
+    }
+}
+
+sub set_action {
+    my ($new_action) = @_;
+    die "actions `$action' and `$new_action' conflict\n"
+	if defined ($action) && $action ne $new_action;
+    $action = $new_action;
 }
 
 sub usage {
     my ($exitcode) = @_;
-    print "run-tests, for grading Pintos projects.\n\n";
-    print "Invoke from a directory containing a student tarball named by\n";
-    print "the submit script, e.g. username.MMM.DD.YY.hh.mm.ss.tar.gz.\n";
-    print "In normal usage, no options are needed.\n\n";
-    print "Output is produced in tests.out and details.out.\n\n";
-    print "Options:\n";
-    print "  -c, --clean     Remove old output files before starting\n";
-    print "  -t, --test=TEST Execute TEST only (allowed multiple times)\n";
-    print "  -g, --grade     Instead of running tests, compose grade.out\n";
-    print "  -v, --verbose   Print commands before executing them\n";
-    print "  -h, --help      Print this help message\n";
+    print <<EOF;
+run-tests, for grading Pintos $hw projects.
+
+Invoke from a directory containing a student tarball named by
+the submit script, e.g. username.MMM.DD.YY.hh.mm.ss.tar.gz.
+
+Workflow:
+
+1. Extracts the source tree into pintos/src and applies patches.
+
+2. Builds the source tree.  (The threads project modifies and rebuilds
+   the source tree for every test.)
+
+3. Runs the tests on the source tree and grades them.  Writes
+   "tests.out" with a summary of the test results, and "details.out"
+   with test failure and warning details.
+
+4. By hand, copy "review.txt" from the tests directory and use it as a
+   template for grading design documents.
+
+5. Assembles "grade.txt", "tests.out", "review.txt", and "tests.out"
+   into "grade.out".  This is primarily simple concatenation, but
+   point totals are tallied up as well.
+
+Options:
+  -c, --clean        Delete test results and temporary files, then exit.
+  -T, --tests=TESTS  Run only the specified comma-separated tests.
+  -x, --extract      Stop after step 1.
+  -b, --build        Stop after step 2.
+  -t, --test         Stop after step 3 (default if "review.txt" not present).
+  -a, --assemble     Stop after step 5 (default if "review.txt" exists).
+  -v, --verbose      Print command lines of subcommands before executing them.
+  -h, --help         Print this help message.
+EOF
     exit $exitcode;
 }
 
@@ -50,9 +86,11 @@ sub usage {
 # Extracts the group's source files into pintos/src,
 # applies any patches providing in the grading directory,
 # and installs a default pintos/src/constants.h
-sub obtain_sources {
+sub extract_sources {
     # Nothing to do if we already have a source tree.
     return if -d "pintos";
+
+    -d ("output") || mkdir ("output") or die "output: mkdir: $!\n";
 
     my ($tarball) = choose_tarball ();
 
@@ -75,7 +113,7 @@ sub obtain_sources {
 
     # Apply patches from grading directory.
     # Patches are applied in lexicographic order, so they should
-    # probably be named 00-debug.patch, 01-bitmap.patch, etc.
+    # probably be named 00debug.patch, 01bitmap.patch, etc.
     # Filenames in patches should be in the format pintos/src/...
     print "Patching...\n";
     for my $patch (glob ("$GRADES_DIR/patches/*.patch")) {
@@ -105,7 +143,7 @@ sub choose_tarball {
 	# Sort tarballs in order by time.
 	@tarballs = sort { ext_mdyHMS ($a) cmp ext_mdyHMS ($b) } @tarballs;
 
-	print "Multiple tarballs:";
+	print "Multiple tarballs:\n";
 	print "\t$_ submitted ", ext_mdyHMS ($_), "\n" foreach @tarballs;
 	print "Choosing $tarballs[$#tarballs]\n";
     }
@@ -124,12 +162,12 @@ sub ext_mdyHMS {
     return sprintf "%02d-%02d-%02d %02d:%02d:%02d", $y, $m, $d, $H, $M, $S;
 }
 
-# Compiling.
+# Building.
 
-sub compile {
+sub build {
     print "Compiling...\n";
-    xsystem ("cd pintos/src/filesys && make", LOG => "make")
-	or return "compile error";
+    xsystem ("cd pintos/src/$hw && make", LOG => "make") eq 'ok'
+	or return "Build error";
 }
 
 # Run and grade the tests.
@@ -137,15 +175,15 @@ sub run_and_grade_tests {
     for $test (@TESTS) {
 	print "$test: ";
 	my ($result) = get_test_result ();
-	if ($result eq 'ok') {
-	    $result = grade_test ($test);
-	} elsif ($result =~ /^Timed out/) {
-	    $result = "$result - " . grade_test ($test);
-	}
 	chomp ($result);
-	print "$result";
-	print " - with warnings" if $result eq 'ok' && defined $details{$test};
-	print "\n";
+
+	my ($grade) = grade_test ($test);
+	chomp ($grade);
+	
+	my ($msg) = $result eq 'ok' ? $grade : "$result - $grade";
+	$msg .= " - with warnings"
+	    if $grade eq 'ok' && defined $details{$test};
+	print "$msg\n";
 	
 	$result{$test} = $result;
     }
@@ -330,8 +368,15 @@ sub get_test_result {
     rename "output/$test", "output/$test.old" or die "rename: $!\n"
 	if -d "output/$test";
 
+    # Make output directory.
+    mkdir "output/$test";
+
     # Run the test.
     my ($result) = run_test ($test);
+
+    # Delete any disks in the output directory because they take up
+    # lots of space.
+    unlink (glob ("output/$test/*.dsk"));
 
     # Save the results for later.
     open (DONE, ">$cache_file") or die "$cache_file: create: $!\n";
@@ -341,59 +386,14 @@ sub get_test_result {
     return $result;
 }
 
-# Creates an output directory for the test,
-# creates all the files needed 
-sub run_test {
-    # Make output directory.
-    mkdir "output/$test";
-
-    my ($fs_size) = $test ne 'grow-too-big' ? 2 : .25;
-    xsystem ("pintos make-disk output/$test/fs.dsk $fs_size >/dev/null 2>&1",
-	     DIE => "failed to create file system disk");
-    xsystem ("pintos make-disk output/$test/swap.dsk 2 >/dev/null 2>&1",
-	     DIE => "failed to create swap disk");
-
-    # Format disk, install test.
-    my ($pintos_base_cmd) =
-	"pintos "
-	. "--os-disk=pintos/src/filesys/build/os.dsk "
-	. "--fs-disk=output/$test/fs.dsk "
-	. "--swap-disk=output/$test/swap.dsk "
-	. "-v";
-    unlink ("output/$test/fs.dsk", "output/$test/swap.dsk"),
-    return "format/put error" 
-	if xsystem ("$pintos_base_cmd put -f $GRADES_DIR/$test $test",
-		    LOG => "$test/put", TIMEOUT => 60, EXPECT => 1) ne 'ok';
-
-    my (@extra_files);
-    push (@extra_files, "child-syn-read") if $test eq 'syn-read';
-    push (@extra_files, "child-syn-wrt") if $test eq 'syn-write';
-    push (@extra_files, "child-syn-rw") if $test eq 'syn-rw';
-    for my $fn (@extra_files) {
-	return "format/put error" 
-	    if xsystem ("$pintos_base_cmd put $GRADES_DIR/$fn $fn",
-			LOG => "$test/put-$fn", TIMEOUT => 60, EXPECT => 1)
-               ne 'ok';
-    }
-    
-    # Run.
-    my ($timeout) = 120;
-    my ($testargs) = defined ($args{$test}) ? " $args{$test}" : "";
-    my ($retval) =
-	xsystem ("$pintos_base_cmd run -q -ex \"$test$testargs\"",
-		 LOG => "$test/run", TIMEOUT => $timeout, EXPECT => 1);
-    my ($result);
-    if ($retval eq 'ok') {
-	$result = "ok";
-    } elsif ($retval eq 'timeout') {
-	$result = "Timed out after $timeout seconds";
-    } elsif ($retval eq 'error') {
-	$result = "Bochs error";
-    } else {
-	die;
-    }
-    unlink ("output/$test/fs.dsk", "output/$test/swap.dsk");
-    return $result;
+sub run_pintos {
+    my ($cmd_line, %args) = @_;
+    $args{EXPECT} = 1 unless defined $args{EXPECT};
+    my ($retval) = xsystem ($cmd_line, %args);
+    return 'ok' if $retval eq 'ok';
+    return "Timed out after $args{TIMEOUT} seconds" if $retval eq 'timeout';
+    return 'Error running Bochs' if $retval eq 'error';
+    die;
 }
 
 # Grade the test.
@@ -433,7 +433,7 @@ sub grade_test {
 # Do final grade.
 # Combines grade.txt, tests.out, review.txt, and details.out,
 # producing grade.out.
-sub compose_final_grade {
+sub assemble_final_grade {
     open (OUT, ">grade.out") or die "grade.out: create: $!\n";
 
     open (GRADE, "<grade.txt") or die "grade.txt: open: $!\n";
@@ -537,7 +537,13 @@ sub look_for_panic {
 	} else {
 	    $A2L = "i386-elf-addr2line";
 	}
-	open (A2L, "$A2L -fe pintos/src/filesys/build/kernel.o @addrs|");
+	my ($kernel_o);
+	if ($hw eq 'threads') {
+	    $kernel_o = "pintos/src/filesys/build/kernel.o";
+	} else {
+	    $kernel_o = "pintos/src/$hw/build/kernel.o";
+	}
+	open (A2L, "$A2L -fe $kernel_o @addrs|");
 	for (;;) {
 	    my ($function, $line);
 	    last unless defined ($function = <A2L>);
@@ -611,7 +617,12 @@ sub get_core_output {
 
     my ($first);
     for ($first = 0; $first <= $#output; $first++) {
-	$first++, last if $output[$first] =~ /^Executing '$test.*':$/;
+	my ($line) = $output[$first];
+	$first++, last
+	    if ($hw ne 'threads' && $line =~ /^Executing '$test.*':$/)
+	    || ($hw eq 'threads'
+		&& grep (/^Boot complete.$/, @output[0...$first - 1])
+		&& $line =~ /^\s*$/);
     }
 
     my ($last);

@@ -1,7 +1,7 @@
 #! /usr/bin/perl
 
 # Find the directory that contains the grading files.
-use vars qw($GRADES_DIR);
+our ($GRADES_DIR);
 
 # Add our Perl library directory to the include path. 
 BEGIN {
@@ -15,10 +15,9 @@ use strict;
 use Pintos::Grading;
 
 our ($hw) = "filesys";
-our ($verbose) = 0;	# Verbosity of output
 our (@TESTS);		# Tests to run.
-our ($clean) = 0;
-our ($grade) = 0;
+our ($test);
+our ($action);
 
 parse_cmd_line ();
 
@@ -39,27 +38,60 @@ parse_cmd_line ();
 	     syn-remove syn-read syn-write syn-rw
 	     ) unless @TESTS > 0;
 
-compose_final_grade (), exit 0 if $grade;
-clean_dir (), exit 0 if $clean;
+clean_dir (), exit if $action eq 'clean';
 
-# Create output directory, if it doesn't already exist.
--d ("output") || mkdir ("output") or die "output: mkdir: $!\n";
+extract_sources (); 
+exit if $action eq 'extract';
 
-# Extract submission.
-obtain_sources ();
+build (); 
+exit if $action eq 'build';
 
-# Compile submission.
-compile ();
-
-# Verify that the proper directory was submitted.
--d "pintos/src/threads" or die "pintos/src/threads: stat: $!\n";
-
-# Run and grade the tests.
-run_and_grade_tests ();
-
-# Write output.
-write_grades ();
+run_and_grade_tests (); 
+write_grades (); 
 write_details ();
+exit if $action eq 'test';
+
+assemble_final_grade ();
+exit if $action eq 'assemble';
+
+die "Don't know how to '$action'";
+
+# Runs $test in directory output/$test.
+# Returns 'ok' if it went ok, otherwise an explanation.
+sub run_test {
+    my ($result);
+
+    my ($fs_size) = $test ne 'grow-too-big' ? 2 : .25;
+    xsystem ("pintos make-disk output/$test/fs.dsk $fs_size >/dev/null 2>&1",
+	     DIE => "failed to create file system disk");
+    xsystem ("pintos make-disk output/$test/swap.dsk 2 >/dev/null 2>&1",
+	     DIE => "failed to create swap disk");
+
+    # Format disk, install test.
+    my ($pintos_base_cmd) =
+	"pintos "
+	. "--os-disk=pintos/src/$hw/build/os.dsk "
+	. "--fs-disk=output/$test/fs.dsk "
+	. "--swap-disk=output/$test/swap.dsk "
+	. "-v";
+    $result = run_pintos ("$pintos_base_cmd put -f $GRADES_DIR/$test $test",
+			  LOG => "$test/put", TIMEOUT => 60);
+    return $result if $result ne 'ok';
+
+    my (@extra_files);
+    push (@extra_files, "child-syn-read") if $test eq 'syn-read';
+    push (@extra_files, "child-syn-wrt") if $test eq 'syn-write';
+    push (@extra_files, "child-syn-rw") if $test eq 'syn-rw';
+    for my $fn (@extra_files) {
+	$result = run_pintos ("$pintos_base_cmd put $GRADES_DIR/$fn $fn",
+			      LOG => "$test/put-$fn", TIMEOUT => 60);
+	return "Error running `put $fn': $result" if $result ne 'ok';
+    }
+    
+    # Run.
+    return run_pintos ("$pintos_base_cmd run -q -ex \"$test\"",
+		       LOG => "$test/run", TIMEOUT => 120);
+}
 
 sub grade_dir_lsdir {
     my (@output) = @_;
