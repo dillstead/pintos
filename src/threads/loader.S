@@ -1,5 +1,6 @@
-#include "mmu.h"
 #include "loader.h"
+#include "mmu.h"
+#include "gdt.h"
 	
 ##############################################################################
 # Kernel loader.

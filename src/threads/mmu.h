@@ -119,11 +119,6 @@ vtop (void *vaddr)
 #define PG_U 0x4               /* User */
 #define PG_A 0x20              /* Accessed */
 #define PG_D 0x40              /* Dirty */
-/*
- * The PG_USER bits are not used by the kernel and they are
- * not interpreted by the hardware.  The kernel allows 
- * user processes to set them arbitrarily.
- */
 
 /* EFLAGS Register. */
 #define FLAG_MBS  0x00000002    /* Must be set. */
@@ -146,86 +141,5 @@ vtop (void *vaddr)
 #define STA_W 0x2              /* Writeable (non-executable segments) */
 
 
-/* Segment selectors. */
-#define SEL_NULL        0x00    /* Null selector. */
-#define SEL_KCSEG       0x08    /* Kernel code selector. */
-#define SEL_KDSEG       0x10    /* Kernel data selector. */
-#define SEL_UCSEG       0x1B    /* User code selector. */
-#define SEL_UDSEG       0x23    /* User data selector. */
-#define SEL_TSS         0x28    /* Task-state segment. */
-#define SEL_CNT         6       /* Number of segments. */
-
-#ifndef __ASSEMBLER__
-struct tss
-  {
-    uint16_t back_link, :16;
-    uint32_t esp0;
-    uint16_t ss0, :16;
-    uint32_t esp1;
-    uint16_t ss1, :16;
-    uint32_t esp2;
-    uint16_t ss2, :16;
-    uint32_t cr3;
-    uint32_t eip;
-    uint32_t eflags;
-    uint32_t eax, ecx, edx, ebx;
-    uint32_t esp, ebp, esi, edi;
-    uint16_t es, :16;
-    uint16_t cs, :16;
-    uint16_t ss, :16;
-    uint16_t ds, :16;
-    uint16_t fs, :16;
-    uint16_t gs, :16;
-    uint16_t ldt, :16;
-    uint16_t trace, bitmap;
-  };
-
-enum seg_system
-  {
-    SYS_SYSTEM = 0,             /* System segment. */
-    SYS_CODE_DATA = 1           /* Code or data segment. */
-  };
-
-enum seg_granularity
-  {
-    GRAN_BYTE = 0,              /* Limit has 1-byte granularity. */
-    GRAN_PAGE = 1               /* Limit has 4 kB granularity. */
-  };
-
-enum seg_type
-  {
-    /* System segment types. */
-    TYPE_TSS_16_A = 1,          /* 16-bit TSS (available). */
-    TYPE_LDT = 2,               /* LDT. */
-    TYPE_TSS_16_B = 3,          /* 16-bit TSS (busy). */
-    TYPE_CALL_16 = 4,           /* 16-bit call gate. */
-    TYPE_TASK = 5,              /* Task gate. */
-    TYPE_INT_16 = 6,            /* 16-bit interrupt gate. */
-    TYPE_TRAP_16 = 7,           /* 16-bit trap gate. */
-    TYPE_TSS_32_A = 9,          /* 32-bit TSS (available). */
-    TYPE_TSS_32_B = 11,         /* 32-bit TSS (busy). */
-    TYPE_CALL_32 = 12,          /* 32-bit call gate. */
-    TYPE_INT_32 = 14,           /* 32-bit interrupt gate. */
-    TYPE_TRAP_32 = 15,          /* 32-bit trap gate. */
-
-    /* Code/data segment types. */
-    TYPE_CODE = 8,              /* 1=Code segment, 0=data segment. */
-    TYPE_ACCESSED = 1,          /* Set if accessed. */
-
-    /* Data segment types. */
-    TYPE_EXPAND_DOWN = 4,       /* 1=Expands up, 0=expands down. */
-    TYPE_WRITABLE = 2,          /* 1=Read/write, 0=read-only. */
-
-    /* Code segment types. */
-    TYPE_CONFORMING = 4,        /* 1=Conforming, 0=nonconforming. */
-    TYPE_READABLE = 2           /* 1=Exec/read, 0=exec-only. */
-  };
-
-static inline uint64_t
-make_dtr_operand (uint16_t limit, void *base)
-{
-  return limit | ((uint64_t) (uint32_t) base << 16);
-}
-#endif
 
 #endif /* !_MMU_H_ */

@@ -1,7 +1,7 @@
 #! /usr/bin/perl
 
 print <<'EOF';
-#include "mmu.h"
+#include "gdt.h"
 
 	.data
 .globl intr_stubs

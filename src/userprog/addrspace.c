@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "file.h"
 #include "filesys.h"
+#include "gdt.h"
 #include "init.h"
 #include "lib.h"
 #include "mmu.h"

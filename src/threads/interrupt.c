@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "intr-stubs.h"
 #include "debug.h"
+#include "gdt.h"
 #include "io.h"
 #include "lib.h"
 #include "mmu.h"
@@ -245,22 +246,28 @@ pic_end_of_interrupt (int irq)
    DPL==0 to be invoked.  See [IA32-v3] sections 4.5 and 4.8.1.1
    for further discussion.
 
-   TYPE must be either TYPE_INT_32 (for an interrupt gate) or
-   TYPE_TRAP_32 (for a trap gate).  The difference is that
-   entering an interrupt gate disables interrupts, but entering a
-   trap gate does not.  See [IA32-v3] section 5.12.1.2 for
-   discussion. */
+   TYPE must be either 14 (for an interrupt gate) or 15 (for a
+   trap gate).  The difference is that entering an interrupt gate
+   disables interrupts, but entering a trap gate does not.  See
+   [IA32-v3] section 5.12.1.2 for discussion. */
 static uint64_t
-make_gate (void (*function) (void), int dpl, enum seg_type type)
+make_gate (void (*function) (void), int dpl, int type)
 {
-  uint32_t offset = (uint32_t) function;
-  uint32_t e0 = ((offset & 0xffff)            /* Offset 15:0. */
-                 | (SEL_KCSEG << 16));        /* Target code segment. */
-  uint32_t e1 = ((offset & 0xffff0000)        /* Offset 31:16. */
-                 | (1 << 15)                  /* Present. */
-                 | ((uint32_t) dpl << 13)     /* Descriptor privilege. */
-                 | (SYS_SYSTEM << 12)         /* System. */
-                 | ((uint32_t) type << 8));   /* Gate type. */
+  uint32_t e0, e1;
+
+  ASSERT (function != NULL);
+  ASSERT (dpl >= 0 && dpl <= 3);
+  ASSERT (type >= 0 && type <= 15);
+
+  e0 = (((uint32_t) function & 0xffff)     /* Offset 15:0. */
+        | (SEL_KCSEG << 16));              /* Target code segment. */
+
+  e1 = (((uint32_t) function & 0xffff0000) /* Offset 31:16. */
+        | (1 << 15)                        /* Present. */
+        | ((uint32_t) dpl << 13)           /* Descriptor privilege level. */
+        | (0 << 12)                        /* System. */
+        | ((uint32_t) type << 8));         /* Gate type. */
+
   return e0 | ((uint64_t) e1 << 32);
 }
 
@@ -269,7 +276,7 @@ make_gate (void (*function) (void), int dpl, enum seg_type type)
 static uint64_t
 make_intr_gate (void (*function) (void), int dpl)
 {
-  return make_gate (function, dpl, TYPE_INT_32);
+  return make_gate (function, dpl, 14);
 }
 
 /* Creates a trap gate that invokes FUNCTION with the given
@@ -277,7 +284,7 @@ make_intr_gate (void (*function) (void), int dpl)
 static uint64_t
 make_trap_gate (void (*function) (void), int dpl)
 {
-  return make_gate (function, dpl, TYPE_TRAP_32);
+  return make_gate (function, dpl, 15);
 }
 
 /* Interrupt handlers. */

@@ -4,6 +4,7 @@
 #include "interrupt.h"
 #include "intr-stubs.h"
 #include "lib.h"
+#include "gdt.h"
 #include "mmu.h"
 #include "palloc.h"
 #include "random.h"

@@ -6,6 +6,4 @@
 /* Physical memory size, in 4 kB pages. */
 size_t ram_pages;
 
-struct tss *tss;
-
 #endif /* init.h */
