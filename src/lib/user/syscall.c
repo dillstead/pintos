@@ -29,9 +29,9 @@ join (pid_t pid)
 }
 
 bool
-create (const char *file)
+create (const char *file, unsigned initial_size)
 {
-  return syscall (SYS_create, file);
+  return syscall (SYS_create, file, initial_size);
 }
 
 bool
