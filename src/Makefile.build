@@ -70,7 +70,7 @@ all: os.dsk
 threads/intr-stubs.S: threads/intr-stubs.pl threads/loader.h
 	$< > $@
 
-threads/kernel.lds.s: CPPFLAGS += -P -C
+threads/kernel.lds.s: CPPFLAGS += -P
 threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
 
 kernel.o: threads/kernel.lds.s $(OBJECTS) 
