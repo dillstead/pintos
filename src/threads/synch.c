@@ -192,8 +192,8 @@ lock_acquire (struct lock *lock)
 /* Releases LOCK, which must be owned by the current thread.
 
    An interrupt handler cannot acquire a lock, so it does not
-   make sense to try to signal a condition variable within an
-   interrupt handler. */
+   make sense to try to release a lock within an interrupt
+   handler. */
 void
 lock_release (struct lock *lock) 
 {
