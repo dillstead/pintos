@@ -408,7 +408,9 @@ sub run_pintos {
 # Grade the test.
 sub grade_test {
     # Read test output.
-    my (@output) = snarf ("output/$test/run.out");
+    my ($outfile) = "output/$test/run.out";
+    die "$outfile: missing test output file (make failed?)" if ! -e $outfile;
+    my (@output) = snarf ($outfile);
 
     # If there's a function "grade_$test", use it to evaluate the output.
     # If there's a file "$GRADES_DIR/$test.exp", compare its contents
