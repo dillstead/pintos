@@ -27,7 +27,7 @@
    handlers. */
 
 /* Queue buffer size, in bytes. */
-#define INTQ_BUFSIZE 8
+#define INTQ_BUFSIZE 64
 
 /* A circular queue of bytes. */
 struct intq
