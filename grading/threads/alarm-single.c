@@ -130,6 +130,7 @@ test_sleep (int thread_cnt, int iterations)
   
   printf ("Test complete.\n");
 
+  lock_release (&test.output_lock);
   free (output);
   free (threads);
 }
