@@ -228,8 +228,16 @@ static struct arena *
 block_to_arena (struct block *b)
 {
   struct arena *a = pg_round_down (b);
+
+  /* Check that the arena is valid. */
   ASSERT (a != NULL);
   ASSERT (a->magic == ARENA_MAGIC);
+
+  /* Check that the block is properly aligned for the arena. */
+  ASSERT (a->desc == NULL
+          || (pg_ofs (b) - sizeof *a) % a->desc->block_size == 0);
+  ASSERT (a->desc != NULL || pg_ofs (b) == sizeof *a);
+
   return a;
 }
 
