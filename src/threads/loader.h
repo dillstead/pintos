@@ -8,11 +8,14 @@
 /* Physical address of kernel base. */
 #define LOADER_KERN_BASE 0x100000       /* 1 MB. */
 
-/* The loader maps 4 MB of the start of physical memory to this
-   virtual base address.  Later, the kernel adds the rest of
-   physical memory to the mapping.
+/* Kernel virtual address at which all physical memory is mapped.
+
+   The loader maps the 4 MB at the bottom of physical memory to
+   this virtual base address.  Later, paging_init() adds the rest
+   of physical memory to the mapping.
+
    This must be aligned on a 4 MB boundary. */
-#define LOADER_PHYS_BASE 0xb0000000     /* 3 GB. */
+#define LOADER_PHYS_BASE 0xc0000000     /* 3 GB. */
 
 /* Offsets within the loader. */
 #define LOADER_BIOS_SIG (LOADER_SIZE - 2)        /* aa55 BIOS signature. */
