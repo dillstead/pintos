@@ -1,5 +1,4 @@
 #include <syscall.h>
-#include "syscall-stub.h"
 #include "../syscall-nr.h"
 
 /* Invokes syscall NUMBER, passing no arguments, and returns the
