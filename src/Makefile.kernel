@@ -2,18 +2,17 @@
 
 include Make.vars
 BUILD_SUBDIRS = $(addprefix build/, $(SUBDIRS))
-CP = cp
-MKDIR = mkdir
 
-all: build build/Makefile $(BUILD_SUBDIRS)
+all: dirs
 	$(MAKE) -C build
 
-$(BUILD_SUBDIRS):
-	$(MKDIR) $@
+dirs: build build/Makefile $(BUILD_SUBDIRS)
 build:
-	$(MKDIR) $@
+	mkdir $@
 build/Makefile: ../Makefile.build
-	$(CP) $< $@
+	cp $< $@
+$(BUILD_SUBDIRS):
+	mkdir $@
 
 clean:
 	rm -rf build
