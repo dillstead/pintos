@@ -401,7 +401,12 @@ sub run_pintos {
     my ($cmd_line, %args) = @_;
     my ($retval) = xsystem ($cmd_line, %args);
     return 'ok' if $retval eq 'ok';
-    return "Timed out after $args{TIMEOUT} seconds" if $retval eq 'timeout';
+    if ($retval eq 'timeout') {
+	my ($msg) = "Timed out after $args{TIMEOUT} seconds";
+	my ($load_avg) = `uptime` =~ /(load average:.*)$/i;
+	$msg .= " - $load_avg" if defined $load_avg;
+	return $msg;
+    }
     return 'Error running Bochs' if $retval eq 'error';
     die;
 }
