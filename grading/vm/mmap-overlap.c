@@ -14,6 +14,12 @@ main (void)
   size_t i;
   int fd[2];
 
+#ifndef PINTOS
+  printf ("Sorry, this test won't work on POSIX,\n"
+          "because POSIX will accept overlapping mmaps.\n");
+  abort ();
+#endif
+
   printf ("(mmap-overlap) begin\n");
 
   for (i = 0; i < 2; i++) 

@@ -21,7 +21,7 @@ mmap_write_SRC = mmap-write.c
 mmap_exit_SRC = mmap-exit.c
 mmap_shuffle_SRC = mmap-shuffle.c arc4.c cksum.c
 
-PROGS = $(TESTS) child-linear child-sort
+PROGS = $(TESTS) child-linear child-sort child-mm-wrt
 child_linear_SRC = child-linear.c arc4.c
 child_sort_SRC = child-sort.c
-
+child_mm_wrt_SRC = child-mm-wrt.c

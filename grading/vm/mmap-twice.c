@@ -18,7 +18,7 @@ main (void)
 
   for (i = 0; i < 2; i++) 
     {
-      fd[i] = open ("sample");
+      fd[i] = open ("sample.txt");
       if (fd[i] < 0) 
         {
           printf ("(mmap-twice) open() %zu failed\n", i);

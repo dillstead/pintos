@@ -44,7 +44,7 @@ main (void)
     }
 
   read (fd, buf, strlen (sample));
-  if (memcmp (ACTUAL, sample, strlen (sample)))
+  if (memcmp (buf, sample, strlen (sample)))
     {
       printf ("(mmap-exit) read of mmap-written file reported bad data\n");
       return 1;

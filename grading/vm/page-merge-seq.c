@@ -55,7 +55,7 @@ sort (void)
       close (fd);
 
       /* Sort with subprocess. */
-      pid_t child = exec ("child-sort");
+      pid_t child = exec ("child-sort buffer");
       if (child == -1) 
         {
           printf ("(page-merge-seq) exec() failed\n");

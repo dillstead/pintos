@@ -1,13 +1,13 @@
-(page-linear) begin
-(page-linear) init: cksum=3115322833
-(page-linear) shuffle 0: cksum=1691062564
-(page-linear) shuffle 1: cksum=1973575879
-(page-linear) shuffle 2: cksum=1647619479
-(page-linear) shuffle 3: cksum=96566261
-(page-linear) shuffle 4: cksum=3885786467
-(page-linear) shuffle 5: cksum=3022003332
-(page-linear) shuffle 6: cksum=3614934266
-(page-linear) shuffle 7: cksum=2704001777
-(page-linear) shuffle 8: cksum=735775156
-(page-linear) shuffle 9: cksum=1864109763
-(page-linear) end
+(page-shuffle) begin
+(page-shuffle) init: cksum=3115322833
+(page-shuffle) shuffle 0: cksum=63424829
+(page-shuffle) shuffle 1: cksum=3779635387
+(page-shuffle) shuffle 2: cksum=384449947
+(page-shuffle) shuffle 3: cksum=1883585126
+(page-shuffle) shuffle 4: cksum=2588854009
+(page-shuffle) shuffle 5: cksum=2250425557
+(page-shuffle) shuffle 6: cksum=866944104
+(page-shuffle) shuffle 7: cksum=3710004019
+(page-shuffle) shuffle 8: cksum=3936244654
+(page-shuffle) shuffle 9: cksum=2799827580
+(page-shuffle) end

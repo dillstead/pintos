@@ -1,0 +1,14 @@
+(page-merge-par) begin
+page-merge-par) init
+(page-merge-par) sort chunk 0
+(page-merge-par) sort chunk 1
+(page-merge-par) sort chunk 2
+(page-merge-par) sort chunk 3
+(page-merge-par) sort chunk 4
+(page-merge-par) sort chunk 5
+(page-merge-par) sort chunk 6
+(page-merge-par) sort chunk 7
+(page-merge-par) merge
+(page-merge-par) verify
+(page-merge-par) success, buf_idx=516096
+(page-merge-par) end
