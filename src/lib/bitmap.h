@@ -45,4 +45,6 @@ void bitmap_read (struct bitmap *, struct file *);
 void bitmap_write (const struct bitmap *, struct file *);
 #endif
 
+void bitmap_dump (const struct bitmap *);
+
 #endif /* bitmap.h */

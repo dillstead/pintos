@@ -24,6 +24,13 @@ byte_cnt (const struct bitmap *b)
   return sizeof (elem_type) * elem_cnt (b);
 }
 
+static inline elem_type
+last_mask (const struct bitmap *b) 
+{
+  int last_bits = b->bit_cnt % ELEM_BITS;
+  return last_bits ? ((elem_type) 1 << last_bits) - 1 : (elem_type) -1;
+}
+
 bool
 bitmap_init (struct bitmap *b, size_t bit_cnt) 
 {
@@ -71,16 +78,12 @@ void
 bitmap_set_all (struct bitmap *b, bool value) 
 {
   size_t i;
-  size_t leftover_bits;
   
   ASSERT (b != NULL);
 
   for (i = 0; i < elem_cnt (b); i++)
     b->bits[i] = value ? (elem_type) -1 : 0;
-
-  leftover_bits = b->bit_cnt % ELEM_BITS;
-  if (leftover_bits != 0) 
-    b->bits[i - 1] = ((elem_type) 1 << leftover_bits) - 1;
+  b->bits[elem_cnt (b) - 1] &= last_mask (b);
 }
 
 void
@@ -114,25 +117,24 @@ bitmap_test (const struct bitmap *b, size_t idx)
 size_t
 bitmap_scan (const struct bitmap *b, bool value) 
 {
-  elem_type ignore;
+  elem_type ignore = value ? 0 : (elem_type) -1;
   size_t idx;
   
   ASSERT (b != NULL);
-  ignore = value ? 0 : (elem_type) -1;
   for (idx = 0; idx < elem_cnt (b); idx++)
     {
       elem_type e = b->bits[idx];
-      if (e != (elem_type) -1)
+      if (e != ignore)
         {
           idx *= ELEM_BITS;
 
-          while ((e & 1) == 1)
+          while ((e & 1) != value)
             {
               e >>= 1;
               idx++;
             }
 
-          return idx;
+          return idx < b->bit_cnt ? idx : BITMAP_ERROR;
         }
     }
   return BITMAP_ERROR;
@@ -203,7 +205,6 @@ bitmap_none (const struct bitmap *b)
 bool
 bitmap_all (const struct bitmap *b) 
 {
-  size_t leftover_bits;
   size_t i;
 
   ASSERT (b != NULL);
@@ -213,13 +214,8 @@ bitmap_all (const struct bitmap *b)
   
   for (i = 0; i < elem_cnt (b) - 1; i++)
     if (b->bits[i] != (elem_type) -1)
-      return true;
-
-  leftover_bits = b->bit_cnt % ELEM_BITS;
-  if (leftover_bits == 0)
-    return b->bits[i] == (elem_type) -1;
-  else
-    return b->bits[i] == ((elem_type) 1 << leftover_bits) - 1;
+      return false;
+  return b->bits[i] == last_mask (b);
 }
 
 #ifdef FILESYS
@@ -227,6 +223,7 @@ void
 bitmap_read (struct bitmap *b, struct file *file) 
 {
   file_read_at (file, b->bits, byte_cnt (b), 0);
+  b->bits[elem_cnt (b) - 1] &= last_mask (b);
 }
 
 void
@@ -235,3 +232,9 @@ bitmap_write (const struct bitmap *b, struct file *file)
   file_write_at (file, b->bits, byte_cnt (b), 0);
 }
 #endif /* FILESYS */
+
+void
+bitmap_dump (const struct bitmap *b) 
+{
+  hex_dump (b->bits, byte_cnt (b), false);
+}
