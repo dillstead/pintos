@@ -250,7 +250,7 @@ cond_init (struct condition *cond, const char *name)
 }
 
 /* Atomically releases LOCK and waits for COND to be signaled by
-   some other piece of code.  After COND is signalled, LOCK is
+   some other piece of code.  After COND is signaled, LOCK is
    reacquired before returning.  LOCK must be held before calling
    this function.
 
@@ -261,7 +261,7 @@ cond_init (struct condition *cond, const char *name)
    again.
 
    A given condition variable is associated with only a single
-   lock, but one lock may be be associated with any number of
+   lock, but one lock may be associated with any number of
    condition variables.  That is, there is a one-to-many mapping
    from locks to condition variables.
 

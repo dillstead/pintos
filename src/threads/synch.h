@@ -12,7 +12,7 @@ struct semaphore
     struct list waiters;        /* List of waiting threads. */
   };
 
-void sema_init (struct semaphore *, unsigned value, const char *);
+void sema_init (struct semaphore *, unsigned value, const char *name);
 void sema_down (struct semaphore *);
 void sema_up (struct semaphore *);
 const char *sema_name (const struct semaphore *);
@@ -25,7 +25,7 @@ struct lock
     struct semaphore semaphore; /* Binary semaphore controlling access. */
   };
 
-void lock_init (struct lock *, const char *);
+void lock_init (struct lock *, const char *name);
 void lock_acquire (struct lock *);
 void lock_release (struct lock *);
 bool lock_held_by_current_thread (const struct lock *);
@@ -38,7 +38,7 @@ struct condition
     struct list waiters;        /* List of waiting threads. */
   };
 
-void cond_init (struct condition *, const char *);
+void cond_init (struct condition *, const char *name);
 void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);

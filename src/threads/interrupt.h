@@ -41,7 +41,7 @@ struct intr_frame
 
     /* Pushed by the CPU.
        These are the interrupted task's saved registers. */
-    void (*eip) (void);         /* Current or next instruction. */
+    void (*eip) (void);         /* Next instruction to execute. */
     uint16_t cs, :16;           /* Code segment for eip. */
     uint32_t eflags;            /* Saved CPU flags. */
     void *esp;                  /* Saved stack pointer. */
