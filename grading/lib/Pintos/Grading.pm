@@ -423,9 +423,9 @@ sub grade_test {
     # Read test output.
     my ($outfile) = "output/$test/run.out";
     if (! -e $outfile) {
-	if (-s "output/$test.make.err") {
+	if (-s "output/$test/make.err") {
 	    # make failed.
-	    $details{$test} = snarf ("output/$test.make.err");
+	    $details{$test} = snarf ("output/$test/make.err");
 	    return "make failed.  Error messages at end of file.";
 	}
 	die "$outfile: missing test output file";
