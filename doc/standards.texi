@@ -39,9 +39,10 @@ follows the @uref{http://www.gnu.org/prep/standards_toc.html, , GNU
 Coding Standards}.  We encourage you to follow the applicable parts of
 them too, especially chapter 5, ``Making the Best Use of C.''  Using a
 different style won't cause actual problems, but it's ugly to see
-gratuitous differences in style from one function to another.
+gratuitous differences in style from one function to another.  If your
+code is too ugly, it will cost you points.
 
-Pintos comments sometimes refer to outside standards or
+Pintos comments sometimes refer to external standards or
 specifications by writing a name inside square brackets, like this:
 @code{[IA32-v3]}.  These names refer to the reference names used in
 this documentation (@pxref{References}).
