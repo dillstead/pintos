@@ -35,6 +35,9 @@ All the test programs from the previous project should also work with
 this project.  You should also write programs to test the new features
 introduced in this project.
 
+You will continue to handle Pintos disks and file systems the same way
+you did in the previous assignment (@pxref{Using the File System}).
+
 Your submission should define @code{THREAD_JOIN_IMPLEMENTED} in
 @file{constants.h} (@pxref{Conditional Compilation}).
 
@@ -376,7 +379,11 @@ is simply an outline of our suggested implementation.
 
 Implement paging to and from files and the swap disk.  You may use the
 disk on interface @code{hd1:1} as the swap disk, using the disk
-interface prototyped in @code{devices/disk.h}.
+interface prototyped in @code{devices/disk.h}.  From the @file{vm/build}
+directory, use the command @code{pintos make-disk swap.dsk @var{n}} to
+create an @var{n} MB swap disk named @file{swap.dsk}.  Afterward,
+@file{swap.dsk} will automatically be attached when you run
+@command{pintos}.
 
 You will need routines to move a page from memory to disk and from
 disk to memory, where ``disk'' is either a file or the swap disk.  If
