@@ -704,14 +704,13 @@ the user virtual address space, in the page just below virtual address
 You may find the non-standard @code{hex_dump()} function, declared in
 @file{<stdio.h>}, useful for debugging your argument passing code.
 Here's what it would show in the above example, given that
-@code{PHYS_BASE} is @t{0xc0000000}, so that the dump starts at virtual
-address @t{0xbfffffcc}:
+@code{PHYS_BASE} is @t{0xc0000000}:
 
 @example
- 00 00 00 00 04 00 00 00-d8 ff ff bf ed ff ff bf |................|
- f5 ff ff bf f8 ff ff bf-fc ff ff bf 00 00 00 00 |................|
- 00 2f 62 69 6e 2f 6c 73-00 2d 6c 00 2a 2e 68 00 |./bin/ls.-l.*.h.|
- 2a 2e 63 00                                     |*.c.            |
+bfffffc0                                      00 00 00 00 |            ....|
+bfffffd0  04 00 00 00 d8 ff ff bf-ed ff ff bf f5 ff ff bf |................|
+bfffffe0  f8 ff ff bf fc ff ff bf-00 00 00 00 00 2f 62 69 |............./bi|
+bffffff0  6e 2f 6c 73 00 2d 6c 00-2a 2e 68 00 2a 2e 63 00 |n/ls.-l.*.h.*.c.|
 @end example
 
 @node System Calls
