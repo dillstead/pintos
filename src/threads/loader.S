@@ -133,33 +133,33 @@ read_sector:
 	cmpl $KERNEL_LOAD_PAGES*8 + 1, %ebx
 	jnz read_sector
 
-##### Create temporary PDE and PTE, set page directory pointer, and turn
-##### on paging.
+##### Create temporary page directory and page table, set page
+##### directory pointer, and turn on paging.
 ##### FIXME? We could use a single 4 MB page instead of 1024 4 kB pages.
 
-	# Create PDE at 64 kB.
+	# Create page directory at 64 kB.
 	movl $0x10000, %edi		
 	movl %edi, %cr3
 
-	# Fill PDE with zeroes.
+	# Fill page directory with zeroes.
 	subl %eax, %eax
 	movl $0x400, %ecx
 	rep stosl
 
-	# Set PDE entries for 0 and LOADER_PHYS_BASE to point to the
-	# PTE.
+	# Set PDEs for 0 and LOADER_PHYS_BASE to point to the
+	# page table.
 	movl $0x11000 | PG_U | PG_W | PG_P, %eax
 	movl %eax, 0x10000
 	movl %eax, 0x10000 | (LOADER_PHYS_BASE >> 20)
 
-	# Initialize PTE.
+	# Initialize page table.
 	movl $PG_U | PG_W | PG_P, %eax
 	movl $0x400, %ecx
 1:	stosl
 	addl $0x1000, %eax
 	loop 1b
 
-	# Enable paging.
+	# Turn on paging.
 	movl %cr0, %eax
 	orl $CR0_PG, %eax
 	movl %eax, %cr0
