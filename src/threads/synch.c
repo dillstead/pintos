@@ -7,7 +7,7 @@
 /* One thread in a list. */
 struct thread_elem
   {
-    struct list_elem elem;
+    list_elem elem;
     struct thread *thread;      
   };
 
@@ -205,7 +205,7 @@ lock_name (const struct lock *lock)
 /* One semaphore in a list. */
 struct semaphore_elem 
   {
-    struct list_elem elem;
+    list_elem elem;
     struct semaphore semaphore;
   };
 
