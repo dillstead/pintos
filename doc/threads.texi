@@ -1,0 +1,574 @@
+@node Project 1--Threads, Project 2--User Programs, Top, Top
+@chapter Project 1: Threads
+
+In this assignment, we give you a minimally functional thread system.
+Your job is to extend the functionality of this system to gain a
+better understanding of synchronization problems. Additionally, you
+will use at least part of this increased functionality in future
+assignments.
+
+You will be working in the @file{threads} and @file{devices}
+directories for this assignment.  Compilation should be done in the
+@file{threads} directory.
+
+@menu
+* Understanding Threads::       
+* Debugging versus Testing::    
+* Tips::                        
+* Problem 1-1 Alarm Clock::     
+* Problem 1-2 Join::            
+* Problem 1-3 Priority Scheduling::  
+* Problem 1-4 Advanced Scheduler::  
+* Threads FAQ::                 
+@end menu
+
+@node Understanding Threads, Debugging versus Testing, Project 1--Threads, Project 1--Threads
+@section Understanding Threads
+
+The first step is to read and understand the initial thread system.
+Pintos, by default, implements thread creation and thread completion,
+a simple scheduler to switch between threads, and synchronization
+primitives (semaphores, locks, and condition variables). 
+@c FIXME: base system doesn't do anything. Debugger sucks.
+However, there's a lot of magic going on in some of this code, so you
+should compile and run the base system to see a simple test of the
+code.  You should trace the execution using your favorite debugger to
+get a sense for what's going on.
+
+When a thread is created, you are creating a new context to be
+scheduled. You provide a function to be run in this context as an
+argument to @code{thread_create()}. The first time the thread is
+scheduled and runs, it will start from the beginning of that function
+and execute it in the context. When that function returns, that thread
+completes. Each thread, therefore, acts like a mini-program running
+inside Pintos, with the function passed to @code{thread_create()}
+acting like @code{main()}.
+
+At any given time, Pintos is running exactly one thread, with the
+others switched out.  The scheduler decides which thread to run next
+when it needs to switch between them.  (If no thread is ready to run
+at any given time, then the special ``idle'' thread runs.)  The
+synchronization primitives are used to force context switches when one
+thread needs to wait for another thread to do something.
+
+The exact mechanics of a context switch are pretty gruesome and have
+been provided for you in @file{switch.S} (this is 80@var{x}86
+assembly; don't worry about understanding it). It involves saving the
+state of the currently running thread and restoring the state of the
+thread we're switching to.
+@c FIXME 
+Slowly trace through a context switch to see what happens.  Be sure to
+keep track of each thread's address and state, and what procedures are
+on the call stack for each thread. You will notice that when one
+thread calls @code{switch_threads()}, another thread starts running,
+and the first thing the new thread does is to return from
+@code{switch_threads()}. We realize this comment will seem cryptic to
+you at this point, but you will understand threads once you understand
+why the @code{switch_threads()} that gets called is different from the
+@code{switch_threads()} that returns.
+
+@strong{Warning}: In Pintos, each thread is assigned a small,
+fixed-size execution stack just under @w{4 kB} in size.  The kernel
+does try to detect stack overflow, but it cannot always succeed.  You
+ma cause bizarre problems, such as mysterious kernel panics, if you
+declare large data structures as non-static local variables,
+e.g. @samp{int buf[1000];}.  Alternatives to stack allocation include
+the page allocator in @file{threads/palloc.c} and the block allocator
+in @file{threads/malloc.c}.  Note that the page allocator doles out
+@w{4 kB} chunks and that @code{malloc()} has a @w{2 kB} block size
+limit.  If you need larger chunks, consider using a linked structure
+instead.
+
+@node Debugging versus Testing, Tips, Understanding Threads, Project 1--Threads
+@section Debugging versus Testing
+
+When you're debugging code, it's useful to be able to be able to run a
+program twice and have it do exactly the same thing.  On second and
+later runs, you can make new observations without having to discard or
+verify your old observations.  This property is called
+``reproducibility.''  The simulator we use, Bochs, can be set up for
+reproducibility.  If you use the Bochs configuration files we provide,
+which specify @samp{ips: @var{n}} where @var{n} is a number of
+simulated instructions per second, your simulations can be
+reproducible.
+
+Of course, a simulation can only be reproducible from one run to the
+next if its input is the same each time.  For simulating an entire
+computer, as we do, this means that every part of the computer must be
+the same.  For example, you must use the same disks, the same version
+of Bochs, and you must not hit any keys on the keyboard (because you
+could not be sure to hit them at exactly the same point each time)
+during the runs.
+
+While reproducibility is useful for debugging, it is a problem for
+testing thread synchronization, an important part of this project.  In
+particular, when Bochs is set up for reproducibility, timer interrupts
+will come at perfectly reproducible points, and therefore so will
+thread switches.  That means that running the same test several times
+doesn't give you any greater confidence in your code's correctness
+than does running it only once.
+
+So, to make your code easier to test, we've added a feature to Bochs
+that makes timer interrupts come at random intervals, but in a
+perfectly predictable way.  In particular, if you put a line
+@samp{ips-jitter: @var{seed}}, where @var{seed} is an integer, into
+your Bochs configuration file, then timer interrupts will come at
+irregularly spaced intervals.  Within a single @var{seed} value,
+execution will still be reproducible, but timer behavior will change
+as @var{seed} is varied.  Thus, for the highest degree of confidence
+you should test your code with many seed values.
+
+@node Tips, Problem 1-1 Alarm Clock, Debugging versus Testing, Project 1--Threads
+@section Tips
+
+There should be no busy-waiting in any of your solutions to this
+assignment.  Furthermore, resist the temptation to directly disable
+interrupts in your solution by calling @code{intr_disable()} or
+@code{intr_set_level()}, although you may find doing so to be useful
+while debugging.  Instead, use semaphores, locks and condition
+variables to solve synchronization problems.  Hint: read the comments
+in @file{threads/synch.h} if you're unsure what synchronization
+primitives may be used in what situations.
+
+Given some designs of some problems, there may be one or two instances
+in which it is appropriate to directly change the interrupt levels
+instead of relying on the given synchroniztion primitives.  This must
+be justified in your @file{DESIGNDOC} file.  If you're not sure you're
+justified, ask!
+
+While all parts of this assignment are required if you intend to earn
+full credit on this project, keep in mind that Problem 2 (Join) will
+be needed for future assignments, so you'll want to get this one
+right.  We don't give out solutions, so you're stuck with your Join
+code for the whole quarter.  Problem 1 (Alarm Clock) could be very
+handy, but not strictly required in the future.  The upshot of all
+this is that you should focus heavily on making sure that your
+implementation of Join works correctly, since if it's broken, you will
+need to fix it for future assignments.  The other parts can be turned
+off in the future if you find you can't make them work quite right.
+
+Also keep in mind that Problem 4 (the MFQS) builds on the features you
+implement in Problem 3, so to avoid unnecessary code duplication, it
+would be a good idea to divide up the work among your team members
+such that you have Problem 3 fully working before you begin to tackle
+Problem 4.
+
+@node Problem 1-1 Alarm Clock, Problem 1-2 Join, Tips, Project 1--Threads
+@section Problem 1-2: Alarm Clock
+
+Improve the implementation of the timer device defined in
+@file{devices/timer.c} by reimplementing @code{timer_msleep(0}.
+Threads call @code{timer_msleep(@var{x})} to suspend execution until
+time has advanced by at least @w{@var{x} milliseconds}.  This is
+useful for threads that operate in real-time, for example, for
+blinking the cursor once per second.  There is no requirement that
+threads start running immediately after waking up; just put them on
+the ready queue after they have waited for approximately the right
+amount of time.
+
+A working implementation of this function is provided.  However, the
+version provided is poor, because it ``busy waits,'' that is, it spins
+in a tight loop checking the current time until the current time has
+advanced far enough.  This is undesirable because it wastes time that
+could potentially be used more profitably by another thread.  Your
+solution should not busy wait.
+
+The argument to @code{timer_msleep()} is expressed in milliseconds.
+You must convert it into timer ticks, rounding up.  The code provided
+does this acceptably; there is no need to change it.
+
+@node Problem 1-2 Join, Problem 1-3 Priority Scheduling, Problem 1-1 Alarm Clock, Project 1--Threads
+@section Problem 1-2: Join
+
+Implement @code{thread_join(struct thread *)} in
+@file{threads/thread.c}.  There is already a prototype for it in
+@file{threads/thread.h}, which you should not change.  This function
+causes the currently running thread to block until thread passed as an
+argument exits.  If A is the running thread and B is the argument,
+then we say that ``A joins B'' in this case.
+
+The model for @code{thread_join()} is the @command{wait} system call
+in Unix-like systems.  (Try reading the manpages.)  That system call
+can only be used by a parent process to wait for a child's death.  You
+should implement @code{thread_join()} to have the same restriction.
+That is, a thread may only join on its immediate children.
+
+A thread need not ever be joined.  Your solution should properly free
+all of a thread's resources, including its @code{struct thread},
+whether it is ever joined or not, and regardless of whether the child
+exits before or after its parent.  That is, a thread should be freed
+exactly once in all cases.
+
+Joining a given thread is idempotent.  That is, joining a thread T
+multiple times is equivalent to joining it once, because T has already
+exited at the time of the later joins.  Thus, joins on T after the
+first should return immediately.
+
+The behavior of calling @code{thread_join()} on an thread that is not
+the caller's child is undefined.  You need not handle this case
+gracefully.
+
+Consider all the ways a join can occur: nested joins (A joins B when B
+is joined on C), multiple joins (A joins B, then A joins C), and so
+on.  Does your join work if @code{thread_join()} is called on a thread
+that has not yet been scheduled for the first time?  You should handle
+all of these cases.  Write test code that demonstrates the cases your
+join works for.  Don't overdo the output volume, please!
+
+Be careful to program this function correctly.  You will need its
+functionality for project 2.
+
+@node Problem 1-3 Priority Scheduling, Problem 1-4 Advanced Scheduler, Problem 1-2 Join, Project 1--Threads
+@section Problem 1-3 Priority Scheduling
+
+Implement priority scheduling in Pintos.  Priority
+scheduling is a key building block for real-time systems.  Implement functions
+@code{thread_set_priority()} to set the priority of a thread and
+@code{thread_get_priority()} to get the priority of a thread.  There
+are already prototypes for these functions in @file{threads/thread.h},
+which you should not change.
+
+When a thread is added to the ready list that has a higher priority
+than the currently running thread, the current thread should
+immediately yield the processor to the new thread.  Similarly, when
+threads are waiting for a lock, semaphore or condition variable, the
+highest priority waiting thread should be woken up first.  A thread's
+priority may be set at any time, including while the thread is waiting
+on a lock, semaphore, or condition variable.
+
+One issue with priority scheduling is ``priority inversion'': if a
+high priority thread needs to wait for a low priority thread (for
+instance, for a lock held by a low priority thread, or in
+@code{thread_join()} for a thread to complete), and a middle priority
+thread is on the ready list, then the high priority thread will never
+get the CPU because the low priority thread will not get any CPU time.
+A partial fix for this problem is to have the waiting thread
+``donate'' its priority to the low priority thread while it is holding
+the lock, then recall the donation once it has acquired the lock.
+Implement this fix.
+
+You will need to account for all different orders that priority
+donation and inversion can occur.  Be sure to handle multiple
+donations, in which multiple priorities are donated to a thread.  You
+must also handle nested donation: given high, medium, and low priority
+threads H, M, and L, respectively, and supposing H is waiting on a
+lock that M holds and M is waiting on a lock that L holds, both M and
+L should be boosted to H's priority.
+
+You only need to implement priority donation when a thread is waiting
+for a lock held by a lower-priority thread. You do not need to
+implement this fix for semaphores, condition variables or joins.
+However, you do need to implement priority scheduling in all cases.
+
+@node Problem 1-4 Advanced Scheduler, Threads FAQ, Problem 1-3 Priority Scheduling, Project 1--Threads
+@section Problem 1-4 Advanced Scheduler
+
+Implement Solaris's multilevel feedback queue scheduler (MFQS), as
+explained below, to reduce the average response time for running jobs
+on your system. 
+@c FIXME need link
+
+Demonstrate that your scheduling algorithm reduces response time
+relative to the original Pintos scheduling algorithm (round robin) for
+at least one workload of your own design (i.e. in addition to the
+provided test).
+
+You may assume a static priority for this problem. It is not necessary
+to ``re-donate'' a thread's priority if it changes (although you are
+free to do so).
+
+@node Threads FAQ,  , Problem 1-4 Advanced Scheduler, Project 1--Threads
+@section FAQ
+
+@enumerate 1
+@item General FAQs
+
+@enumerate 1
+@item
+@b{I am adding a new @file{.h} or @file{.c} file.  How do I fix the
+@file{Makefile}s?}
+
+To add a @file{.c} file, edit the top-level @file{Makefile.build}.
+You'll want to add your file to variable @samp{@var{dir}_SRC}, where
+@var{dir} is the directory where you added the file.  For this
+project, that means you should add it to @code{threads_SRC}, or
+possibly @code{devices_SRC} if you put in the @file{devices}
+directory.  Then run @code{make}.  If your new file doesn't get
+compiled, run @code{make clean} and then try again.
+
+There is no need to edit the @file{Makefile}s to add a @file{.h} file.
+
+@item
+@b{If a thread finishes, should its children be terminated immediately,
+or should they finish normally?}
+
+You should feel free to decide what semantics you think this
+should have. You need only provide justification for your
+decision.
+
+@item
+@b{Why can't I disable interrupts?}
+
+Turning off interrupts should only be done for short amounts of time,
+or else you end up losing important things such as disk or input
+events.  Turning off interrupts also increases the interrupt handling
+latency, which can make a machine feel sluggish if taken too far.
+Therefore, in general, setting the interrupt level should be used
+sparingly.  Also, any synchronization problem can be easily solved by
+turning interrupts off, since while interrupts are off, there is no
+concurrency, so there's no possibility for race condition.
+
+To make sure you understand concurrency well, we are discouraging you
+from taking this shortcut at all in your solution.  If you are unable
+to solve a particular synchronization problem with semaphores, locks,
+or conditions, or think that they are inadequate for a particular
+reason, you may turn to disabling interrupts.  If you want to do this,
+we require in your design document a complete justification and
+scenario (i.e.@: exact sequence of events) to show why interrupt
+manipulation is the best solution.  If you are unsure, the TAs can
+help you determine if you are using interrupts too haphazardly.  We
+want to emphasize that there are only limited cases where this is
+appropriate.
+
+@item
+@b{Where might interrupt-level manipuation be appropriate?}
+
+You might find it necessary in some solutions to the Alarm problem.
+
+You might want it at one small point for the priority scheduling
+problem.  Note that it is not required to use interrupts for these
+problems.  There are other, equally correct solutions that do not
+require interrupt manipulation.  However, if you do manipulate
+interrupts and @strong{correctly and fully document it} in your design
+document, we will allow limited use of interrupt disabling.
+@end enumerate
+
+@item Alarm Clock FAQs
+
+@enumerate 1
+@item
+@b{Why can't I use most synchronization primitives in an interrupt
+handler?}
+
+As you've discovered, you cannot sleep in an external interrupt
+handler.  Since many lock, semaphore, and condition variable functions
+attempt to sleep, you won't be able to call those in
+@code{timer_interrupt()}.  You may still use those that never sleep.
+
+Having said that, you need to make sure that global data does not get
+updated by multiple threads simultaneously executing
+@code{timer_msleep()}.  Here are some pieces of information to think
+about:
+
+@enumerate a
+@item
+Interrupts are turned off while @code{timer_interrupt()} runs.  This
+means that @code{timer_interrupt()} will not be interrupted by a
+thread running in @code{timer_msleep()}.
+
+@item
+A thread in @code{timer_msleep()}, however, can be interrupted by a
+call to @code{timer_interrupt()}, except when that thread has turned
+off interrupts.
+
+@item
+Examples of synchronization mechanisms have been presented in lecture.
+Going over these examples should help you understand when each type is
+useful or needed.
+@end enumerate
+
+@item
+@b{What about timer overflow due to the fact that times are defined as
+integers? Do I need to check for that?}
+
+Don't worry about the possibility of timer values overflowing.  Timer
+values are expressed as signed 63-bit numbers, which at 100 ticks per
+second should be good for almost 2,924,712,087 years.
+@end enumerate
+
+@item Join FAQs
+
+@enumerate 1
+@item
+@b{Am I correct to assume that once a thread is deleted, it is no
+longer accessible by the parent (i.e.@: the parent can't call
+@code{thread_join(child)})?}
+
+A parent joining a child that has completed should be handled
+gracefully and should act as a no-op.
+@end enumerate
+
+@item Priority Scheduling FAQs
+
+@enumerate 1
+@item
+@b{Doesn't the priority scheduling lead to starvation? Or do I have to
+implement some sort of aging?}
+
+
+It is true that strict priority scheduling can lead to starvation
+because thread may not run if a higher-priority thread is runnable.
+In this problem, don't worry about starvation or any sort of aging
+technique.  Problem 4 will introduce a mechanism for dynamically
+changing thread priorities.
+
+This sort of scheduling is valuable in real-time systems because it
+offers the programmer more control over which jobs get processing
+time.  High priorities are generally reserved for time-critical
+tasks. It's not ``fair,'' but it addresses other concerns not
+applicable to a general-purpose operating system.
+
+@item
+@b{After a lock has been released, does the program need to switch to
+the highest priority thread that needs the lock (assuming that its
+priority is higher than that of the current thread)?}
+
+When a lock is released, the highest priority thread waiting for that
+lock should be unblocked and put on the ready to run list.  The
+scheduler should then run the highest priority thread on the ready
+list.
+
+@item
+@b{If a thread calls @code{thread_yield()} and then it turns out that
+it has higher priority than any other threads, does the high-priority
+thread continue running?}
+
+Yes.  If there is a single highest-priority thread, it continues
+running until it blocks or finishes, even if it calls
+@code{thread_yield()}.
+
+@item
+@b{If the highest priority thread is added to the ready to run list it
+should start execution immediately.  Is it immediate enough if I
+wait until next timer interrupt occurs?}
+
+The highest priority thread should run as soon as it is runnable,
+preempting whatever thread is currently running.
+
+@item
+@b{What happens to the priority of the donating thread?  Do the priorities
+get swapped?}
+
+No.  Priority donation only changes the priority of the low-priority
+thread.  The donating thread's priority stays unchanged.  Also note
+that priorities aren't additive: if thread A (with priority 5) donates
+to thread B (with priority 3), then B's new priority is 5, not 8.
+
+@item 
+@b{Can a thread's priority be changed while it is sitting on the ready
+queue?}
+
+Yes.  Consider this case: low-priority thread L currently has a lock
+that high-priority thread H wants.  H donates its priority to L (the
+lock holder).  L finishes with the lock, and then loses the CPU and is
+moved to the ready queue.  Now L's old priority is restored while it
+is in the ready queue.
+
+@item
+@b{Can a thread's priority change while it is sitting on the queue of a
+semaphore?}
+
+Yes.  Same scenario as above except L gets blocked waiting on a new
+lock when H restores its priority.
+
+@item
+@b{Why is pubtest3's FIFO test skipping some threads! I know my scheduler
+is round-robin'ing them like it's supposed to!  Our output is like this:}
+
+@example
+Thread 0 goes.
+Thread 2 goes.
+Thread 3 goes.
+Thread 4 goes.
+Thread 0 goes.
+Thread 1 goes.
+Thread 2 goes.
+Thread 3 goes.
+Thread 4 goes.
+@end example
+
+@noindent @b{which repeats 5 times and then}
+
+@example
+Thread 1 goes.
+Thread 1 goes.
+Thread 1 goes.
+Thread 1 goes.
+Thread 1 goes.
+@end example
+
+This happens because context switches are being invoked by the test
+when it explicitly calls @code{thread_yield()}.  However, the time
+slice timer is still alive and so, every tick (by default), thread 1
+gets switched out (caused by @code{timer_interrupt()} calling
+@code{intr_yield_on_return()}) before it gets a chance to run its
+mainline.  It is by coincidence that Thread 1 is the one that gets
+skipped in our example.  If we use a different jitter value, the same
+behavior is seen where a thread gets started and switched out
+completely.
+
+Solution: Increase the value of @code{TIME_SLICE} in
+@file{devices/timer.c} to a very high value, such as 10000, to see
+that the threads will round-robin if they aren't interrupted.
+
+@item
+@b{What happens when a thread is added to the ready list which has
+higher priority than the currently running thread?}
+
+The correct behavior is to immediately yield the processor.  Your
+solution must act this way.
+
+@item
+@b{What range of priorities should be supported and what should the
+default priority of a thread be?}
+
+Your implementation should support priorities from 0 through 59 and
+the default priority of a thread should be 29.
+@end enumerate
+
+@item Advanced Scheduler FAQs
+
+@enumerate 1
+@item
+@b{What is the interval between timer interrupts?}
+
+Timer interrupts occur @code{TIMER_FREQ} times per second.  You can
+adjust this value by editing @file{devices/timer.h}.  The default is
+100 Hz.
+
+@item
+@b{Do I have to modify the dispatch table?}
+
+No, although you are allowed to. It is possible to complete
+this problem (i.e.@: demonstrate response time improvement)
+without doing so.
+
+@item
+@b{When the scheduler changes the priority of a thread, how does this
+affect priority donation?}
+
+Short (official) answer: Don't worry about it. Your priority donation
+code may assume static priority assignment.
+
+Longer (unofficial) opinion: If you wish to take this into account,
+however, your design may end up being ``cleaner.''  You have
+considerable freedom in what actually takes place. I believe what
+makes the most sense is for scheduler changes to affect the
+``original'' (non-donated) priority.  This change may actually be
+masked by the donated priority.  Priority changes should only
+propagate with donations, not ``backwards'' from donees to donors.
+
+@item
+@b{What is meant by ``static priority''?}
+
+Once thread A has donated its priority to thread B, if thread A's
+priority changes (due to the scheduler) while the donation still
+exists, you do not have to change thread B's donated priority.
+However, you are free to do so.
+
+@item
+@b{Do I have to make my dispatch table user-configurable?}
+
+No.  Hard-coding the dispatch table values is fine.
+@end enumerate
+@end enumerate
