@@ -23,7 +23,14 @@
 /* Number of timer ticks since OS booted. */
 static volatile int64_t ticks;
 
+/* Number of loops per timer tick.
+   Initialized by timer_calibrate(). */
+static unsigned loops_per_tick;
+
 static intr_handler_func timer_interrupt;
+static bool too_many_loops (unsigned loops);
+static void busy_wait (int64_t loops);
+static void real_time_sleep (int64_t num, int32_t denom);
 
 /* Sets up the 8254 Programmable Interval Timer (PIT) to
    interrupt PIT_FREQ times per second, and registers the
@@ -40,6 +47,30 @@ timer_init (void)
   outb (0x40, count >> 8);
 
   intr_register (0x20, 0, INTR_OFF, timer_interrupt, "8254 Timer");
+}
+
+/* Calibrates loops_per_tick, used to implement brief delays. */
+void
+timer_calibrate (void) 
+{
+  unsigned high_bit, test_bit;
+
+  ASSERT (intr_get_level () == INTR_ON);
+  printf ("Calibrating timer...  ");
+
+  /* Approximate loops_per_tick as the largest power-of-two
+     still less than one timer tick. */
+  loops_per_tick = 1u << 10;
+  while (!too_many_loops (loops_per_tick << 1))
+    loops_per_tick <<= 1;
+
+  /* Refine the next 8 bits of loops_per_tick. */
+  high_bit = loops_per_tick;
+  for (test_bit = high_bit >> 1; test_bit != high_bit >> 10; test_bit >>= 1)
+    if (!too_many_loops (high_bit | test_bit))
+      loops_per_tick |= test_bit;
+
+  printf ("%'"PRIu64" loops/s.\n", (uint64_t) loops_per_tick * TIMER_FREQ);
 }
 
 /* Returns the number of timer ticks since the OS booted. */
@@ -71,29 +102,25 @@ timer_sleep (int64_t ticks)
     thread_yield ();
 }
 
-/* Returns MS milliseconds in timer ticks, rounding up. */
-int64_t
-timer_ms2ticks (int64_t ms) 
+/* Suspends execution for approximately MS milliseconds. */
+void
+timer_msleep (int64_t ms) 
 {
-  /*       MS / 1000 s          
-     ------------------------ = MS * TIMER_FREQ / 1000 ticks. 
-     (1 / TIMER_FREQ) ticks/s
-  */
-  return DIV_ROUND_UP (ms * TIMER_FREQ, 1000);
+  real_time_sleep (ms, 1000);
 }
 
-/* Returns US microseconds in timer ticks, rounding up. */
-int64_t
-timer_us2ticks (int64_t us) 
+/* Suspends execution for approximately US microseconds. */
+void
+timer_usleep (int64_t us) 
 {
-  return DIV_ROUND_UP (us * TIMER_FREQ, 1000000);
+  real_time_sleep (us, 1000 * 1000);
 }
 
-/* Returns NS nanoseconds in timer ticks, rounding up. */
-int64_t
-timer_ns2ticks (int64_t ns) 
+/* Suspends execution for approximately NS nanoseconds. */
+void
+timer_nsleep (int64_t ns) 
 {
-  return DIV_ROUND_UP (ns * TIMER_FREQ, 1000000000);
+  real_time_sleep (ns, 1000 * 1000 * 1000);
 }
 
 /* Prints timer statistics. */
@@ -112,3 +139,68 @@ timer_interrupt (struct intr_frame *args UNUSED)
   if (ticks % TIME_SLICE == 0)
     intr_yield_on_return ();
 }
+
+/* Returns true if LOOPS iterations waits for more than one timer
+   tick, otherwise false. */
+static bool
+too_many_loops (unsigned loops) 
+{
+  int64_t start;
+
+  /* Wait for a timer tick. */
+  start = ticks;
+  while (ticks == start)
+    continue;
+
+  /* Run LOOPS loops. */
+  start = ticks;
+  busy_wait (loops);
+
+  /* If the tick count changed, we iterated too long. */
+  return start != ticks;
+}
+
+/* Iterates through a simple loop LOOPS times, for implementing
+   brief delays.
+
+   Marked NO_INLINE because code alignment can significantly
+   affect timings, so that if this function was inlined
+   differently in different places the results would be difficult
+   to predict. */
+static void NO_INLINE
+busy_wait (int64_t loops) 
+{
+  while (loops-- > 0)
+    continue;
+}
+
+/* Sleep for approximately NUM/DENOM seconds. */
+static void
+real_time_sleep (int64_t num, int32_t denom) 
+{
+  /* Convert NUM/DENOM seconds into timer ticks, rounding down.
+          
+        (NUM / DENOM) s          
+     ---------------------- = NUM * TIMER_FREQ / DENOM ticks. 
+     1 s / TIMER_FREQ ticks
+  */
+  int64_t ticks = num * TIMER_FREQ / denom;
+
+  ASSERT (intr_get_level () == INTR_ON);
+  if (ticks > 0)
+    {
+      /* We're waiting for at least one full timer tick.  Use
+         timer_sleep() because it will yield the CPU to other
+         processes. */                
+      timer_sleep (ticks); 
+    }
+  else 
+    {
+      /* Otherwise, use a busy-wait loop for more accurate
+         sub-tick timing.  We scale the numerator and denominator
+         down by 1000 to avoid the possibility of overflow. */
+      ASSERT (denom % 1000 == 0);
+      busy_wait (loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000)); 
+    }
+}
+

@@ -387,10 +387,16 @@ advanced far enough.  This is undesirable because it wastes time that
 could potentially be used more profitably by another thread.  Your
 solution should not busy wait.
 
-The argument to @func{timer_sleep} is expressed in timer ticks, not
-in milliseconds or another unit.  There are @code{TIMER_FREQ} timer
+The argument to @func{timer_sleep} is expressed in timer ticks, not in
+milliseconds or any another unit.  There are @code{TIMER_FREQ} timer
 ticks per second, where @code{TIMER_FREQ} is a macro defined in
 @code{devices/timer.h}.
+
+Separate functions @func{timer_msleep}, @func{timer_usleep}, and
+@func{timer_nsleep} do exist for sleeping a specific number of
+milliseconds, microseconds, or nanoseconds, respectively, but these will
+call @func{timer_sleep} automatically when necessary.  You do not need
+to modify them.
 
 If your delays seem too short or too long, reread the explanation of the
 @option{-r} option to @command{pintos} (@pxref{Debugging versus

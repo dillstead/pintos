@@ -285,12 +285,12 @@ reset_channel (struct channel *c)
   /* Issue soft reset sequence, which selects device 0 as a side effect.
      Also enable interrupts. */
   outb (reg_ctl (c), 0);
-  timer_sleep (timer_us2ticks (10));
+  timer_usleep (10);
   outb (reg_ctl (c), CTL_SRST);
-  timer_sleep (timer_us2ticks (10));
+  timer_usleep (10);
   outb (reg_ctl (c), 0);
 
-  timer_sleep (timer_ms2ticks (150));
+  timer_msleep (150);
 
   /* Wait for device 0 to clear BSY. */
   if (present[0]) 
@@ -309,7 +309,7 @@ reset_channel (struct channel *c)
         {
           if (inb (reg_nsect (c)) == 1 && inb (reg_lbal (c)) == 1)
             break;
-          timer_sleep (timer_ms2ticks (10));
+          timer_msleep (10);
         }
       wait_while_busy (&c->devices[1]);
     }
@@ -475,7 +475,7 @@ wait_until_idle (const struct disk *d)
     {
       if ((inb (reg_status (d->channel)) & (STA_BSY | STA_DRQ)) == 0)
         return;
-      timer_sleep (timer_us2ticks (10));
+      timer_usleep (10);
     }
 
   printf ("%s: idle timeout\n", d->name);
@@ -501,7 +501,7 @@ wait_while_busy (const struct disk *d)
             printf ("ok\n");
           return (inb (reg_alt_status (c)) & STA_DRQ) != 0;
         }
-      timer_sleep (timer_ms2ticks (10));
+      timer_msleep (10);
     }
 
   printf ("failed\n");
@@ -518,7 +518,7 @@ select_device (const struct disk *d)
     dev |= DEV_DEV;
   outb (reg_device (c), dev);
   inb (reg_alt_status (c));
-  timer_sleep (timer_ns2ticks (400));
+  timer_nsleep (400);
 }
 
 /* Select disk D in its channel, as select_device(), but wait for

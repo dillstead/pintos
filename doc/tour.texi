@@ -173,7 +173,8 @@ and @func{syscall_init}.
 Now that interrupts are set up, we can start preemptively scheduling
 threads with @func{thread_start}, which also enables interrupts.
 Interrupt-driven serial port I/O is also possible now, so we use
-@func{serial_init_queue} to switch to that mode.
+@func{serial_init_queue} to switch to that mode.  Finally,
+@func{timer_calibrate} calibrates the timer for accurate short delays.
 
 If the filesystem is compiled in, as it will be in project 2 and
 later, we now initialize the disks with @func{disk_init}, then the
