@@ -139,6 +139,8 @@ diff -urp orig/bochs-2.1.1/gdbstub.cc bochs-2.1.1/gdbstub.cc
              mem2hex((char *)registers, obuf, NUMREGSBYTES);
              put_reply(obuf);
              break;
+
+diff -u tmp/bochs-2.1.1/iodev/serial.cc bochs-2.1.1/iodev/serial.cc
 --- tmp/bochs-2.1.1/iodev/serial.cc	2004-02-11 14:28:54.000001000 -0800
 +++ bochs-2.1.1/iodev/serial.cc	2004-09-14 23:02:04.000001000 -0700
 @@ -53,7 +53,7 @@
@@ -196,8 +198,8 @@ diff -urp bochs-2.1.1.orig/iodev/pit82c54.cc bochs-2.1.1/iodev/pit82c54.cc
 +            unsigned n = thisctr.inlatch;
 +            if (jitter) {
 +                n *= (double) rand() / RAND_MAX;
-+                if (n < 1)
-+                    n = 1;
++                if (n < 5)
++                    n = 5;
 +            }
 +	    set_count(thisctr, n);
  	    thisctr.next_change_time=(thisctr.count_binary-1) & 0xFFFF;
