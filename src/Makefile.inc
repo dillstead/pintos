@@ -12,7 +12,7 @@ VPATH := $(VPATH):$(TOP_SRCDIR)/userprog
 
 WARNINGS = -Wall -W -Wstrict-prototypes -Wmissing-prototypes
 CFLAGS = -g -O3 -MMD -msoft-float $(WARNINGS) $(INCLUDES) $(DEFINES)
-ASFLAGS = -Wa,--gstabs+ $(INCLUDES) $(DEFINES)
+ASFLAGS = -Wa,--gstabs $(INCLUDES) $(DEFINES)
 
 # Core kernel.
 THREADS_SRC  = init.c		# Main program.
