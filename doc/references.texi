@@ -39,11 +39,11 @@ Programming Guide}.  Operating system support, including segmentation,
 paging, tasks, interrupt and exception handling.
 
 @bibdfn{FreeVGA}
-@uref{freevga/home.htm, , FreeVGA Project}.  Documents the VGA video
+@uref{specs/freevga/home.htm, , FreeVGA Project}.  Documents the VGA video
 hardware used in PCs.
 
 @bibdfn{kbd}
-@uref{kbd/index.html, , Keyboard scancodes}.  Documents PC keyboard
+@uref{specs/kbd/scancodes.html, , Keyboard scancodes}.  Documents PC keyboard
 interface.
 
 @bibdfn{ATA-3}
@@ -61,7 +61,7 @@ used for PC serial ports.
 Datasheet for PC timer chip.
 
 @bibdfn{8259A}
-@uref{specs/8529A.pdf, , Intel 8259A Programmable Interrupt Controller
+@uref{specs/8259A.pdf, , Intel 8259A Programmable Interrupt Controller
 (8259A/8259A-2)}.  Datasheet for PC interrupt controller chip.
 
 @node Software References
@@ -95,6 +95,6 @@ Interface: Intel386 Architecture Processor Supplement: Fourth
 Edition}.  80@var{x}86-specific parts of the Unix interface.
 
 @bibdfn{SysV-ABI-update}
-@uref{specs/sysv-abi-update.html, , System V Application Binary
+@uref{specs/sysv-abi-update.html/contents.html, , System V Application Binary
 Interface---DRAFT---24 April 2001}.  A draft of a revised version of
 @bibref{SysV-ABI} which was never completed.
