@@ -1,0 +1,30 @@
+SRCDIR = ../../src
+
+PROGS = $(TESTS) child-simple child-arg child-bad child-close
+child_simple_SRC = child-simple.c
+child_arg_SRC = child-arg.c
+child_bad_SRC = child-bad.c
+child_close_SRC = child-close.c
+
+DISKS = $(patsubst %,%.dsk,$(TESTS))
+
+disks: $(DISKS)
+
+exec-once.dsk exec-multiple.dsk join-simple.dsk join-twice.dsk: child-simple
+exec-arg.dsk: child-arg
+join-killed.dsk: child-bad
+multi-child-fd.dsk: child-close
+
+%.dsk: %
+	./prep-disk $<
+
+clean::
+	rm -f $(DISKS)
+
+include $(SRCDIR)/Makefile.userprog
+
+CFLAGS += -Werror
+
+Makefile: Make.base Make.tests mkmf
+	./mkmf
+
