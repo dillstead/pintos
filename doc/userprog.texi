@@ -247,14 +247,21 @@ requirements:
 
 @itemize @bullet
 @item
-The kernel should print out the program's name and exit status
-whenever a process terminates, e.g.@: @code{shell: exit(-1)}, whether
-termination is due to a call to the @code{exit} system call or for
-another reason.  The name printed should be the full name passed to
-@func{process_execute}, except that it is acceptable to truncate it to
-15 characters to allow for the limited space in @struct{thread}.
+The kernel should print out the program's name and exit status whenever
+a process terminates, whether termination is caused by the @code{exit}
+system call or for another reason.
 
 @itemize @minus
+@item
+The message must be formatted exactly as if it was printed with
+@code{printf ("%s: exit(%d)\n", @dots{});} given appropriate arguments.
+
+@item
+The name printed should be the full name passed to
+@func{process_execute}, except that it is acceptable to truncate it to
+15 characters to allow for the limited space in @struct{thread}.  The
+name printed need not include arguments.
+
 @item
 Do not print a message when a kernel thread that is not a process
 terminates.
@@ -264,7 +271,7 @@ Do not print messages about process termination for the @code{halt}
 system call.
 
 @item
-No message need be printed when a process that fails to load.
+No message need be printed when a process fails to load.
 @end itemize
 
 @item
