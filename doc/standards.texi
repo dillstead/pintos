@@ -42,6 +42,8 @@ different style won't cause actual problems, but it's ugly to see
 gratuitous differences in style from one function to another.  If your
 code is too ugly, it will cost you points.
 
+Please limit C source file lines to at most 79 characters long.
+
 Pintos comments sometimes refer to external standards or
 specifications by writing a name inside square brackets, like this:
 @code{[IA32-v3]}.  These names refer to the reference names used in
