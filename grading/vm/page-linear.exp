@@ -3,4 +3,3 @@
 (page-linear) read/modify/write pass two
 (page-linear) read pass
 (page-linear) end
-page-linear: exit(0)

@@ -6,4 +6,3 @@
 (page-parallel) join child 1
 (page-parallel) join child 2
 (page-parallel) end
-page-parallel: exit(0)

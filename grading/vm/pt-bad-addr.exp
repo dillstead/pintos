@@ -1,2 +1,1 @@
 (pt-bad-addr) begin
-pt-bad-addr: exit(-1)

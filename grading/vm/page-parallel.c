@@ -1,4 +1,9 @@
+#include <stdio.h>
+#ifdef PINTOS
 #include <syscall.h>
+#else
+#include "posix-compat.h"
+#endif
 
 #define CHILD_CNT 3
 
@@ -15,7 +20,7 @@ main (void)
       children[i] = exec ("child-linear");
       if (children[i] == -1) 
         {
-          printf ("(page-parallel) exec() returned pid -1\n", children[i]);
+          printf ("(page-parallel) exec() returned pid -1\n");
           return 1;
         }
     }

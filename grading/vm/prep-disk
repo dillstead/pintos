@@ -1,0 +1,47 @@
+#! /usr/bin/perl -w
+
+use strict;
+use Getopt::Long;
+
+my ($pintos) = "pintos";
+my ($os_disk) = "../../src/userprog/build/os.dsk";
+my ($fs_disk);
+
+GetOptions ("os-disk=s" => \$os_disk,
+	    "fs-disk=s" => \$fs_disk,
+	    "help" => sub { usage (0) })
+    or die "option parsing failed; use --help for help\n";
+
+if (!defined $fs_disk) {
+    die "output disk name expected; use --help for help\n"
+	if @ARGV < 1;
+    $fs_disk = shift @ARGV;
+}
+
+if (! -e $os_disk) {
+    print STDERR "$os_disk: stat: $!\n";
+    print STDERR "perhaps you should `make' in ../../src/userprog?\n";
+    exit 1;
+}
+
+our ($formatted) = 0;
+
+unlink $fs_disk;
+xsystem ("$pintos make-disk '$fs_disk' 2");
+while (@ARGV) {
+    put_file (shift (@ARGV));
+}
+
+sub put_file {
+    my ($fn) = @_;
+    my ($cmd) = "$pintos -v --os-disk='$os_disk' --fs-disk='$fs_disk' put";
+    $cmd .= " -f", $formatted = 1 if !$formatted;
+    $cmd .= " '$fn'";
+    xsystem ($cmd);
+}
+
+sub xsystem {
+    my ($cmd) = @_;
+    print "$cmd\n";
+    system ($cmd) == 0 || die "command failed\n";
+}

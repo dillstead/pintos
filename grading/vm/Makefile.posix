@@ -1,0 +1,40 @@
+SRCDIR = ../../src
+
+include $(SRCDIR)/Make.config
+include Make.progs
+
+VPATH = $(SRCDIR)
+
+DEFINES =
+CPPFLAGS = -I.
+CFLAGS = -Wall -W -Wstrict-prototypes -Wmissing-prototypes
+
+PROGS_SRC = $(foreach prog,$(PROGS),$($(subst -,_,$(prog))_SRC))
+PROGS_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(PROGS_SRC)))
+PROGS_DEP = $(patsubst %.o,%.d,$(PROGS_OBJ))
+
+all: $(PROGS)
+
+define TEMPLATE
+$(2)_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$($(2)_SRC)))
+$(1): $$($(2)_OBJ) posix-compat.o
+	$$(CC) $$(LDFLAGS) $$^ $$(LDLIBS) -o $$@
+endef
+
+$(foreach prog,$(PROGS),$(eval $(call TEMPLATE,$(prog),$(subst -,_,$(prog)))))
+
+$(PROGS): $(LIB)
+
+libc.a: $(LIB_OBJ)
+	rm -f $@
+	ar r $@ $^
+	ranlib $@
+
+clean::
+	rm -f $(PROGS) $(PROGS_OBJ) $(PROGS_DEP)
+	rm -f $(LIB_DEP) $(LIB_OBJ) lib/user/entry.[do] libc.a 
+
+.PHONY: all clean
+
+-include $(LIB_DEP) $(PROGS_DEP)
+

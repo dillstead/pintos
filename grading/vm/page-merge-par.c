@@ -8,7 +8,7 @@
 #include "arc4.h"
 
 #define CHUNK_SIZE (63 * 1024)                  /* Max file size. */
-#define CHUNK_CNT 16                            /* Number of chunks. */
+#define CHUNK_CNT 8                             /* Number of chunks. */
 #define DATA_SIZE (CHUNK_CNT * CHUNK_SIZE)      /* Buffer size. */
 
 unsigned char buf1[DATA_SIZE], buf2[DATA_SIZE];
@@ -22,7 +22,7 @@ init (void)
   struct arc4 arc4;
   size_t i;
 
-  printf ("page-merge-seq) init\n");
+  printf ("page-merge-par) init\n");
 
   arc4_init (&arc4, "foobar", 6);
   arc4_crypt (&arc4, buf1, sizeof buf1);
@@ -34,44 +34,56 @@ init (void)
 static void
 sort (void)
 {
+  pid_t children[CHUNK_CNT];
   size_t i;
 
-  create ("buffer", CHUNK_SIZE);
   for (i = 0; i < CHUNK_CNT; i++) 
     {
+      char fn[128];
+      char cmd[128];
       int fd;
 
-      printf ("(page-merge-seq) sort chunk %zu\n", i);
+      printf ("(page-merge-par) sort chunk %zu\n", i);
 
       /* Write this chunk to a file. */
-      fd = open ("buffer");
-
+      snprintf (fn, sizeof fn, "buf%d", i);
+      create (fn, CHUNK_SIZE);
+      fd = open (fn);
       if (fd < 0) 
         {
-          printf ("(page-merge-seq) open() failed\n");
+          printf ("(page-merge-par) open() failed\n");
           exit (1);
         }
       write (fd, buf1 + CHUNK_SIZE * i, CHUNK_SIZE);
       close (fd);
 
       /* Sort with subprocess. */
-      pid_t child = exec ("child-sort");
-      if (child == -1) 
+      snprintf (cmd, sizeof cmd, "child-sort %s", fn);
+      children[i] = exec (cmd);
+      if (children[i] == -1) 
         {
-          printf ("(page-merge-seq) exec() failed\n");
+          printf ("(page-merge-par) exec() failed\n");
           exit (1);
-        }
-      if (join (child) != 123) 
+        } 
+    }
+
+  for (i = 0; i < CHUNK_CNT; i++) 
+    {
+      char fn[128];
+      int fd;
+
+      if (join (children[i]) != 123) 
         {
-          printf ("(page-merge-seq) join(exec()) returned bad value\n");
+          printf ("(page-merge-par) join(exec()) returned bad value\n");
           exit (1);
         }
 
       /* Read chunk back from file. */
-      fd = open ("buffer");
+      snprintf (fn, sizeof fn, "buf%d", i);
+      fd = open (fn);
       if (fd < 0) 
         {
-          printf ("(page-merge-seq) open() failed\n");
+          printf ("(page-merge-par) open() failed\n");
           exit (1);
         }
       read (fd, buf1 + CHUNK_SIZE * i, CHUNK_SIZE);
@@ -88,7 +100,7 @@ merge (void)
   unsigned char *op;
   size_t i;
 
-  printf ("(page-merge-seq) merge\n");
+  printf ("(page-merge-par) merge\n");
 
   /* Initialize merge pointers. */
   mp_left = CHUNK_CNT;
@@ -121,7 +133,7 @@ verify (void)
   size_t buf_idx;
   size_t hist_idx;
 
-  printf ("(page-merge-seq) verify\n");
+  printf ("(page-merge-par) verify\n");
 
   buf_idx = 0;
   for (hist_idx = 0; hist_idx < sizeof histogram / sizeof *histogram;
@@ -131,7 +143,7 @@ verify (void)
         {
           if (buf2[buf_idx] != hist_idx)
             {
-              printf ("(page-merge-seq) bad value %d in byte %zu\n",
+              printf ("(page-merge-par) bad value %d in byte %zu\n",
                       buf2[buf_idx], buf_idx);
               exit (1);
             }
@@ -139,17 +151,17 @@ verify (void)
         } 
     }
 
-  printf ("(page-merge-seq) success, buf_idx=%zu\n", buf_idx);
+  printf ("(page-merge-par) success, buf_idx=%zu\n", buf_idx);
 }
 
 int
 main (void) 
 {
-  printf ("(page-merge-seq) begin\n");
+  printf ("(page-merge-par) begin\n");
   init ();
   sort ();
   merge ();
   verify ();
-  printf ("(page-merge-seq) end\n");
+  printf ("(page-merge-par) end\n");
   return 0;
 }
