@@ -1,5 +1,5 @@
 TEXIS = projects.texi intro.texi threads.texi mlfqs.texi userprog.texi	\
-filesys.texi vm.texi
+filesys.texi vm.texi standards.texi
 
 all: projects.html projects.info
 

@@ -1,5 +1,5 @@
-@node Multilevel Feedback Scheduling, , Threads FAQ, Project 1--Threads
-@section Multilevel Feedback Scheduling
+@node Multilevel Feedback Scheduling, Coding Standards, Project 4--File Systems, Top
+@appendix Multilevel Feedback Scheduling
 
 This section gives a brief overview of the behavior of the Solaris 2.6
 Time-Sharing (TS) scheduler, an example of a Multilevel Feedback Queue
@@ -37,7 +37,7 @@ scheduled if a lower priority process is running on the CPU.
 @end menu
 
 @node Scheduling in Solaris
-@subsection Scheduling in Solaris
+@section Scheduling in Solaris
 
 The Solaris operating system is based on Unix System V Release 4
 (SVR4).  Scheduling in Solaris, as in all SVR4-based schedulers, is
@@ -97,7 +97,7 @@ class.  Note the priorities of each of the processes, as listed in the
 fifth column.
 
 @node Class Independent Functionality
-@subsection Class Independent Functionality
+@section Class Independent Functionality
 
 The class independent routines arbitrate across the scheduling
 classes.  This involves three basic responsibilities.
@@ -120,7 +120,7 @@ must be moved between blocked and ready queues.
 @end itemize
 
 @node Time-Sharing Scheduling Class
-@subsection Time-Sharing Scheduling Class
+@section Time-Sharing Scheduling Class
 
 The time-sharing scheduler in Solaris is an example of a multi-level
 feedback queue scheduler.  A job begins at priority 29.  Compute-bound
@@ -134,7 +134,7 @@ time-slice.  Its priority is raised if it has not consumed its
 time-slice before a starvation interval expires.
 
 @node Dispatch Table
-@subsection Dispatch Table
+@section Dispatch Table
 
 The durations of the time-slices, the changes in priorities, and the
 starvation interval are specified in a user-tunable dispatch table.
@@ -256,7 +256,7 @@ levels after it consumes its time-slice.  The priority of a process is
 increased to 50 or above when the starvation timer expires.
 
 @node Implementation
-@subsection Implementation
+@section Implementation
 
 For each job in the TS class, the following data structure is
 maintained (we've removed a few of the fields for simplicity):
@@ -332,7 +332,7 @@ preempted thread is added to the front of its priority queue.
 @end table
 
 @node Fairness
-@subsection Fairness
+@section Fairness
 
 The Solaris time-sharing scheduler approximates fair allocations by
 decreasing the priority of a job the more that it is scheduled.
@@ -367,7 +367,7 @@ amount of time in a dedicated environment.
 @image{mlfqs2}
 
 @node Project Requirements
-@subsection Project Requirements
+@section Project Requirements
 
 For your project, you need to implement code that is similar in
 functionality to the Solaris TS scheduler, but your code does not have

@@ -1,0 +1,202 @@
+@node Coding Standards, , Multilevel Feedback Scheduling, Top
+@appendix Coding Standards
+
+All of you should have taken a class like CS 107, so we expect you to
+be familiar with some set of coding standards such as
+@uref{http://www.stanford.edu/class/cs140/projects/misc/CodingStandards.pdf,
+, CS 107 Coding Standards}. Even if you've taken 107, we recommend
+reviewing that document.  We expect code at the "Peer-Review Quality"
+level as described there.
+
+Our standards for coding are mostly important in grading.  More
+information on our grading methodology can be found on the Course Info
+page and the Grading page.  We also want to stress that aside from the
+fact that we are explicitly basing part of your grade on these things,
+good coding practices will improve the quality of your code.  This
+makes it easier for your partners to interact with it, and ultimately,
+will improve your chances of having a good working program.  That said
+once, the rest of this document will discuss only the ways in which
+our coding standards will affect our grading.
+
+@menu
+* Coding Style::                
+* Conditional Compilation::     
+@end menu
+
+@node Coding Style
+@section Style
+
+Style, for the purposes of our grading, refers to how readable your
+code is.  At minimum, this means that your code is well formatted, your
+variable names are descriptive and your functions are decomposed and
+well commented.  Any other factors which make it hard (or easy) for us
+to read or use your code will be reflected in your style grade.
+
+The existing Pintos code is written in the GNU style and largely
+follows the @uref{http://www.gnu.org/prep/standards_toc.html, , GNU
+Coding Standards}.  We encourage you to follow the applicable parts of
+them too, especially chapter 5, ``Making the Best Use of C.''  Using a
+different style won't cause actual problems, but it's ugly to see
+gratuitous differences in style from one function to another.
+
+@node Conditional Compilation
+@section Conditional Compilation
+
+Given the scope and complexity of your assignments this quarter, you
+may find it convenient while coding and debugging (and we will find it
+convenient while grading) to be able to independently turn different
+parts of the assignments on and off.  To do this, choose a macro name
+and use it in conditional
+compilation directives, e.g.:
+
+@example
+#ifdef @var{NAME}
+@dots{}your code@dots{}
+#endif
+@end example
+
+In general, the code that you turn in must not depend on conditional
+compilation directives.  Project code should be written so that all of
+the subproblems for the project function together, and it should
+compile properly without the need for any new macros to be defined.
+There are a few exceptions:
+
+@itemize @bullet
+@item
+Project 1 has a few parts that we must be able to turn on and off via
+conditional compilation.  You must use the macros we specify for those
+parts.
+
+@item
+Code written for extra credit may be included conditionally.  If the
+extra credit code changes the normally expected functionality of the
+code, then it @emph{must} be included conditionally, and it must not
+be enabled by default.
+@end itemize
+
+You can use @file{constants.h} in @file{pintos/src} to define macros
+for conditional compilation.  We will replace the @file{constants.h}
+that you supply with one of our own when we test your code, so do not
+define anything important in it.
+
+@node C99
+@section C99
+
+The Pintos source code uses a few features of the ``C99'' standard
+library that were not in the original 1989 standard for C.  Because
+they are so new, most classes do not cover these features, so this
+section will describe them.  The new features used in Pintos are
+mostly in new headers:
+
+@table @file
+@item <stdbool.h>
+Defines macros @code{bool}, a 1-bit type that takes on only the values
+0 and 1, @code{true}, which expands to 1, and @code{false}, which
+expands to 0.
+
+@item <stdint.h>
+On systems that support them, this header defines types
+@code{int@var{n}_t} and @code{uint@var{n}_t} for @var{n} = 8, 16, 32,
+64, and possibly others.  These are 2's complement signed and unsigned
+types, respectively, with the given number of bits.  
+
+On systems where it is possible, this header also defines types
+@code{intptr_t} and @code{uintptr_t}, which are integer types big
+enough to hold a pointer.
+
+On all systems, this header defines types @code{intmax_t} and
+@code{uintmax_t}, which are the system's signed and unsigned integer
+types with the widest ranges.
+
+For every signed integer type @code{@var{type}_t} it defines, as well
+as for @code{ptrdiff_t} defined in @file{<stddef.h>}, this header also
+defines macros @code{@var{type}_MAX} and @code{@var{type}_MIN} that
+give the type's range.  Similarly, for every unsigned integer type
+@code{@var{type}_t} defined here, as well as for @code{size_t} defined
+in @file{<stddef.h>}, this header defines a @code{@var{type}_MAX}
+macro giving its maximum value.
+
+@item <inttypes.h>
+@file{<stdint.h>} is useful on its own, but it provides no way to pass
+the types it defines to @code{printf()} and related functions.  This
+header provides macros to help with that.  For every
+@code{int@var{n}_t} defined by @file{<stdint.h>}, it provides macros
+@code{PRId@var{n}} and @code{PRIi@var{n}} for formatting values of
+that type with @code{"%d"} and @code{"%i"}.  Similarly, for every
+@code{uint@var{n}_t}, it provides @code{PRIo@var{n}},
+@code{PRIu@var{n}}, @code{PRIu@var{x}}, and @code{PRIu@var{X}}.
+
+You use these something like this, taking advantage of the fact that
+the C compiler concatenates adjacent string literals:
+@example
+#include <inttypes.h>
+@dots{}
+int32_t value = @dots{};
+printf ("value=%08"PRId32"\n");
+@end example
+@noindent
+The @samp{%} is not supplied by the @code{PRI} macros.  As shown
+above, you supply it yourself and follow it by any flags, field
+widths, etc.
+
+@item <stdio.h>
+The @file{printf()} function has some new type modifiers for printing
+standard types:
+
+@table @samp
+@item j
+For @code{intmax_t} (e.g.@: @samp{%jd}) or @code{uintmax_t} (e.g.@:
+@samp{%ju}).
+
+@item z
+For @code{size_t} (e.g.@: @samp{%zu}).
+
+@item t
+For @code{ptrdiff_t} (e.g.@: @samp{%td}).
+@end table
+@end table
+
+@node Unsafe String Functions
+@section Unsafe String Functions
+
+A few of the string functions declared in the standard
+@file{<string.h>} and @file{<stdio.h>} headers are notoriously unsafe.
+The worst offenders are intentionally not included in the Pintos C
+library:
+
+@table @code
+@item strcpy()
+When used carelessly this function can overflow the buffer reserved
+for its output string.  Use @code{strlcpy()} instead.  Refer to
+comments in its source code in @code{lib/string.c} for documentation.
+
+@item strncpy()
+This function can leave its destination buffer without a null string
+terminator and it has performance problems besides.  Again, use
+@code{strlcpy()}.
+
+@item strcat()
+Same issue as @code{strcpy()}, but substitute @code{strlcat()}.
+Again, refer to comments in its source code in @code{lib/string.c} for
+documentation.
+
+@item strncat()
+The meaning of its buffer size argument often leads to problems.
+Again, use @code{strlcat()}.
+
+@item strtok()
+Uses global data, so it is unsafe in threaded programs such as
+kernels.  Use @code{strtok_r()} instead, and see its source code in
+@code{lib/string.c} for documentation and an example.
+
+@item sprintf()
+Same issue as @code{strcpy()}.  Use @code{snprintf()} instead.  Refer
+to comments in @code{lib/stdio.h} for documentation.
+
+@item vsprintf()
+Same issue as @code{strcpy()}.  Use @code{vsnprintf()} instead.
+@end table
+
+If you try to use any of these functions, you should get a hint from
+the error message, which will refer to an identifier like
+@code{dont_use_sprintf_use_snprintf}.

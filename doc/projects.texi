@@ -7,6 +7,8 @@
 * Project 2--User Programs::    
 * Project 3--Virtual Memory::   
 * Project 4--File Systems::     
+* Multilevel Feedback Scheduling::  
+* Coding Standards::            
 @end menu
 
 @include intro.texi
@@ -15,4 +17,5 @@
 @include vm.texi
 @include filesys.texi
 @c @include devel.texi
-@c @include standards.texi
+@include mlfqs.texi
+@include standards.texi

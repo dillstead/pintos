@@ -199,24 +199,46 @@ issue the command @code{pintos run}.  This command will create a
 @file{bochsrc.txt} file, which is needed for running Bochs, and then
 invoke Bochs.
 
-Bochs opens a new window that represents the the simulated machine's
+Bochs opens a new window that represents the simulated machine's
 display, and a BIOS message briefly flashes.  Then Pintos boots and
-runs a simple test program that scrolls by a few screenfuls of text.
+runs a simple test program that outputs a few screenfuls of text.
 When it's done, you can close Bochs by clicking on the ``Power''
 button in the window's top right corner, or rerun the whole process by
 clicking on the ``Reset'' button just to its left.  The other buttons
 are not very useful for our purposes.
 
+(If no window appeared at all, and you just got a terminal full of
+corrupt-looking text, then you're probably logged in remotely and X
+forwarding is not set up correctly.  In this case, you can fix your X
+setup, or you can use the @option{-nv} option.)
+
 The text printed by Pintos inside Bochs probably went by too quickly
 to read.  However, you've probably noticed by now that the same text
-was displayed 
+was displayed in the terminal you used to run @command{pintos}.  This
+is because Pintos sends all output both to the VGA display and to the
+first serial port, and by default the serial port is connected to
+Bochs's @code{stdout}.  You can log this output to a file by
+redirecting at the command line, e.g.@: @code{pintos run > logfile}.
 
+The @command{pintos} program offers multiple options for running
+Pintos.  Use @code{pintos help} to see a list of the options.  You can
+select a simulator other than Bochs, although the Leland systems only
+have Bochs installed.  You can start the simulator running a debugger
+(@pxref{Debugging Pintos}).  You can set the amount of memory to give
+the VM.  Finally, you can set up how you want VM output to be
+displayed: use @option{-nv} to turn off the VGA display, @option{-t}
+to use your terminal window as the VGA display instead of opening a
+new window, or @option{-ns} to suppress the serial output to
+@code{stdout}.
+
+The @command{pintos} program offers commands other than @samp{run} and
+@samp{help}, but we won't have any need for them until project 2.
 
 @node Pintos Trivia
 @section Pintos Trivia
 
 The design of Pintos is inspired by Nachos, an instructional operating
-system implemented at UC Berkeley, and even uses a few pieces of
+system originally from UC Berkeley, and even uses a few pieces of
 Nachos code.  Pintos is different from Nachos in two important ways.
 First, Nachos requires a host operating system such as Solaris,
 whereas Pintos runs on real or simulated 80@var{x}86 hardware.

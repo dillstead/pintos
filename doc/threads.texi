@@ -582,5 +582,3 @@ However, you are free to do so.
 No.  Hard-coding the dispatch table values is fine.
 @end enumerate
 @end enumerate
-
-@include mlfqs.texi

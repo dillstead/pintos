@@ -477,7 +477,7 @@ e.g.@: @samp{example 1 2 3 4: 0}.
 @end enumerate
 
 @node 80x86 Calling Convention
-@appendixsec 80@var{x}86 Calling Convention
+@section 80@var{x}86 Calling Convention
 
 What follows is a quick and dirty discussion of the 80@var{x}86
 calling convention.  Some of the basics should be familiar from CS
@@ -627,7 +627,7 @@ address space, in the page just below virtual address @code{PHYS_BASE}
 (defined in @file{threads/mmu.h}).
 
 @node System Calls
-@appendixsec System Calls
+@section System Calls
 
 We have already been dealing with one way that the operating system
 can regain control from a user program: interrupts from timers and I/O
