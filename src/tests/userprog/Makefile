@@ -14,3 +14,7 @@ recursor_SRC = recursor.c
 shell_SRC = shell.c
 
 include $(SRCDIR)/Makefile.userprog
+
+# Uncomment the line below to round up segment sizes to full pages for
+# testing purposes only.
+#LDFLAGS += -Wl,-T,fullpage.x
