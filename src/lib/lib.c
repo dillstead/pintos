@@ -10,7 +10,7 @@
 void *
 memset (void *dst_, int value, size_t cnt) 
 {
-  uint8_t *dst = dst_;
+  unsigned char *dst = dst_;
   
   while (cnt-- > 0)
     *dst++ = value;
@@ -21,8 +21,8 @@ memset (void *dst_, int value, size_t cnt)
 void *
 memcpy (void *dst_, const void *src_, size_t cnt) 
 {
-  uint8_t *dst = dst_;
-  const uint8_t *src = src_;
+  unsigned char *dst = dst_;
+  const unsigned char *src = src_;
 
   while (cnt-- > 0)
     *dst++ = *src++;
@@ -33,8 +33,8 @@ memcpy (void *dst_, const void *src_, size_t cnt)
 void *
 memmove (void *dst_, const void *src_, size_t cnt) 
 {
-  uint8_t *dst = dst_;
-  const uint8_t *src = src_;
+  unsigned char *dst = dst_;
+  const unsigned char *src = src_;
 
   if (dst < src) 
     {
@@ -55,14 +55,26 @@ memmove (void *dst_, const void *src_, size_t cnt)
 void *
 memchr (const void *block_, int ch_, size_t size) 
 {
-  const uint8_t *block = block_;
-  uint8_t ch = ch_;
+  const unsigned char *block = block_;
+  unsigned char ch = ch_;
 
   for (; size-- > 0; block++)
     if (*block == ch)
       return (void *) block;
 
   return NULL;
+}
+
+int
+memcmp (const void *a_, const void *b_, size_t size) 
+{
+  const unsigned char *a = a_;
+  const unsigned char *b = b_;
+
+  for (; size-- > 0; a++, b++)
+    if (*a != *b)
+      return *a > *b ? +1 : -1;
+  return 0;
 }
 
 size_t
