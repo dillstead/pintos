@@ -1,0 +1,7 @@
+*.d
+diskimage.bin
+loader.bin
+kernel.bin
+kernel.bin.data
+kernel.bin.pad
+intr-stubs.S
