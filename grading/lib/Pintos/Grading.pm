@@ -427,7 +427,7 @@ sub grade_test {
 	    $details{$test} = snarf ("output/$test/make.err");
 	    return "make failed.  Error messages at end of file.";
 	}
-	die "$outfile: missing test output file";
+	return "preparation for test failed";
     }
     my (@output) = snarf ($outfile);
 
