@@ -43,9 +43,9 @@ pte_get_page (uint32_t pte)
    new page directory.
 
    At the time this function is called, the active page table
-   only maps the first 4 MB of RAM, so it should not try to use
-   extravagant amounts of memory.  Fortunately, there is no need
-   to do so. */
+   (set up by loader.S) only maps the first 4 MB of RAM, so we
+   should not try to use extravagant amounts of memory.
+   Fortunately, there is no need to do so. */
 void
 paging_init (void)
 {
