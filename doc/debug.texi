@@ -221,9 +221,8 @@ panicked, you can re-run @command{backtrace} on the user program, like
 so: (typing the command on a single line, of course):
 
 @example
-~/cs140/pintos/src/utils/backtrace grow-too-big 0xc0106eff 0xc01102fb
-0xc010dc22 0xc010cf67 0xc0102319 0xc010325a 0x804812c 0x8048a96
-0x8048ac8
+backtrace grow-too-big 0xc0106eff 0xc01102fb 0xc010dc22 0xc010cf67
+0xc0102319 0xc010325a 0x804812c 0x8048a96 0x8048ac8
 @end example
 
 The results look like this:
