@@ -11,7 +11,7 @@ SECTIONS
   _start = .;
 
   /* Kernel starts with code, followed by read-only data and writable data. */
-  .text : { *(.text) } = 0x9090
+  .text : { *(.start) *(.text) } = 0x9090
   .rodata : { *(.rodata) *(.rodata.*) }
   .data : { *(.data) }
 

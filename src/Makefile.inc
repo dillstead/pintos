@@ -15,8 +15,7 @@ CFLAGS = -g -O3 -MMD -msoft-float $(WARNINGS) $(INCLUDES) $(DEFINES)
 ASFLAGS = -Wa,--gstabs+ $(INCLUDES) $(DEFINES)
 
 # Core kernel.
-THREADS_SRC  = start.S		# Must be linked first.
-THREADS_SRC += init.c		# Main program.
+THREADS_SRC  = init.c		# Main program.
 THREADS_SRC += thread.c		# Thread management core.
 THREADS_SRC += switch.S		# Thread switch routine.
 THREADS_SRC += interrupt.c	# Interrupt core.
@@ -25,6 +24,7 @@ THREADS_SRC += synch.c		# Synchronization.
 THREADS_SRC += paging.c		# Page tables.
 THREADS_SRC += palloc.c		# Page allocator.
 THREADS_SRC += malloc.c		# Subpage allocator.
+THREADS_SRC += start.S		# Startup code.
 
 # Device driver code.
 DEVICES_SRC  = timer.c		# Timer device.
