@@ -2,18 +2,32 @@ include ../../Make.config
 
 SHELL = /bin/sh
 
+VPATH = ../..
+
+DEFINES = -DUSER
+CPPFLAGS = -nostdinc -I../.. -I- -I../../lib -I../../lib/user \
+	   -include constants.h
+
+# Test programs to compile, and a list of sources for each.
+# To add a new test, put its name on the PROGS list
+# and then add a name_SRC line that lists its source files.
+PROGS = bubsort echo halt insult lineup matmult recursor shell
+bubsort_SRC = bubsort.c
+echo_SRC = echo.c
+halt_SRC = halt.c
+insult_SRC = insult.c
+lineup_SRC = lineup.c
+matmult_SRC = matmult.c
+recursor_SRC = recursor.c
+shell_SRC = shell.c
+
+# Linker flags.
 LDFLAGS = -nostdlib -static
 LDLIBS = $(shell $(CC) -print-libgcc-file-name)
 
 # Uncomment the line below to round up segment sizes to full pages for
 # testing purposes only.
 #LDFLAGS += -Wl,-T,fullpage.x
-
-VPATH = ../..
-
-DEFINES = -DUSER
-CPPFLAGS = -nostdinc -I../.. -I- -I../../lib -I../../lib/user \
-	   -include constants.h
 
 # C library sources linked into every test program.
 LIB_SRC  = lib/debug.c			# Debug code.
@@ -28,16 +42,6 @@ LIB_SRC += lib/user/console.c		# Console code.
 LIB_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(LIB_SRC)))
 LIB_DEP = $(patsubst %.o,%.d,$(LIB_OBJ))
 LIB = libc.a lib/user/entry.o
-
-PROGS = bubsort echo halt insult lineup matmult recursor shell
-bubsort_SRC = bubsort.c
-echo_SRC = echo.c
-halt_SRC = halt.c
-insult_SRC = insult.c
-lineup_SRC = lineup.c
-matmult_SRC = matmult.c
-recursor_SRC = recursor.c
-shell_SRC = shell.c
 
 PROGS_SRC = $(foreach prog,$(PROGS),$($(prog)_SRC))
 PROGS_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(PROGS_SRC)))
