@@ -38,7 +38,7 @@ working with, you should probably undo the test cases from project 1.
 * Using the File System::       
 * How User Programs Work::      
 * Virtual Memory Layout::       
-* Global Requirements::         
+* Grading Requirements::        
 * Problem 2-1 Argument Passing::  
 * Problem 2-2 System Calls::    
 * User Programs FAQ::           
