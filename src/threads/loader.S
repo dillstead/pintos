@@ -67,12 +67,16 @@
 	cli
 	cld
 
-# Set up segment registers and stack.
-# Stack grows downward starting from us.
+# Set up data segments and stack.
 
 	subw %ax, %ax
 	movw %ax, %es
 	movw %ax, %ds
+
+# Stack grows downward starting from us.
+# We don't ever use the stack so this is strictly speaking
+# unnecessary.
+
 	movw %ax, %ss
 	movw $0x7c00, %sp
 	
