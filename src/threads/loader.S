@@ -12,6 +12,11 @@
 # first byte of the kernel, where start.S is linked.
 ##############################################################################
 	
+/* Flags in control register 0 */
+#define CR0_PE 0x00000001      /* Protection Enable. */
+#define CR0_EM 0x00000004      /* (Floating-point) Emulation. */
+#define CR0_PG 0x80000000      /* Paging. */
+
 .globl start				# Entry point	
 start:	.code16				# This runs in real mode
 	cli				# Disable interrupts

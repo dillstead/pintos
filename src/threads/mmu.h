@@ -117,61 +117,17 @@ vtop (void *vaddr)
 #define PG_P 0x1               /* Present */
 #define PG_W 0x2               /* Writeable */
 #define PG_U 0x4               /* User */
-#define PG_PWT 0x8             /* Write-Through */
-#define PG_PCD 0x10            /* Cache-Disable */
 #define PG_A 0x20              /* Accessed */
 #define PG_D 0x40              /* Dirty */
-#define PG_PS 0x80             /* Page Size */
-#define PG_MBZ 0x180           /* Bits must be zero */
-#define PG_USER 0xe00          /* Bits for user processes */
 /*
  * The PG_USER bits are not used by the kernel and they are
  * not interpreted by the hardware.  The kernel allows 
  * user processes to set them arbitrarily.
  */
 
-
-
-/* Control Register flags */
-#define CR0_PE 0x1             /* Protection Enable */
-#define CR0_MP 0x2             /* Monitor coProcessor */
-#define CR0_EM 0x4             /* Emulation */
-#define CR0_TS 0x8             /* Task Switched */
-#define CR0_ET 0x10            /* Extension Type */
-#define CR0_NE 0x20            /* Numeric Errror */
-#define CR0_WP 0x10000         /* Write Protect */
-#define CR0_AM 0x40000         /* Alignment Mask */
-#define CR0_NW 0x20000000      /* Not Writethrough */
-#define CR0_CD 0x40000000      /* Cache Disable */
-#define CR0_PG 0x80000000      /* Paging */
-
-#define CR4_PCE 0x100          /* Performance counter enable */
-#define CR4_MCE 0x40           /* Machine Check Enable */
-#define CR4_PSE 0x10           /* Page Size Extensions */
-#define CR4_DE  0x08           /* Debugging Extensions */
-#define CR4_TSD 0x04           /* Time Stamp Disable */
-#define CR4_PVI 0x02           /* Protected-Mode Virtual Interrupts */
-#define CR4_VME 0x01           /* V86 Mode Extensions */
-
 /* EFLAGS Register. */
-#define FLAG_CF   0x00000001    /* Carry Flag. */
-#define FLAG_PF   0x00000004    /* Parity Flag. */
-#define FLAG_AF   0x00000010    /* Auxiliary Carry Flag. */
-#define FLAG_ZF   0x00000040    /* Zero Flag. */
-#define FLAG_SF   0x00000080    /* Sign Flag. */
-#define FLAG_TF   0x00000100    /* Trap Flag. */
+#define FLAG_MBS  0x00000002    /* Must be set. */
 #define FLAG_IF   0x00000200    /* Interrupt Flag. */
-#define FLAG_DF   0x00000400    /* Direction Flag. */
-#define FLAG_OF   0x00000800    /* Overflow Flag. */
-#define FLAG_IOPL 0x00003000    /* I/O Privilege Level (2 bits). */
-#define FLAG_IOPL_SHIFT 12
-#define FLAG_NT   0x00004000    /* Nested Task. */
-#define FLAG_RF   0x00010000    /* Resume Flag. */
-#define FLAG_VM   0x00020000    /* Virtual 8086 Mode. */
-#define FLAG_AC   0x00040000    /* Alignment Check. */
-#define FLAG_VIF  0x00080000    /* Virtual Interrupt Flag. */
-#define FLAG_VIP  0x00100000    /* Virtual Interrupt Pending. */
-#define FLAG_ID   0x00200000    /* ID Flag. */
 
 /* Page fault error codes */
 #define FEC_PR 0x1             /* Page fault caused by protection violation */

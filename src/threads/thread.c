@@ -135,7 +135,7 @@ thread_execute (const char *filename)
   if_->ds = SEL_UDSEG;
   if_->eip = start;
   if_->cs = SEL_UCSEG;
-  if_->eflags = FLAG_IF | 2;
+  if_->eflags = FLAG_IF | FLAG_MBS;
   if_->esp = PHYS_BASE;
   if_->ss = SEL_UDSEG;
 
