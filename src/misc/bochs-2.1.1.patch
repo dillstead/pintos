@@ -1,16 +1,24 @@
 The first two patches are needed for Bochs to properly compile and run
-under Solaris on Sparc.  The first should probably be handled by
-Autoconf; I'm not sure why it isn't.  The second is needed to make GCC
-accept X.h's frequent use of "extern foo(...)", because use of an
-implicit int return type is forbidden in C++.
+under Solaris on Sparc.  If you're not compiling on Solaris, don't
+apply them.  The first should probably be handled by Autoconf; I'm not
+sure why it isn't.  The second is needed to make GCC accept X.h's
+frequent use of "extern foo(...)", because use of an implicit int
+return type is forbidden in C++.
 
 The third patch makes the gdb stubs work on Solaris/Sparc, by doing
-proper byteswapping.
+proper byteswapping.  It should be harmless elsewhere.
 
 The fourth patch enables the serial device under Solaris and disables
 tty setup at the same time.  Tty setup is a pain when you want to
 connect a serial port to stdout and it doesn't work under Solaris
-anyway.
+anyway.  This patch is useful everywhere with `pintos', but may not be
+wanted elsewhere.
+
+Here's a ./configure invocation for Bochs that works optimally with
+the `pintos' utility:
+	./configure --with-x --with-x11 --with-term --with-nogui
+If you want the gdb stub, add --enable-gdb-stub
+If you want the internal debugger, add --enable-debugger
 
 diff -urp orig/bochs-2.1.1/Makefile.in bochs-2.1.1/Makefile.in
 --- orig/bochs-2.1.1/Makefile.in	2004-02-11 14:28:02.000000000 -0800
