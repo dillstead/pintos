@@ -8,6 +8,7 @@
 #include "serial.h"
 #include "vga.h"
 
+/* Sets the SIZE bytes in DST to VALUE. */
 void *
 memset (void *dst_, int value, size_t size) 
 {
@@ -21,6 +22,8 @@ memset (void *dst_, int value, size_t size)
   return dst_;
 }
 
+/* Copies SIZE bytes from SRC to DST, which must not overlap.
+   Returns DST. */
 void *
 memcpy (void *dst_, const void *src_, size_t size) 
 {
@@ -36,6 +39,8 @@ memcpy (void *dst_, const void *src_, size_t size)
   return dst_;
 }
 
+/* Copies SIZE bytes from SRC to DST, which are allowed to
+   overlap.  Returns DST. */
 void *
 memmove (void *dst_, const void *src_, size_t size) 
 {
@@ -61,6 +66,9 @@ memmove (void *dst_, const void *src_, size_t size)
   return dst;
 }
 
+/* Returns a pointer to the first occurrence of CH in the first
+   SIZE bytes starting at BLOCK.  Returns a null pointer if CH
+   does not occur in BLOCK. */
 void *
 memchr (const void *block_, int ch_, size_t size) 
 {
@@ -76,6 +84,10 @@ memchr (const void *block_, int ch_, size_t size)
   return NULL;
 }
 
+/* Find the first differing byte in the two blocks of SIZE bytes
+   at A and B.  Returns a positive value if the byte in A is
+   greater, a negative value if the byte in B is greater, or zero
+   if blocks A and B are equal. */
 int
 memcmp (const void *a_, const void *b_, size_t size) 
 {
@@ -91,6 +103,10 @@ memcmp (const void *a_, const void *b_, size_t size)
   return 0;
 }
 
+/* Copies string SRC to DST.  If SRC is longer than SIZE - 1
+   characters, only SIZE - 1 characters are copied.  A null
+   terminator is always written to DST, unless SIZE is 0.
+   Returns the length of SRC. */
 size_t
 strlcpy (char *dst, const char *src, size_t size) 
 {
@@ -102,14 +118,16 @@ strlcpy (char *dst, const char *src, size_t size)
   src_len = strlen (src);
   if (size > 0) 
     {
-      size_t dst_len_max = size - 1;
-      size_t dst_len = src_len < dst_len_max ? src_len : dst_len_max;
+      size_t dst_len = size - 1;
+      if (src_len < dst_len)
+        src_len = dst_len;
       memcpy (dst, src, dst_len);
       dst[dst_len] = '\0';
     }
   return src_len;
 }
 
+/* Returns the length of STRING. */
 size_t
 strlen (const char *string) 
 {
@@ -122,6 +140,10 @@ strlen (const char *string)
   return p - string;
 }
 
+/* Finds and returns the first occurrence of C in STRING, or a
+   null pointer if C does not appear in STRING.  If C == '\0'
+   then returns a pointer to the null terminator at the end of
+   STRING. */
 char *
 strchr (const char *string, int c_) 
 {
@@ -138,6 +160,11 @@ strchr (const char *string, int c_)
       string++;
 }
 
+/* Finds the first differing characters in strings A and B.
+   Returns a positive value if the character in A (as an unsigned
+   char) is greater, a negative value if the character in B (as
+   an unsigned char) is greater, or zero if strings A and B are
+   equal. */
 int
 strcmp (const char *a_, const char *b_) 
 {
