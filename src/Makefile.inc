@@ -41,8 +41,9 @@ LIB_SRC += backdoor.c		# Backdoor IPC.
 
 # Filesystem code.
 FILESYS_SRC  = filesys.c	# Filesystem core.
-FILESYS_SRC += file.c		# Individual files.
-FILESYS_SRC += filesys-stub.c	# Stub helper code.
+FILESYS_SRC += file.c		# Files.
+FILESYS_SRC += directory.c	# Directories.
+FILESYS_SRC += filehdr.c	# File headers (inodes).
 
 # User process code.
 USERPROG_SRC  = addrspace.c	# Address spaces.
