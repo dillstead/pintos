@@ -460,7 +460,7 @@ such as Linux do not load partial pages lazily.
 
 Incidentally, if you have trouble handling the third case above, you
 can eliminate it temporarily by linking the test programs with a
-special ``linker script.''  Read @file{tests/userprog/Makefile} for
+special ``linker script.''  Read @file{Makefile.userprog} for
 details.  We will not test your submission with this special linker
 script, so the code you turn in must properly handle all cases.
 

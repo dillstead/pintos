@@ -10,8 +10,12 @@ DEFINES = -DPINTOS -DUSER
 CPPFLAGS = -nostdinc -I$(SRCDIR) -I- -I$(SRCDIR)/lib -I$(SRCDIR)/lib/user -I.
 
 # Linker flags.
-LDFLAGS = -nostdlib -static
+LDFLAGS = -nostdlib -static -Wl,-T,$(LDSCRIPT)
 LDLIBS = $(shell $(CC) -print-libgcc-file-name)
+LDSCRIPT = $(SRCDIR)/lib/user/normal.lds
+# Uncomment the following line to round up section sizes
+# to full pages (for debugging only).
+#LDSCRIPT = $(SRCDIR)/lib/user/fullpage.lds
 
 # C library sources linked into every test program.
 LIB_SRC  = lib/debug.c			# Debug code.
@@ -34,13 +38,11 @@ all: $(PROGS)
 
 define TEMPLATE
 $(2)_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$($(2)_SRC)))
-$(1): $$($(2)_OBJ) $$(LIB)
-	$$(CC) $$(LDFLAGS) $$^ $$(LDLIBS) -o $$@
+$(1): $$($(2)_OBJ) $$(LIB) $$(LDSCRIPT)
+	$$(CC) $$(LDFLAGS) $$($(2)_OBJ) $$(LIB) $$(LDLIBS) -o $$@
 endef
 
 $(foreach prog,$(PROGS),$(eval $(call TEMPLATE,$(prog),$(subst -,_,$(prog)))))
-
-$(PROGS): $(LIB)
 
 libc.a: $(LIB_OBJ)
 	rm -f $@
