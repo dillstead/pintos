@@ -322,8 +322,9 @@ printf_integer (uintmax_t value, bool negative, const char *digits,
   base = strlen (digits);
 
   /* Accumulate digits into buffer.
-     This algorithm produces digits in reverse order, so we count
-     backward from the end of the array. */
+     This algorithm produces digits in reverse order, so later we
+     will output the buffer's content in reverse.  This is also
+     the reason that later we append zeros and the sign. */
   cp = buf;
   while (value > 0) 
     {
@@ -331,15 +332,15 @@ printf_integer (uintmax_t value, bool negative, const char *digits,
       value /= base;
     }
 
-  /* Prepend enough zeros to match precision.
+  /* Append enough zeros to match precision.
      If precision is 0, then a value of zero is rendered as a
      null string.  Otherwise at least one digit is presented. */
   if (c->precision < 0)
     c->precision = 1;
-  while (cp - buf < c->precision && cp - buf > (int) sizeof buf - 8)
+  while (cp - buf < c->precision && cp - buf < (int) sizeof buf - 8)
     *cp++ = '0';
 
-  /* Prepend sign. */
+  /* Append sign. */
   if (c->flags & PLUS)
     *cp++ = negative ? '-' : '+';
   else if (c->flags & SPACE)
