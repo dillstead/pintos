@@ -12,9 +12,10 @@ static void page_fault (struct intr_frame *);
    programs.
 
    In a real Unix-like OS, most of these interrupts would be
-   passed along to the user process in the form of signals, but
-   we don't implement signals.  Instead, we'll make them simply
-   kill the user process.
+   passed along to the user process in the form of signals, as
+   described in [SV-386] 3-24 and 3-25, but we don't implement
+   signals.  Instead, we'll make them simply kill the user
+   process.
 
    Page faults are an exception.  Here they are treated the same
    way as other exceptions, but this will need to change to
