@@ -126,7 +126,7 @@ if ($cmd eq 'run') {
     open (DST, ">$hostfn") or die "$hostfn: create: $!\n";
     my ($input);
     read (SRC, $input, 512) == 512 or die "$disks[2]: read error\n";
-    my ($size) = unpack ("%V", $input);
+    my ($size) = unpack ("V", $input);
     $size != 0xffffffff or die "$guestfn: too big for $disks[2]?";
     my ($src);
     read (SRC, $src, $size) == $size or die "$disks[2]: read error\n";
