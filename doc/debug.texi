@@ -201,7 +201,15 @@ address.
 (Use a @samp{0x} prefix to specify an address in hex.)
 @end table
 
-If you notice unexplainable behavior while using @command{gdb}, there
+You might notice that @command{gdb} tends to show code being executed
+in an order different from the order in the source.  That is, the
+current statement jumps around seemingly randomly.  This is due to
+GCC's optimizer, which does tend to reorder code.  If it bothers you,
+you can turn off optimization by editing
+@file{pintos/src/Make.config}, removing @option{-O3} from the
+@code{CFLAGS} definition.
+
+If you notice other strange behavior while using @command{gdb}, there
 are three possibilities.  The first is that there is a bug in your
 modified Pintos.  The second is that there is a bug in Bochs's
 interface to @command{gdb} or in @command{gdb} itself.  The third is
