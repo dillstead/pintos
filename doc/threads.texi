@@ -334,24 +334,31 @@ and options @option{-j} and @option{-r} are mutually exclusive.
 
 @itemize @bullet
 @item
-There should be no busy-waiting in any of your solutions to this
-assignment.
+There should be no busy waiting in any of your solutions to this
+assignment.  We consider a tight loop that calls @func{thread_yield}
+to be one form of busy waiting.
 
 @item
-Do your best to resist the temptation to directly disable interrupts
-in your solution by calling @func{intr_disable} or
-@func{intr_set_level}, although you may find doing so to be useful
-while debugging.  Instead, use semaphores, locks and condition
-variables to solve synchronization problems.  Read the tour section on
-synchronization (@pxref{Synchronization}) or the comments in
-@file{threads/synch.h} if you're unsure what synchronization
-primitives may be used in what situations.
+Proper synchronization is an important part of the solutions to these
+problems.  It is tempting to synchronize all your code by turning off
+interrupts with @func{intr_disable} or @func{intr_set_level}, because
+this eliminates concurrency and thus the possibility for race
+conditions, but @strong{don't}.  Instead, use semaphores, locks, and
+condition variables to solve the bulk of your synchronization
+problems.  Read the tour section on synchronization
+(@pxref{Synchronization}) or the comments in @file{threads/synch.c} if
+you're unsure what synchronization primitives may be used in what
+situations.
 
-Given some designs of some problems, there may be one or two instances
-in which it is appropriate to directly change the interrupt levels
-instead of relying on the given synchronization primitives.  This must
-be justified in your @file{DESIGNDOC} file.  If you're not sure you're
-justified, ask!
+You might run into a few situations where interrupt disabling is the
+best way to handle synchronization.  If so, you need to explain your
+rationale in your design documents.  If you're unsure whether a given
+situation justifies disabling interrupts, talk to the TAs, who can
+help you decide on the right thing to do.
+
+Disabling interrupts can be useful for debugging, if you want to make
+sure that a section of code is not interrupted.  You should remove
+debugging code before turning in your project.
 
 @item
 All parts of this assignment are required if you intend to earn full
@@ -588,7 +595,7 @@ latency, which can make a machine feel sluggish if taken too far.
 Therefore, in general, setting the interrupt level should be used
 sparingly.  Also, any synchronization problem can be easily solved by
 turning interrupts off, since while interrupts are off, there is no
-concurrency, so there's no possibility for race condition.
+concurrency, so there's no possibility for race conditions.
 
 To make sure you understand concurrency well, we are discouraging you
 from taking this shortcut at all in your solution.  If you are unable
