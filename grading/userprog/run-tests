@@ -189,6 +189,11 @@ sub extract_tarball {
     xsystem ("cd pintos/src && tar xzf ../../$tarball",
 	     DIE => "extraction failed\n");
 
+    if (-e "fixme.sh") {
+	print "Running fixme.sh...\n";
+	xsystem ("sh -e fixme.sh", DIE => "fix script failed\n");
+    }
+
     print "Patching...\n";
     xsystem ("patch -fs pintos/src/lib/debug.c < $GRADES_DIR/panic.diff",
 	     LOG => "patch",
@@ -270,7 +275,7 @@ sub really_run_test {
 
     # Run.
     my ($timeout) = 10;
-    $timeout = 60 if $test eq 'multi-oom';
+    $timeout = 600 if $test =~ /^multi-/;
     my ($testargs) = defined ($args{$test}) ? " $args{$test}" : "";
     xsystem ("pintos "
 	     . "--os-disk=pintos/src/userprog/build/os.dsk "
@@ -347,12 +352,12 @@ sub grade_multi_oom {
 	$n = $m + 1;
 	shift @output;
     }
-    die "Only $n child processes started.\n" if $n < 15;
+    die "Only $n child process(es) started.\n" if $n < 15;
 
     # There could be a death notice for a process that didn't get
     # fully loaded, and/or notices from the loader.
     while (@output > 0
-	   && ($output[0] =~ /^\(multi-oom\) end $n$/
+	   && ($output[0] =~ /^multi-oom: exit\(-1\)$/
 	       || $output[0] =~ /^load: /)) {
 	shift @output;
     }
@@ -418,6 +423,25 @@ sub verify_common {
 	}
 	$extra{$test} = $details;
 	die "Kernel panic.  Details at end of file.\n"
+    }
+
+    if (grep (/Pintos booting/, @output) > 1) {
+	my ($details);
+
+	$details = "Pintos spontaneously rebooted during this test.\n";
+	$details .= "This is most often due to unhandled page faults.\n";
+	$details .= "Here's the output from the initial boot through the\n";
+	$details .= "first reboot:\n\n";
+
+	my ($i) = 0;
+	local ($_);
+	for (@output) {
+	    $details .= "  $_\n";
+	    last if /Pintos booting/ && ++$i > 1;
+	}
+	$details{$test} = $details;
+	die "Triple-fault caused spontaneous reboot(s).  "
+	    . "Details at end of file.\n";
     }
 
     die "No output at all\n" if @output == 0;
@@ -536,6 +560,20 @@ sub compare_output {
 	    if !$not_fuzzy_match;
     }
 
+    if ($fuzzy_match) {
+	$details =
+	    "This test passed, but with extra, unexpected output.\n"
+	    . "Please inspect your code to make sure that it does not\n"
+	    . "produce output other than as specified in the project\n"
+	    . "description.\n\n"
+	    . "$details";
+    } else {
+	$details =
+	    "This test failed because its output did not match any\n"
+	    . "of the acceptable form(s).\n\n"
+	    . "$details";
+    }
+
     $details{$test} = $details;
     die "Output differs from expected.  Details at end of file.\n"
 	unless $fuzzy_match;
@@ -547,14 +585,26 @@ sub write_grades {
     my ($ploss) = 0;
     my ($tloss) = 0;
     my ($total) = 0;
+    my ($warnings) = 0;
     for (my ($i) = 0; $i <= $#summary; $i++) {
 	local ($_) = $summary[$i];
 	if (my ($loss, $test) = /^  -(\d+) ([-a-zA-Z0-9]+):/) {
 	    my ($result) = $result{$test} || "Not tested.";
 
 	    if ($result eq 'ok') {
-		splice (@summary, $i, 1);
-		$i--;
+		if (!defined $details{$test}) {
+		    # Test successful and no warnings.
+		    splice (@summary, $i, 1);
+		    $i--;
+		} else {
+		    # Test successful with warnings.
+		    s/-(\d+) //;
+		    $summary[$i] = $_;
+		    splice (@summary, $i + 1, 0,
+			    "    Test passed with warnings.  "
+			    . "Details at end of file.");
+		    $warnings++;
+		} 
 	    } else {
 		$ploss += $loss;
 		$tloss += $loss;
@@ -564,8 +614,10 @@ sub write_grades {
 	} elsif (my ($ptotal) = /^Score: \/(\d+)$/) {
 	    $total += $ptotal;
 	    $summary[$i] = "Score: " . ($ptotal - $ploss) . "/$ptotal";
-	    splice (@summary, $i, 0, "  All tests passed.") if $ploss == 0;
+	    splice (@summary, $i, 0, "  All tests passed.")
+		if $ploss == 0 && !$warnings;
 	    $ploss = 0;
+	    $warnings = 0;
 	    $i++;
 	}
     }
@@ -586,8 +638,15 @@ sub write_details {
 	my ($details) = $details{$test};
 	next if !defined ($details) && ! -e "output/$test/run.out";
 
+	my ($banner);
+	if ($result{$test} ne 'ok') {
+	    $banner = "$test failure details"; 
+	} else {
+	    $banner = "$test warnings";
+	}
+
 	print DETAILS "\n" if $n++;
-	print DETAILS "--- $test details ", '-' x (50 - length ($test));
+	print DETAILS "--- $banner ", '-' x (50 - length ($banner));
 	print DETAILS "\n\n";
 
 	if (!defined $details) {
