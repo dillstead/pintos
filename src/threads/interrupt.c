@@ -98,13 +98,13 @@ extern void (*intr_stubs[256]) (void);
 
 intr_handler_func *intr_handlers[256];
 
-void intr_handler (struct intr_args *args);
+void intr_handler (struct intr_frame *args);
 
 bool intr_in_progress;
 bool yield_on_return;
 
 void
-intr_handler (struct intr_args *args) 
+intr_handler (struct intr_frame *args) 
 {
   bool external;
   
@@ -256,10 +256,10 @@ intr_init (void)
 }
 
 void
-intr_unexpected (struct intr_args *regs)
+intr_unexpected (struct intr_frame *regs)
 {
   uint32_t cr2;
   asm ("movl %%cr2, %0" : "=r" (cr2));
-  panic ("Unexpected interrupt 0x%02x, error code %08x, cr2=%08x, eip=%08x",
-         regs->vec_no, regs->error_code, cr2, regs->eip);
+  panic ("Unexpected interrupt 0x%02x, error code %08x, cr2=%08x, eip=%p",
+         regs->vec_no, regs->error_code, cr2, (void *) regs->eip);
 }

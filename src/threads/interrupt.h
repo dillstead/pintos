@@ -15,7 +15,7 @@ enum if_level intr_set_level (enum if_level);
 enum if_level intr_enable (void);
 enum if_level intr_disable (void);
 
-struct intr_args
+struct intr_frame
   {
     /* Pushed by the stubs. */
     uint32_t edi;
@@ -41,7 +41,7 @@ struct intr_args
     uint16_t ss, :16;
   };
 
-typedef void intr_handler_func (struct intr_args *);
+typedef void intr_handler_func (struct intr_frame *);
 
 void intr_init (void);
 void intr_register (uint8_t vec, int dpl, enum if_level, intr_handler_func *);

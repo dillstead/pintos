@@ -6,7 +6,7 @@
 static volatile uint64_t ticks;
 
 static void
-irq20_timer (struct intr_args *args UNUSED)
+irq20_timer (struct intr_frame *args UNUSED)
 {
   ticks++;
   intr_yield_on_return ();

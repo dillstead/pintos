@@ -5,7 +5,7 @@
 #include "lib.h"
 
 static void
-irq21_keyboard (struct intr_args *args UNUSED) 
+irq21_keyboard (struct intr_frame *args UNUSED) 
 {
   printk ("Keyboard!\n");
   inb (0x60);
