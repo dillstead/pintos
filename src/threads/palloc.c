@@ -1,6 +1,7 @@
 #include "threads/palloc.h"
 #include <bitmap.h>
 #include <debug.h>
+#include <inttypes.h>
 #include <round.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -30,13 +31,16 @@ struct pool
   {
     struct lock lock;                   /* Mutual exclusion. */
     struct bitmap *used_map;            /* Bitmap of free pages. */
-    uint8_t *start, *end;               /* Start and end of pool. */
+    uint8_t *base;                      /* Base of pool. */
   };
 
 /* Two pools: one for kernel data, one for user pages. */
 struct pool kernel_pool, user_pool;
 
-static void init_pool (struct pool *, void *start, void *end,
+/* Maximum number of pages to put in user pool. */
+size_t user_page_limit = SIZE_MAX;
+
+static void init_pool (struct pool *, void *base, size_t page_cnt,
                        const char *name);
 static bool page_from_pool (const struct pool *, void *page);
 
@@ -52,11 +56,16 @@ palloc_init (void)
   uint8_t *free_start = pg_round_up (&_end);
   uint8_t *free_end = ptov (ram_pages * PGSIZE);
   size_t free_pages = (free_end - free_start) / PGSIZE;
-  uint8_t *free_middle = free_start + free_pages / 2 * PGSIZE;
+  size_t user_pages = free_pages / 2;
+  size_t kernel_pages;
+  if (user_pages > user_page_limit)
+    user_pages = user_page_limit;
+  kernel_pages = free_pages - user_pages;
 
   /* Give half of memory to kernel, half to user. */
-  init_pool (&kernel_pool, free_start, free_middle, "kernel pool");
-  init_pool (&user_pool, free_middle, free_end, "user pool");
+  init_pool (&kernel_pool, free_start, kernel_pages, "kernel pool");
+  init_pool (&user_pool, free_start + kernel_pages * PGSIZE,
+             user_pages, "user pool");
 }
 
 /* Obtains and returns a group of PAGE_CNT contiguous free pages.
@@ -79,7 +88,7 @@ palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
 
   page_idx = bitmap_scan_and_flip (pool->used_map, 0, page_cnt, false);
   if (page_idx != BITMAP_ERROR)
-    pages = pool->start + PGSIZE * page_idx;
+    pages = pool->base + PGSIZE * page_idx;
   else
     pages = NULL;
 
@@ -129,8 +138,7 @@ palloc_free_multiple (void *pages, size_t page_cnt)
   else
     NOT_REACHED ();
 
-  page_idx = pg_no (pages) - pg_no (pool->start);
-  ASSERT (pg_no (pages) + page_cnt <= pg_no (pool->end));
+  page_idx = pg_no (pages) - pg_no (pool->base);
 
 #ifndef NDEBUG
   memset (pages, 0xcc, PGSIZE * page_cnt);
@@ -152,33 +160,33 @@ palloc_free_page (void *page)
 /* Initializes pool P as starting at START and ending at END,
    naming it NAME for debugging purposes. */
 static void
-init_pool (struct pool *p, void *start, void *end, const char *name) 
+init_pool (struct pool *p, void *base, size_t page_cnt, const char *name) 
 {
-  size_t bitmap_size;
-  size_t page_cnt;
+  /* We'll put the pool's used_map at its base.
+     Calculate the space needed for the bitmap
+     and subtract it from the pool's size. */
+  size_t bm_pages = DIV_ROUND_UP (bitmap_needed_bytes (page_cnt), PGSIZE);
+  if (bm_pages > page_cnt)
+    PANIC ("Not enough memory in %s for bitmap.", name);
+  page_cnt -= bm_pages;
 
-  ASSERT (pg_ofs (start) == 0);
-  ASSERT (pg_ofs (end) == 0);
-  ASSERT (end > start);
+  printf ("%d pages available in %s.\n", page_cnt, name);
 
-  page_cnt = pg_no (end) - pg_no (start);
-  printf ("%d kB allocated for %s.\n", (PGSIZE / 1024) * page_cnt, name);
-
+  /* Initialize the pool. */
   lock_init (&p->lock, name);
-  bitmap_size = ROUND_UP (bitmap_needed_bytes (page_cnt), PGSIZE);
-  page_cnt -= bitmap_size / PGSIZE;
-  p->used_map = bitmap_create_preallocated (page_cnt, start, bitmap_size);
-  p->start = start + bitmap_size;
-  p->end = end;
-  ASSERT (p->end > p->start);
+  p->used_map = bitmap_create_preallocated (page_cnt, base,
+                                            bm_pages * PGSIZE);
+  p->base = base + bm_pages * PGSIZE;
 }
 
 /* Returns true if PAGE was allocated from POOL,
    false otherwise. */
 static bool
-page_from_pool (const struct pool *pool, void *page_) 
+page_from_pool (const struct pool *pool, void *page) 
 {
-  uint8_t *page = page_;
+  size_t page_no = pg_no (page);
+  size_t start_page = pg_no (pool->base);
+  size_t end_page = start_page + bitmap_size (pool->used_map);
 
-  return page >= pool->start && page < pool->end;
+  return page_no >= start_page && page_no < end_page;
 }

@@ -222,9 +222,11 @@ argv_init (void)
 #ifdef USERPROG
     else if (!strcmp (argv[i], "-ex")) 
       initial_program = argv[++i];
+    else if (!strcmp (argv[i], "-ul"))
+      user_page_limit = atoi (argv[++i]);
 #endif
 #ifdef FILESYS
-  else if (!strcmp (argv[i], "-f"))
+    else if (!strcmp (argv[i], "-f"))
       format_filesys = true;
     else if (!strcmp (argv[i], "-ci")) 
       {
@@ -250,6 +252,7 @@ argv_init (void)
           " -d CLASS[,...]      Enable the given classes of debug messages.\n"
 #ifdef USERPROG
           " -ex 'PROG [ARG...]' Run PROG, passing the optional arguments.\n"
+          " -ul USER_MAX        Limit user memory to USER_MAX pages.\n"
 #endif
 #ifdef FILESYS
           " -f                  Format the filesystem disk (hdb or hd0:1).\n"
