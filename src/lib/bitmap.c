@@ -1,4 +1,3 @@
-#define NDEBUG
 #include "bitmap.h"
 #include <limits.h>
 #include "debug.h"
