@@ -47,7 +47,6 @@ static void kernel_thread (thread_func *, void *aux);
 static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
-static struct thread *new_thread (const char *name, int priority);
 static void init_thread (struct thread *, const char *name, int priority);
 static bool is_thread (struct thread *);
 static void *alloc_frame (struct thread *, size_t size);
@@ -116,10 +115,14 @@ thread_create (const char *name, int priority,
 
   ASSERT (function != NULL);
 
-  t = new_thread (name, priority);
+  /* Allocate thread. */
+  t = palloc_get (PAL_ZERO);
   if (t == NULL)
     return TID_ERROR;
-  tid = t->tid;
+
+  /* Initialize thread. */
+  init_thread (t, name, priority);
+  tid = t->tid = allocate_tid ();
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -287,22 +290,6 @@ static bool
 is_thread (struct thread *t) 
 {
   return t != NULL && t->magic == THREAD_MAGIC;
-}
-
-/* Creates a new thread named NAME as a child of the running
-   thread.  Returns the new thread if successful or a null
-   pointer on failure. */
-static struct thread *
-new_thread (const char *name, int priority)
-{
-  struct thread *t = palloc_get (PAL_ZERO);
-  if (t != NULL) 
-    {
-      init_thread (t, name, priority);
-      t->tid = allocate_tid ();
-    }
-
-  return t;
 }
 
 /* Does basic initialization of T as a blocked thread named
