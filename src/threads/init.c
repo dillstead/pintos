@@ -39,22 +39,21 @@ size_t ram_pages;
 uint32_t *base_page_dir;
 
 #ifdef FILESYS
-/* Format the filesystem? */
+/* -f: Format the filesystem? */
 static bool format_filesys;
 #endif
 
 #ifdef USERPROG
-/* Initial program to run. */
+/* -ex: Initial program to run. */
 static char *initial_program;
 #endif
 
-/* Power off after running requested actions? */
-static bool power_off;
+/* -q: Power off after running requested actions? */
+static bool do_power_off;
 
 static void ram_init (void);
 static void paging_init (void);
 static void argv_init (void);
-static void do_power_off (void);
 
 int main (void) NO_RETURN;
 
@@ -119,8 +118,8 @@ main (void)
   test ();
 #endif
 
-  if (power_off) 
-    do_power_off ();
+  if (do_power_off) 
+    power_off ();
 
   /* Terminate this thread. */
   thread_exit ();
@@ -212,7 +211,7 @@ argv_init (void)
     else if (!strcmp (argv[i], "-d")) 
       debug_enable (argv[++i]);
     else if (!strcmp (argv[i], "-q"))
-      power_off = true;
+      do_power_off = true;
 #ifdef USERPROG
     else if (!strcmp (argv[i], "-ex")) 
       initial_program = argv[++i];
@@ -259,7 +258,7 @@ argv_init (void)
           " -q                  Power off after doing requested actions.\n"
           " -u                  Print this help message and power off.\n"
           );
-        do_power_off ();
+        power_off ();
       }
     else 
       PANIC ("unknown option `%s' (use -u for help)", argv[i]);
@@ -268,7 +267,7 @@ argv_init (void)
 /* Powers down the machine we're running on,
    as long as we're running on Bochs or qemu. */
 void
-do_power_off (void) 
+power_off (void) 
 {
   const char s[] = "Shutdown";
   const char *p;
