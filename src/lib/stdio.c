@@ -492,8 +492,6 @@ format_integer (uintmax_t value, bool negative, const struct integer_base *b,
      If requested precision is 0, then a value of zero is
      rendered as a null string, otherwise as "0". */
   precision = c->precision < 0 ? 1 : c->precision;
-  if (precision < 0)
-    precision = 1;
   while (cp - buf < precision && cp - buf < (int) sizeof buf - 8)
     *cp++ = '0';
 
