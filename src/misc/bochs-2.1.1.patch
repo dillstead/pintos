@@ -14,6 +14,10 @@ connect a serial port to stdout and it doesn't work under Solaris
 anyway.  This patch is useful everywhere with `pintos', but may not be
 wanted elsewhere.
 
+The remaining patches add the `jitter' feature described in the
+project documentation, in which timer interrupts are delivered at
+random intervals.
+
 To apply all the patches, cd into the Bochs directory, then type
 	patch -p1 < ~/pintos/src/misc/bochs-2.1.1.patch
 You will have to supply the proper path to the patch, of course.  You
@@ -162,3 +166,67 @@ diff -urp orig/bochs-2.1.1/gdbstub.cc bochs-2.1.1/gdbstub.cc
    }
  #endif   /* def SERIAL_ENABLE */
    // nothing for now
+
+diff -urp bochs-2.1.1.orig/bochs.h bochs-2.1.1/bochs.h
+--- bochs-2.1.1.orig/bochs.h	2004-02-11 14:28:03.000000000 -0800
++++ bochs-2.1.1/bochs.h	2004-09-20 17:02:01.000000000 -0700
+@@ -757,4 +757,6 @@ int bx_init_hardware ();
+ 
+ #endif
+ 
++extern int jitter;
++
+ #endif  /* BX_BOCHS_H */
+diff -urp bochs-2.1.1.orig/iodev/pit82c54.cc bochs-2.1.1/iodev/pit82c54.cc
+--- bochs-2.1.1.orig/iodev/pit82c54.cc	2004-02-11 14:28:53.000000000 -0800
++++ bochs-2.1.1/iodev/pit82c54.cc	2004-09-20 17:18:24.000000000 -0700
+@@ -28,6 +28,7 @@
+ 
+ #include "bochs.h"
+ #include "pit82c54.h"
++#include <stdlib.h>
+ #define LOG_THIS this->
+ 
+ 
+@@ -356,7 +357,13 @@ pit_82C54::clock(Bit8u cnum) {
+       case 2:
+ 	if(thisctr.count_written) {
+ 	  if(thisctr.triggerGATE || thisctr.first_pass) {
+-	    set_count(thisctr, thisctr.inlatch);
++            unsigned n = thisctr.inlatch;
++            if (jitter) {
++                n *= (double) rand() / RAND_MAX;
++                if (n < 1)
++                    n = 1;
++            }
++	    set_count(thisctr, n);
+ 	    thisctr.next_change_time=(thisctr.count_binary-1) & 0xFFFF;
+ 	    thisctr.null_count=0;
+ 	    if(thisctr.inlatch==1) {
+diff -urp bochs-2.1.1.orig/iodev/pit_wrap.cc bochs-2.1.1/iodev/pit_wrap.cc
+diff -urp bochs-2.1.1.orig/iodev/serial.cc bochs-2.1.1/iodev/serial.cc
+diff -urp bochs-2.1.1.orig/main.cc bochs-2.1.1/main.cc
+--- bochs-2.1.1.orig/main.cc	2004-02-11 14:28:41.000000000 -0800
++++ bochs-2.1.1/main.cc	2004-09-20 17:15:39.000000000 -0700
+@@ -58,6 +58,7 @@
+ 
+ 
+ int bochsrc_include_count = 0;
++int jitter = 0;
+ 
+ extern "C" {
+ #include <signal.h>
+@@ -2022,6 +2024,13 @@ bx_init_main (int argc, char *argv[])
+     else if (!strcmp ("-q", argv[arg])) {
+       SIM->get_param_enum(BXP_BOCHS_START)->set (BX_QUICK_START);
+     }
++    else if (!strcmp ("-j", argv[arg])) {
++      if (++arg >= argc) BX_PANIC(("-j must be followed by a number"));
++      else {
++        jitter = 1;
++        srand (atoi (argv[arg]));
++      }
++    }
+     else if (!strcmp ("-f", argv[arg])) {
+       if (++arg >= argc) BX_PANIC(("-f must be followed by a filename"));
+       else bochsrc_filename = argv[arg];
