@@ -196,7 +196,7 @@ join_children (pid_t pids[], size_t child_cnt)
     {
       int status = join (pids[i]);
       CHECK (status == (int) i,
-             "join child %zu of %zu returned %d (expected %d)",
+             "join child %zu of %zu returned %d (expected %zu)",
              i + 1, child_cnt, status, i);
     }
 }
