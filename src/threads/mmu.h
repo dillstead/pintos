@@ -9,19 +9,19 @@
 
 /* Virtual to physical translation works like this on an x86:
 
-   - The top 10 bits of the virtual address (bits 22:31) are used
+   - The top 10 bits of the virtual address (bits 22:32) are used
      to index into the page directory.  If the PDE is marked
      "present," the physical address of a page table is read from
      the PDE thus obtained.  If the PDE is marked "not present"
      then a page fault occurs.
 
-   - The next 10 bits of the virtual address (bits 12:21) are
+   - The next 10 bits of the virtual address (bits 12:22) are
      used to index into the page table.  If the PTE is marked
      "present," the physical address of a data page is read from
      the PTE thus obtained.  If the PTE is marked "not present"
      then a page fault occurs.
 
-   - The bottom 12 bits of the virtual address (bits 0:11) are
+   - The bottom 12 bits of the virtual address (bits 0:12) are
      added to the data page's physical base address, producing
      the final physical address.
 
@@ -57,21 +57,22 @@
 
 #define MASK(SHIFT, CNT) (((1ul << (CNT)) - 1) << (SHIFT))
 
-/* Page offset (bits 0:11). */
-#define PGSHIFT         0                  /* First offset bit. */
-#define PGBITS          12                 /* Number of offset bits. */
-#define PGMASK          MASK(PGSHIFT, PGBITS)
-#define PGSIZE          (1 << PGBITS)
+/* Page offset (bits 0:12). */
+#define PGSHIFT 0                       /* Index of first offset bit. */
+#define PGBITS  12                      /* Number of offset bits. */
+#define PGMASK  MASK(PGSHIFT, PGBITS)   /* Page offset bits (0:12). */
+#define PGSIZE  (1 << PGBITS)           /* Bytes in a page. */
 
-/* Page table (bits 12:21). */
-#define	PTSHIFT		PGBITS		   /* First page table bit. */
-#define PTBITS          10                 /* Number of page table bits. */
-#define PTMASK          MASK(PTSHIFT, PTBITS)
+/* Page table (bits 12:22). */
+#define	PTSHIFT PGBITS		        /* Index of first page table bit. */
+#define PTBITS  10                      /* Number of page table bits. */
+#define PTMASK  MASK(PTSHIFT, PTBITS)   /* Page table bits (12:22). */
+#define PTSPAN  (1 << PTBITS << PGBITS) /* Bytes covered by a page table. */
 
-/* Page directory (bits 22:31). */
-#define PDSHIFT         (PTSHIFT + PTBITS) /* First page dir bit. */
-#define PDBITS          10                 /* Number of page dir bits. */
-#define PDMASK          MASK(PDSHIFT, PDBITS)
+/* Page directory (bits 22:32). */
+#define PDSHIFT (PTSHIFT + PTBITS)      /* First page dir bit. */
+#define PDBITS  10                      /* Number of page dir bits. */
+#define PDMASK  MASK(PDSHIFT, PDBITS)   /* Page directory bits (22:32). */
 
 /* Offset within a page. */
 static inline unsigned pg_ofs (const void *va) {
