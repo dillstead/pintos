@@ -253,11 +253,11 @@ code by refraining from reading any homework solutions available
 online or elsewhere.  (Source code for other operating system kernels,
 such as Linux or FreeBSD, is of course fair game.)
 
-Please refer to the @file{LICENSE} file at the top level of the Pintos
-source distribution for license details.
-
 There is NO WARRANTY for Pintos, not even for MERCHANTABILITY or
 FITNESS FOR A PARTICULAR PURPOSE.
+
+Please refer to the @file{LICENSE} file at the top level of the Pintos
+source distribution for details of license and lack of warranty.
 
 @node Pintos Trivia
 @section Pintos Trivia
