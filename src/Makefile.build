@@ -67,9 +67,6 @@ DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
 
 all: os.dsk
 
-threads/intr-stubs.S: threads/intr-stubs.pl threads/loader.h
-	$< > $@.tmp && mv $@.tmp $@
-
 threads/kernel.lds.s: CPPFLAGS += -P
 threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
 
@@ -92,7 +89,7 @@ os.dsk: loader.bin kernel.bin
 
 clean:
 	$(RM) -f $(OBJECTS) $(DEPENDS) 
-	$(RM) -f threads/intr-stubs.S threads/loader.o
+	$(RM) -f threads/loader.o
 	$(RM) -f kernel.o kernel.lds.s
 	$(RM) -f kernel.bin loader.bin
 

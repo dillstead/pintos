@@ -4,10 +4,9 @@
 /* Interrupt stubs.
 
    These are little snippets of code in intr-stubs.S, one for
-   each of the 256 possible x86 interrupts.  They just push the
-   interrupt vector number on the stack (and, for interrupts that
-   don't have an error code, a fake error code), then jump to
-   intr_entry().
+   each of the 256 possible x86 interrupts.  Each one does a
+   little bit of stack manipulation, then jumps to intr_entry().
+   See intr-stubs.S for more information.
 
    This array points to each of the interrupt stub entry points
    so that intr_init() can easily find them. */

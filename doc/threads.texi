@@ -157,9 +157,9 @@ the kernel.
 Basic interrupt handling and functions for turning interrupts on and
 off.
 
-@item intr-stubs.pl
+@item intr-stubs.S
 @itemx intr-stubs.h
-A Perl program that outputs assembly for low-level interrupt handling.
+Assembly code for low-level interrupt handling.
 
 @item synch.c
 @itemx synch.h

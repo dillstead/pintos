@@ -73,7 +73,7 @@ execute_thread (void *filename_)
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
-     threads/intr-stubs.pl).  Because intr_exit takes all of its
+     threads/intr-stubs.S).  Because intr_exit takes all of its
      arguments on the stack in the form of a `struct intr_frame',
      we just point the stack pointer (%esp) to our stack frame
      and jump to it. */

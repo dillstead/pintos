@@ -19,7 +19,7 @@ enum intr_level intr_disable (void);
 /* Interrupt stack frame. */
 struct intr_frame
   {
-    /* Pushed by intr_entry in intr-stubs.S (see intr-stubs.pl).
+    /* Pushed by intr_entry in intr-stubs.S.
        These are the interrupted task's saved registers. */
     uint32_t edi;               /* Saved EDI. */
     uint32_t esi;               /* Saved ESI. */
@@ -34,12 +34,17 @@ struct intr_frame
     uint16_t es, :16;           /* Saved ES segment register. */
     uint16_t ds, :16;           /* Saved DS segment register. */
 
-    /* Pushed by intrXX_stub in intr-stubs.S (see intr-stubs.pl). */
+    /* Pushed by intrNN_stub in intr-stubs.S. */
     uint32_t vec_no;            /* Interrupt vector number. */
 
     /* Sometimes pushed by the CPU,
-       otherwise for consistency pushed as 0 by intrXX_stub. */
+       otherwise for consistency pushed as 0 by intrNN_stub.
+       The CPU puts it just under `eip', but we move it here. */
     uint32_t error_code;        /* Error code. */
+
+    /* Pushed by intrNN_stub in intr-stubs.S.
+       This frame pointer eases interpretation of backtraces. */
+    void *frame_pointer;        /* Saved EBP (frame pointer). */
 
     /* Pushed by the CPU.
        These are the interrupted task's saved registers. */

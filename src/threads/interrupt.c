@@ -310,8 +310,8 @@ make_idtr_operand (uint16_t limit, void *base)
 
 /* Handler for all interrupts, faults, and exceptions.  This
    function is called by the assembly language interrupt stubs in
-   intr-stubs.S (see intr-stubs.pl).  FRAME describes the
-   interrupt and the interrupted thread's registers. */
+   intr-stubs.S.  FRAME describes the interrupt and the
+   interrupted thread's registers. */
 void
 intr_handler (struct intr_frame *frame) 
 {
