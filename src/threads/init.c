@@ -58,7 +58,7 @@ main (void)
   serial_init_poll ();
 
   /* Greet user. */
-  printf ("Booting cnachos86 with %'d kB RAM...\n", ram_pages * 4);
+  printf ("Pintos booting with %'d kB RAM...\n", ram_pages * 4);
 
   /* Parse command line. */
   argv_init ();
