@@ -434,14 +434,6 @@ file.  Put them in a @file{threads/testcases} directory.
 @xref{TESTCASE}, for more information.
 
 @item
-@b{If a thread finishes, should its children be terminated immediately,
-or should they finish normally?}
-
-You should feel free to decide what semantics you think this
-should have. You need only provide justification for your
-decision.
-
-@item
 @b{Why can't I disable interrupts?}
 
 Turning off interrupts should only be done for short amounts of time,
