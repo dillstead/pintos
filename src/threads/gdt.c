@@ -4,6 +4,51 @@
 #include "palloc.h"
 #include "tss.h"
 
+/* The Global Descriptor Table (GDT).
+
+   The GDT, an x86-specific structure, defines segments that can
+   potentially be used by all processes in a system, subject to
+   their permissions.  There is also a per-process Local
+   Descriptor Table (LDT) but that is not used by modern
+   operating systems.
+
+   Each entry in the GDT, which is known by its byte offset in
+   the table, identifies a segment.  For our purposes only three
+   types of segments are of interest: code, data, and TSS or
+   Task-State Segment descriptors.  The former two types are
+   exactly what they sound like.  The TSS is used primarily for
+   stack switching on interrupts.
+
+   For more information on the GDT as used here, refer to
+   [IA32-v3] sections 3.2 through 3.5. */
+static uint64_t gdt[SEL_CNT];
+
+/* Creating descriptors. */
+static uint64_t make_code_desc (int dpl);
+static uint64_t make_data_desc (int dpl);
+static uint64_t make_tss_desc (void *laddr);
+
+/* Sets up a proper GDT.  The bootstrap loader's GDT didn't
+   include user-mode selectors or a TSS, but we need both now. */
+void
+gdt_init (void)
+{
+  uint64_t gdtr_operand;
+
+  /* Initialize GDT. */
+  gdt[SEL_NULL / sizeof *gdt] = 0;
+  gdt[SEL_KCSEG / sizeof *gdt] = make_code_desc (0);
+  gdt[SEL_KDSEG / sizeof *gdt] = make_data_desc (0);
+  gdt[SEL_UCSEG / sizeof *gdt] = make_code_desc (3);
+  gdt[SEL_UDSEG / sizeof *gdt] = make_data_desc (3);
+  gdt[SEL_TSS / sizeof *gdt] = make_tss_desc (tss_get ());
+
+  /* Load GDTR, TR. */
+  gdtr_operand = make_dtr_operand (sizeof gdt - 1, gdt);
+  asm volatile ("lgdt %0" :: "m" (gdtr_operand));
+  asm volatile ("ltr %w0" :: "r" (SEL_TSS));
+}
+
 /* System segment or code/data segment? */
 enum seg_class
   {
@@ -86,25 +131,3 @@ make_tss_desc (void *laddr)
   return make_seg_desc ((uint32_t) laddr, 0x67, CLS_SYSTEM, 9, 0, GRAN_BYTE);
 }
 
-static uint64_t gdt[SEL_CNT];
-
-/* Sets up a proper GDT.  The bootstrap loader's GDT didn't
-   include user-mode selectors or a TSS. */
-void
-gdt_init (void)
-{
-  uint64_t gdtr_operand;
-
-  /* Initialize GDT. */
-  gdt[SEL_NULL / sizeof *gdt] = 0;
-  gdt[SEL_KCSEG / sizeof *gdt] = make_code_desc (0);
-  gdt[SEL_KDSEG / sizeof *gdt] = make_data_desc (0);
-  gdt[SEL_UCSEG / sizeof *gdt] = make_code_desc (3);
-  gdt[SEL_UDSEG / sizeof *gdt] = make_data_desc (3);
-  gdt[SEL_TSS / sizeof *gdt] = make_tss_desc (tss_get ());
-
-  /* Load GDTR, TR. */
-  gdtr_operand = make_dtr_operand (sizeof gdt - 1, gdt);
-  asm volatile ("lgdt %0" :: "m" (gdtr_operand));
-  asm volatile ("ltr %w0" :: "r" (SEL_TSS));
-}
