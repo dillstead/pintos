@@ -304,6 +304,12 @@ probably want to leave the code that reads the pages from disk, but
 use your new page table management code to construct the page tables
 only as page faults occur for them.
 
+You should use the @code{palloc_get_page()} function to get the page
+frames that you use for storing user virtual pages.  Be sure to pass
+the @code{PAL_USER} flag to this function when you do so, because that
+allocates pages from a ``user pool'' separate from the ``kernel pool''
+that other calls to @code{palloc_get_page()} make.
+
 There are many possible ways to implement virtual memory.  The above
 is simply an outline of our suggested implementation.
 
@@ -599,6 +605,20 @@ heuristic to figure this out.
 
 Make a reasonable decision and document it in your code and in
 your design document.  Please make sure to justify your decision.
+
+@item
+@b{Why do I need to pass @code{PAL_USER} to @code{palloc_get_page()}
+when I allocate physical page frames?}
+
+You can layer some other allocator on top of @code{palloc_get_page()}
+if you like, but it should be the underlying mechanism, directly or
+indirectly, for two reasons.  First, running out of pages in the user
+pool just causes user programs to page, but running out of pages in
+the kernel pool will cause all kinds of problems, because many kernel
+functions depend on being able to allocate memory.  Second, you can
+use the @option{-ul} option to @command{pintos} to limit the size of
+the user pool, which makes it easy to test your VM implementation with
+various user memory sizes.
 @end enumerate
 
 @node Problem 3-3 Memory Mapped File FAQ

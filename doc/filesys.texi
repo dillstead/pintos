@@ -289,7 +289,8 @@ be implemented properly in @file{threads/init.c} and
 @item
 @b{Will you test our file system with a different @code{DISK_SECTOR_SIZE}?}
 
-No, @code{DISK_SECTOR_SIZE} will not change.
+No, @code{DISK_SECTOR_SIZE} is fixed at 512.  This is a fixed property
+of IDE disk hardware.
 
 @item
 @b{Will the @code{struct inode} take up space on the disk too?}
