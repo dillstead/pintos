@@ -265,7 +265,8 @@ sub really_run_test {
 	     . "--swap-disk=output/$test/swap.dsk "
 	     . "-v run -q -ex \"$test$testargs\"",
 	     LOG => "$test/run",
-	     TIMEOUT => $timeout)
+	     TIMEOUT => $timeout,
+	     EXPECT => 1)
 	or return "Bochs error";
     
     return "ok";
@@ -683,9 +684,7 @@ sub xsystem {
 	die "fork: $!\n" if !defined $pid;
 	if (!$pid) {
 	    if (defined $log) {
-		close STDOUT;
 		open (STDOUT, ">output/$log.out");
-		close STDERR;
 		open (STDERR, ">output/$log.err");
 	    }
 	    exec ($command);
@@ -698,7 +697,7 @@ sub xsystem {
     if ($@) {
 	die unless $@ eq "alarm\n";   # propagate unexpected errors
 	print "Timed out $pid.\n";
-	print "not killed\n" if !kill ('SIGTERM', $pid);
+	kill ('SIGTERM', $pid);
 	$status = 0;
     }
 
@@ -708,11 +707,14 @@ sub xsystem {
 	print "Child terminated with signal $signal\n";
     }
 
-    unlink ("output/$log.err") if defined ($log) && $status == 0;
+    my ($expected_exit) = !defined ($options{EXPECT}) ? 0 : $options{EXPECT};
+    my ($ok) = WIFEXITED ($status) && WEXITSTATUS ($status) == $expected_exit;
+
+    unlink ("output/$log.err") if defined ($log) && $ok;
 
     die $options{DIE} if $status != 0 && defined $options{DIE};
 
-    return $status == 0;
+    return $ok;
 }
 
 sub snarf {

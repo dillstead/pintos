@@ -234,8 +234,8 @@ sub run_vm {
 
 	my (@cmd) = ($bin, '-q');
 	push (@cmd, '-j', $jitter) if defined $jitter;
-	print join (' ', @_), "\n";
-	exec (@_);
+	print join (' ', @cmd), "\n";
+	exec (@cmd);
     } elsif ($sim eq 'qemu') {
 	print "warning: qemu doesn't support --terminal\n"
 	    if $vga eq 'terminal';
