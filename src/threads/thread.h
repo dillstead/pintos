@@ -2,11 +2,11 @@
 #define HEADER_THREAD_H 1
 
 #include <stdint.h>
-#include "debug.h"
-#include "list.h"
+#include "lib/debug.h"
+#include "lib/list.h"
 
 #ifdef USERPROG
-#include "addrspace.h"
+#include "userprog/addrspace.h"
 #endif
 
 /* States in a thread's life cycle. */

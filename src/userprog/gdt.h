@@ -1,7 +1,7 @@
 #ifndef HEADER_GDT_H
 #define HEADER_GDT_H 1
 
-#include "loader.h"
+#include "threads/loader.h"
 
 /* Segment selectors.
    More selectors are defined by the loader in loader.h. */

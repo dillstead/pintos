@@ -1,8 +1,8 @@
 #include "directory.h"
 #include "file.h"
 #include "fsutil.h"
-#include "lib.h"
-#include "malloc.h"
+#include "lib/lib.h"
+#include "threads/malloc.h"
 
 /* Initializes D as a directory that holds ENTRY_CNT entries. */
 bool

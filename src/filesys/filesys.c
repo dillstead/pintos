@@ -27,13 +27,13 @@
 */
 
 #include "filesys.h"
-#include "bitmap.h"
-#include "debug.h"
-#include "directory.h"
-#include "disk.h"
 #include "file.h"
 #include "filehdr.h"
-#include "lib.h"
+#include "directory.h"
+#include "devices/disk.h"
+#include "lib/bitmap.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
 
 /* Filesystem.
 

@@ -1,10 +1,10 @@
 #include "file.h"
-#include "debug.h"
-#include "lib.h"
-#include "malloc.h"
 #include "directory.h"
 #include "filehdr.h"
 #include "filesys.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
+#include "threads/malloc.h"
 
 bool
 file_open (struct file *file, disk_sector_t hdr_sector) 

@@ -1,9 +1,9 @@
 #include "tss.h"
 #include <stddef.h>
-#include "debug.h"
 #include "gdt.h"
-#include "mmu.h"
-#include "palloc.h"
+#include "lib/debug.h"
+#include "threads/mmu.h"
+#include "threads/palloc.h"
 
 /* The Task-State Segment (TSS).
 

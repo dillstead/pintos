@@ -1,7 +1,7 @@
 #include "debug.h"
 #include <stdarg.h>
-#include "interrupt.h"
 #include "lib.h"
+#include "threads/interrupt.h"
 
 #define MAX_CLASSES 16
 static bool all_enabled;

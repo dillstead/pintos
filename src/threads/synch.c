@@ -28,8 +28,8 @@
 
 #include "synch.h"
 #include "interrupt.h"
-#include "lib.h"
 #include "thread.h"
+#include "lib/lib.h"
 
 /* Initializes semaphore SEMA to VALUE and names it NAME (for
    debugging purposes only).  A semaphore is a nonnegative

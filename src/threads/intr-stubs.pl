@@ -1,7 +1,7 @@
 #! /usr/bin/perl
 
 print <<'EOF';
-#include "loader.h"
+#include "threads/loader.h"
 
 	.data
 .globl intr_stubs

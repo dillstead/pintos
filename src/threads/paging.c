@@ -2,9 +2,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "init.h"
-#include "lib.h"
 #include "mmu.h"
 #include "palloc.h"
+#include "lib/lib.h"
 
 static uint32_t *base_page_dir;
 

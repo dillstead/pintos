@@ -1,3 +1,2 @@
-all:
-%:
-	$(MAKE) -C build $@
+include Makefile.vars
+include ../Makefile.kernel

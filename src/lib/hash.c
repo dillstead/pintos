@@ -1,5 +1,6 @@
 #include "hash.h"
-#include "malloc.h"
+#include "debug.h"
+#include "threads/malloc.h"
 
 static struct list *find_bucket (struct hash *, hash_elem *);
 static struct list_elem *find_elem (struct hash *, struct list *, hash_elem *);

@@ -1,15 +1,15 @@
 #include "addrspace.h"
 #include <inttypes.h>
-#include "debug.h"
-#include "file.h"
-#include "filesys.h"
-#include "init.h"
-#include "lib.h"
-#include "mmu.h"
-#include "paging.h"
-#include "palloc.h"
-#include "thread.h"
 #include "tss.h"
+#include "filesys/file.h"
+#include "filesys/filesys.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
+#include "threads/init.h"
+#include "threads/mmu.h"
+#include "threads/paging.h"
+#include "threads/palloc.h"
+#include "threads/thread.h"
 
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification, [ELF1], more-or-less verbatim.  */

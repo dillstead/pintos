@@ -1,11 +1,11 @@
 #include "disk.h"
 #include <stdbool.h>
-#include "debug.h"
-#include "io.h"
-#include "interrupt.h"
-#include "lib.h"
-#include "synch.h"
 #include "timer.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
+#include "threads/io.h"
+#include "threads/interrupt.h"
+#include "threads/synch.h"
 
 /* ATA command block port addresses. */
 #define reg_data(CHANNEL) ((CHANNEL)->reg_base + 0)     /* Data. */

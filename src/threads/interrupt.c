@@ -2,12 +2,12 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include "intr-stubs.h"
-#include "debug.h"
 #include "io.h"
-#include "lib.h"
 #include "mmu.h"
 #include "thread.h"
-#include "timer.h"
+#include "devices/timer.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
 
 /* Number of x86 interrupts. */
 #define INTR_CNT 256

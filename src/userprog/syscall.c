@@ -1,7 +1,7 @@
 #include "syscall.h"
-#include "lib.h"
-#include "interrupt.h"
-#include "thread.h"
+#include "lib/lib.h"
+#include "threads/interrupt.h"
+#include "threads/thread.h"
 
 static void syscall_handler (struct intr_frame *);
 

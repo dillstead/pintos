@@ -1,0 +1,93 @@
+# -*- makefile -*-
+
+include ../Makefile.vars
+
+SHELL = /bin/sh
+
+CC = gcc
+
+SRC_ROOT = ../..
+VPATH = $(SRC_ROOT)
+
+WARNINGS = -Wall -W -Wstrict-prototypes -Wmissing-prototypes
+INCLUDES = -I$(SRC_ROOT)
+CFLAGS = -g -O3 -MMD -msoft-float $(INCLUDES) $(WARNINGS) $(DEFINES)
+ASFLAGS = -Wa,--gstabs $(INCLUDES) $(DEFINES)
+
+# Core kernel.
+threads_SRC  = threads/init.c		# Main program.
+threads_SRC += threads/thread.c		# Thread management core.
+threads_SRC += threads/switch.S		# Thread switch routine.
+threads_SRC += threads/interrupt.c	# Interrupt core.
+threads_SRC += threads/intr-stubs.S	# Interrupt stubs.
+threads_SRC += threads/synch.c		# Synchronization.
+threads_SRC += threads/paging.c		# Page tables.
+threads_SRC += threads/palloc.c		# Page allocator.
+threads_SRC += threads/malloc.c		# Subpage allocator.
+threads_SRC += threads/start.S		# Startup code.
+
+# Device driver code.
+devices_SRC  = devices/timer.c		# Timer device.
+devices_SRC += devices/kbd.c		# Keyboard device.
+devices_SRC += devices/vga.c		# Video device.
+devices_SRC += devices/serial.c		# Serial port device.
+devices_SRC += devices/disk.c		# IDE disk device.
+
+# Library code.
+lib_SRC  = lib/debug.c		# Debug helpers.
+lib_SRC += lib/lib.c		# Standard C library.
+lib_SRC += lib/random.c		# Pseudo-random numbers.
+lib_SRC += lib/list.c		# Doubly-linked lists.
+lib_SRC += lib/bitmap.c		# Bitmaps.
+lib_SRC += lib/hash.c		# Hash tables.
+
+# Filesystem code.
+filesys_SRC  = filesys/filesys.c	# Filesystem core.
+filesys_SRC += filesys/file.c		# Files.
+filesys_SRC += filesys/directory.c	# Directories.
+filesys_SRC += filesys/filehdr.c	# File headers (inodes).
+filesys_SRC += filesys/fsutil.c		# Utilities.
+
+# User process code.
+userprog_SRC  = userprog/addrspace.c	# Address spaces.
+userprog_SRC += userprog/exception.c	# User exception handler.
+userprog_SRC += userprog/syscall.c	# System call handler.
+userprog_SRC += userprog/gdt.c		# GDT initialization.
+userprog_SRC += userprog/tss.c		# TSS management.
+
+SOURCES = $(foreach dir,$(SUBDIRS),$($(dir)_SRC))
+OBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))
+DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
+
+all: os.dsk
+
+threads/intr-stubs.S: threads/intr-stubs.pl threads/loader.h
+	$< > $@
+
+threads/kernel.lds.s: CPPFLAGS += -P -C
+threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
+
+kernel.o: threads/kernel.lds.s $(OBJECTS) 
+	ld -T $< -o $@ $(OBJECTS) `$(CC) -print-libgcc-file-name`
+
+kernel.bin: kernel.o
+	objcopy -O binary -R .note -R .comment -S $< $@.tmp
+	$(SRC_ROOT)/pad 4096 < $@.tmp > $@
+	rm $@.tmp
+
+threads/loader.o: threads/loader.S threads/loader.h kernel.bin
+	gcc -c $< -o $@ -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
+
+loader.bin: threads/loader.o
+	ld -N -e start -Ttext 0x7c00 --oformat binary -o $@ $<
+
+os.dsk: loader.bin kernel.bin
+	cat $^ > $@
+
+clean:
+	rm -f $(OBJECTS) $(DEPENDS) 
+	rm -f threads/intr-stubs.S threads/loader.o
+	rm -f kernel.o kernel.lds.s
+	rm -f kernel.bin loader.bin
+
+-include $(DEPENDS)

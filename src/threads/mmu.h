@@ -3,7 +3,7 @@
 
 #ifndef __ASSEMBLER__
 #include <stdint.h>
-#include "debug.h"
+#include "lib/debug.h"
 #endif
 
 #include "loader.h"

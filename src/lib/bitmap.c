@@ -3,9 +3,9 @@
 #include <limits.h>
 #include "debug.h"
 #include "lib.h"
-#include "malloc.h"
+#include "threads/malloc.h"
 #ifdef FILESYS
-#include "file.h"
+#include "filesys/file.h"
 #endif
 
 /* Number of bits in an element. */

@@ -1,9 +1,9 @@
 #include "exception.h"
 #include <inttypes.h>
-#include "lib.h"
 #include "gdt.h"
-#include "interrupt.h"
-#include "thread.h"
+#include "lib/lib.h"
+#include "threads/interrupt.h"
+#include "threads/thread.h"
 
 static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
-#include "disk.h"
+#include "devices/disk.h"
 #include "off_t.h"
 
 struct file 

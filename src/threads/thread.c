@@ -1,15 +1,15 @@
 #include "thread.h"
 #include <stddef.h>
-#include "debug.h"
 #include "interrupt.h"
 #include "intr-stubs.h"
-#include "lib.h"
 #include "mmu.h"
 #include "palloc.h"
-#include "random.h"
 #include "switch.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
+#include "lib/random.h"
 #ifdef USERPROG
-#include "gdt.h"
+#include "userprog/gdt.h"
 #endif
 
 /* Value for struct thread's `magic' member.

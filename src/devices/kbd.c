@@ -1,8 +1,8 @@
 #include "kbd.h"
-#include "debug.h"
-#include "interrupt.h"
-#include "io.h"
-#include "lib.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
+#include "threads/interrupt.h"
+#include "threads/io.h"
 
 static void
 irq21_keyboard (struct intr_frame *args UNUSED) 

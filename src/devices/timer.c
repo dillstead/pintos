@@ -1,7 +1,7 @@
 #include "timer.h"
-#include "debug.h"
-#include "interrupt.h"
-#include "io.h"
+#include "lib/debug.h"
+#include "threads/interrupt.h"
+#include "threads/io.h"
   
 #if TIMER_FREQ < 19
 #error 8254 timer requires TIMER_FREQ >= 19

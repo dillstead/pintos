@@ -1,9 +1,9 @@
 #include "vga.h"
 #include <stdint.h>
 #include <stddef.h>
-#include "io.h"
-#include "lib.h"
-#include "mmu.h"
+#include "lib/lib.h"
+#include "threads/io.h"
+#include "threads/mmu.h"
 
 /* VGA text screen support.  See [FREEVGA] for more information. */
 

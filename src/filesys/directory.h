@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include "disk.h"
+#include "devices/disk.h"
 
 /* Maximum length of a filename.
    This is the traditional UNIX maximum.

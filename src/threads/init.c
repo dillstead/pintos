@@ -2,31 +2,31 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <limits.h>
-#include "debug.h"
 #include "interrupt.h"
 #include "io.h"
-#include "kbd.h"
-#include "lib.h"
 #include "loader.h"
 #include "malloc.h"
 #include "mmu.h"
 #include "paging.h"
 #include "palloc.h"
-#include "random.h"
-#include "serial.h"
 #include "thread.h"
-#include "timer.h"
-#include "vga.h"
+#include "devices/kbd.h"
+#include "devices/serial.h"
+#include "devices/timer.h"
+#include "devices/vga.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
+#include "lib/random.h"
 #ifdef USERPROG
-#include "exception.h"
-#include "syscall.h"
-#include "gdt.h"
-#include "tss.h"
+#include "userprog/exception.h"
+#include "userprog/gdt.h"
+#include "userprog/syscall.h"
+#include "userprog/tss.h"
 #endif
 #ifdef FILESYS
-#include "filesys.h"
-#include "disk.h"
-#include "fsutil.h"
+#include "devices/disk.h"
+#include "filesys/filesys.h"
+#include "filesys/fsutil.h"
 #endif
 
 /* Amount of physical memory, in 4 kB pages. */

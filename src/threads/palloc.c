@@ -1,13 +1,13 @@
 #include "palloc.h"
 #include <stddef.h>
 #include <stdint.h>
-#include "debug.h"
 #include "init.h"
 #include "loader.h"
-#include "lib.h"
-#include "list.h"
 #include "mmu.h"
 #include "synch.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
+#include "lib/list.h"
 
 /* Page allocator.  Hands out memory in page-size chunks.
    See malloc.h for an allocator that hands out smaller

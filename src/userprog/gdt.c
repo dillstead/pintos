@@ -1,8 +1,8 @@
 #include "gdt.h"
-#include "debug.h"
-#include "mmu.h"
-#include "palloc.h"
 #include "tss.h"
+#include "lib/debug.h"
+#include "threads/mmu.h"
+#include "threads/palloc.h"
 
 /* The Global Descriptor Table (GDT).
 

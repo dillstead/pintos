@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "debug.h"
+#include "lib/debug.h"
 
 /* Register definitions for the 16550A UART used in PCs.  This is
    a full definition of all the registers and their bits.  We

@@ -1,11 +1,11 @@
 #include "fsutil.h"
 #include <stdbool.h>
-#include "debug.h"
-#include "filesys.h"
 #include "file.h"
-#include "lib.h"
-#include "mmu.h"
-#include "palloc.h"
+#include "filesys.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
+#include "threads/mmu.h"
+#include "threads/palloc.h"
 
 /* Filename and file size to use for copy operations,
    as "filename:size". */

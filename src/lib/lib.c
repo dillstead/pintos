@@ -1,12 +1,12 @@
+#include "lib.h"
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include "debug.h"
-#include "interrupt.h"
-#include "lib.h"
-#include "serial.h"
-#include "vga.h"
+#include "devices/serial.h"
+#include "devices/vga.h"
+#include "threads/interrupt.h"
 
 static void
 vprintf_core (const char *format, va_list args,

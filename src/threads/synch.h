@@ -2,7 +2,7 @@
 #define HEADER_SYNCH_H 1
 
 #include <stdbool.h>
-#include "list.h"
+#include "lib/list.h"
 
 /* A counting semaphore. */
 struct semaphore 

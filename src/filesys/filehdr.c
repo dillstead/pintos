@@ -1,9 +1,9 @@
 #include "filehdr.h"
-#include "bitmap.h"
-#include "debug.h"
-#include "malloc.h"
 #include "filesys.h"
-#include "lib.h"
+#include "lib/bitmap.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
+#include "threads/malloc.h"
 
 /* Allocates sectors from bitmap B for the content of a file
    whose size is LENGTH bytes, and returns a new `struct filehdr'

@@ -1,11 +1,11 @@
 #include "malloc.h"
 #include <stdint.h>
-#include "debug.h"
-#include "lib.h"
-#include "list.h"
-#include "synch.h"
 #include "mmu.h"
 #include "palloc.h"
+#include "synch.h"
+#include "lib/debug.h"
+#include "lib/lib.h"
+#include "lib/list.h"
 
 /* A simple implementation of malloc().
 

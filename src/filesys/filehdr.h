@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include "disk.h"
 #include "off_t.h"
+#include "devices/disk.h"
 
 /* Number of direct sector pointers in a file header. */
 #define DIRECT_CNT ((DISK_SECTOR_SIZE - sizeof (off_t) * 2)     \
