@@ -16,8 +16,7 @@
 #error TIMER_FREQ <= 1000 recommended
 #endif
 
-/* Number of timer ticks that a process gets before being
-   preempted. */
+/* Number of time ticks to elapse between process yields. */
 #define TIME_SLICE 1
 
 /* Number of timer ticks since OS booted. */
