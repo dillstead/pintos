@@ -39,7 +39,7 @@ struct thread *thread_current (void);
 bool thread_execute (const char *filename);
 #endif
 
-void thread_start (struct thread *);
+void thread_start (struct thread *) NO_RETURN;
 void thread_ready (struct thread *);
 void thread_exit (void) NO_RETURN;
 
