@@ -6,9 +6,11 @@
 #define TIMER_FREQ 100
 
 void timer_init (void);
-uint64_t timer_ticks (void);
-uint64_t timer_elapsed (uint64_t);
+int64_t timer_ticks (void);
+int64_t timer_elapsed (int64_t);
 
-void timer_wait_until (uint64_t);
+void timer_msleep (int64_t ms);
+void timer_usleep (int64_t us);
+void timer_nsleep (int64_t ns);
 
 #endif /* timer.h */

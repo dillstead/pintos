@@ -7,7 +7,7 @@
 #error 8254 timer requires TIMER_FREQ >= 19
 #endif
 
-static volatile uint64_t ticks;
+static volatile int64_t ticks;
 
 static void
 irq20_timer (struct intr_frame *args UNUSED)
@@ -33,25 +33,40 @@ timer_init (void)
   intr_register (0x20, 0, IF_OFF, irq20_timer, "8254 Timer");
 }
 
-uint64_t
+int64_t
 timer_ticks (void) 
 {
   enum if_level old_level = intr_disable ();
-  uint64_t t = ticks;
+  int64_t t = ticks;
   intr_set_level (old_level);
   return t;
 }
 
-uint64_t
-timer_elapsed (uint64_t then) 
+int64_t
+timer_elapsed (int64_t then) 
 {
-  uint64_t now = timer_ticks ();
-  return now > then ? now - then : ((uint64_t) -1 - then) + now + 1;
+  return timer_ticks () - then;
 }
 
-/* Suspends execution for at least DURATION ticks. */
+/* Suspends execution for approximately DURATION milliseconds. */
 void
-timer_wait_until (uint64_t duration) 
+timer_msleep (int64_t ms) 
 {
-  /* FIXME */
+  int64_t ticks = (int64_t) ms * TIMER_FREQ / 1000;
+  int64_t start = timer_ticks ();
+
+  while (timer_elapsed (start) < ticks) 
+    continue;
+}
+
+void
+timer_usleep (int64_t us) 
+{
+  timer_msleep (us / 1000 + 1);
+}
+
+void
+timer_nsleep (int64_t ns) 
+{
+  timer_msleep (ns / 1000000 + 1);
 }
