@@ -18,6 +18,7 @@
 #include "threads/mmu.h"
 #include "threads/paging.h"
 #include "threads/palloc.h"
+#include "threads/test.h"
 #include "threads/thread.h"
 #ifdef USERPROG
 #include "userprog/exception.h"
@@ -105,6 +106,8 @@ main (void)
       printf ("\nExecuting '%s':\n", initial_program);
       thread_execute (initial_program); 
     }
+#else
+  test ();
 #endif
 
   /* Terminate this thread. */
