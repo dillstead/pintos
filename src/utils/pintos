@@ -51,7 +51,7 @@ while (@ARGV) {
 	copy_pad ($hostfn, "scratch.dsk", 512);
 
 	# Do copy.
-	run_vm ("-ci", $hostfn, $size, "-q");
+	run_vm ("-ci", $guestfn, $size, "-q");
 	exit 0;
     } elsif ($arg eq 'get') {
 	usage () if @ARGV != 1 && @ARGV != 2;
@@ -284,7 +284,7 @@ sub bochs_disk_line {
     return "" if !defined $file;
     my (%geom) = disk_geometry ($file);
     return "$device: type=disk, path=$file, mode=flat, "
-	. " cylinders=$geom{C}, heads=$geom{H}, spt=$geom{S}, "
+	. "cylinders=$geom{C}, heads=$geom{H}, spt=$geom{S}, "
 	. "translation=none\n";
 }
 
