@@ -1,7 +1,0 @@
-*.d
-diskimage.bin
-loader.bin
-kernel.bin
-kernel.bin.tmp
-kernel.lds.s
-intr-stubs.S
