@@ -55,7 +55,7 @@ main (void)
   /* Needed by printf(), so initialize them very early. */
   ram_init ();
   vga_init ();
-  serial_init (1);
+  serial_init_poll ();
 
   /* Greet user. */
   printf ("Booting cnachos86 with %'d kB RAM...\n", ram_pages * 4);
@@ -87,7 +87,7 @@ main (void)
 
   /* Start thread scheduler and enable interrupts. */
   thread_start ();
-  serial_init (2);
+  serial_init_queue ();
 
 #ifdef FILESYS
   /* Initialize filesystem. */
@@ -98,9 +98,6 @@ main (void)
 
   printf ("Boot complete.\n");
   
-  for (;;) 
-    putchar (serial_getc ());
-
 #ifdef USERPROG
   /* Run a user program. */
   if (initial_program != NULL)

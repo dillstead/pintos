@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-void serial_init (int phase);
+void serial_init_poll (void);
+void serial_init_queue (void);
 void serial_putc (uint8_t);
-uint8_t serial_getc (void);
 
 #endif /* devices/serial.h */
