@@ -164,6 +164,8 @@ sub run_vm {
 	print BOCHSRC "vgaromimage: $vgaromimage\n";
 	print BOCHSRC bochs_disk_line ("ata0-master", $disks[0]);
 	print BOCHSRC bochs_disk_line ("ata0-slave", $disks[1]);
+	print BOCHSRC "ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15\n"
+	    if defined ($disks[2]) || defined ($disks[3]);
 	print BOCHSRC bochs_disk_line ("ata1-master", $disks[2]);
 	print BOCHSRC bochs_disk_line ("ata1-slave", $disks[3]);
 	print BOCHSRC "boot: c\n";
