@@ -41,7 +41,7 @@ test (void)
     {
       int repeat;
 
-      printf (" %zu", size);
+      printf (" %d", size);
       for (repeat = 0; repeat < 10; repeat++) 
         {
           static struct value values[MAX_SIZE * 4];
