@@ -18,7 +18,7 @@ switch_threads:
 	#
 	# Note that the SVR4 ABI allows us to destroy %eax, %ecx, %edx,
 	# but requires us to preserve %ebx, %ebp, %esi, %edi.  See
-	# [SV-ABI-386] pages 3-11 and 3-12 for details.
+	# [SysV-ABI-386] pages 3-11 and 3-12 for details.
 	#
 	# This stack frame must match the one set up by thread_create().
 	pushl %ebx
