@@ -191,7 +191,7 @@ static inline uint32_t pte_create_user (uint32_t *page, bool writable) {
 }
 
 /* Returns a pointer to the page that page table entry PTE, which
-   must "present", points to. */
+   must be "present", points to. */
 static inline void *pte_get_page (uint32_t pte) {
   ASSERT (pte & PG_P);
   return ptov (pte & ~PGMASK);
