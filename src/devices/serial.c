@@ -131,6 +131,8 @@ set_serial (int bps)
   int baud_base = 1843200 / 16;         /* Base rate of 16550A. */
   uint16_t divisor = baud_base / bps;   /* Clock rate divisor. */
 
+  ASSERT (bps >= 300 && bps <= 115200);
+
   /* Enable DLAB. */
   outb (LCR_REG, LCR_N81 | LCR_DLAB);
 
