@@ -397,6 +397,14 @@ implementing the join syscall, but besides that, you can use
 the original code provided for project 1.
 
 @item
+@b{All my user programs die with page faults.}
+
+This will generally happen if you haven't implemented problem 2-1
+yet.  The reason is that the basic C library for user programs tries
+to read @var{argc} and @var{argv} off the stack.  Because the stack
+isn't properly set up yet, this causes a page fault.
+
+@item
 @b{Is there a way I can disassemble user programs?}
 
 The @command{i386-elf-objdump} utility can disassemble entire user
@@ -417,7 +425,7 @@ is compiled as a unit.)  If you wish to port libraries to Pintos, feel
 free.
 
 @item
-@b{How do I compile new user programs? How do I make 'echo' compile?}
+@b{How do I compile new user programs?}
 
 You need to modify @file{tests/Makefile}.
 
