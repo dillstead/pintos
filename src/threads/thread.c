@@ -25,6 +25,10 @@ static struct list ready_list;
 static struct thread *idle_thread;      /* Thread. */
 static void idle (void *aux UNUSED);    /* Thread function. */
 
+/* Initial thread.
+   This is the thread running main(). */
+static struct thread *initial_thread;
+
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
   {
@@ -57,14 +61,12 @@ void schedule_tail (struct thread *prev);
 void
 thread_init (void) 
 {
-  struct thread *t;
-  
   ASSERT (intr_get_level () == INTR_OFF);
 
   /* Set up a thread structure for the running thread. */
-  t = running_thread ();
-  init_thread (t, "main");
-  t->status = THREAD_RUNNING;
+  initial_thread = running_thread ();
+  init_thread (initial_thread, "main");
+  initial_thread->status = THREAD_RUNNING;
 
   /* Initialize run queue. */
   list_init (&ready_list);
@@ -379,7 +381,8 @@ destroy_thread (struct thread *t)
 #ifdef USERPROG
   addrspace_destroy (t);
 #endif
-  palloc_free (t);
+  if (t != initial_thread)
+    palloc_free (t);
 }
 
 /* Completes a thread switch by activating the new thread's page
