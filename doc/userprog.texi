@@ -456,7 +456,13 @@ than end of file).  Fd 0 reads from the keyboard using
 @itemx int write (int @var{fd}, const void *@var{buffer}, unsigned @var{size})
 Write @var{size} bytes from @var{buffer} to the open file @var{fd}.
 Returns the number of bytes actually written, or -1 if the file could
-not be written.   Fd 1 writes to the console.
+not be written.   
+
+Fd 1 writes to the console.  Your code to write to the console should
+write all of @var{buffer} in one call to @func{putbuf}, at least as
+long as @var{size} is not bigger than a few hundred bytes.  Otherwise,
+lines of text output by different processes may end up interleaved on
+the console, confusing both human readers and our grading scripts.
 
 @item SYS_seek
 @itemx void seek (int @var{fd}, unsigned @var{position})
