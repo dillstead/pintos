@@ -2,24 +2,24 @@ CORRECTNESS [[total]]
 ---------------------
 
 Argument passing
-  -3 args-argc: argc is not set correctly
+  -4 args-argc: argc is not set correctly
+  -4 args-single: passing single argument fails
   -3 args-argv0: executable name not passed as argv[0]
   -3 args-argvn: argv[argc] is not a null pointer
-  -3 args-single: passing single argument fails
   -3 args-multiple: passing multiple arguments fails
   -3 args-dbl-space: using multiple spaces between arguments fails
-Score: /18
+Score: /20
 
 System calls
+  -4 sc-boundary: syscall with args across page boundary must work
   -3 sc-bad-sp: system call with a bad stack pointer must not crash OS
   -3 sc-bad-arg: syscall with argument off top of stack must not crash OS
-  -3 sc-boundary: syscall with args across page boundary must work
-Score: /9
+Score: /10
 
 System calls: halt, exec 
   -1 halt: halt system call fails
-  -2 exit: exit system call malfunctions
-Score: /3
+  -1 exit: exit system call malfunctions
+Score: /2
 
 System calls: create
   -2 create-normal: create a file in the most normal way
@@ -83,8 +83,7 @@ System calls: join
 Score: /7
 
 Multiprogramming
-  -2 multi-recurse: test recursively executing subprocesses
-  -2 multi-oom: exhausting user memory must not crash OS
-  -2 multi-fragment: programs must load even if user memory is fragmented
-  -2 multi-parent-fd: child must not be able to close parent's fds
-Score: /8
+  -3 multi-recurse: test recursively executing subprocesses
+  -3 multi-oom: exhausting user memory must not crash OS
+  -3 multi-child-fd: child must not be able to close parent's fds
+Score: /9
