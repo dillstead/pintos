@@ -91,6 +91,10 @@ intr_init (void)
   /* Initialize interrupt controller. */
   pic_init ();
 
+  /* Initialize IDT. */
+  for (i = 0; i < INTR_CNT; i++)
+    idt[i] = make_trap_gate (intr_stubs[i], 0);
+
   /* Load IDT register. */
   idtr_operand = make_idtr_operand (sizeof idt - 1, idt);
   asm volatile ("lidt %0" :: "m" (idtr_operand));
