@@ -2,11 +2,7 @@
   each one by 16 bytes and are probably not that useful.
   Alternatively make the names pointers?
 
-* pagedir.[ch] needs comments.
-
 * Write, test VM.
-
-* Implement `jitter'.
 
 * Test list, hash ADTs.
 
