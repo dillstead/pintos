@@ -210,7 +210,7 @@ are not very useful for our purposes.
 (If no window appeared at all, and you just got a terminal full of
 corrupt-looking text, then you're probably logged in remotely and X
 forwarding is not set up correctly.  In this case, you can fix your X
-setup, or you can use the @option{-nv} option.)
+setup, or you can use the @option{nv} option.)
 
 The text printed by Pintos inside Bochs probably went by too quickly
 to read.  However, you've probably noticed by now that the same text
@@ -227,9 +227,9 @@ options.  You can select a simulator other than Bochs, although the
 Leland systems only have Bochs installed.  You can start the simulator
 running a debugger (@pxref{i386-elf-gdb}).  You can set the amount of
 memory to give the VM.  Finally, you can set up how you want VM output
-to be displayed: use @option{-nv} to turn off the VGA display,
+to be displayed: use @option{-v} to turn off the VGA display,
 @option{-t} to use your terminal window as the VGA display instead of
-opening a new window, or @option{-ns} to suppress the serial output to
+opening a new window, or @option{-s} to suppress the serial output to
 @code{stdout}.
 
 The @command{pintos} program offers commands other than @samp{run} and

@@ -529,9 +529,9 @@ Each character is 1 byte.
 @end itemize
 
 @item
-@b{Why doesn't keyboard input work with @option{-nv}?}
+@b{Why doesn't keyboard input work with @option{-v}?}
 
-Serial input isn't implemented.  Don't use @option{-nv} if you want to
+Serial input isn't implemented.  Don't use @option{-v} if you want to
 use the shell or otherwise type at the keyboard.
 @end enumerate
 

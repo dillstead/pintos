@@ -46,13 +46,13 @@ Your submission should define @code{THREAD_JOIN_IMPLEMENTED} in
 It is important for you to note that in addition to getting virtual
 memory working, this assignment is also meant to be an open-ended
 design problem.  We will expect you to come up with a design that
-makes sense.  You will have the freedom to choose how to do software
-translation on TLB misses, how to represent the swap partition, how to
-implement paging, etc.  In each case, we will expect you to provide a
-defensible justification in your design documentation as to why your
-choices are reasonable.  You should evaluate your design on all the
-available criteria: speed of handling a page fault, space overhead in
-memory, minimizing the number of page faults, simplicity, etc.
+makes sense.  You will have the freedom to choose how to handle page
+faults, how to organize the swap disk, how to implement paging, etc.
+In each case, we will expect you to provide a defensible justification
+in your design documentation as to why your choices are reasonable.
+You should evaluate your design on all the available criteria: speed
+of handling a page fault, space overhead in memory, minimizing the
+number of page faults, simplicity, etc.
 
 In keeping with this, you will find that we are going to say as little
 as possible about how to do things.  Instead we will focus on what end
@@ -304,29 +304,22 @@ any implementation you like, as long as it accomplishes the goal.
 @node Problem 3-2 Paging To and From Disk
 @section Problem 3-2: Paging To and From Disk
 
-Implement paging to and from disk.
+Implement paging to and from files and the swap disk.  You may use the
+disk on interface @code{hd1:1} as the swap disk.
 
 You will need routines to move a page from memory to disk and from
-disk to memory.  You may use the Pintos file system for swap space, or
-you may use the disk on interface @code{hd1:1}, which is otherwise
-unused.  A swap disk can theoretically be faster than using the file
-system, because it avoid file system overhead and because the swap
-disk and file system disk will be on separate hard disk controllers.
-You will definitely need to be able to retrieve pages from files in
-any case, so to avoid special cases it may be easier to use a file for
-swap.  You will still be using the basic file system provided with
-Pintos.  If you do everything correctly, your VM should still work
-when you implement your own file system for the next assignment.
+disk to memory, where ``disk'' is either a file or the swap disk.  If
+you do everything correctly, your VM should still work when you
+implement your own file system for the next assignment.
 
 You will need a way to track pages which are used by a process but
 which are not in physical memory, to fully handle page faults.  Pages
-that you store on disk should not be constrained to be in sequential
-order, and consequently your swap file (or swap disk) should not
-require unused empty space.  You will also need a way to track all of
-the physical memory pages, in order to find an unused one when needed,
-or to evict a page when memory is needed but no empty pages are
-available.  The data structures that you designed in part 1 should do
-most of the work for you.
+that you write to swap should not be constrained to be in sequential
+order.  You will also need a way to track all of the physical memory
+pages, in order to find an unused one when needed, or to evict a page
+when memory is needed but no empty pages are available.  The data
+structures that you designed in part 1 should do most of the work for
+you.
 
 You will need a page replacement algorithm.  The hardware sets the
 accessed and dirty bits when it accesses memory.  Therefore, you
@@ -503,17 +496,10 @@ the linker manual, accessible via @samp{info ld}.
 @item Page Table Management FAQs
 @enumerate 1
 @item
-@b{How do we manage allocation of pages used for page tables?}
+@b{Do page tables need to created lazily?}
 
-You can use any reasonable algorithm to do so.  However, you should
-make sure that memory used for page tables doesn't grow so much that
-it encroaches deeply on the memory used for data pages.
-
-Here is one reasonable algorithm.  At OS boot time, reserve some fixed
-number of pages for page tables.  Then, each time a new page table
-page is needed, select one of these pages in ``round robin'' fashion.
-If the page in use, clean up any pointers to it.  Then use it for the
-new page table page.
+No.  You can create the page tables at load time (or @code{mmap} time)
+if you like.
 
 @item
 @b{Our code handles the PageFault exceptions. However, the number of
@@ -530,11 +516,23 @@ you handle a page fault in your code.
 
 @enumerate 1
 @item
-@b{Can we assume (and enforce) that the user's stack will
-never increase beyond one page?}
+@item
+@b{Does the virtual memory system need to support growth of the stack
+segment?}
 
-No.  This value was useful for project 2, but for this assignment, you
-need to implement an extensible stack segment.
+Yes. If a page fault appears just below the last stack segment page,
+you must add a new page to the bottom of the stack. It is impossible
+to predict how large the stack will grow at compile time, so we must
+allocate pages as necessary. You should only allocate additional pages
+if they ``appear'' to be stack accesses.
+
+@item
+@b{Does the first stack page need to be loaded lazily?}
+
+No, you can initialize the first stack page with the command line at
+load time.  There's no need to wait for it to be faulted in.  Even if
+you did wait, the very first instruction in the user program is likely
+to be one that faults in the page.
 
 @item
 @b{Does the virtual memory system need to support growth of the data
@@ -546,16 +544,6 @@ still have no dynamic allocation in Pintos (although it is possible to
 Implementing @code{sbrk()} has been an extra-credit assignment in
 previous years, but adds little additional complexity to a
 well-designed system.
-
-@item
-@b{Does the virtual memory system need to support growth of the stack
-segment?}
-
-Yes. If a page fault appears just below the last stack segment page,
-you must add a new page to the bottom of the stack. It is impossible
-to predict how large the stack will grow at compile time, so we must
-allocate pages as necessary. You should only allocate additional pages
-if they ``appear'' to be stack accesses.
 
 @item
 @b{But what do you mean by ``appear'' to be stack accesses? How big can a
@@ -679,3 +667,5 @@ No, once created the mapping is valid until @code{munmap} is called
 or the process exits.
 @end enumerate
 @end enumerate
+
+TLB invalidation FIXME

@@ -471,6 +471,18 @@ problems.  There are other, equally correct solutions that do not
 require interrupt manipulation.  However, if you do manipulate
 interrupts and @strong{correctly and fully document it} in your design
 document, we will allow limited use of interrupt disabling.
+
+@item
+@b{What does ``warning: no previous prototype for `@var{function}''
+mean?}
+
+It means that you defined a non-@code{static} function without
+preceding it by a prototype.  Because non-@code{static} functions are
+intended for use by other @file{.c} files, for safety they should be
+prototyped in a header file included before their definition.  To fix
+the problem, add a prototype in a header file that you include, or, if
+the function isn't actually used by other @file{.c} files, make it
+@code{static}.
 @end enumerate
 
 @item Alarm Clock FAQs
