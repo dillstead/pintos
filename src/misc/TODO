@@ -1,9 +1,3 @@
-* Write "tour".
-
-* Always flush TLB.
-
-----------------------------------------------------------------------
-
 * Cygwin support:
   - PE linker scripts?  Doesn't seem to support ELF ones.
   - .S files need _ prefixes on symbols.
