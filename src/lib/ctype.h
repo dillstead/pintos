@@ -16,7 +16,7 @@ static inline int isspace (int c) {
 static inline int isblank (int c) { return c == ' ' || c == '\t'; }
 static inline int isgraph (int c) { return c > 32 && c < 127; }
 static inline int isprint (int c) { return c >= 32 && c < 127; }
-static inline int iscntrl (int c) { return c >= 0 && c < 32 || c == 127; }
+static inline int iscntrl (int c) { return (c >= 0 && c < 32) || c == 127; }
 static inline int isascii (int c) { return c >= 0 && c < 128; }
 static inline int ispunct (int c) {
   return isprint (c) && !isalnum (c) && !isspace (c);
