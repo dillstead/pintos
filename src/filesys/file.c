@@ -45,6 +45,7 @@ file_close (struct file *file)
   
   inode_close (file->inode);
   free (file->bounce);
+  free (file);
 }
 
 /* Reads SIZE bytes from FILE into BUFFER,
