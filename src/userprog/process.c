@@ -227,7 +227,7 @@ load (const char *filename, void (**eip) (void), void **esp)
   if (ehdr.e_machine != 3)
     LOAD_ERROR (("ELF executable is not x86"));
   if (ehdr.e_version != 1)
-    LOAD_ERROR (("ELF executable hasunknown version %d",
+    LOAD_ERROR (("ELF executable has unknown version %d",
                  (int) ehdr.e_version));
   if (ehdr.e_phentsize != sizeof (struct Elf32_Phdr))
     LOAD_ERROR (("bad ELF program header size"));
