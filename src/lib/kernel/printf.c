@@ -1,12 +1,14 @@
 #include <stdarg.h>
 #include <stdio.h>
-
 #include "devices/serial.h"
 #include "devices/vga.h"
 #include "threads/interrupt.h"
 
 static void vprintf_helper (char, void *);
 
+/* The standard vprintf() function,
+   which is like printf() but uses a va_list.
+   Writes its output to both vga display and serial port. */
 int
 vprintf (const char *format, va_list args) 
 {
@@ -29,11 +31,11 @@ vprintf_helper (char c, void *char_cnt_)
   putchar (c);
 }
 
-/* Writes C to the console. */
+/* Writes C to the vga display and serial port. */
 int
 putchar (int c) 
 {
-  serial_outb (c);
+  serial_putc (c);
   vga_putc (c);
   return c;
 }
