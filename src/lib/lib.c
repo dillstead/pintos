@@ -106,7 +106,10 @@ memcmp (const void *a_, const void *b_, size_t size)
 /* Copies string SRC to DST.  If SRC is longer than SIZE - 1
    characters, only SIZE - 1 characters are copied.  A null
    terminator is always written to DST, unless SIZE is 0.
-   Returns the length of SRC. */
+   Returns the length of SRC.
+
+   See http://www.courtesan.com/todd/papers/strlcpy.html for
+   information on strlcpy(). */
 size_t
 strlcpy (char *dst, const char *src, size_t size) 
 {
