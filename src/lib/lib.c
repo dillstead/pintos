@@ -182,10 +182,13 @@ snprintf (char *buffer, size_t buf_size,
           const char *format, ...) 
 {
   va_list args;
+  int retval;
 
   va_start (args, format);
-  vsnprintf (buffer, buf_size, format, args);
+  retval = vsnprintf (buffer, buf_size, format, args);
   va_end (args);
+
+  return retval;
 }
 
 /* printf() and friends internals.  You do not need to understand
@@ -199,7 +202,8 @@ struct printf_conversion
         PLUS = 1 << 1,
         SPACE = 1 << 2,
         POUND = 1 << 3,
-        ZERO = 1 << 4
+        ZERO = 1 << 4,
+        GROUP = 1 << 5
       }
     flags;
 
@@ -244,6 +248,9 @@ parse_conversion (const char *format, struct printf_conversion *c,
           break;
         case '0':
           c->flags |= ZERO;
+          break;
+        case '\'':
+          c->flags |= GROUP;
           break;
         default:
           format--;
@@ -373,6 +380,8 @@ printf_integer (uintmax_t value, bool negative, const char *digits,
   cp = buf;
   while (value > 0) 
     {
+      if ((c->flags & GROUP) && cp > buf && (cp - buf) % 3 == 0)
+        *cp++ = ',';
       *cp++ = digits[value % base];
       value /= base;
     }
@@ -633,5 +642,35 @@ vprintf_core (const char *format, va_list args,
           printf_core ("<<no %%%c conversion>>", output, aux, *format);
           break;
         }
+    }
+}
+
+void
+hex_dump (const void *buffer, size_t size) 
+{
+  const size_t n_per_line = 16;
+  const uint8_t *p = buffer;
+  size_t ofs = 0;
+
+  while (size > 0) 
+    {
+      size_t n, i;
+
+      printk ("%08zx", ofs);
+      n = size >= n_per_line ? n_per_line : size;
+      for (i = 0; i < n; i++) 
+        printk ("%c%02x", i == n / 2 ? '-' : ' ', (unsigned) p[i]);
+      for (; i < n_per_line; i++)
+        printk ("   ");
+      printk (" |");
+      for (i = 0; i < n; i++)
+        printk ("%c", isprint (p[i]) ? p[i] : '.');
+      for (; i < n_per_line; i++)
+        printk (" ");
+      printk ("|\n");
+
+      p += n;
+      ofs += n;
+      size -= n;
     }
 }
