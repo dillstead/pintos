@@ -7,6 +7,9 @@ all:
 
 check:
 	$(MAKE) -C .. distclean
+	$(MAKE) check-noclean
+
+check-noclean:
 	for d in $(TESTS); do $(MAKE) $$d || exit 1; done
 	@echo All tests passed.
 
@@ -91,6 +94,7 @@ userprog::
 	$(prep-grading)
 	$(mk-sandbox)
 	$(apply-patch) ../solutions/p1-2.patch
+	echo '#define THREAD_JOIN_IMPLEMENTED 1' > $@/pintos/src/constants.h
 	$(run-tests) null
 	$(clean)
 

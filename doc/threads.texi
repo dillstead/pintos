@@ -157,9 +157,9 @@ the kernel.
 Basic interrupt handling and functions for turning interrupts on and
 off.
 
-@item intr-stubs.S
+@item intr-stubs.pl
 @itemx intr-stubs.h
-Assembly code for low-level interrupt handling.
+A Perl program that outputs assembly for low-level interrupt handling.
 
 @item synch.c
 @itemx synch.h
@@ -501,6 +501,10 @@ Write test code that demonstrates the cases your join works for.
 
 Be careful to program this function correctly.  You will need its
 functionality for project 2.
+
+Once you've implemented @func{thread_join}, define
+@code{THREAD_JOIN_IMPLEMENTED} in @file{constants.h}.
+@xref{Conditional Compilation}, for more information.
 
 @node Problem 1-3 Priority Scheduling
 @section Problem 1-3: Priority Scheduling

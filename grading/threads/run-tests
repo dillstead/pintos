@@ -56,6 +56,7 @@ die "Don't know how to '$action'";
 sub run_test {
     # Change constants.h if necessary.
     my ($defines) = $test ne 'mlfqs-on' ? "" : "#define MLFQS 1\n";
+    $defines .= "#define THREAD_JOIN_IMPLEMENTED 1\n";
     if ($defines ne snarf ("pintos/src/constants.h")) {
 	open (CONSTANTS, ">pintos/src/constants.h");
 	print CONSTANTS $defines;

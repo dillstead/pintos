@@ -138,9 +138,10 @@ sub extract_sources {
 		 LOG => $stem, DIE => "applying patch $stem failed\n");
     }
 
-    # Install default pintos/src/constants.h (which is empty).
+    # Install default pintos/src/constants.h.
     open (CONSTANTS, ">pintos/src/constants.h")
 	or die "constants.h: create: $!\n";
+    print CONSTANTS "#define THREAD_JOIN_IMPLEMENTED 1\n";
     close CONSTANTS;
 }
 
