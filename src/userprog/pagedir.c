@@ -47,14 +47,18 @@ pagedir_destroy (uint32_t *pd)
    If UADDR is unmapped, behavior varies based on CREATE:
    if CREATE is true, then a new, zeroed page is created and a
    pointer into it is returned,
-   otherwise a null pointer is returned. */
+   otherwise a null pointer is returned.
+   Also returns a null pointer if UADDR is a kernel address. */
 static uint32_t *
 lookup_page (uint32_t *pd, void *uaddr, bool create)
 {
   uint32_t *pt, *pde;
 
   ASSERT (pd != NULL);
-  ASSERT (uaddr < PHYS_BASE);
+
+  /* Make sure it's a user address. */
+  if (uaddr >= PHYS_BASE)
+    return NULL;
 
   /* Check for a page table for UADDR.
      If one is missing, create one if requested. */
@@ -93,6 +97,7 @@ pagedir_set_page (uint32_t *pd, void *upage, void *kpage,
 
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (pg_ofs (kpage) == 0);
+  ASSERT (upage < PHYS_BASE);
   ASSERT (lookup_page (pd, upage, false) == NULL);
 
   pte = lookup_page (pd, upage, true);
