@@ -89,12 +89,12 @@ prepared for interactions with all previous parts (as usual).
 @node File System Synchronization
 @section Synchronization
 
-The file system as provided requires external synchronization, that is,
+The provided file system requires external synchronization, that is,
 callers must ensure that only one thread can be running in the file
 system code at once.  Your submission should use a more finely granular
-synchronization strategy.  You will need to consider synchronization for
-each type of file system object.  The provided code uses the following
-strategies:
+synchronization strategy.  You will need to consider synchronization
+issues for each type of file system object.  The provided code uses the
+following strategies:
 
 @itemize @bullet
 @item
@@ -105,9 +105,9 @@ external viewpoint.
 
 @item
 Inodes are immutable in the provided file system, that is, their content
-never changes between creation and deletion, and furthermore only one
-copy of an inode's data is maintained in memory at once, even if the
-file is open in multiple contexts.
+never changes between creation and deletion.  Furthermore, only one copy
+of an inode's data is maintained in memory at once, even if the file is
+open in multiple contexts.
 
 @item
 File data doesn't have to be consistent because it's just not part of
@@ -117,11 +117,10 @@ show inconsistent results: it can show that none, all, or part of the
 write has completed.  (However, after the write system call returns to
 its caller, all subsequent readers must see the change.)  Similarly,
 when two threads write to the same part of a file at the same time,
-their data may be arbitrarily interleaved.
-
-External synchronization of the provided file system ensures that reads
-and writes are fully serialized, but your file system doesn't have to
-maintain full serialization as long as it follows the rules above.
+their data may be interleaved.  External synchronization of the provided
+file system ensures that reads and writes are fully serialized, but your
+file system doesn't have to maintain full serialization as long as it
+follows the rules above.
 @end itemize
 
 @node Problem 4-1 Large Files
