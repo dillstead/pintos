@@ -5,6 +5,7 @@
 #include <debug.h>
 
 typedef int pid_t;
+#define PID_ERROR ((pid_t) -1)
 
 void halt (void) NO_RETURN;
 void exit (int status) NO_RETURN;

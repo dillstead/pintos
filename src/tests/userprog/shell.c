@@ -23,6 +23,12 @@ main (void)
       
       /* Execute command. */
       if (cp > command) 
-        join (exec (command));
+        {
+          pid_t pid = exec (command);
+          if (pid != PID_ERROR)
+            join (pid);
+          else
+            printf ("exec failed\n");
+        }
     }
 }
