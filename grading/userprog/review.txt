@@ -16,7 +16,7 @@ Quality of DESIGNDOC
       Allocation of file descriptors.
       Handling exceptions and related cleanup.
       pid_t rationale (if they changed tid_t -> pid_t mapping).
-      Synchronization of system calls and filesystem.
+      Synchronization of system calls and file system.
 
 Overall:
   -1 Gratuitous use of malloc() (e.g. for allocating a list or a lock)

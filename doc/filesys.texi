@@ -2,14 +2,14 @@
 @chapter Project 4: File Systems
 
 In the previous two assignments, you made extensive use of a
-filesystem without actually worrying about how it was implemented
+file system without actually worrying about how it was implemented
 underneath.  For this last assignment, you will fill in the
-implementation of the filesystem.  You will be working primarily in
+implementation of the file system.  You will be working primarily in
 the @file{filesys} directory.
 
 You should build on the code you wrote for the previous assignments.
 However, if you wish, you may turn off your VM features, as they are
-not vital to making the filesystem work.  (You will need to edit
+not vital to making the file system work.  (You will need to edit
 @file{filesys/Makefile.vars} to fully disable VM.)  All of the
 functionality needed for project 2 (argument passing, syscalls and
 multiprogramming) must work in your filesys submission.
@@ -17,9 +17,9 @@ multiprogramming) must work in your filesys submission.
 On the other hand, one of the particular charms of working on
 operating systems is being able to use what you build, and building
 full-featured systems.  Therefore, you should strive to make all the
-parts work together so that you can run VM and your filesystem at the
+parts work together so that you can run VM and your file system at the
 same time.  Plus, keeping VM is a great way to stress-test your
-filesystem implementation.
+file system implementation.
 
 Your submission should define @code{THREAD_JOIN_IMPLEMENTED} in
 @file{constants.h} (@pxref{Conditional Compilation}).
@@ -43,7 +43,7 @@ Here are some files that are probably new to you.  These are in the
 
 @table @file
 @item fsutil.c
-Simple utilities for the filesystem that are accessible from the
+Simple utilities for the file system that are accessible from the
 kernel command line.
 
 @item filesys.h
@@ -80,7 +80,7 @@ system has calls that are similar, but not identical, to these.  The
 file system translates these calls into physical disk operations.  
 
 All the basic functionality is there in the code above, so that the
-filesystem is usable right off the bat.  In fact, you've been using it
+file system is usable right off the bat.  In fact, you've been using it
 in the previous two projects.  However, it has severe limitations
 which you will remove.
 
@@ -265,7 +265,7 @@ is likely to benefit from the enhancement, explain why you expect it
 to perform better than on the original file system implementation, and
 demonstrate the performance improvement.
 
-Note that write-behind makes your filesystem more fragile in the face
+Note that write-behind makes your file system more fragile in the face
 of crashes.  Therefore, you should
 periodically write all cached blocks to disk.  If you have
 @func{timer_sleep} from the first project working, this is an
@@ -363,7 +363,7 @@ pintos -ci shell 12345
 pintos -ex "shell"
 @end example
 
-If you don't change the filesystem interface, then this should already
+If you don't change the file system interface, then this should already
 be implemented properly in @file{threads/init.c} and
 @file{filesys/fsutil.c}.
 

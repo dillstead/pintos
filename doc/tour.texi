@@ -176,9 +176,9 @@ Interrupt-driven serial port I/O is also possible now, so we use
 @func{serial_init_queue} to switch to that mode.  Finally,
 @func{timer_calibrate} calibrates the timer for accurate short delays.
 
-If the filesystem is compiled in, as it will be in project 2 and
+If the file system is compiled in, as it will be in project 2 and
 later, we now initialize the disks with @func{disk_init}, then the
-filesystem with @func{filesys_init}, and run any operations that were
+file system with @func{filesys_init}, and run any operations that were
 requested on the kernel command line with @func{fsutil_run}.
 
 Boot is complete, so we print a message.

@@ -506,9 +506,9 @@ call functionality.
 @anchor{Synchronizing File Access}
 You must make sure that system calls are properly synchronized so that
 any number of user processes can make them at once.  In particular, it
-is not safe to call into the filesystem code provided in the
+is not safe to call into the file system code provided in the
 @file{filesys} directory from multiple threads at once.  For now, we
-recommend adding a single lock that controls access to the filesystem
+recommend adding a single lock that controls access to the file system
 code.  You should acquire this lock before calling any functions in
 the @file{filesys} directory, and release it afterward.  Don't forget
 that @func{process_execute} also accesses files.  @strong{For now, we

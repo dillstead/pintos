@@ -55,7 +55,7 @@ goodness.
 
 Things you @emph{don't} need: an explanation of the pre-existing
 Pintos code, an explanation of the project spec, justification for the
-project (e.g.@: we don't need you to explain to us why filesystems are
+project (e.g.@: we don't need you to explain to us why file systems are
 important to an operating system), a play-by-play of every change you
 made to the system, any other pontificating.  (You may laugh at some
 of the things listed above, but we've gotten all of them in the past.)
