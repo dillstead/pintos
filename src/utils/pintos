@@ -15,6 +15,12 @@ while (@ARGV) {
 	exit 0;
     } elsif ($arg =~ /^mem(?:ory)?=(\d+)/) {
 	$mem = $1;
+    } elsif ($arg eq '-j') {
+	die "-j need random seed argument\n" if !@ARGV;
+	die "-j need integer argument\n" if $ARGV[0] !~ /^-?\d+$/;
+	$jitter = shift (@ARGV);
+    } elsif ($arg =~ /--jitter=(-?\d+)$/) {
+	$jitter = $1;
     } elsif ($arg eq '--no-vga' || $arg eq '-nv') {
 	print "warning: --no-vga conflicts with --terminal\n"
 	    if $vga eq 'terminal';
@@ -117,6 +123,7 @@ sub usage {
     print "  -ns, --no-serial No serial output\n";
     print "  -t, --terminal   Display VGA in terminal (Bochs only)\n";
     print "VM options:\n";
+    print "  -j SEED          Randomize timer interrupts (Bochs only)\n";
     print "  --mem=MB         Run VM with MB megabytes of physical memory\n";
     exit $exitcode;
 }
@@ -182,10 +189,14 @@ sub run_vm {
 	    print BOCHSRC "display_library: term\n";
 	}
 	close (BOCHSRC);
-	run_command_no_die ($bin, '-q');
+	@cmd = ($bin, '-q');
+	push (@cmd, '-j', $jitter) if defined $jitter;
+	run_command_no_die (@cmd);
     } elsif ($sim eq 'qemu') {
 	print "warning: qemu doesn't support --terminal\n"
 	    if $vga eq 'terminal';
+	print "warning: qemu doesn't support jitter\n"
+	    if defined $jitter;
 	my (@cmd) = ('qemu');
 	push (@cmd, '-hda', $disks[0]) if defined $disks[0];
 	push (@cmd, '-hdb', $disks[1]) if defined $disks[1];
@@ -204,6 +215,8 @@ sub run_vm {
 	    if $vga eq 'none';
 	print "warning: VMware GSX Server doesn't support --terminal\n"
 	    if $vga eq 'terminal';
+	print "warning: VMware GSX Server doesn't support jitter\n"
+	    if defined $jitter;
 
 	open (VMX, ">pintos.vmx") or die "pintos.vmx: create: $!\n";
 	chmod 0777 & ~umask, "pintos.vmx";
