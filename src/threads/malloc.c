@@ -41,9 +41,13 @@ struct desc
     struct lock lock;           /* Lock. */
   };
 
+/* Magic number for detecting arena corruption. */
+#define ARENA_MAGIC 0x9a548eed
+
 /* Arena. */
 struct arena 
   {
+    unsigned magic;             /* Always set to ARENA_MAGIC. */
     struct desc *desc;          /* Owning descriptor. */
     size_t free_cnt;            /* Number of free blocks. */
   };
@@ -55,7 +59,7 @@ struct block
   };
 
 /* Our set of descriptors. */
-static struct desc descs[16];   /* Descriptors. */
+static struct desc descs[10];   /* Descriptors. */
 static size_t desc_cnt;         /* Number of descriptors. */
 
 static struct arena *block_to_arena (struct block *);
@@ -94,7 +98,7 @@ malloc (size_t size)
   /* Find the smallest descriptor that satisfies a SIZE-byte
      request. */
   for (d = descs; d < descs + desc_cnt; d++)
-    if (size < d->block_size)
+    if (d->block_size >= size)
       break;
   if (d == descs + desc_cnt) 
     {
@@ -118,11 +122,12 @@ malloc (size_t size)
         }
 
       /* Initialize arena and add its blocks to the free list. */
+      a->magic = ARENA_MAGIC;
       a->desc = d;
       a->free_cnt = d->blocks_per_arena;
       for (i = 0; i < d->blocks_per_arena; i++) 
         {
-          b = arena_to_block (a, i);
+          struct block *b = arena_to_block (a, i);
           list_push_back (&d->free_list, &b->free_elem);
         }
     }
@@ -161,12 +166,16 @@ calloc (size_t a, size_t b)
 void
 free (void *p) 
 {
-  struct block *b = p;
-  struct arena *a = block_to_arena (b);
-  struct desc *d = a->desc;
+  struct block *b;
+  struct arena *a;
+  struct desc *d;
 
   if (p == NULL)
     return;
+
+  b = p;
+  a = block_to_arena (b);
+  d = a->desc;
 
   lock_acquire (&d->lock);
 
@@ -194,13 +203,18 @@ free (void *p)
 static struct arena *
 block_to_arena (struct block *b)
 {
-  return pg_round_down (b);
+  struct arena *a = pg_round_down (b);
+  ASSERT (a != NULL);
+  ASSERT (a->magic == ARENA_MAGIC);
+  return a;
 }
 
 /* Returns the (IDX - 1)'th block within arena A. */
 static struct block *
 arena_to_block (struct arena *a, size_t idx) 
 {
+  ASSERT (a != NULL);
+  ASSERT (a->magic == ARENA_MAGIC);
   ASSERT (idx < a->desc->blocks_per_arena);
   return (struct block *) ((uint8_t *) a
                            + sizeof *a
