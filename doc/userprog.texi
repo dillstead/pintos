@@ -191,14 +191,13 @@ directory.  By default, the @file{Makefile} in this directory will
 compile the test programs we provide.  You can edit the
 @file{Makefile} to compile your own test programs as well.
 
-One thing you should realize immediately is that, until you use the
-above operation to copy a test program to the emulated disk, Pintos
-will be unable to do very much useful work.  You will also find that
-you won't be able to do interesting things until you copy a variety of
-programs to the disk.  A useful technique is to create a clean
-reference disk and copy that over whenever you trash your
-@file{fs.dsk} beyond a useful state, which may happen occasionally
-while debugging.
+One thing you should realize immediately is that, until you copy a
+test program to the emulated disk, Pintos will be unable to do very
+much useful work.  You will also find that you won't be able to do
+interesting things until you copy a variety of programs to the disk.
+A useful technique is to create a clean reference disk and copy that
+over whenever you trash your @file{fs.dsk} beyond a useful state,
+which may happen occasionally while debugging.
 
 @node Virtual Memory Layout
 @section Virtual Memory Layout
