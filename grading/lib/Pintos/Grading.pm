@@ -832,5 +832,12 @@ sub file_contains {
     close (FILE);
     return $equal;
 }
+
+sub success {
+    for my $test (@TESTS) {
+	return 1 if !defined ($result{$test}) || $result{$test} ne 'ok';
+    }
+    return 0;
+}
 
 1;

@@ -35,10 +35,10 @@ exit if $action eq 'build';
 run_and_grade_tests (); 
 write_grades (); 
 write_details ();
-exit if $action eq 'test';
+exit success () if $action eq 'test';
 
 assemble_final_grade ();
-exit if $action eq 'assemble';
+exit success () if $action eq 'assemble';
 
 die "Don't know how to '$action'";
 
