@@ -74,7 +74,7 @@ main (void)
   console_init ();
 
   /* Greet user. */
-  printf ("Pintos booting with %'zd kB RAM...\n", ram_pages * PGSIZE / 1024);
+  printf ("Pintos booting with %'zu kB RAM...\n", ram_pages * PGSIZE / 1024);
 
   /* Parse command line. */
   argv_init ();

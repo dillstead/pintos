@@ -217,7 +217,7 @@ inode_print (const struct inode *idx)
 {
   size_t i;
   
-  printf ("Inode %"PRDSNu": %"PRDSNu" bytes, %zd sectors (",
+  printf ("Inode %"PRDSNu": %"PRDSNu" bytes, %zu sectors (",
           idx->sector, idx->data.length, idx->data.sector_cnt);
 
   /* This loop could be unsafe for large idx->data.sector_cnt, can
