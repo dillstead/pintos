@@ -343,7 +343,7 @@ use vars qw(
 #--##############################################################################
 
 # CVS version:
-# $Id: texi2html,v 1.1 2004-09-26 21:06:17 blp Exp $
+# $Id: texi2html,v 1.2 2004-10-14 00:10:34 blp Exp $
 
 # Homepage:
 $T2H_HOMEPAGE = "http://texi2html.cvshome.org";
@@ -390,7 +390,7 @@ $THISPROG = "texi2html $THISVERSION"; # program name and version
 # Copy this file and make changes to it, if you like.
 # Afterwards, either, load it with command-line option -init_file <your_init_file>
 #
-# $Id: texi2html,v 1.1 2004-09-26 21:06:17 blp Exp $
+# $Id: texi2html,v 1.2 2004-10-14 00:10:34 blp Exp $
 
 ######################################################################
 # stuff which can also be set by command-line options
@@ -1863,7 +1863,7 @@ package Getopt::MySimple;
 
 # --------------------------------------------------------------------------
 # Locally modified by obachman (Display type instead of env, order by cmp)
-# $Id: texi2html,v 1.1 2004-09-26 21:06:17 blp Exp $
+# $Id: texi2html,v 1.2 2004-10-14 00:10:34 blp Exp $
 
 # use strict;
 # no strict 'refs';
@@ -2310,6 +2310,11 @@ $index_properties =
 # an eval of these $complex_format_map->{what}->[1] yieleds end
 $complex_format_map =
 {
+ verbatim =>
+ [
+  q{"<TABLE><tr>$T2H_EXAMPLE_INDENT_CELL<td class=example><pre>"},
+  q{'</pre></td></tr></table>'}
+ ],
  example =>
  [
   q{"<TABLE><tr>$T2H_EXAMPLE_INDENT_CELL<td class=example><pre>"},
