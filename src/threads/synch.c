@@ -117,7 +117,7 @@ sema_self_test (void)
   printf ("Testing semaphores...");
   sema_init (&sema[0], 0, "ping");
   sema_init (&sema[1], 0, "pong");
-  thread_create ("sema-test", sema_test_helper, &sema);
+  thread_create ("sema-test", PRI_DEFAULT, sema_test_helper, &sema);
   for (i = 0; i < 10; i++) 
     {
       sema_up (&sema[0]);

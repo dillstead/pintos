@@ -23,6 +23,11 @@ enum thread_status
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
 
+/* Thread priorities. */
+#define PRI_MIN 0                       /* Lowest priority. */
+#define PRI_DEFAULT 29                  /* Default priority. */
+#define PRI_MAX 59                      /* Highest priority. */
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -86,6 +91,7 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
+    int priority;                       /* Priority. */
 
     /* Shared between thread.c and synch.c. */
     list_elem elem;                     /* List element. */
@@ -103,7 +109,7 @@ void thread_init (void);
 void thread_start (void);
 
 typedef void thread_func (void *aux);
-tid_t thread_create (const char *name, thread_func *, void *);
+tid_t thread_create (const char *name, int priority, thread_func *, void *);
 #ifdef USERPROG
 tid_t thread_execute (const char *filename);
 #endif
@@ -117,9 +123,11 @@ void thread_exit (void) NO_RETURN;
 void thread_yield (void);
 void thread_block (void);
 
-/* These functions will be implemented in project 1. */
+/* This function will be implemented in problem 1-2. */
 void thread_join (tid_t);
-void thread_set_priority (tid_t, int);
-int thread_get_priority (tid_t);
+
+/* These functions will be implemented in problem 1-3. */
+void thread_set_priority (int);
+int thread_get_priority (void);
 
 #endif /* threads/thread.h */

@@ -63,7 +63,7 @@ test_sleep (int iterations)
       t->product = &product;
       t->lock = &lock;
       sema_init (&t->done, 0, name);
-      t->tid = thread_create (name, sleeper, t);
+      t->tid = thread_create (name, PRI_DEFAULT, sleeper, t);
     }
   
   /* Wait for all the threads to finish. */

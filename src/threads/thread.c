@@ -45,8 +45,8 @@ static void kernel_thread (thread_func *, void *aux);
 static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
-static struct thread *new_thread (const char *name);
-static void init_thread (struct thread *, const char *name);
+static struct thread *new_thread (const char *name, int priority);
+static void init_thread (struct thread *, const char *name, int priority);
 static bool is_thread (struct thread *);
 static void *alloc_frame (struct thread *, size_t size);
 static void destroy_thread (struct thread *);
@@ -72,7 +72,7 @@ thread_init (void)
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
-  init_thread (initial_thread, "main");
+  init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 
@@ -85,20 +85,26 @@ thread_init (void)
 void
 thread_start (void) 
 {
-  thread_create ("idle", idle, NULL);
+  thread_create ("idle", PRI_DEFAULT, idle, NULL);
   intr_enable ();
 }
 
-/* Creates a new kernel thread named NAME, which executes
-   FUNCTION passing AUX as the argument, and adds it to the ready
-   queue.  If thread_start() has been called, then the new thread
-   may be scheduled before thread_create() returns.  It could
-   even exit before thread_create() returns.  Use a semaphore or
-   some other form of synchronization if you need to ensure
-   ordering.  Returns the thread identifier for the new thread,
-   or TID_ERROR if creation fails. */
+/* Creates a new kernel thread named NAME with the given initial
+   PRIORITY, which executes FUNCTION passing AUX as the argument,
+   and adds it to the ready queue.  If thread_start() has been
+   called, then the new thread may be scheduled before
+   thread_create() returns.  It could even exit before
+   thread_create() returns.  Use a semaphore or some other form
+   of synchronization if you need to ensure ordering.  Returns
+   the thread identifier for the new thread, or TID_ERROR if
+   creation fails.
+
+   The code provided sets the new thread's `priority' member to
+   PRIORITY, but no actual priority scheduling is implemented.
+   Priority scheduling is the goal of Problem 1-3. */
 tid_t
-thread_create (const char *name, thread_func *function, void *aux) 
+thread_create (const char *name, int priority,
+               thread_func *function, void *aux) 
 {
   struct thread *t;
   struct kernel_thread_frame *kf;
@@ -108,10 +114,10 @@ thread_create (const char *name, thread_func *function, void *aux)
 
   ASSERT (function != NULL);
 
-  t = new_thread (name);
+  t = new_thread (name, priority);
   if (t == NULL)
     return TID_ERROR;
-  tid = t->tid = allocate_tid ();
+  tid = t->tid;
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -150,10 +156,10 @@ thread_execute (const char *filename)
 
   ASSERT (filename != NULL);
 
-  t = new_thread (filename);
+  t = new_thread (filename, PRI_DEFAULT);
   if (t == NULL)
     return TID_ERROR;
-  tid = t->tid = allocate_tid ();
+  tid = t->tid;
   
   if (!addrspace_load (t, filename, &start)) 
     PANIC ("%s: program load failed", filename);
@@ -331,31 +337,36 @@ is_thread (struct thread *t)
   return t != NULL && t->magic == THREAD_MAGIC;
 }
 
-/* Creates a new thread named NAME and initializes its fields.
-   Returns the new thread if successful or a null pointer on
-   failure. */
+/* Creates a new thread named NAME as a child of the running
+   thread.  Returns the new thread if successful or a null
+   pointer on failure. */
 static struct thread *
-new_thread (const char *name) 
+new_thread (const char *name, int priority)
 {
-  struct thread *t;
-
-  ASSERT (name != NULL);
-  
-  t = palloc_get (PAL_ZERO);
-  if (t != NULL)
-    init_thread (t, name);
+  struct thread *t = palloc_get (PAL_ZERO);
+  if (t != NULL) 
+    {
+      init_thread (t, name, priority);
+      t->tid = allocate_tid ();
+    }
 
   return t;
 }
 
-/* Initializes T as a new, blocked thread named NAME. */
+/* Does basic initialization of T as a new, blocked thread named
+   NAME. */
 static void
-init_thread (struct thread *t, const char *name)
+init_thread (struct thread *t, const char *name, int priority)
 {
+  ASSERT (t != NULL);
+  ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
+  ASSERT (name != NULL);
+
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
+  t->priority = priority;
   t->magic = THREAD_MAGIC;
 }
 
