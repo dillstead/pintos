@@ -43,8 +43,6 @@ quick_thread_func (void *name_)
   const char *name = name_;
   int i;
 
-  intr_disable ();
-
   for (i = 0; i < 5; i++) 
     {
       printf ("Thread %s iteration %d\n", name, i);

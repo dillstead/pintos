@@ -1,0 +1,66 @@
+DESIGN [[/40]
+-------------
+
+ -20 Missing or far too brief DESIGNDOC
+  -2 Troublesome or unexplained dependencies
+  -2 Changing interfaces, each (max -6)
+
+DESIGNDOC (per problem):
+  -1 Minor details missing
+  -2 Major details missing
+  -5 Totally missing
+
+Problem 1-1: Alarm Clock
+  -1 Uses lock/interrupt disabling without justifying
+  -1 Uses a lock inside of CallBack
+  -3 Busy waiting
+  -2 Wakes up too often, e.g. by using semaphores with negative values
+  -1 Traverses entire list of sleeping threads every tick
+  -1 Put threads to sleep directly
+  -1 Doesn't protect data structure in CallBack
+  -1 Doesn't protect data structure in WaitUntil
+  -3 Bad design
+
+Problem 1-2: Join
+  -3 Busy waiting in thread finish when waiting on the parent's join
+  -3 A static list of all parent-child pairs is extremely wasteful
+  -3 Obviously wasteful with memory (not deleting threads)
+  -2 Finished parent deletes children which may still be running
+  -1 Enable/disable interrupts or put thread to sleep directly
+  -2 Joinable child lets its Thread object be deleted before parent dies
+  -1 Race condition between join and thread exit
+
+Problem 1-3: Priority Scheduler
+  -3 Doesn't use sorted queue scheduler, and don't justify why they didn't
+  -1 Semaphores don't wake highest-priority thread first
+  -1 Condition variables don't wake highest-priority thread first
+  -1 Should use sorted queue in semaphores, unless explained in DESIGNDOC
+  -1 Should use sorted queue in conditions, unless explained in DESIGNDOC
+  -2 Yield should pick the highest-priority thread (including current)
+  -3 Bad design
+  +2 Used a heap or other advanced priority queue for ready_list
+
+Problem 1-4: Advanced Scheduler
+  -2 Isn't table-driven
+  -5 Bad design
+
+
+TESTCASES [[/10]
+----------------
+  -2 Problem 1-1: no test cases/no test output/no description in TESTCASES
+  -1 Problem 1-1: not enough testing/inconclusive test output
+  -2 Problem 1-2: no test cases/no test output/no description in TESTCASES
+  -1 Problem 1-2: not enough testing/inconclusive test output
+  -2 Problem 1-3: no test cases/no test output/no description in TESTCASES
+  -1 Problem 1-3: not enough testing/inconclusive test output
+  -2 Problem 1-4: no test cases/no test output/no description in TESTCASES
+  -1 Problem 1-4: not enough testing/inconclusive test output
+
+
+STYLE [[/10]]
+-------------
+Insert any comments here
+
+
+COMMENTS
+--------

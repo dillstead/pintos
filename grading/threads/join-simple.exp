@@ -1,0 +1,15 @@
+Testing simple join.
+Thread 0 should finish before thread 1 starts.
+Thread 0 iteration 0
+Thread 0 iteration 1
+Thread 0 iteration 2
+Thread 0 iteration 3
+Thread 0 iteration 4
+Thread 0 done!
+Thread 1 iteration 0
+Thread 1 iteration 1
+Thread 1 iteration 2
+Thread 1 iteration 3
+Thread 1 iteration 4
+Thread 1 done!
+Simple join test done.

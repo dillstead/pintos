@@ -29,7 +29,7 @@ nested_test (void)
   printf ("\n"
           "Testing nested join.\n"
           "Threads 0 to 7 should start in numerical order\n"
-          "and finish in reverse order.");
+          "and finish in reverse order.\n");
   tid0 = thread_create ("0", PRI_DEFAULT, nested_thread_func, &zero);
   thread_join (tid0);
   printf ("Simple join test done.\n");

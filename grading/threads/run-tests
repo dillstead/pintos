@@ -1,0 +1,214 @@
+#! /usr/bin/perl -w
+
+use POSIX;
+use Text::Diff;
+
+$verbose = 0;
+($GRADES_DIR = $0) =~ s#/[^/]+$##;
+-d $GRADES_DIR or die "$GRADES_DIR: stat: $!\n";
+
+-d ("output") || mkdir ("output") or die "output: mkdir: $!\n";
+
+if (! -d "pintos") {
+    my (@tarballs)
+	= grep (/^[a-z0-9]+\.[A-Za-z]+\.\d+\.\d+\.\d+\.\d+.\d+\.tar\.gz$/,
+		glob ("*.tar.gz"));
+    die "no pintos dir and no source tarball\n" if scalar (@tarballs) == 0;
+    die "no pintos dir and multiple tarballs\n" if scalar (@tarballs) > 1;
+    mkdir "pintos" or die "pintos: mkdir: $!\n";
+    mkdir "pintos/src" or die "pintos: mkdir: $!\n";
+    print "Extracting $tarballs[0]...\n";
+    xsystem ("", "cd pintos/src && tar xzf ../../$tarballs[0]")
+	or die "extraction failed\n";
+}
+-d "pintos/src/threads" or die "pintos/src/threads: stat: $!\n";
+
+print "Compiling initial tree...\n";
+xsystem ("make", "cd pintos/src/threads && make") or die;
+
+for my $test ("alarm-single", "alarm-multiple", "alarm-zero", "alarm-negative",
+	      "join-simple"
+	      #"join-quick", "join-multiple", "join-nested",
+	      #"join-dummy", "join-invalid", "join-no",
+	      #"priority-preempt", "priority-fifo", "priority-donate-one",
+	      #"priority-donate-multiple", "priority-donate-nest",
+	      #"mlfqs"
+	      ) {
+    print "Testing $test: ";
+    my ($result) = run_test ($test);
+    print "$result\n";
+
+    if ($result eq 'ok') {
+	print "Grading $test: ";
+	$result = grade_test ($test);
+	print "$result\n";
+    }
+}
+
+sub grade_test {
+    my ($test) = @_;
+
+    my (@output) = snarf ("output/$test.run.out");
+    
+    ($grade_func = $test) =~ s/-/_/g;
+    eval "grade_$grade_func(\@output)";
+    if ($@) {
+	die $@ if $@ =~ /at \S+ line \d+$/;
+	return $@;
+    }
+    return "ok";
+}
+
+sub grade_alarm_single {
+    verify_alarm (1, @_);
+}
+
+sub grade_alarm_multiple {
+    verify_alarm (7, @_);
+}
+
+sub grade_alarm_zero {
+    my (@output) = @_;
+    #verify_common (@output);
+    die "Crashed in timer_sleep()\n" if !grep (/^Success\.$/, @output);
+}
+
+sub grade_alarm_negative {
+    my (@output) = @_;
+    #verify_common (@output);
+    die "Crashed in timer_sleep()\n" if !grep (/^Success\.$/, @output);
+}
+
+sub grade_join_simple {
+    my (@output) = @_;
+    #verify_common (@output);
+    compare_output ("$GRADES_DIR/join-simple.exp", @output);
+}
+
+sub compare_output {
+    my ($exp_file, @actual) = @_;
+    my (@expected) = snarf ($exp_file);
+
+    # Trim header and trailer from @actual.
+    while (scalar (@actual) && $actual[0] ne $expected[0]) {
+	shift (@actual);
+    }
+    die "First line of expected output was not present.\n" if !@actual;
+    while (scalar (@actual) && $actual[$#actual] ne $expected[$#expected]) {
+	pop (@actual);
+    }
+    die "Final line of expected output was not present.\n" if !@actual;
+    
+    # Check whether they're the same.
+    if ($#actual == $#expected) {
+	my ($eq) = 1;
+	for (my ($i) = 0; $i <= $#expected; $i++) {
+	    $eq = 0 if $actual[$i] ne $expected[$i];
+	}
+	return if $eq;
+    }
+
+    # They differ.  Output a diff.
+    my (@diff) = split ("\n", diff (\@expected, \@actual, {CONTEXT => 0}));
+    for (my ($i) = 0; $i < $#diff; ) {
+	if ($diff[$i] =~ /^@@/) {
+	    if ($i == 0) {
+		shift (@diff);
+	    } else {
+		$diff[$i++] = "";
+	    }
+	} else {
+	    $i++;
+	}
+    }
+    my ($diff) = join ("\n", @diff);
+    die "Output differs from expected:\n$diff\n";
+}
+
+sub verify_alarm {
+    my ($iterations, @output) = @_;
+
+    #verify_common (@output);
+
+    my (@products);
+    for (my ($i) = 0; $i < $iterations; $i++) {
+	for (my ($t) = 0; $t < 5; $t++) {
+	    push (@products, ($i + 1) * ($t + 1) * 10);
+	}
+    }
+    @products = sort {$a <=> $b} @products;
+
+    for $_ (@output) {
+	die $_ if /Out of order/;
+
+	my ($p) = /product=(\d+)$/;
+	next if !defined $p;
+
+	my ($q) = shift (@products);
+	die "Too many wakeups.\n" if !defined $q;
+	die "Out of order wakeups ($p vs. $q).\n" if $p != $q; # FIXME
+    }
+    die scalar (@products) . " fewer wakeups than expected.\n"
+	if @products != 0;
+}
+
+sub run_test {
+    my ($test) = @_;
+    return "ok" if -f "output/$test.run.out";
+    
+    my ($src) = "$GRADES_DIR/$test.c";
+    -e $src or die "$src: stat: $!\n";
+    xsystem ("", "cp $src pintos/src/threads/test.c") or die;
+    unlink ("pintos/src/threads/build/threads/test.o");
+    unlink ("pintos/src/threads/build/kernel.o");
+    unlink ("pintos/src/threads/build/kernel.bin");
+    unlink ("pintos/src/threads/build/os.dsk");
+    xsystem ("$test.make", "cd pintos/src/threads && make")
+	or return "compile error";
+    xsystem ("$test.run", "cd pintos/src/threads/build && pintos -v run -q")
+	or return "Bochs error";
+    return "ok";
+}
+
+sub xsystem {
+    my ($log, $command) = @_;
+    print "$command\n" if $verbose;
+
+    my ($status);
+    if ($log ne '') {
+	$status = systimeout ("($command) >output/$log.out 2>output/$log.err");
+	unlink ("output/$log.err") unless $status != 0;
+    } else {
+	$status = systimeout ($command);
+    }
+
+    die "Interrupted\n"
+	if WIFSIGNALED ($status) && WTERMSIG ($status) == SIGINT;
+
+    return $status == 0;
+}
+
+sub systimeout {
+    my ($command) = @_;
+    my ($status);
+    eval {
+	local $SIG{ALRM} = sub { die "alarm\n" };
+	alarm 10;
+	$status = system ($command);
+	alarm 0;
+    };
+    if ($@) {
+	die unless $@ eq "alarm\n";   # propagate unexpected errors
+	print "Timed out.\n";
+	$status = -1;
+    }
+    return $status;
+}
+
+sub snarf {
+    my ($file) = @_;
+    open (OUTPUT, $file) or die "$file: open: $!\n";
+    my (@lines) = <OUTPUT>;
+    close (OUTPUT);
+    return @lines;
+}
