@@ -167,7 +167,7 @@ fsutil_print (const char *filename)
       if (n == 0)
         break;
 
-      hex_dump (buffer, n, true);
+      hex_dump (0, buffer, n, true);
     }
   palloc_free (buffer);
   file_close (file);

@@ -1,5 +1,7 @@
-#include <ctype.h>
 #include <stdio.h>
+#include <ctype.h>
+#include <inttypes.h>
+#include <round.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -553,39 +555,53 @@ __printf (const char *format,
   va_end (args);
 }
 
-/* Dumps the SIZE bytes in BUFFER to the console as hex bytes
-   arranged 16 per line.  If ASCII is true then the corresponding
+/* Dumps the SIZE bytes in BUF to the console as hex bytes
+   arranged 16 per line, plus offsets listed starting at OFS for
+   the first byte in BU.  If ASCII is true then the corresponding
    ASCII characters are also rendered alongside. */   
 void
-hex_dump (const void *buffer, size_t size, bool ascii)
+hex_dump (uintptr_t ofs, const void *buf_, size_t size, bool ascii)
 {
-  const size_t n_per_line = 16; /* Maximum bytes per line. */
-  size_t n;                     /* Number of bytes in this line. */
-  const uint8_t *p;             /* Start of current line in buffer. */
+  const uint8_t *buf = buf_;
+  const size_t per_line = 16; /* Maximum bytes per line. */
 
-  for (p = buffer; p < (uint8_t *) buffer + size; p += n) 
+  while (size > 0)
     {
+      size_t start, end, n;
       size_t i;
-
+      
       /* Number of bytes on this line. */
-      n = (uint8_t *) (buffer + size) - p;
-      if (n > n_per_line)
-        n = n_per_line;
+      start = ofs % per_line;
+      end = per_line;
+      if (end - start > size)
+        end = start + size;
+      n = end - start;
 
       /* Print line. */
-      for (i = 0; i < n; i++) 
-        printf ("%c%02x", i == n_per_line / 2 ? '-' : ' ', (unsigned) p[i]);
+      printf ("%08jx  ", (uintmax_t) ROUND_DOWN (ofs, per_line));
+      for (i = 0; i < start; i++)
+        printf ("   ");
+      for (; i < end; i++) 
+        printf ("%02hhx%c",
+                buf[i - start], i == per_line / 2 - 1? '-' : ' ');
       if (ascii) 
         {
-          for (; i < n_per_line; i++)
+          for (; i < per_line; i++)
             printf ("   ");
-          printf (" |");
-          for (i = 0; i < n; i++)
-            printf ("%c", isprint (p[i]) ? p[i] : '.');
-          for (; i < n_per_line; i++)
+          printf ("|");
+          for (i = 0; i < start; i++)
+            printf (" ");
+          for (; i < end; i++)
+            printf ("%c",
+                    isprint (buf[i - start]) ? buf[i - start] : '.');
+          for (; i < per_line; i++)
             printf (" ");
           printf ("|");
         }
       printf ("\n");
+
+      ofs += n;
+      buf += n;
+      size -= n;
     }
 }

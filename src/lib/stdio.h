@@ -2,9 +2,10 @@
 #define __LIB_STDIO_H
 
 #include <debug.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdarg.h>
+#include <stdint.h>
 
 /* Predefined file handles. */
 #define STDIN_FILENO 0
@@ -26,7 +27,7 @@ void putbuf (const char *, size_t);
 int hprintf (int, const char *, ...) PRINTF_FORMAT (2, 3);
 int vhprintf (int, const char *, va_list) PRINTF_FORMAT (2, 0);
 #endif
-void hex_dump (const void *, size_t size, bool ascii);
+void hex_dump (uintptr_t ofs, const void *, size_t size, bool ascii);
 
 /* Internal functions. */
 void __vprintf (const char *format, va_list args,
