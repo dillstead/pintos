@@ -7,10 +7,6 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 
-#if 1
-#include "devices/vga.h"
-#endif
-
 #define QUEUE_BUFSIZE 8
 
 struct queue 
@@ -20,11 +16,11 @@ struct queue
     
     struct thread *not_full, *not_empty;
     uint8_t buf[QUEUE_BUFSIZE];
-    size_t head, tail;
+    int head, tail;
   };
 
 static struct queue recv_queue, xmit_queue;
-static int init_level;
+static bool polled_io;
 
 static void set_serial (int bps, int bits, enum parity_type parity, int stop);
 static void update_ier (void);
@@ -38,48 +34,49 @@ static bool queue_full (const struct queue *);
 static uint8_t queue_getc (struct queue *);
 static void queue_putc (struct queue *, uint8_t);
 
-/* Initializes the serial port device. */
+/* Initializes the serial port device for polling mode.
+   Polling mode busy-waits for the serial port to become free
+   before writing to it.  It's slow, but until interrupts have
+   been initialized it's all we can do. */
 void
-serial_init (int level) 
+serial_init_poll (void) 
 {
-  init_level = level;
-  switch (level)
-    {
-    case 1:
-      outb (IER_REG, 0);                    /* Turn off all interrupts. */
-      outb (FCR_REG, 0);                    /* Disable FIFO. */
-      set_serial (9600, 8, NONE, 1);        /* 9600 bps, N-8-1. */
-      outb (MCR_REG, 8);                    /* Turn off output lines. */
-      break;
+  ASSERT (!polled_io);
+  polled_io = true;
+  outb (IER_REG, 0);                    /* Turn off all interrupts. */
+  outb (FCR_REG, 0);                    /* Disable FIFO. */
+  set_serial (9600, 8, NONE, 1);        /* 9600 bps, N-8-1. */
+  outb (MCR_REG, 8);                    /* Turn on OUT2 output line. */
+} 
 
-    case 2:
-      /* Prepare interrupt handler. */
-      queue_init (&recv_queue, "serial recv");
-      queue_init (&xmit_queue, "serial xmit");
-      intr_register (0x20 + 4, 0, INTR_OFF, serial_interrupt, "serial");
-      outb (IER_REG, IER_RECV);
-      break;
-
-    default:
-      NOT_REACHED ();
-    }
+/* Initializes the serial port device for queued interrupt-driven
+   I/O.  With interrupt-driven I/O we don't waste CPU time
+   waiting for the serial device to become ready. */
+void
+serial_init_queue (void) 
+{
+  ASSERT (polled_io);
+  polled_io = false;
+  queue_init (&recv_queue, "serial recv");
+  queue_init (&xmit_queue, "serial xmit");
+  intr_register (0x20 + 4, 0, INTR_OFF, serial_interrupt, "serial");
 }
 
-static void putc_busy_wait (uint8_t);
+static void putc_poll (uint8_t);
 static void putc_queue (uint8_t);
 
 /* Sends BYTE to the serial port. */
 void
 serial_putc (uint8_t byte) 
 {
-  if (init_level == 1 || intr_context ())
-    putc_busy_wait (byte);
+  if (polled_io || intr_context ())
+    putc_poll (byte);
   else
     putc_queue (byte); 
 }
 
 static void
-putc_busy_wait (uint8_t byte)
+putc_poll (uint8_t byte)
 {
   while ((inb (LSR_REG) & LSR_THRE) == 0)
     continue;
@@ -151,23 +148,27 @@ update_ier (void)
 static void
 serial_interrupt (struct intr_frame *f UNUSED) 
 {
-  /* As long as the hardware is ready to take a byte
-     and we have a byte to give it,
-     transmit a byte. */
-  while ((inb (LSR_REG) & LSR_THRE) != 0 && !queue_empty (&xmit_queue)) 
-    outb (THR_REG, queue_getc (&xmit_queue));
-  
-  /* As long as the hardware has a byte to give us
-     and we have space in our buffer for a byte,
+  /* As long as we have space in our buffer for a byte,
+     and the hardware has a byte to give us,
      receive a byte. */
-  while ((inb (LSR_REG) & LSR_DR) != 0 && !queue_full (&recv_queue)) 
-    queue_putc (&recv_queue, inb (RBR_REG)); 
+  while (!queue_full (&recv_queue) && (inb (LSR_REG) & LSR_DR) != 0)
+    {
+      uint8_t byte = inb (RBR_REG);
+      //outb (0x0402, byte);
+      queue_putc (&recv_queue, byte); 
+    }
+  
+  /* As long as we have a byte to transmit,
+     and the hardware is ready to accept a byte for transmission,
+     transmit a byte. */
+  while (!queue_empty (&xmit_queue) && (inb (LSR_REG) & LSR_THRE) != 0) 
+    outb (THR_REG, queue_getc (&xmit_queue));
   
   /* Update interrupt enable register based on queue status. */
   update_ier ();
 }
 
-static size_t next (size_t pos);
+static int next (int pos);
 static bool owned_by_current_thread (const struct queue *);
 static void wait (struct queue *q, struct thread **waiter);
 static void signal (struct queue *q, struct thread **waiter);
@@ -208,7 +209,7 @@ static bool
 queue_full (const struct queue *q) 
 {
   ASSERT (intr_get_level () == INTR_OFF);
-  return q->head == next (q->tail);
+  return next (q->head) == q->tail;
 }
 
 static uint8_t
@@ -220,8 +221,8 @@ queue_getc (struct queue *q)
   while (queue_empty (q))
     wait (q, &q->not_empty);
 
-  byte = q->buf[q->head];
-  q->head = next (q->head);
+  byte = q->buf[q->tail];
+  q->tail = next (q->tail);
   signal (q, &q->not_full);
   return byte;
 }
@@ -229,19 +230,17 @@ queue_getc (struct queue *q)
 static void
 queue_putc (struct queue *q, uint8_t byte) 
 {
-  ASSERT (intr_get_level () == INTR_OFF);  
-
   ASSERT (owned_by_current_thread (q));
   while (queue_full (q))
     wait (q, &q->not_full);
-  
-  q->buf[q->tail] = byte;
-  q->tail = next (q->tail);
+
+  q->buf[q->head] = byte;
+  q->head = next (q->head);
   signal (q, &q->not_empty);
 }
 
-static size_t
-next (size_t pos) 
+static int
+next (int pos) 
 {
   return (pos + 1) % QUEUE_BUFSIZE;
 }
