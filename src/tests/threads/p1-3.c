@@ -54,7 +54,7 @@ test_fifo (void)
           "If the order varies then there is a bug.\n");
 
   thread_set_priority (PRI_DEFAULT + 2);
-  for (i = 0; i < 5; i++) 
+  for (i = 0; i < 10; i++) 
     {
       char name[16];
       snprintf (name, sizeof name, "%d", i);
