@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #ifdef KERNEL
+#include "threads/init.h"
 #include "threads/interrupt.h"
 #include "devices/serial.h"
 #else
@@ -89,7 +90,9 @@ debug_panic (const char *file, int line, const char *function,
 
 #ifdef KERNEL
   serial_flush ();
-  power_off ();
+  if (power_off_when_done)
+    power_off ();
+  for (;;);
 #else
   exit (1);
 #endif

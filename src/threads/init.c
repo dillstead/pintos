@@ -49,8 +49,8 @@ static bool format_filesys;
 static char *initial_program;
 #endif
 
-/* -q: Power off after running requested actions? */
-static bool do_power_off;
+/* -q: Power off after kernel tasks complete? */
+bool power_off_when_done;
 
 static void ram_init (void);
 static void paging_init (void);
@@ -133,7 +133,7 @@ main (void)
 #endif
 
   /* Finish up. */
-  if (do_power_off) 
+  if (power_off_when_done) 
     power_off ();
   else 
     thread_exit ();
@@ -225,7 +225,7 @@ argv_init (void)
     else if (!strcmp (argv[i], "-d")) 
       debug_enable (argv[++i]);
     else if (!strcmp (argv[i], "-q"))
-      do_power_off = true;
+      power_off_when_done = true;
 #ifdef USERPROG
     else if (!strcmp (argv[i], "-ex")) 
       initial_program = argv[++i];
