@@ -68,6 +68,6 @@ diskimage.bin: loader.bin kernel.bin
 	cat loader.bin kernel.bin > diskimage.bin
 
 clean:
-	rm -f *.o *.d *.bin intr-stubs.S
+	rm -f *.o *.d *.bin kernel.bin.data kernel.bin.pad intr-stubs.S
 
 
