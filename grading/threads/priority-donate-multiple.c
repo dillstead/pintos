@@ -72,7 +72,7 @@ a_thread_func (void *lock_)
   lock_acquire (lock);
   printf (" 7. Thread a acquired lock a.\n");
   lock_release (lock);
-  printf (" 8. Thread b finished.\n");
+  printf (" 8. Thread a finished.\n");
 }
 
 static void
