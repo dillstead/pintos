@@ -1,0 +1,3 @@
+* Stats should be per-file system, not per-disk.
+
+* Use xmalloc(), xcalloc() everywhere appropriate.
