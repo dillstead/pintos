@@ -28,3 +28,6 @@ projects
   <"dusseau" at the server cs.wisc.edu>.
 
 * Updates for Pintos by Ben Pfaff <blp@cs.stanford.edu>.
+
+* Example code in the tour's description of monitors is from Mendel
+  Roseblum's classroom slides.
