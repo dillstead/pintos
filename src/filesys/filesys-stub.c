@@ -84,7 +84,11 @@ filesys_stub_get_bool (void)
 void 
 filesys_stub_get_bytes (void *buffer, size_t size)
 {
-  backdoor_get_bytes (buffer, size, in_byte, NULL);
+  /* We could use backdoor_get_bytes() but this is significantly
+     faster. */
+  asm ("rep insl; movl %0, %%ecx; rep insb"
+       :
+       : "g" (size % 4), "d" (0x8901), "c" (size / 4), "D" (buffer));
 }
 
 struct file *
