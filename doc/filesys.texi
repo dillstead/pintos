@@ -128,8 +128,9 @@ only once).
 Make sure that directories can expand beyond their original size just
 as any other file can.
 
-To take advantage of hierarchical name spaces in user programs,
-provide the following syscalls:
+Update the existing system calls so that, anywhere a file name is
+provided by the caller, an absolute or relative path name may used.
+Also, implement the following new system calls:
 
 @table @code
 @item SYS_chdir
