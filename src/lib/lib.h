@@ -6,6 +6,7 @@
 
 #define ROUND_UP(X, STEP) (((X) + (STEP) - 1) / (STEP) * (STEP))
 #define DIV_ROUND_UP(X, STEP) (((X) + (STEP) - 1) / (STEP))
+#define ROUND_DOWN(X, STEP) ((X) / (STEP) * (STEP))
 
 void *memset (void *, int, size_t);
 void *memcpy (void *, const void *, size_t);
