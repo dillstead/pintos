@@ -47,6 +47,12 @@ open (const char *file)
 }
 
 int
+filesize (int fd) 
+{
+  return syscall (SYS_filesize, fd);
+}
+
+int
 read (int fd, void *buffer, unsigned size)
 {
   return syscall (SYS_read, fd, buffer, size);
