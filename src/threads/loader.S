@@ -39,7 +39,6 @@
  */
 
 #include "threads/loader.h"
-/*#include "threads/mmu.h"*/
 	
 #### Kernel loader.
 
@@ -51,7 +50,7 @@
 #### memory, and jumps to the first byte of the kernel, where start.S
 #### is linked.
 	
-/* Flags in control register 0 */
+/* Flags in control register 0. */
 #define CR0_PE 0x00000001      /* Protection Enable. */
 #define CR0_EM 0x00000004      /* (Floating-point) Emulation. */
 #define CR0_PG 0x80000000      /* Paging. */
@@ -111,20 +110,23 @@ start:
 #### Get memory size, via interrupt 15h function 88h.  Returns CF
 #### clear if successful, with AX = (kB of physical memory) - 1024.
 #### This only works for memory sizes <= 65 MB, which should be fine
-#### for our purposes.
+#### for our purposes.  We cap memory at 64 MB because that's all we
+#### prepare page tables for, below.
 	
 	movb $0x88, %ah
 	int $0x15
-	jc panic		# Carry flag set on error
-	addl $1024, %eax	# Total kB
-	shrl $2, %eax		# Total 4 kB pages
+	jc panic
+	addl $1024, %eax	# Total kB memory
+	cmp $0x10000, %eax	# Cap at 64 MB
+	jbe 1f
+	mov $0x10000, %eax
+1:	shrl $2, %eax		# Total 4 kB pages
 	movl %eax, ram_pages
 	
 #### Create temporary page directory and page table and set page
 #### directory base register.
 
 # Create page directory at 64 kB and fill with zeroes.
-
 	mov $0x1000, %ax
 	mov %ax, %es
 	subl %eax, %eax
@@ -132,19 +134,29 @@ start:
 	movl $0x400, %ecx
 	rep stosl
 
-# Set PDEs for 0 and LOADER_PHYS_BASE to point to the page table.
-# See comments near the PG_* macros in paging.h for a description of
-# the values stored here.
+# Add PDEs to point to PTEs for the first 64 MB of RAM.
+# Also add identical PDEs starting at LOADER_PHYS_BASE.
+# See [IA32-v3] section 3.7.6 for a description of the bits in %eax.
 
 	movl $0x11007, %eax
-	movl %eax, %es:0
-	movl %eax, %es:LOADER_PHYS_BASE >> 20
+	movl $0x11, %ecx
+	subl %edi, %edi
+1:	movl %eax, %es:(%di)
+	movl %eax, %es:LOADER_PHYS_BASE >> 20(%di)
+	addw $4, %di
+	addl $0x1000, %eax
+	loop 1b
 
-# Initialize page table.
+# Set up one-to-map linear to physical map for the first 64 MB of RAM.
+# See [IA32-v3] section 3.7.6 for a description of the bits in %eax.
 
-	movl $7, %eax
-	movl $0x400, %ecx
-1:	stosl
+	movw $0x1100, %ax
+	movw %ax, %es
+	movl $0x7, %eax
+	movl $0x4000, %ecx
+	subl %edi, %edi
+1:	movl %eax, %es:(%di)
+	addw $4, %di
 	addl $0x1000, %eax
 	loop 1b
 
@@ -198,7 +210,7 @@ start:
 	movw %ax, %fs		
 	movw %ax, %gs		
 	movw %ax, %ss
-	movl $LOADER_PHYS_BASE + 0x20000, %esp
+	movl $LOADER_PHYS_BASE + 0x30000, %esp
 
 #### Load kernel starting at physical address LOADER_KERN_BASE by
 #### frobbing the IDE controller directly.
