@@ -401,6 +401,15 @@ This is less likely to produce surprises, because everyone can see
 everyone else's code as it is written, instead of just when it is
 finished.  These systems also make it possible to review changes and,
 when a change introduces a bug, drop back to working versions of code.
+
+@item
+You should expect to run into bugs that you simply don't understand
+while working on this and subsequent projects.  When you do, go back
+and reread the appendix on debugging tools, which is filled with
+useful debugging tips that should help you to get back up to speed
+(@pxref{Debugging Tools}).  Be sure to read the section on backtraces
+(@pxref{Backtraces}), which will help you to get the most out of every
+kernel panic or assertion failure.
 @end itemize
 
 @node Problem 1-1 Alarm Clock
