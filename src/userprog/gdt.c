@@ -44,7 +44,7 @@ gdt_init (void)
   gdt[SEL_UDSEG / sizeof *gdt] = make_data_desc (3);
   gdt[SEL_TSS / sizeof *gdt] = make_tss_desc (tss_get ());
 
-  /* Load GDTR, TR. */
+  /* Load GDTR, TR.  See [IA32-v3] 2.4.1, 2.4.4, 6.2.3.  */
   gdtr_operand = make_gdtr_operand (sizeof gdt - 1, gdt);
   asm volatile ("lgdt %0" :: "m" (gdtr_operand));
   asm volatile ("ltr %w0" :: "r" (SEL_TSS));
@@ -125,7 +125,8 @@ make_data_desc (int dpl)
 
 /* Returns a descriptor for an "available" 32-bit Task-State
    Segment with its base at the given linear address, a limit of
-   0x67 bytes (the size of a 32-bit TSS), and a DPL of 0. */
+   0x67 bytes (the size of a 32-bit TSS), and a DPL of 0.
+   See [IA32-v3] 6.2.2. */
 static uint64_t
 make_tss_desc (void *laddr)
 {
