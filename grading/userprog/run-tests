@@ -51,7 +51,7 @@ sub usage {
 	     write-normal write-bad-ptr write-boundary write-zero write-stdin
 	     write-bad-fd
 	     exec-once exec-arg exec-multiple exec-missing exec-bad-ptr
-	     multi-recurse multi-oom
+	     multi-recurse multi-oom multi-child-fd
 	     ) unless @TESTS > 0;
 
 our (%args);
@@ -192,6 +192,15 @@ sub extract_tarball {
     xsystem ("patch -fs pintos/src/lib/debug.c < $GRADES_DIR/panic.diff",
 	     LOG => "patch",
 	     DIE => "patch failed\n");
+    xsystem ("patch -fs pintos/src/lib/kernel/bitmap.c "
+	     . "< $GRADES_DIR/random.diff",
+	     LOG => "patch",
+	     DIE => "patch failed\n");
+
+    open (CONSTANTS, ">pintos/src/constants.h")
+	or die "constants.h: create: $!\n";
+    print CONSTANTS "#define THREAD_JOIN_IMPLEMENTED 1\n";
+    close CONSTANTS;
 }
 
 sub ext_mdyHMS {
@@ -384,7 +393,7 @@ sub verify_common {
 	    } else {
 		$A2L = "i386-elf-addr2line";
 	    }
-	    open (A2L, "$A2L -fe output/$test/kernel.o @addrs|");
+	    open (A2L, "$A2L -fe pintos/src/userprog/build/kernel.o @addrs|");
 	    for (;;) {
 		my ($function, $line);
 		last unless defined ($function = <A2L>);

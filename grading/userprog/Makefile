@@ -12,7 +12,7 @@ TESTS = \
 	$(addprefix write-, normal bad-ptr boundary zero stdin bad-fd) \
 	$(addprefix exec-, once arg multiple missing bad-ptr) \
 	$(addprefix join-, simple twice killed bad-pid) \
-	$(addprefix multi-, recurse oom)
+	$(addprefix multi-, recurse oom child-fd)
 
 define TEST_PROG
 PROGS += $(1)
@@ -25,13 +25,15 @@ DISKS = $(patsubst %,%.dsk,$(PROGS))
 disks: $(DISKS)
 
 # Other programs needed by some of the main test programs. 
-PROGS += child-simple child-arg child-bad
+PROGS += child-simple child-arg child-bad child-close
 child_simple_SRC = child-simple.c
 child_arg_SRC = child-arg.c
 child_bad_SRC = child-bad.c
+child_close_SRC = child-close.c
 exec-once.dsk exec-multiple.dsk join-simple.dsk join-twice.dsk: child-simple
 exec-arg.dsk: child-arg
 join-killed.dsk: child-bad
+multi-child-fd.dsk: child-close
 
 %.dsk: %
 	./prep-disk $<
