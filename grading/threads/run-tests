@@ -9,11 +9,13 @@ use Getopt::Long;
 our ($VERBOSE) = 0;	# Verbosity of output
 our (@TESTS);		# Tests to run.
 my ($clean) = 0;
+my ($grade) = 0;
 
 GetOptions ("v|verbose+" => \$VERBOSE,
 	    "h|help" => sub { usage (0) },
 	    "t|test=s" => \@TESTS,
-	    "c|clean" => \$clean)
+	    "c|clean" => \$clean,
+	    "g|grade" => \$grade)
     or die "Malformed command line; use --help for help.\n";
 die "Non-option argument not supported; use --help for help.\n"
     if @ARGV > 0;
@@ -28,6 +30,7 @@ sub usage {
     print "Options:\n";
     print "  -c, --clean     Remove old output files before starting\n";
     print "  -t, --test=TEST Execute TEST only (allowed multiple times)\n";
+    print "  -g, --grade     Instead of running tests, compose grade.out\n";
     print "  -v, --verbose   Print commands before executing them\n";
     print "  -h, --help      Print this help message\n";
     exit $exitcode;
@@ -42,6 +45,54 @@ sub usage {
 	  "priority-donate-multiple", "priority-donate-nest",
 	  "mlfqs-on", "mlfqs-off")
     unless @TESTS > 0;
+
+# Handle final grade mode.
+if ($grade) {
+    open (OUT, ">grade.out") or die "grade.out: create: $!\n";
+
+    open (GRADE, "<grade.txt") or die "grade.txt: open: $!\n";
+    while (<GRADE>) {
+	last if /^\s*$/;
+	print OUT;
+    }
+    close (GRADE);
+    
+    my (@tests) = snarf ("tests.out");
+    my ($p_got, $p_pos) = $tests[0] =~ m%\((\d+)/(\d+)\)% or die;
+
+    my (@review) = snarf ("review.txt");
+    my ($part_lost) = (0, 0);
+    for (my ($i) = $#review; $i >= 0; $i--) {
+	local ($_) = $review[$i];
+	if (my ($loss) = /^\s*([-+]\d+)/) {
+	    $part_lost += $loss;
+	} elsif (my ($out_of) = m%\[\[/(\d+)\]\]%) {
+	    my ($got) = $out_of + $part_lost;
+	    $got = 0 if $got < 0;
+	    $review[$i] =~ s%\[\[/\d+\]\]%($got/$out_of)% or die;
+	    $part_lost = 0;
+
+	    $p_got += $got;
+	    $p_pos += $out_of;
+	}
+    }
+    die "Lost points outside a section\n" if $part_lost;
+
+    for (my ($i) = 1; $i <= $#review; $i++) {
+	if ($review[$i] =~ /^-{3,}\s*$/ && $review[$i - 1] !~ /^\s*$/) {
+	    $review[$i] = '-' x (length ($review[$i - 1]));
+	}
+    }
+
+    print OUT "\nOVERALL SCORE\n";
+    print OUT "-------------\n";
+    print OUT "$p_got points out of $p_pos total\n\n";
+
+    print OUT map ("$_\n", @tests), "\n";
+    print OUT map ("$_\n", @review);
+
+    exit 0;
+}
 
 # Find the directory that contains the grading files.
 our ($GRADES_DIR);
@@ -82,6 +133,10 @@ for $test (@TESTS) {
     
     $result{$test} = $result;
 }
+
+# MLFQS takes results from mlfqs-on and mlfqs-off.
+grade_mlfqs_speedup ();
+grade_mlfqs_priority ();
 
 # Write output.
 write_grades ();
@@ -143,7 +198,6 @@ sub test_constants {
 
 sub run_test {
     my ($test) = @_;
-    return "ok" if -f "output/$test/done";
 
     # Reuse older results if any.
     if (open (DONE, "<output/$test/done")) {
@@ -372,41 +426,98 @@ sub grade_priority_fifo {
 sub grade_mlfqs_on {
     my (@output) = @_;
     verify_common (@output);
-    mlfqs_stats (@output);
+    our (@mlfqs_on_stats) = mlfqs_stats (@output);
 }
 
 sub grade_mlfqs_off {
     my (@output) = @_;
     verify_common (@output);
-    mlfqs_stats (@output);
+    our (@mlfqs_off_stats) = mlfqs_stats (@output);
+}
+
+sub grade_mlfqs_speedup {
+    our (@mlfqs_off_stats);
+    our (@mlfqs_on_stats);
+    eval {
+	check_mlfqs ();
+	my ($off_ticks) = $mlfqs_off_stats[1];
+	my ($on_ticks) = $mlfqs_on_stats[1];
+	die "$off_ticks ticks without MLFQS, $on_ticks with MLFQS\n"
+	    if $on_ticks >= $off_ticks;
+	die "ok\n";
+    };
+    chomp $@;
+    $result{'mlfqs-speedup'} = $@;
+}
+
+sub grade_mlfqs_priority {
+    our (@mlfqs_off_stats);
+    our (@mlfqs_on_stats);
+    eval {
+	check_mlfqs () if !defined (@mlfqs_on_stats);
+	for my $cat qw (CPU IO MIX) {
+	    die "Priority changed away from PRI_DEFAULT (29) without MLFQS\n"
+		if $mlfqs_off_stats[0]{$cat}{MIN} != 29
+		|| $mlfqs_off_stats[0]{$cat}{MAX} != 29;
+	    die "Minimum priority never changed from PRI_DEFAULT (29) "
+		. "with MLFQS\n"
+		if $mlfqs_on_stats[0]{$cat}{MIN} == 29;
+	    die "Maximum priority never changed from PRI_DEFAULT (29) "
+		. "with MLFQS\n"
+		if $mlfqs_on_stats[0]{$cat}{MAX} == 29;
+	}
+	die "ok\n";
+    };
+    chomp $@;
+    $result{'mlfqs-priority'} = $@;
+}
+
+sub check_mlfqs {
+    our (@mlfqs_off_stats);
+    our (@mlfqs_on_stats);
+    die "p1-4 didn't finish with MLFQS on or off\n"
+	if !defined (@mlfqs_off_stats) && !defined (@mlfqs_on_stats);
+    die "p1-4 didn't finish with MLFQS on\n"
+	if !defined (@mlfqs_on_stats);
+    die "p1-4 didn't finish with MLFQS off\n"
+	if !defined (@mlfqs_off_stats);
 }
 
 sub mlfqs_stats {
     my (@output) = @_;
-    my (%stats) = ("io" => {}, "cpu" => {}, "mix" => {});
-    my (%map) = ("CPU intensive" => "cpu",
-		 "IO intensive" => "io",
-		 "Alternating IO/CPU" => "mix");
+    my (%stats) = (CPU => {}, IO => {}, MIX => {});
+    my (%map) = ("CPU intensive" => 'CPU',
+		 "IO intensive" => 'IO',
+		 "Alternating IO/CPU" => 'MIX');
+    my (%rmap) = reverse %map;
+    my ($ticks);
     local ($_);
     foreach (@output) {
+	$ticks = $1 if /Timer: (\d+) ticks/;
 	my ($thread, $pri) = /^([A-Za-z\/ ]+): (\d+)$/ or next;
 	my ($t) = $map{$thread} or next;
 	
 	my ($s) = $stats{$t};
-	$$s{"n"}++;
-	$$s{"sum"} += $pri;
-	$$s{"sum2"} += $pri * $pri;
-	$$s{"min"} = $pri if !defined ($$s{"min"}) || $pri < $$s{"min"};
-	$$s{"max"} = $pri if !defined ($$s{"max"}) || $pri > $$s{"max"};
+	$$s{N}++;
+	$$s{SUM} += $pri;
+	$$s{SUM2} += $pri * $pri;
+	$$s{MIN} = $pri if !defined ($$s{MIN}) || $pri < $$s{MIN};
+	$$s{MAX} = $pri if !defined ($$s{MAX}) || $pri > $$s{MAX};
     }
 
-    my ($details) = "";
-    for my $t (keys %stats) {
-	my ($s) = $stats{$t};
-	$details .= "$t: n=$$s{'n'}, min=$$s{'min'}, max=$$s{'max'}, avg=" . int ($$s{'sum'} / $$s{'n'}) . "\n";
+    my (%expect_n) = (CPU => 5000, IO => 1000, MIX => 12000);
+    for my $cat (values (%map)) {
+	my ($s) = $stats{$cat};
+	die "$rmap{$cat} printed $$s{N} times, not $expect_n{$cat}\n"
+	    if $$s{N} != $expect_n{$cat};
+	die "$rmap{$cat} priority dropped to $$s{MIN}, below PRI_MIN (0)\n"
+	    if $$s{MIN} < 0;
+	die "$rmap{$cat} priority rose to $$s{MAX}, above PRI_MAX (59)\n"
+	    if $$s{MAX} > 59;
+	$$s{MEAN} = $$s{SUM} / $$s{N};
     }
-    $details{$test} = $details;
-    die "MLFQS\n";
+
+    return (\%stats, $ticks);
 }
 
 sub verify_common {
