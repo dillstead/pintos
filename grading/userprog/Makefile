@@ -13,15 +13,13 @@ DISKS = $(patsubst %,%.dsk,$(PROGS))
 disks: $(DISKS)
 
 PINTOS = ../../src/utils/pintos
-%.dsk: % os.dsk
-	rm -f $@ fs.dsk
-	$(PINTOS) make-disk fs.dsk 2
-	$(PINTOS) -v run -f -q
-	$(PINTOS) -v put $<
-	mv fs.dsk $@
-
-os.dsk: ../../src/userprog/build/os.dsk
-	ln -sf $< $@
+OS_DISK = ../../src/userprog/build/os.dsk
+%.dsk: %
+	rm -f $@.tmp
+	$(PINTOS) make-disk $@.tmp 2
+	$(PINTOS) -v --os-disk=$(OS_DISK) --fs-disk=$@.tmp run -f -q
+	$(PINTOS) -v --os-disk=$(OS_DISK) --fs-disk=$@.tmp put $<
+	mv $@.tmp $@
 
 clean::
 	rm -f $(DISKS)

@@ -1,0 +1,2 @@
+(create-empty) begin
+create-empty: exit(-1)

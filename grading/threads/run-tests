@@ -726,6 +726,8 @@ sub xsystem {
 
     unlink ("output/$log.err") if defined ($log) && $status == 0;
 
+    die $options{DIE} if $status != 0 && defined $options{DIE};
+
     return $status == 0;
 }
 

@@ -1,0 +1,4 @@
+(create-normal) begin
+(create-normal) create(): 1
+(create-normal) end
+create-normal: exit(0)

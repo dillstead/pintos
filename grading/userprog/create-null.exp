@@ -1,0 +1,3 @@
+(create-null) begin
+(create-null) end
+create-null: exit(0)

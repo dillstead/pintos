@@ -37,13 +37,8 @@ sub usage {
 }
 
 # Default set of tests.
-@TESTS = ("alarm-single", "alarm-multiple", "alarm-zero", "alarm-negative",
-	  "join-simple",
-	  "join-quick", "join-multiple", "join-nested",
-	  "join-dummy", "join-invalid", "join-no",
-	  "priority-preempt", "priority-fifo", "priority-donate-one",
-	  "priority-donate-multiple", "priority-donate-nest",
-	  "mlfqs-on", "mlfqs-off")
+@TESTS = qw (create-normal create-empty create-null 
+	     create-long)
     unless @TESTS > 0;
 
 # Handle final grade mode.
@@ -118,6 +113,9 @@ if ($clean) {
 # Extract submission.
 extract_tarball () if ! -d "pintos";
 
+# Compile submission.
+compile ();
+
 # Verify that the proper directory was submitted.
 -d "pintos/src/threads" or die "pintos/src/threads: stat: $!\n";
 
@@ -133,14 +131,12 @@ for $test (@TESTS) {
 	$result = grade_test ($test);
 	$result =~ s/\n$//;
     }
-    print "$result\n";
+    print "$result";
+    print " - with warnings" if $result eq 'ok' && defined $details{$test};
+    print "\n";
     
     $result{$test} = $result;
 }
-
-# MLFQS takes results from mlfqs-on and mlfqs-off.
-grade_mlfqs_speedup ();
-grade_mlfqs_priority ();
 
 # Write output.
 write_grades ();
@@ -189,14 +185,12 @@ sub ext_mdyHMS {
 sub test_source {
     my ($test) = @_;
     my ($src) = "$GRADES_DIR/$test.c";
-    $src = "$GRADES_DIR/mlfqs.c" if $test =~ /^mlfqs/;
     -e $src or die "$src: stat: $!\n";
     return $src;
 }
 
 sub test_constants {
    my ($defines) = "";
-   $defines .= "#define MLFQS 1\n" if $test eq 'mlfqs-on';
    return $defines;
  }
 
@@ -223,6 +217,12 @@ sub run_test {
     return $status;
 }
 
+sub compile {
+    print "Compiling...\n";
+    xsystem ("cd pintos/src/userprog && make", LOG => "make")
+	or return "compile error";
+}
+
 sub really_run_test {
     # Need to run it.
     # If there's residue from an earlier test, move it to .old.
@@ -233,46 +233,15 @@ sub really_run_test {
 
     # Make output directory.
     mkdir "output/$test";
-
-    # Change constants.h if necessary.
-    my ($defines) = test_constants ($test);
-    if ($defines ne snarf ("pintos/src/constants.h")) {
-	open (CONSTANTS, ">pintos/src/constants.h");
-	print CONSTANTS $defines;
-	close (CONSTANTS);
-    }
-
-    # Changes devices/timer.c if necessary.
-    my ($new_time_slice) = $test eq 'priority-fifo' ? 100 : 1;
-    my (@timer) = snarf ("pintos/src/devices/timer.c");
-    if (!grep (/^\#define TIME_SLICE $new_time_slice$/, @timer)) {
-	@timer = grep (!/^\#define TIME_SLICE/, @timer);
-	unshift (@timer, "#define TIME_SLICE $new_time_slice");
-	open (TIMER, ">pintos/src/devices/timer.c");
-	print TIMER map ("$_\n", @timer);
-	close (TIMER);
-    }
-
-    # Copy in the new test.c and delete enough files to ensure a full rebuild.
-    my ($src) = test_source ($test);
-    xsystem ("cp $src pintos/src/threads/test.c", DIE => "cp failed\n");
-    unlink ("pintos/src/threads/build/threads/test.o");
-    unlink ("pintos/src/threads/build/kernel.o");
-    unlink ("pintos/src/threads/build/kernel.bin");
-    unlink ("pintos/src/threads/build/os.dsk");
-
-    # Build.
-    xsystem ("cd pintos/src/threads && make", LOG => "$test/make")
-	or return "compile error";
-
-    # Copy out files for backtraces later.
-    xsystem ("cp pintos/src/threads/build/kernel.o output/$test");
-    xsystem ("cp pintos/src/threads/build/os.dsk output/$test");
+    xsystem ("cp $GRADES_DIR/$test.dsk output/$test/fs.dsk",
+	     DIE => "cp failed\n");
 
     # Run.
     my ($timeout) = 10;
-    $timeout = 600 if $test =~ /^mlfqs/;
-    xsystem ("cd pintos/src/threads/build && pintos -v run -q",
+    xsystem ("pintos "
+	     . "--os-disk=pintos/src/userprog/build/os.dsk "
+	     . "--fs-disk=output/$test/fs.dsk "
+	     . "-v run -q -ex \"$test\"",
 	     LOG => "$test/run",
 	     TIMEOUT => $timeout)
 	or return "Bochs error";
@@ -302,8 +271,11 @@ sub grade_test {
     return "ok";
 }
 
-sub grade_alarm_single {
-    verify_alarm (1, @_);
+sub grade_create_empty {
+    my (@output) = @_;
+    verify_common (@_);
+    compare_output (["(create-empty) begin"], @output);
+    
 }
 
 sub grade_alarm_multiple {
@@ -580,54 +552,95 @@ sub verify_common {
 	if !grep (/Powering off/, @output);
 }
 
-sub compare_output {
-    my ($exp_file, @actual) = @_;
-    my (@expected) = snarf ($exp_file);
+sub eq_lines {
+    my ($actual, $expected) = @_;
+    return $actual eq $expected;
+}
 
+sub compare_output {
+    my ($exp, @actual) = @_;
     @actual = map ("$_\n", @actual);
-    @expected = map ("$_\n", @expected);
 
     # Trim header and trailer from @actual.
-    while (scalar (@actual) && $actual[0] ne $expected[0]) {
-	shift (@actual);
-    }
-    die "First line of expected output was not present.\n" if !@actual;
-    while (scalar (@actual) && $actual[$#actual] ne $expected[$#expected]) {
-	pop (@actual);
-    }
-    die "Final line of expected output was not present.\n" if !@actual;
-    
-    # Check whether they're the same.
-    if ($#actual == $#expected) {
-	my ($eq) = 1;
-	for (my ($i) = 0; $i <= $#expected; $i++) {
-	    $eq = 0 if $actual[$i] ne $expected[$i];
-	}
-	return if $eq;
+    our ($test);
+    my ($first);
+    for ($first = 0; $first <= $#actual; $first++) {
+	$first++, last if $actual[$first] =~ /^Executing '$test':$/;
     }
 
-    # They differ.  Output a diff.
-    my (@diff) = "";
-    my ($d) = Algorithm::Diff->new (\@expected, \@actual);
-    while ($d->Next ()) {
-	my ($ef, $el, $af, $al) = $d->Get (qw (min1 max1 min2 max2));
-	if ($d->Same ()) {
-	    push (@diff, map ("  $_", $d->Items (1)));
-	} else {
-	    push (@diff, map ("- $_", $d->Items (1))) if $d->Items (1);
-	    push (@diff, map ("+ $_", $d->Items (2))) if $d->Items (2);
+    my ($last);
+    for ($last = $#actual; $last >= 0; $last--) {
+	$last--, last if $actual[$last] =~ /^Timer: \d+ ticks$/;
+    }
+
+    if ($last < $first) {
+	my ($no_first) = $first > $#actual;
+	my ($no_last) = $last < $#actual;
+	die "Couldn't locate output.\n";
+    }
+
+    @actual = @actual[$first ... $last];
+
+    # Fix up lines that look like exit codes.
+    for my $i (0...$#actual) {
+	if (my ($process, $code)
+	    = $actual[$i] =~ /^([-a-zA-Z0-9 ]+):.*[ \(](-?\d+)\b\)?$/) {
+	    $process = substr ($process, 0, 15);
+	    $actual[$i] = "$process: exit($code)\n";
 	}
     }
 
     my ($details) = "";
     $details .= "$test actual output:\n";
     $details .= join ('', map ("  $_", @actual));
-    $details .= "\n$test expected output:\n";
-    $details .= join ('', map ("  $_", @expected));
-    $details .= "\nOutput differences in `diff -u' format:\n";
-    $details .= join ('', @diff) . "\n";
+
+    my ($fuzzy_match) = 0;
+    for (my ($i) = 0; ; $i++) {
+	my ($fn) = $exp;
+	$fn .= $i if $i;
+	if (! -e $fn) {
+	    die "$exp: stat: $!\n" if !$i;
+	    last;
+	}
+	my (@expected) = map ("$_\n", snarf ($fn));
+
+	$details .= "\n$test acceptable output:\n";
+	$details .= join ('', map ("  $_", @expected));
+
+	# Check whether they're the same.
+	if ($#actual == $#expected) {
+	    my ($eq) = 1;
+	    for (my ($i) = 0; $i <= $#expected; $i++) {
+		$eq = 0 if !eq_lines ($actual[$i], $expected[$i]);
+	    }
+	    return if $eq;
+	}
+
+	# They differ.  Output a diff.
+	my (@diff) = "";
+	my ($d) = Algorithm::Diff->new (\@expected, \@actual);
+	my ($all_additions) = 1;
+	while ($d->Next ()) {
+	    my ($ef, $el, $af, $al) = $d->Get (qw (min1 max1 min2 max2));
+	    if ($d->Same ()) {
+		push (@diff, map ("  $_", $d->Items (1)));
+	    } else {
+		push (@diff, map ("- $_", $d->Items (1))) if $d->Items (1);
+		push (@diff, map ("+ $_", $d->Items (2))) if $d->Items (2);
+		$all_additions = 0 if $d->Items (1);
+	    }
+	}
+
+	$fuzzy_match = 1 if $all_additions;
+
+	$details .= "Differences in `diff -u' format:\n";
+	$details .= join ('', @diff);
+	$details .= "(This is considered a `fuzzy match'.)\n" if $fuzzy_match;
+    }
+
     $details{$test} = $details;
-    die "Output differs from expected.  Details at end of file.\n";
+    die "Output differs from expected.  Details at end of file.\n"
+	unless $fuzzy_match;
 }
 
 sub write_grades {
@@ -670,7 +683,7 @@ sub write_details {
     open (DETAILS, ">details.out");
     my ($n) = 0;
     for my $test (@TESTS) {
-	next if $result{$test} eq 'ok';
+	next if $result{$test} eq 'ok' && !defined $details{$test};
 	
 	my ($details) = $details{$test};
 	next if !defined ($details) && ! -e "output/$test/run.out";
@@ -725,6 +738,8 @@ sub xsystem {
     }
 
     unlink ("output/$log.err") if defined ($log) && $status == 0;
+
+    die $options{DIE} if $status != 0 && defined $options{DIE};
 
     return $status == 0;
 }

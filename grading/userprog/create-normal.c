@@ -4,8 +4,8 @@
 int
 main (void) 
 {
-  printf ("create(\"quux.dat\"): ");
-  printf ("%d\n", create ("quux.dat", 0));
-  printf ("survived\n");
+  printf ("(create-normal) begin\n");
+  printf ("(create-normal) create(): %d\n", create ("quux.dat", 0));
+  printf ("(create-normal) end\n");
   return 0;
 }

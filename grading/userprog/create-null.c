@@ -4,8 +4,8 @@
 int
 main (void) 
 {
-  printf ("create(null): ");
-  printf ("%d\n", create (NULL, 0));
-  printf ("survived\n");
+  printf ("(create-null) begin\n");
+  create (NULL, 0);
+  printf ("(create-null) end\n");
   return 0;
 }
