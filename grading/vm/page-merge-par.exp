@@ -1,5 +1,5 @@
 (page-merge-par) begin
-page-merge-par) init
+(page-merge-par) init
 (page-merge-par) sort chunk 0
 (page-merge-par) sort chunk 1
 (page-merge-par) sort chunk 2

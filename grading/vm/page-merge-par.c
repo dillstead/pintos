@@ -22,7 +22,7 @@ init (void)
   struct arc4 arc4;
   size_t i;
 
-  printf ("page-merge-par) init\n");
+  printf ("(page-merge-par) init\n");
 
   arc4_init (&arc4, "foobar", 6);
   arc4_crypt (&arc4, buf1, sizeof buf1);
