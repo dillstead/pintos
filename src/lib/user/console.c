@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <syscall.h>
 #include <syscall-nr.h>
 
@@ -29,8 +30,7 @@ hprintf (int handle, const char *format, ...)
 int
 puts (const char *s) 
 {
-  while (*s != '\0')
-    putchar (*s++);
+  write (STDOUT_FILENO, s, strlen (s));
   putchar ('\n');
 
   return 0;
