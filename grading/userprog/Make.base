@@ -23,6 +23,8 @@ clean::
 
 include $(SRCDIR)/Makefile.userprog
 
+# Use -Werror because otherwise there's so much output spew
+# that it's very difficult to pick out warnings.
 CFLAGS += -Werror
 
 Makefile: Make.base Make.tests mkmf
