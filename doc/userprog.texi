@@ -358,11 +358,12 @@ be disrupted).
 @item SYS_create
 @itemx bool create (const char *@var{file}, unsigned @var{initial_size})
 Create a new file called @var{file} initially @var{initial_size} bytes
-in size.  Returns -1 if failed, 0 if OK.
+in size.  Returns true if successful, false otherwise.
 
 @item SYS_remove
 @itemx bool remove (const char *@var{file})
-Delete the file called @var{file}.  Returns -1 if failed, 0 if OK.
+Delete the file called @var{file}.  Returns true if successful, false
+otherwise.
 
 @item SYS_open
 @itemx int open (const char *@var{file})
