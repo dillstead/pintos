@@ -118,6 +118,7 @@ intr_init (void)
   intr_names[11] = "#NP Segment Not Present";
   intr_names[12] = "#SS Stack Fault Exception";
   intr_names[13] = "#GP General Protection Exception";
+  intr_names[14] = "#PF Page-Fault Exception";
   intr_names[16] = "#MF x87 FPU Floating-Point Error";
   intr_names[17] = "#AC Alignment Check Exception";
   intr_names[18] = "#MC Machine-Check Exception";
