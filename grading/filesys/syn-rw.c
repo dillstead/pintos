@@ -16,30 +16,19 @@ test_main (void)
   pid_t children[CHILD_CNT];
   size_t ofs;
   int fd;
-  int i;
 
-  check (create (filename, 0), "create \"%s\"", filename);
-  check ((fd = open (filename)) > 1, "open \"%s\"", filename);
+  CHECK (create (filename, 0), "create \"%s\"", filename);
+  CHECK ((fd = open (filename)) > 1, "open \"%s\"", filename);
 
-  for (i = 0; i < CHILD_CNT; i++) 
-    {
-      char cmd_line[128];
-      snprintf (cmd_line, sizeof cmd_line, "child-syn-rw %d", i);
-      check ((children[i] = exec (cmd_line)) != PID_ERROR,
-             "exec child %d of %d: \"%s\"", i + 1, (int) CHILD_CNT, cmd_line);
-    }
+  exec_children ("child-syn-rw", children, CHILD_CNT);
 
   random_bytes (buf, sizeof buf);
   quiet = true;
   for (ofs = 0; ofs < BUF_SIZE; ofs += CHUNK_SIZE)
-    check (write (fd, buf + ofs, CHUNK_SIZE) > 0,
+    CHECK (write (fd, buf + ofs, CHUNK_SIZE) > 0,
            "write %d bytes at offset %zu in \"%s\"",
            (int) CHUNK_SIZE, ofs, filename);
   quiet = false;
 
-  for (i = 0; i < CHILD_CNT; i++) 
-    {
-      int status = join (children[i]);
-      check (status == i, "join child %d of %d", i + 1, (int) CHILD_CNT);
-    }
+  join_children (children, CHILD_CNT);
 }

@@ -9,15 +9,16 @@ static char buf[76543];
 void
 test_main (void) 
 {
+  const char *filename = "testfile";
   char zero = 0;
   int fd;
   
-  check (create ("testfile", 0), "create \"testfile\"");
-  check ((fd = open ("testfile")) > 1, "open \"testfile\"");
-  msg ("seek \"testfile\"");
+  CHECK (create (filename, 0), "create \"%s\"", filename);
+  CHECK ((fd = open (filename)) > 1, "open \"%s\"", filename);
+  msg ("seek \"%s\"", filename);
   seek (fd, sizeof buf - 1);
-  check (write (fd, &zero, 1) > 0, "write \"testfile\"");
-  msg ("close \"testfile\"");
+  CHECK (write (fd, &zero, 1) > 0, "write \"%s\"", filename);
+  msg ("close \"%s\"", filename);
   close (fd);
-  check_file ("testfile", buf, sizeof buf);
+  check_file (filename, buf, sizeof buf);
 }

@@ -56,8 +56,8 @@ seq_test (const char *filename, void *buf, size_t size, size_t initial_size,
   int fd;
   
   random_bytes (buf, size);
-  check (create (filename, initial_size), "create \"%s\"", filename);
-  check ((fd = open (filename)) > 1, "open \"%s\"", filename);
+  CHECK (create (filename, initial_size), "create \"%s\"", filename);
+  CHECK ((fd = open (filename)) > 1, "open \"%s\"", filename);
 
   ofs = 0;
   msg ("writing \"%s\"", filename);
@@ -116,7 +116,7 @@ check_file (const char *filename, const void *buf_, size_t size)
   char block[512];
   int fd;
 
-  check ((fd = open (filename)) > 1, "open \"%s\" for verification", filename);
+  CHECK ((fd = open (filename)) > 1, "open \"%s\" for verification", filename);
 
   ofs = 0;
   while (ofs < size)
@@ -171,4 +171,32 @@ compare_bytes (const void *read_data_, const void *expected_data_, size_t size,
   hex_dump (ofs + i, expected_data + i, show_cnt, true);
   fail ("%zu bytes read starting at offset %zu in \"%s\" differ "
         "from expected", j - i, ofs, filename);
+}
+
+void
+exec_children (const char *child_name, pid_t pids[], size_t child_cnt) 
+{
+  size_t i;
+
+  for (i = 0; i < child_cnt; i++) 
+    {
+      char cmd_line[128];
+      snprintf (cmd_line, sizeof cmd_line, "%s %zu", child_name, i);
+      CHECK ((pids[i] = exec (cmd_line)) != PID_ERROR,
+             "exec child %zu of %zu: \"%s\"", i + 1, child_cnt, cmd_line);
+    }
+}
+
+void
+join_children (pid_t pids[], size_t child_cnt) 
+{
+  size_t i;
+  
+  for (i = 0; i < child_cnt; i++) 
+    {
+      int status = join (pids[i]);
+      CHECK (status == (int) i,
+             "join child %zu of %zu returned %d (expected %d)",
+             i + 1, child_cnt, status, i);
+    }
 }

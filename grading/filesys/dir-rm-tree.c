@@ -43,7 +43,7 @@ remove_tree (int at, int bt, int ct, int dt)
   quiet = false;
 
   snprintf (try, sizeof (try), "/%d/%d/%d/%d", at - 1, 0, ct - 1, 0);
-  check (open (try) == -1, "open \"%s\" (must return -1)", try);
+  CHECK (open (try) == -1, "open \"%s\" (must return -1)", try);
 }
 
 static void
@@ -56,5 +56,5 @@ do_remove (const char *format, ...)
   vsnprintf (name, sizeof name, format, args);
   va_end (args);
 
-  check (remove (name), "remove \"%s\"", name);
+  CHECK (remove (name), "remove \"%s\"", name);
 }

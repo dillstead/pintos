@@ -1,7 +1,7 @@
 #! /usr/bin/perl
 
 # Find the directory that contains the grading files.
-our ($GRADES_DIR);
+use vars qw($GRADES_DIR);
 
 # Add our Perl library directory to the include path. 
 BEGIN {
@@ -15,7 +15,9 @@ use strict;
 use POSIX;
 use Algorithm::Diff;
 use Getopt::Long;
+use Pintos::Grading;
 
+our ($test);
 our ($verbose) = 0;	# Verbosity of output
 our (@TESTS);		# Tests to run.
 my ($clean) = 0;
@@ -128,7 +130,7 @@ if ($clean) {
 -d ("output") || mkdir ("output") or die "output: mkdir: $!\n";
 
 # Extract submission.
-extract_tarball () if ! -d "pintos";
+obtain_sources ();
 
 # Compile submission.
 compile ();
@@ -137,17 +139,18 @@ compile ();
 -d "pintos/src/threads" or die "pintos/src/threads: stat: $!\n";
 
 # Run and grade the tests.
-our $test;
 our %result;
 our %details;
 our %extra;
 for $test (@TESTS) {
     print "$test: ";
-    my ($result) = run_test ($test);
+    my ($result) = get_test_result ();
     if ($result eq 'ok') {
 	$result = grade_test ($test);
-	$result =~ s/\n$//;
+    } elsif ($result =~ /^Timed out/) {
+	$result = "$result - " . grade_test ($test);
     }
+    chomp ($result);
     print "$result";
     print " - with warnings" if $result eq 'ok' && defined $details{$test};
     print "\n";
@@ -159,167 +162,6 @@ for $test (@TESTS) {
 write_grades ();
 write_details ();
 
-sub choose_tarball {
-    my (@tarballs)
-	= grep (/^[a-z0-9]+\.[A-Za-z]+\.\d+\.\d+\.\d+\.\d+.\d+\.tar\.gz$/,
-		glob ("*.tar.gz"));
-    die "no pintos dir and no source tarball\n" if scalar (@tarballs) == 0;
-
-    # Sort tarballs in reverse order by time.
-    @tarballs = sort { ext_mdyHMS ($b) cmp ext_mdyHMS ($a) } @tarballs;
-
-    print "Multiple tarballs: choosing $tarballs[0]\n"
-	if scalar (@tarballs) > 1;
-    return $tarballs[0];
-}
-
-sub extract_tarball {
-    my ($tarball) = choose_tarball ();
-
-    mkdir "pintos" or die "pintos: mkdir: $!\n";
-    mkdir "pintos/src" or die "pintos: mkdir: $!\n";
-
-    print "Extracting $tarball...\n";
-    xsystem ("cd pintos/src && tar xzf ../../$tarball",
-	     DIE => "extraction failed\n");
-
-    if (-e "fixme.sh") {
-	print "Running fixme.sh...\n";
-	xsystem ("sh -e fixme.sh", DIE => "fix script failed\n");
-    }
-
-    print "Patching...\n";
-    xsystem ("patch -fs pintos/src/lib/debug.c < $GRADES_DIR/panic.diff",
-	     LOG => "patch",
-	     DIE => "patch failed\n");
-
-    open (CONSTANTS, ">pintos/src/constants.h")
-	or die "constants.h: create: $!\n";
-    print CONSTANTS "#define THREAD_JOIN_IMPLEMENTED 1\n";
-    close CONSTANTS;
-}
-
-sub ext_mdyHMS {
-    my ($s) = @_;
-    my ($ms, $d, $y, $H, $M, $S) =
-	$s =~ /.([A-Za-z]+)\.(\d+)\.(\d+)\.(\d+)\.(\d+).(\d+)\.tar\.gz$/
-	or die;
-    my ($m) = index ("janfebmaraprmayjunjulaugsepoctnovdec", lc $ms) / 3
-	or die;
-    return sprintf "%02d-%02d-%02d %02d:%02d:%02d", $y, $m, $d, $H, $M, $S;
-}
-
-sub test_source {
-    my ($test) = @_;
-    my ($src) = "$GRADES_DIR/$test.c";
-    -e $src or die "$src: stat: $!\n";
-    return $src;
-}
-
-sub test_constants {
-   my ($defines) = "";
-   return $defines;
- }
-
-sub run_test {
-    my ($test) = @_;
-
-    # Reuse older results if any
-    if (open (DONE, "<output/$test/done")) {
-	my ($status);
-	$status = <DONE>;
-	chomp $status;
-	close (DONE);
-	return $status;
-    }
-
-    # Really run the test.
-    my ($status) = really_run_test ($test);
-
-    # Save the results for later.
-    open (DONE, ">output/$test/done") or die "output/$test/done: create: $!\n";
-    print DONE "$status\n";
-    close (DONE);
-
-    return $status;
-}
-
-sub compile {
-    print "Compiling...\n";
-    xsystem ("cd pintos/src/filesys && make", LOG => "make")
-	or return "compile error";
-}
-
-sub really_run_test {
-    # Need to run it.
-    # If there's residue from an earlier test, move it to .old.
-    # If there's already a .old, delete it.
-    xsystem ("rm -rf output/$test.old", VERBOSE => 1) if -d "output/$test.old";
-    rename "output/$test", "output/$test.old" or die "rename: $!\n"
-	if -d "output/$test";
-
-    # Make output directory.
-    mkdir "output/$test";
-    my ($fs_size) = $test ne 'grow-too-big' ? 2 : .25;
-    xsystem ("pintos make-disk output/$test/fs.dsk $fs_size >/dev/null 2>&1",
-	     DIE => "failed to create file system disk");
-    xsystem ("pintos make-disk output/$test/swap.dsk 2 >/dev/null 2>&1",
-	     DIE => "failed to create swap disk");
-
-    # Format disk, install test.
-    my ($pintos_base_cmd) =
-	"pintos "
-	. "--os-disk=pintos/src/filesys/build/os.dsk "
-	. "--fs-disk=output/$test/fs.dsk "
-	. "--swap-disk=output/$test/swap.dsk "
-	. "-v";
-    unlink ("output/$test/fs.dsk", "output/$test/swap.dsk"),
-    return "format/put error" 
-	if !xsystem ("$pintos_base_cmd put -f $GRADES_DIR/$test $test",
-		     LOG => "$test/put", TIMEOUT => 60, EXPECT => 1);
-
-    my (@extra_files);
-    push (@extra_files, "child-syn-read") if $test eq 'syn-read';
-    push (@extra_files, "child-syn-wrt") if $test eq 'syn-write';
-    push (@extra_files, "child-syn-rw") if $test eq 'syn-rw';
-    for my $fn (@extra_files) {
-	return "format/put error" 
-	    if !xsystem ("$pintos_base_cmd put $GRADES_DIR/$fn $fn",
-			 LOG => "$test/put-$fn", TIMEOUT => 60, EXPECT => 1);
-    }
-    
-    # Run.
-    my ($timeout) = 60;
-    my ($testargs) = defined ($args{$test}) ? " $args{$test}" : "";
-    my ($result) =
-	xsystem ("$pintos_base_cmd run -q -ex \"$test$testargs\"",
-		 LOG => "$test/run", TIMEOUT => $timeout, EXPECT => 1)
-	? "ok" : "Bochs error";
-    unlink ("output/$test/fs.dsk", "output/$test/swap.dsk");
-    return $result;
-}
-
-sub grade_test {
-    my ($test) = @_;
-
-    my (@output) = snarf ("output/$test/run.out");
-
-    my ($grade_func) = "grade_$test";
-    $grade_func =~ s/-/_/g;
-    if (-e "$GRADES_DIR/$test.exp" && !defined (&$grade_func)) {
-	eval {
-	    verify_common (@output);
-	    compare_output ("$GRADES_DIR/$test.exp", @output);
-	}
-    } else {
-	eval "$grade_func (\@output)";
-    }
-    if ($@) {
-	die $@ if $@ =~ /at \S+ line \d+$/;
-	return $@;
-    }
-    return "ok";
-}
 
 sub grade_process_death {
     my ($proc_name, @output) = @_;
@@ -392,7 +234,13 @@ EOF
 
     my (@failure) = grep (/FAIL/, @output);
     if (@failure != 0) {
-	die "Test failed: \"$failure[0]\"\n";
+	eval {
+	    my (@core) = get_core_output (@output);
+	    $details{$test} = "Program output:\n\n" . join ('', map ("$_\n", @core));
+	};
+	my ($failure) = $failure[0];
+	$failure =~ s/^\([^)]+\)\s+//;
+	die "Failed with message \"$failure\"\n";
     }
 
     if (grep (/Pintos booting/, @output) > 1) {
@@ -429,7 +277,6 @@ EOF
 sub get_core_output {
     my (@output) = @_;
 
-    our ($test);
     my ($first);
     for ($first = 0; $first <= $#output; $first++) {
 	$first++, last if $output[$first] =~ /^Executing '$test.*':$/;
@@ -604,7 +451,7 @@ sub write_grades {
 sub write_details {
     open (DETAILS, ">details.out");
     my ($n) = 0;
-    for my $test (@TESTS) {
+    for $test (@TESTS) {
 	next if $result{$test} eq 'ok' && !defined $details{$test};
 	
 	my ($details) = $details{$test};
@@ -631,7 +478,7 @@ sub write_details {
 		if (/PANIC/ && $panic++ > 0) {
 		    @output = @output[0...$i];
 		    push (@output,
-			  "[...details of recursive panic omitted...]");
+			  "[...details of recursive panic(s) omitted...]");
 		    last;
 		}
 	    }
@@ -646,70 +493,6 @@ sub write_details {
 
 }
 
-sub xsystem {
-    my ($command, %options) = @_;
-    print "$command\n" if $verbose || $options{VERBOSE};
-
-    my ($log) = $options{LOG};
-
-    my ($pid, $status);
-    eval {
-	local $SIG{ALRM} = sub { die "alarm\n" };
-	alarm $options{TIMEOUT} if defined $options{TIMEOUT};
-	$pid = fork;
-	die "fork: $!\n" if !defined $pid;
-	if (!$pid) {
-	    if (defined $log) {
-		open (STDOUT, ">output/$log.out");
-		open (STDERR, ">output/$log.err");
-	    }
-	    exec ($command);
-	    exit (-1);
-	}
-	waitpid ($pid, 0);
-	$status = $?;
-	alarm 0;
-    };
-
-    my ($ok);
-    if ($@) {
-	die unless $@ eq "alarm\n";   # propagate unexpected errors
-	print "Timed out: ";
-	for (my ($i) = 0; $i < 10; $i++) {
-	    kill ('SIGTERM', $pid);
-	    sleep (1);
-	    my ($retval) = waitpid ($pid, WNOHANG);
-	    last if $retval == $pid || $retval == -1;
-	    print "Waiting for $pid to die" if $i == 0;
-	    print ".";
-	}
-	$ok = 1;
-    } else {
-	if (WIFSIGNALED ($status)) {
-	    my ($signal) = WTERMSIG ($status);
-	    die "Interrupted\n" if $signal == SIGINT;
-	    print "Child terminated with signal $signal\n";
-	}
-
-	my ($exp_status) = !defined ($options{EXPECT}) ? 0 : $options{EXPECT};
-	$ok = WIFEXITED ($status) && WEXITSTATUS ($status) == $exp_status;
-    }
-
-
-    if (!$ok && defined $options{DIE}) {
-	my ($msg) = $options{DIE};
-	if (defined ($log)) {
-	    chomp ($msg);
-	    $msg .= "; see output/$log.err and output/$log.out for details\n";
-	}
-	die $msg;
-    } elsif (defined ($log) && $ok) {
-	unlink ("output/$log.err");
-    }
-
-    return $ok;
-}
-
 sub snarf {
     my ($file) = @_;
     open (OUTPUT, $file) or die "$file: open: $!\n";

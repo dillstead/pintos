@@ -8,7 +8,7 @@ test_main (void)
 {
   int fd;
   
-  check (mkdir ("xyzzy"), "mkdir \"xyzzy\"");
+  CHECK (mkdir ("xyzzy"), "mkdir \"xyzzy\"");
   msg ("open \"xyzzy\"");
   fd = open ("xyzzy");
   if (fd == -1) 
@@ -16,7 +16,7 @@ test_main (void)
   else 
     {
       int retval = write (fd, "foobar", 6);
-      check (retval == -1, "write \"xyzzy\" (must return -1, actually %d)",
+      CHECK (retval == -1, "write \"xyzzy\" (must return -1, actually %d)",
              retval);
     }
 }

@@ -34,11 +34,11 @@ test_main (void)
   random_bytes (buf_a, sizeof buf_a);
   random_bytes (buf_b, sizeof buf_b);
 
-  check (create ("a", 0), "create \"a\"");
-  check (create ("b", 0), "create \"b\"");
+  CHECK (create ("a", 0), "create \"a\"");
+  CHECK (create ("b", 0), "create \"b\"");
 
-  check ((fd_a = open ("a")) > 1, "open \"a\"");
-  check ((fd_b = open ("b")) > 1, "open \"b\"");
+  CHECK ((fd_a = open ("a")) > 1, "open \"a\"");
+  CHECK ((fd_b = open ("b")) > 1, "open \"b\"");
 
   msg ("write \"a\" and \"b\" alternately");
   while (ofs_a < FILE_SIZE || ofs_b < FILE_SIZE) 

@@ -16,15 +16,15 @@ main (int argc, char *argv[])
 
   quiet = true;
   
-  check (argc == 2, "argc must be 2, actually %d", argc);
+  CHECK (argc == 2, "argc must be 2, actually %d", argc);
   child_idx = atoi (argv[1]);
 
   random_init (0);
   random_bytes (buf, sizeof buf);
 
-  check ((fd = open (filename)) > 1, "open \"%s\"", filename);
+  CHECK ((fd = open (filename)) > 1, "open \"%s\"", filename);
   seek (fd, CHUNK_SIZE * child_idx);
-  check (write (fd, buf + CHUNK_SIZE * child_idx, CHUNK_SIZE) > 0,
+  CHECK (write (fd, buf + CHUNK_SIZE * child_idx, CHUNK_SIZE) > 0,
          "write \"%s\"", filename);
   msg ("close \"%s\"", filename);
   close (fd);

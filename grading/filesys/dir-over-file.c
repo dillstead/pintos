@@ -6,6 +6,6 @@ const char test_name[] = "dir-over-file";
 void
 test_main (void) 
 {
-  check (mkdir ("abc"), "mkdir \"abc\"");
-  check (!create ("abc", 0), "create \"abc\" (must return false)");
+  CHECK (mkdir ("abc"), "mkdir \"abc\"");
+  CHECK (!create ("abc", 0), "create \"abc\" (must return false)");
 }

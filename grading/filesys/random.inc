@@ -28,8 +28,8 @@ test_main (void)
   for (i = 0; i < BLOCK_CNT; i++)
     order[i] = i;
 
-  check (create (filename, TEST_SIZE), "create \"%s\"", filename);
-  check ((fd = open (filename)) > 1, "open \"%s\"", filename);
+  CHECK (create (filename, TEST_SIZE), "create \"%s\"", filename);
+  CHECK ((fd = open (filename)) > 1, "open \"%s\"", filename);
 
   msg ("write \"%s\" in random order", filename);
   shuffle (order, BLOCK_CNT, sizeof *order);

@@ -18,7 +18,7 @@ test_main (void)
   size_t i;
   
 #ifdef DIRECTORY
-  check (mkdir (DIRECTORY), "mkdir %s", DIRECTORY);
+  CHECK (mkdir (DIRECTORY), "mkdir %s", DIRECTORY);
 #define DIR_PREFIX DIRECTORY "/"
 #else
 #define DIR_PREFIX ""

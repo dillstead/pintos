@@ -6,6 +6,6 @@ const char test_name[] = "dir-rm-root";
 void
 test_main (void) 
 {
-  check (!remove ("/"), "remove \"/\" (must return false)");
-  check (create ("/a", 243), "create \"/a\"");
+  CHECK (!remove ("/"), "remove \"/\" (must return false)");
+  CHECK (create ("/a", 243), "create \"/a\"");
 }

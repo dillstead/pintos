@@ -6,6 +6,6 @@ const char test_name[] = "dir-under-file";
 void
 test_main (void) 
 {
-  check (create ("abc", 0), "create \"abc\"");
-  check (!mkdir ("abc"), "mkdir \"abc\" (must return false)");
+  CHECK (create ("abc", 0), "create \"abc\"");
+  CHECK (!mkdir ("abc"), "mkdir \"abc\" (must return false)");
 }

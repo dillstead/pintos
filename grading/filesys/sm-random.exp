@@ -4,3 +4,4 @@
 (sm-random) write "bazzle" in random order
 (sm-random) read "bazzle" in random order
 (sm-random) close "bazzle"
+(sm-random) end

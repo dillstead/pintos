@@ -9,6 +9,7 @@ static char buf[TEST_SIZE];
 void
 test_main (void) 
 {
-  check (create ("testfile", TEST_SIZE), "create testfile");
-  check_file ("testfile", buf, TEST_SIZE);
+  const char *filename = "blargle";
+  CHECK (create (filename, TEST_SIZE), "create \"%s\"", filename);
+  check_file (filename, buf, TEST_SIZE);
 }

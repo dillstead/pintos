@@ -12,11 +12,11 @@ test_main (void)
   dir[1] = '\0';
   for (dir[0] = '0'; dir[0] <= '9'; dir[0]++) 
     {
-      check (mkdir (dir), "mkdir \"%s\"", dir);
-      check (chdir (dir), "chdir \"%s\"", dir);
+      CHECK (mkdir (dir), "mkdir \"%s\"", dir);
+      CHECK (chdir (dir), "chdir \"%s\"", dir);
     }
-  check (create ("test", 512), "create \"test\"");
-  check (chdir ("/"), "chdir \"/\"");
-  check (open (filename) > 1, "open \"%s\"", filename);
+  CHECK (create ("test", 512), "create \"test\"");
+  CHECK (chdir ("/"), "chdir \"/\"");
+  CHECK (open (filename) > 1, "open \"%s\"", filename);
 }
 

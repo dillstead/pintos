@@ -18,17 +18,17 @@ main (int argc, const char *argv[])
 
   quiet = true;
   
-  check (argc == 2, "argc must be 2, actually %d", argc);
+  CHECK (argc == 2, "argc must be 2, actually %d", argc);
   child_idx = atoi (argv[1]);
 
   random_init (0);
   random_bytes (buf, sizeof buf);
 
-  check ((fd = open (filename)) > 1, "open \"%s\"", filename);
+  CHECK ((fd = open (filename)) > 1, "open \"%s\"", filename);
   for (i = 0; i < sizeof buf; i++) 
     {
       char c;
-      check (read (fd, &c, 1) > 0, "read \"%s\"", filename);
+      CHECK (read (fd, &c, 1) > 0, "read \"%s\"", filename);
       compare_bytes (&c, buf + i, 1, i, filename);
     }
   close (fd);

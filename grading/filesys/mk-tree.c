@@ -33,7 +33,7 @@ make_tree (int at, int bt, int ct, int dt)
   quiet = false;
 
   snprintf (try, sizeof try, "/%d/%d/%d/%d", 0, bt - 1, 0, dt - 1);
-  check ((fd = open (try)) > 1, "open \"%s\"", try);
+  CHECK ((fd = open (try)) > 1, "open \"%s\"", try);
   msg ("close \"%s\"", try);
   close (fd);
 }
@@ -48,7 +48,7 @@ do_mkdir (const char *format, ...)
   vsnprintf (dir, sizeof dir, format, args);
   va_end (args);
 
-  check (mkdir (dir), "mkdir \"%s\"", dir);
+  CHECK (mkdir (dir), "mkdir \"%s\"", dir);
 }
 
 static void
@@ -61,5 +61,5 @@ do_touch (const char *format, ...)
   vsnprintf (file, sizeof file, format, args);
   va_end (args);
 
-  check (create (file, 0), "create \"%s\"", file);
+  CHECK (create (file, 0), "create \"%s\"", file);
 }

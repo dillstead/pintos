@@ -14,22 +14,22 @@ test_main (void)
   tmp[1] = '\0';
   for (tmp[0] = '0'; tmp[0] <= '9'; tmp[0]++) 
     {
-      check (mkdir (tmp), "mkdir \"%s\"", tmp);
-      check (chdir (tmp), "chdir \"%s\"", tmp);
+      CHECK (mkdir (tmp), "mkdir \"%s\"", tmp);
+      CHECK (chdir (tmp), "chdir \"%s\"", tmp);
     }
-  check (create ("test", 512), "create \"test\"");
+  CHECK (create ("test", 512), "create \"test\"");
 
-  check (chdir ("/"), "chdir \"/\"");
-  check ((fd = open (filename)) > 1, "open \"%s\"", filename);
+  CHECK (chdir ("/"), "chdir \"/\"");
+  CHECK ((fd = open (filename)) > 1, "open \"%s\"", filename);
   msg ("close \"%s\"", filename);
   close (fd);
 
   strlcpy (tmp, filename, sizeof tmp);
   while (strlen (tmp) > 0)
     {
-      check (remove (tmp), "remove \"%s\"", tmp);
+      CHECK (remove (tmp), "remove \"%s\"", tmp);
       *strrchr (tmp, '/') = 0;
     }
 
-  check (open (filename) == -1, "open \"%s\" (must return -1)", filename);
+  CHECK (open (filename) == -1, "open \"%s\" (must return -1)", filename);
 }
