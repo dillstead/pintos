@@ -10,12 +10,12 @@ struct switch_threads_frame
     uint32_t esi;               /*  8: Saved %esi. */
     uint32_t edi;               /* 12: Saved %edi. */
     void (*eip) (void);         /* 16: Return address. */
-    struct thread *cur;         /* 20: thread_switch()'s CUR argument. */
-    struct thread *next;        /* 24: thread_switch()'s NEXT argument. */
+    struct thread *cur;         /* 20: switch_threads()'s CUR argument. */
+    struct thread *next;        /* 24: switch_threads()'s NEXT argument. */
   };
 
 /* Switches from CUR, which must be the running thread, to NEXT,
-   which must also be running thread_switch(), returning CUR in
+   which must also be running switch_threads(), returning CUR in
    NEXT's context. */
 struct thread *switch_threads (struct thread *cur, struct thread *next);
 

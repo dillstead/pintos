@@ -3,7 +3,7 @@
 #### struct thread *switch_threads (struct thread *cur, struct thread *next);
 ####
 #### Switches from CUR, which must be the running thread, to NEXT,
-#### which must also be running thread_switch(), returning CUR in
+#### which must also be running switch_threads(), returning CUR in
 #### NEXT's context.
 ####
 #### This function works by assuming that the thread we're switching
