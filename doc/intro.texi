@@ -79,7 +79,7 @@ Now you can extract the source for Pintos into a directory named
 @example
 tar xzf /usr/class/cs140/pintos/pintos.tar.gz
 @end example
-Alternatively
+Alternatively, retrieve
 @uref{http://www.stanford.edu/class/cs140/pintos/pintos.tar.gz} and
 extract it in a similar way.
 
@@ -210,7 +210,7 @@ are not very useful for our purposes.
 (If no window appeared at all, and you just got a terminal full of
 corrupt-looking text, then you're probably logged in remotely and X
 forwarding is not set up correctly.  In this case, you can fix your X
-setup, or you can use the @option{nv} option.)
+setup, or you can use the @option{-v} option.)
 
 The text printed by Pintos inside Bochs probably went by too quickly
 to read.  However, you've probably noticed by now that the same text
