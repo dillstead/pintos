@@ -110,7 +110,13 @@ if ($cmd eq 'run') {
     # Create scratch disk from file.
     die "$hostfn: $!\n" if ! -e $hostfn;
     my ($size) = -s _;
-    copy_pad ($hostfn, "scratch.dsk", 512);
+    if ($size) { 
+	copy_pad ($hostfn, "scratch.dsk", 512);
+    } else {
+	open (SCRATCH, ">scratch.dsk") or die "scratch.dsk: create: $!\n";
+	syswrite (SCRATCH, "\0" x 512);
+	close (SCRATCH);
+    }
 
     # Do copy.
     my (@cmd) = ("-ci", $guestfn, $size, "-q");
