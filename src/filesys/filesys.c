@@ -1,10 +1,11 @@
 #include "filesys.h"
-#include "disk.h"
+#include "bitmap.h"
+#include "debug.h"
 #include "directory.h"
-
-static struct disk *disk;
-
-static struct file free_map_file, root_dir_file;
+#include "disk.h"
+#include "file.h"
+#include "filehdr.h"
+#include "lib.h"
 
 #define FREE_MAP_SECTOR 0
 #define ROOT_DIR_SECTOR 1
@@ -12,46 +13,53 @@ static struct file free_map_file, root_dir_file;
 #define NUM_DIR_ENTRIES 10
 #define ROOT_DIR_FILE_SIZE (sizeof (struct dir_entry) * NUM_DIR_ENTRIES)
 
+struct disk *filesys_disk;
+
+static struct file free_map_file, root_dir_file;
+
 static void
 do_format (void)
 {
   struct bitmap free_map;
-  struct filehdr map_hdr, dir_hdr;
+  struct filehdr *map_hdr, *dir_hdr;
   struct dir dir;
 
   /* Create the initial bitmap and reserve sectors for the
      free map and root directory file headers. */
-  if (!bitmap_init (&free_map, disk_size (disk)))
-    panic ("bitmap creation failed");
+  if (!bitmap_init (&free_map, disk_size (filesys_disk)))
+    panic ("bitmap creation failed--disk is too large");
   bitmap_mark (&free_map, FREE_MAP_SECTOR);
   bitmap_mark (&free_map, ROOT_DIR_SECTOR);
 
   /* Allocate data sector(s) for the free map file
      and write its file header to disk. */
-  if (!filehdr_allocate (&map_hdr, bitmap_storage_size (&free_map)))
-    panic ("free map creation failed");
-  filehdr_write (&map_hdr, FREE_MAP_SECTOR);
-  filehdr_destroy (&map_hdr);
+  map_hdr = filehdr_allocate (&free_map, bitmap_storage_size (&free_map));
+  if (map_hdr == NULL)
+    panic ("free map creation failed--disk is too large");
+  filehdr_write (map_hdr, FREE_MAP_SECTOR);
+  filehdr_destroy (map_hdr);
 
   /* Allocate data sector(s) for the root directory file
      and write its file header to disk. */
-  if (!filehdr_allocate (&dir_hdr, ROOT_DIR_FILE_SIZE))
+  dir_hdr = filehdr_allocate (&free_map, ROOT_DIR_FILE_SIZE);
+  if (dir_hdr == NULL)
     panic ("root directory creation failed");
-  filehdr_write (&dir_hdr, FREE_MAP_SECTOR);
-  filehdr_destroy (&dir_hdr);
+  filehdr_write (dir_hdr, ROOT_DIR_SECTOR);
+  filehdr_destroy (dir_hdr);
 
   /* Write out the free map now that we have space reserved
      for it. */
   file_open (&free_map_file, FREE_MAP_SECTOR);
-  bitmapio_write (&free_map, free_map_file);
+  bitmap_write (&free_map, &free_map_file);
   bitmap_destroy (&free_map);
   file_close (&free_map_file);
 
   /* Write out the root directory in the same way. */
-  file_open (&root_dir_file, ROOT_DIR_SECTOR);
+  if (!file_open (&root_dir_file, ROOT_DIR_SECTOR))
+    panic ("can't open root directory");
   if (!dir_init (&dir, NUM_DIR_ENTRIES))
     panic ("can't initialize root directory");
-  dir_write (root_dir_file);
+  dir_write (&dir, &root_dir_file);
   dir_destroy (&dir);
   file_close (&free_map_file);
 }
@@ -59,8 +67,8 @@ do_format (void)
 void
 filesys_init (bool format) 
 {
-  disk = disk_get (1);
-  if (disk == NULL)
+  filesys_disk = disk_get (1);
+  if (filesys_disk == NULL)
     panic ("ide1:1 not present, filesystem initialization failed");
 
   if (format) 
@@ -76,7 +84,7 @@ filesys_create (const char *name, off_t initial_size)
   struct dir dir;
   struct bitmap free_map;
   disk_sector_no hdr_sector;
-  struct filehdr filehdr;
+  struct filehdr *filehdr;
   bool success = false;
 
   /* Read the root directory. */
@@ -86,9 +94,9 @@ filesys_create (const char *name, off_t initial_size)
     goto exit1;
 
   /* Allocate a block for the file header. */
-  if (!bitmap_init (&free_map, disk_size (disk)))
+  if (!bitmap_init (&free_map, disk_size (filesys_disk)))
     goto exit1;
-  bitmapio_read (&free_map, &free_map_file);
+  bitmap_read (&free_map, &free_map_file);
   hdr_sector = bitmap_find_and_set (&free_map);
   if (hdr_sector == BITMAP_ERROR)
     goto exit2;
@@ -98,18 +106,19 @@ filesys_create (const char *name, off_t initial_size)
     goto exit2;
 
   /* Allocate space for the file. */
-  if (!filehdr_allocate (&filehdr, initial_size))
+  filehdr = filehdr_allocate (&free_map, initial_size);
+  if (filehdr == NULL)
     goto exit2;
 
   /* Write everything back. */
-  filehdr_write (&filehdr, hdr_sector);
+  filehdr_write (filehdr, hdr_sector);
   dir_write (&dir, &root_dir_file);
-  bitmapio_write (&free_map, &free_map_file);
+  bitmap_write (&free_map, &free_map_file);
 
   success = true;
 
   /* Clean up. */
-  filehdr_destroy (&filehdr);
+  filehdr_destroy (filehdr);
  exit2:
   bitmap_destroy (&free_map);
  exit1:
@@ -119,11 +128,27 @@ filesys_create (const char *name, off_t initial_size)
 }
 
 bool
+filesys_open (const char *name, struct file *file)
+{
+  struct dir dir;
+  disk_sector_no hdr_sector;
+  bool success = false;
+
+  dir_init (&dir, NUM_DIR_ENTRIES);
+  dir_read (&dir, &root_dir_file);
+  if (dir_lookup (&dir, name, &hdr_sector))
+    success = file_open (file, hdr_sector);
+  
+  dir_destroy (&dir);
+  return success;
+}
+
+bool
 filesys_remove (const char *name) 
 {
   struct dir dir;
   disk_sector_no hdr_sector;
-  struct filehdr filehdr;
+  struct filehdr *filehdr;
   struct bitmap free_map;
   bool success = false;
 
@@ -134,21 +159,22 @@ filesys_remove (const char *name)
     goto exit1;
 
   /* Read the file header. */
-  if (!filehdr_read (&filehdr, hdr_sector))
+  filehdr = filehdr_read (hdr_sector);
+  if (filehdr == NULL)
     goto exit1;
 
   /* Allocate a block for the file header. */
-  if (!bitmap_init (&free_map, disk_size (disk)))
+  if (!bitmap_init (&free_map, disk_size (filesys_disk)))
     goto exit2;
-  bitmapio_read (&free_map, &free_map_file);
+  bitmap_read (&free_map, &free_map_file);
 
   /* Deallocate. */
-  filehdr_deallocate (&filehdr, &free_map);
+  filehdr_deallocate (filehdr, &free_map);
   bitmap_reset (&free_map, hdr_sector);
   dir_remove (&dir, name);
 
   /* Write everything back. */
-  bitmapio_write (&free_map, &free_map_file);
+  bitmap_write (&free_map, &free_map_file);
   dir_write (&dir, &root_dir_file);
 
   success = true;
@@ -156,37 +182,46 @@ filesys_remove (const char *name)
   /* Clean up. */
   bitmap_destroy (&free_map);
  exit2:
-  filehdr_destroy (&filehdr);
+  filehdr_destroy (filehdr);
  exit1:
   dir_destroy (&dir);
 
   return success;
 }
 
-#undef NDEBUG
-#include "debug.h"
-#include "file.h"
+static void must_succeed_function (int, int) ATTRIBUTE((noinline));
+
+static void 
+must_succeed_function (int line_no, int success) 
+{
+  if (!success)
+    panic ("filesys_self_test: operation failed on line %d", line_no);
+}
+
+#define MUST_SUCCEED(EXPR) must_succeed_function (__LINE__, EXPR)
 
 void
 filesys_self_test (void)
 {
   static const char s[] = "This is a test string.";
-  struct file *file;
+  struct file file;
   char s2[sizeof s];
 
-  ASSERT (filesys_create ("foo"));
-  ASSERT ((file = filesys_open ("foo")) != NULL);
-  ASSERT (file_write (file, s, sizeof s) == sizeof s);
-  ASSERT (file_tell (file) == sizeof s);
-  ASSERT (file_length (file) == sizeof s);
-  file_close (file);
+  MUST_SUCCEED (filesys_create ("foo", sizeof s));
+  MUST_SUCCEED (filesys_open ("foo", &file));
+  MUST_SUCCEED (file_write (&file, s, sizeof s) == sizeof s);
+  MUST_SUCCEED (file_tell (&file) == sizeof s);
+  MUST_SUCCEED (file_length (&file) == sizeof s);
+  file_close (&file);
 
-  ASSERT ((file = filesys_open ("foo")) != NULL);
-  ASSERT (file_read (file, s2, sizeof s2) == sizeof s2);
-  ASSERT (memcmp (s, s2, sizeof s) == 0);
-  ASSERT (file_tell (file) == sizeof s2);
-  ASSERT (file_length (file) == sizeof s2);
-  file_close (file);
+  MUST_SUCCEED (filesys_open ("foo", &file));
+  MUST_SUCCEED (file_read (&file, s2, sizeof s2) == sizeof s2);
+  MUST_SUCCEED (memcmp (s, s2, sizeof s) == 0);
+  MUST_SUCCEED (file_tell (&file) == sizeof s2);
+  MUST_SUCCEED (file_length (&file) == sizeof s2);
+  file_close (&file);
 
-  ASSERT (filesys_remove ("foo"));
+  MUST_SUCCEED (filesys_remove ("foo"));
+
+  printk ("filesys: self test ok\n");
 }
