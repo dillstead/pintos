@@ -127,16 +127,9 @@ bitmap_set (struct bitmap *b, size_t idx, bool value)
 void
 bitmap_set_all (struct bitmap *b, bool value) 
 {
-  size_t i;
-  
   ASSERT (b != NULL);
 
-  if (b->bit_cnt > 0)
-    {
-      for (i = 0; i < elem_cnt (b); i++)
-        b->bits[i] = value ? (elem_type) -1 : 0;
-      b->bits[elem_cnt (b) - 1] &= last_mask (b); 
-    }
+  bitmap_set_multiple (b, 0, bitmap_size (b), value);
 }
 
 /* Sets the bits numbered START through END, exclusive, in B to
@@ -154,21 +147,25 @@ bitmap_set_multiple (struct bitmap *b, size_t start, size_t end, bool value)
     bitmap_set (b, idx, value);
 }
 
-/* Sets the bit numbered IDX in B to true. */
+/* Atomically sets the bit numbered IDX in B to true. */
 void
 bitmap_mark (struct bitmap *b, size_t idx) 
 {
-  bitmap_set (b, idx, true);
+  asm ("orl %1, %0"
+       : "=m" (b->bits[elem_idx (idx)])
+       : "r" (bit_mask (idx)));
 }
 
-/* Sets the bit numbered IDX in B to false. */
+/* Atomically sets the bit numbered IDX in B to false. */
 void
 bitmap_reset (struct bitmap *b, size_t idx) 
 {
-  bitmap_set (b, idx, false);
+  asm ("andl %1, %0"
+       : "=m" (b->bits[elem_idx (idx)])
+       : "r" (~bit_mask (idx)));
 }
 
-/* Toggles the bit numbered IDX in B;
+/* Atomically toggles the bit numbered IDX in B;
    that is, if it is true, makes it false,
    and if it is false, makes it true. */
 void
@@ -176,7 +173,9 @@ bitmap_flip (struct bitmap *b, size_t idx)
 {
   ASSERT (b != NULL);
   ASSERT (idx < b->bit_cnt);
-  b->bits[elem_idx (idx)] ^= bit_mask (idx);
+  asm ("xorl %1, %0"
+       : "=m" (b->bits[elem_idx (idx)])
+       : "r" (bit_mask (idx)));
 }
 
 /* Returns the value of the bit numbered IDX in B. */
@@ -226,7 +225,9 @@ bitmap_scan (const struct bitmap *b, size_t start, size_t cnt, bool value)
 /* Finds the first group of CNT consecutive bits in B at or after
    START that are all set to VALUE, flips them all to !VALUE,
    and returns the index of the first bit in the group.
-   If there is no such group, returns BITMAP_ERROR. */
+   If there is no such group, returns BITMAP_ERROR.
+   Bits are set atomically, but testing bits is not atomic with
+   setting them. */
 size_t
 bitmap_scan_and_flip (struct bitmap *b, size_t start, size_t cnt, bool value)
 {
