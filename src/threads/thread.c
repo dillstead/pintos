@@ -12,6 +12,9 @@
 #include "gdt.h"
 #endif
 
+/* Value for struct thread's `magic' member.
+   Used to detect stack overflow.  See the big comment at the top
+   of thread.h for details. */
 #define THREAD_MAGIC 0x1234abcdu
 
 /* List of processes in THREAD_READY state, that is, processes
@@ -194,7 +197,8 @@ thread_name (struct thread *t)
 }
 
 /* Returns the running thread.
-   This is running_thread() plus a couple of sanity checks. */
+   This is running_thread() plus a couple of sanity checks.
+   See the big comment at the top of thread.h for details. */
 struct thread *
 thread_current (void) 
 {
@@ -218,6 +222,8 @@ thread_exit (void)
 {
   ASSERT (!intr_context ());
 
+  /* Just set our status to dying and schedule another process.
+     We will be destroyed during the call to schedule_tail(). */
   intr_disable ();
   thread_current ()->status = THREAD_DYING;
   schedule ();
@@ -242,7 +248,11 @@ thread_yield (void)
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
-   again until awoken by thread_unblock(). */
+   again until awoken by thread_unblock().
+
+   This function must be called with interrupts turned off.  It
+   is usually a better idea to use one of the synchronization
+   primitives in synch.h. */
 void
 thread_block (void) 
 {
@@ -319,7 +329,7 @@ new_thread (const char *name)
   return t;
 }
 
-/* Initializes T as a new thread named NAME. */
+/* Initializes T as a new, blocked thread named NAME. */
 static void
 init_thread (struct thread *t, const char *name)
 {
@@ -391,12 +401,17 @@ schedule_tail (struct thread *prev)
   
   ASSERT (intr_get_level () == INTR_OFF);
 
+  /* Mark us as running. */
   cur->status = THREAD_RUNNING;
 
 #ifdef USERPROG
+  /* Activate the new address space. */
   addrspace_activate (cur);
 #endif
 
+  /* If the thread we switched from is dying, destroy it.
+     This must happen late because it's not a good idea to
+     e.g. destroy the page table you're currently using. */
   if (prev != NULL && prev->status == THREAD_DYING) 
     destroy_thread (prev);
 }

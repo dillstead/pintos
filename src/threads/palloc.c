@@ -58,6 +58,10 @@ palloc_init (void)
   list_init (&free_pages);
 }
 
+/* Obtains and returns a free page.  If PAL_ZERO is set in FLAGS,
+   then the page is filled with zeros.  If no pages are
+   available, returns a null pointer, unless PAL_ASSERT is set in
+   FLAGS, in which case the kernel panics. */
 void *
 palloc_get (enum palloc_flags flags)
 {
@@ -65,6 +69,10 @@ palloc_get (enum palloc_flags flags)
 
   lock_acquire (&lock);
 
+  /* If there's a page in the free list, take it.
+     Otherwise, if there's a page not yet added to the free list,
+     use it.
+     Otherwise, we're out of memory. */
   if (!list_empty (&free_pages))
     page = list_entry (list_pop_front (&free_pages), struct page, free_elem);
   else if (uninit_start < uninit_end) 
@@ -91,6 +99,7 @@ palloc_get (enum palloc_flags flags)
   return page;
 }
 
+/* Frees PAGE. */
 void
 palloc_free (void *page_) 
 {
