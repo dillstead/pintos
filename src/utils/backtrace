@@ -1,19 +1,56 @@
-#! /usr/bin/perl
-$a2l = search_path ("i386-elf-addr2line") || search_path ("addr2line");
-$bin = shift @ARGV;
-open (A2L, "$a2l -fe $bin " . join (' ', @ARGV) . "|");
-while ($function = <A2L>) {
-    $line = <A2L>;
-    chomp $function;
-    chomp $line;
-    print shift (@ARGV), ": $function ($line)\n";
+#! /usr/bin/perl -w
+
+use strict;
+
+# Check command line.
+if (grep ($_ eq '-h' || $_ eq '--help', @ARGV)) {
+    print "backtrace, for converting raw addresses into symbolic backtraces\n";
+    print "\n";
+    print "usage: backtrace BINARY ADDRESS...\n";
+    print "where BINARY is the binary file from which to obtain symbols\n";
+    print "  and each ADDRESS is a raw address to convert to a symbol name.\n";
+    print "\n";
+    print "In use with Pintos, BINARY is usually kernel.o and the ADDRESS\n";
+    print "list is taken from the \"Call stack:\" printed by the kernel.\n";
+    print "Read \"Backtraces\" in the \"Debugging Tools\" chapter\n";
+    print "of the Pintos documentation for more information.\n";
+    exit 0;
 }
-   
+die "backtrace: binary file argument required (use --help for help)\n"
+    if @ARGV == 0;
+die "backtrace: at least one address argument required (use --help for help)\n"
+    if @ARGV == 1;
+
+# Find binary file.
+my ($bin) = shift @ARGV;
+die "backtrace: $bin: not found (use --help for help)\n"
+    if ! -e $bin;
+
+# Find addr2line.
+my ($a2l) = search_path ("i386-elf-addr2line") || search_path ("addr2line");
+if (!$a2l) {
+    die "backtrace: neither `i386-elf-addr2line' nor `addr2line' in PATH\n";
+}
 sub search_path {
     my ($target) = @_;
-    for $dir (split (':', $ENV{PATH})) {
+    for my $dir (split (':', $ENV{PATH})) {
 	my ($file) = "$dir/$target";
 	return $file if -e $file;
     }
-    return 0;
+    return undef;
 }
+
+# Drop leading and trailing garbage inserted by kernel.
+shift while grep (/call|stack/i, $ARGV[0]);
+s/\.$// foreach @ARGV;
+
+# Do backtrace.
+open (A2L, "$a2l -fe $bin " . join (' ', @ARGV) . "|");
+while (<A2L>) {
+    my ($function, $line);
+    chomp ($function = $_);
+    chomp ($line = <A2L>);
+    print shift (@ARGV), ": $function ($line)\n";
+}
+close (A2L);
+   

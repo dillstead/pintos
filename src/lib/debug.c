@@ -88,6 +88,10 @@ debug_panic (const char *file, int line, const char *function,
 
   debug_backtrace ();
 
+  printf ("The `backtrace' program can make call stacks useful.\n"
+          "Read \"Backtraces\" in the \"Debugging Tools\" chapter\n"
+          "of the Pintos documentation for more information.\n");
+  
 #ifdef KERNEL
   serial_flush ();
   if (power_off_when_done)
