@@ -78,38 +78,53 @@ protcseg:
 
 	movl $1, %ebx
 	movl $0x100000, %edi
-read_sector:		
+read_sector:
+
+	### Poll status register while controller busy.
 	movl $0x1f7, %edx
 1:	inb %dx, %al
 	testb $0x80, %al
 	jnz 1b
-	
+
+	### Read a single sector.
 	movl $0x1f2, %edx
 	movb $1, %al
 	outb %al, %dx
 
+	### Sector number to write in low 28 bits.
+	### LBA mode, device 0 in top 4 bits.
 	movl %ebx, %eax
 	andl $0x0fffffff, %eax
 	orl $0xe0000000, %eax
 
+	### Dump %eax to ports 0x1f3...0x1f6.
 	movl $4, %ecx
-2:	incl %edx
+2:	incw %dx
 	outb %al, %dx
 	shrl $8, %eax
 	loop 2b
 
+	### READ command to command register.
 	incw %dx
 	movb $0x20, %al
 	outb %al, %dx
-	
+
+	### Poll status register while controller busy.
 1:	inb %dx, %al
 	testb $0x80, %al
 	jnz 1b
 
+	### Poll status register until data ready.
+1:	inb %dx, %al
+	testb $0x08, %al
+	jz 1b
+
+	### Transfer sector.
 	movl $512 / 4, %ecx
 	movl $0x1f0, %edx
 	rep insl
 
+	### Next sector.
 	incl %ebx
 	cmpl $KERNEL_LOAD_PAGES*8 + 1, %ebx
 	jnz read_sector
