@@ -19,13 +19,18 @@ enum thread_status
 
 struct thread 
   {
+    /* These members are owned by the thread_*() functions. */
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     list_elem rq_elem;                  /* Run queue list element. */
+
 #ifdef USERPROG
-    struct addrspace addrspace;         /* Userland address space. */
+    /* These members are owned by the addrspace_*() functions. */
+    uint32_t *pagedir;                  /* Page directory. */
 #endif
+    
+    /* Marker to detect stack overflow. */
     unsigned magic;                     /* Always set to THREAD_MAGIC. */
   };
 

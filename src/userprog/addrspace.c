@@ -8,6 +8,7 @@
 #include "mmu.h"
 #include "paging.h"
 #include "palloc.h"
+#include "thread.h"
 
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification more-or-less verbatim. */
@@ -79,12 +80,12 @@ struct Elf32_Phdr
         } while (0)
 
 static bool
-install_page (struct addrspace *as, void *upage, void *kpage)
+install_page (struct thread *t, void *upage, void *kpage)
 {
   /* Verify that there's not already a page at that virtual
      address, then map our page there. */
-  if (pagedir_get_page (as->pagedir, upage) == NULL
-      && pagedir_set_page (as->pagedir, upage, kpage, true))
+  if (pagedir_get_page (t->pagedir, upage) == NULL
+      && pagedir_set_page (t->pagedir, upage, kpage, true))
     return true;
   else
     {
@@ -94,14 +95,14 @@ install_page (struct addrspace *as, void *upage, void *kpage)
 }
 
 static bool
-load_segment (struct addrspace *as, struct file *file,
+load_segment (struct thread *t, struct file *file,
               const struct Elf32_Phdr *phdr) 
 {
   void *start, *end;
   uint8_t *upage;
   off_t filesz_left;
 
-  ASSERT (as != NULL);
+  ASSERT (t != NULL);
   ASSERT (file != NULL);
   ASSERT (phdr != NULL);
   ASSERT (phdr->p_type == PT_LOAD);
@@ -147,7 +148,7 @@ load_segment (struct addrspace *as, struct file *file,
       memset (kpage + read_bytes, 0, zero_bytes);
       filesz_left -= read_bytes;
 
-      if (!install_page (as, upage, kpage))
+      if (!install_page (t, upage, kpage))
         return false;
     }
 
@@ -155,7 +156,7 @@ load_segment (struct addrspace *as, struct file *file,
 }
 
 static bool
-setup_stack (struct addrspace *as) 
+setup_stack (struct thread *t) 
 {
   uint8_t *kpage = palloc_get (PAL_ZERO);
   if (kpage == NULL)
@@ -164,11 +165,11 @@ setup_stack (struct addrspace *as)
       return false;
     }
 
-  return install_page (as, ((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
+  return install_page (t, ((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
 }
 
 bool
-addrspace_load (struct addrspace *as, const char *filename,
+addrspace_load (struct thread *t, const char *filename,
                 void (**start) (void)) 
 {
   struct Elf32_Ehdr ehdr;
@@ -178,8 +179,12 @@ addrspace_load (struct addrspace *as, const char *filename,
   bool success = false;
   int i;
 
-  as->pagedir = pagedir_create ();
+  /* Allocate page directory. */
+  t->pagedir = pagedir_create ();
+  if (t->pagedir == NULL)
+    LOAD_ERROR (("page directory allocation failed"));
 
+  /* Open executable file. */
   file_open = filesys_open (filename, &file);
   if (!file_open)
     LOAD_ERROR (("open failed"));
@@ -229,14 +234,14 @@ addrspace_load (struct addrspace *as, const char *filename,
           printk ("unknown ELF segment type %08x\n", phdr.p_type);
           break;
         case PT_LOAD:
-          if (!load_segment (as, &file, &phdr))
+          if (!load_segment (t, &file, &phdr))
             goto error;
           break;
         }
     }
 
   /* Set up stack. */
-  if (!setup_stack (as))
+  if (!setup_stack (t))
     goto error;
 
   /* Start address. */
@@ -248,23 +253,26 @@ addrspace_load (struct addrspace *as, const char *filename,
   if (file_open)
     file_close (&file);
   if (!success) 
-    addrspace_destroy (as);
+    addrspace_destroy (t);
   return success;
 }
 
 void
-addrspace_destroy (struct addrspace *as)
+addrspace_destroy (struct thread *t)
 {
-  if (as != NULL && as->pagedir != NULL) 
-    pagedir_destroy (as->pagedir); 
+  if (t->pagedir != NULL) 
+    {
+      pagedir_destroy (t->pagedir);
+      t->pagedir = NULL; 
+    }
 }
 
 void
-addrspace_activate (struct addrspace *as) 
+addrspace_activate (struct thread *t)
 {
-  ASSERT (as != NULL);
+  ASSERT (t != NULL);
   
-  if (as->pagedir != NULL)
-    pagedir_activate (as->pagedir);
-  tss->esp0 = (uint32_t) pg_round_down (as) + PGSIZE;
+  if (t->pagedir != NULL)
+    pagedir_activate (t->pagedir);
+  tss->esp0 = (uint32_t) t + PGSIZE;
 }

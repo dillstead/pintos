@@ -126,7 +126,7 @@ thread_execute (const char *filename)
   if (t == NULL)
     return false;
   
-  if (!addrspace_load (&t->addrspace, filename, &start)) 
+  if (!addrspace_load (t, filename, &start)) 
     PANIC ("%s: program load failed", filename);
 
   /* Interrupt frame. */
@@ -336,6 +336,7 @@ destroy_thread (struct thread *t)
   ASSERT (t->status == THREAD_DYING);
   ASSERT (t != thread_current ());
 
+  addrspace_destroy (t);
   palloc_free (t);
 }
 
@@ -363,7 +364,7 @@ schedule_tail (struct thread *prev)
     destroy_thread (prev);
 
 #ifdef USERPROG
-  addrspace_activate (&cur->addrspace);
+  addrspace_activate (cur);
 #endif
 }
 
