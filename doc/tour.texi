@@ -495,7 +495,7 @@ is, kernel threads can be preempted at any time.  Traditional Unix
 systems are ``nonpreemptible,'' that is, kernel threads can only be
 preempted at points where they explicitly call into the scheduler.
 User programs can be preempted at any time in both models.  As you
-might imagine, preemptible kernels require more use of
+might imagine, preemptible kernels require more explicit
 synchronization.
 
 You should have little need to set the interrupt state directly.  Most
@@ -530,8 +530,8 @@ Turns interrupts off and returns the previous interrupt state.
 @node Semaphores
 @subsubsection Semaphores
 
-A semaphore is a nonnegative integer along with two atomic operators
-for manipulating it, which are:
+A semaphore is a nonnegative integer along with two operators
+for atomically manipulating it, which are:
 
 @itemize @bullet
 @item
@@ -594,7 +594,7 @@ semaphore is twofold.  First, a semaphore can have a value greater
 than 1, but a lock can only be owned by a single thread at a time.
 Second, a semaphore does not have an owner, meaning that one thread
 can ``down'' the semaphore and then another one ``up'' it, but with a
-lock the same thread must both acquire and release it.  When these
+lock a single thread must both acquire and release it.  When these
 restrictions prove onerous, it's a good sign that a semaphore should
 be used, instead of a lock.
 
@@ -633,8 +633,8 @@ A condition variable allows one piece of code to signal a condition
 and cooperating code to receive the signal and act upon it.  Each
 condition variable is associated with a lock.  A given condition
 variable is associated with only a single lock, but one lock may be
-associated with any number of condition variables.  A lock along with
-all of its condition variables is known as a ``monitor.''
+associated with any number of condition variables.  A set of condition
+variables taken together with their lock is called a ``monitor.''
 
 A thread that owns the monitor lock is said to be ``in the monitor.''
 The thread in the monitor has control over all the data protected with
@@ -736,7 +736,7 @@ timer, keyboard, serial ports, and disks.  External interrupts are
 @dfn{asynchronous}, meaning that they don't occur in a fashion
 synchronized with anything going on in the CPU.  External interrupts
 are what @func{intr_disable} and related functions can arrange to
-temporarily ignore (@pxref{Disabling Interrupts}).
+postpone (@pxref{Disabling Interrupts}).
 
 @item
 @dfn{Internal interrupts}, that is, interrupts caused by something
