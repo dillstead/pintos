@@ -6,14 +6,14 @@
    <gmh@leland.stanford.edu>, Yu Ping Hu <yph@cs.stanford.edu>.
    Modified by arens. */
 
+#ifdef MLFQS
+#error This test not applicable with MLFQS enabled.
+#endif
+
 #include "threads/test.h"
 #include <stdio.h>
 #include "threads/synch.h"
 #include "threads/thread.h"
-
-#ifdef MLFQS
-#error This test not applicable with MLFQS enabled.
-#endif
 
 static void test_preempt (void);
 static void test_fifo (void);

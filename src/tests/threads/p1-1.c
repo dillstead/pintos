@@ -10,6 +10,10 @@
    Taskar <btaskar@cs.stanford.edu>, and Toli Kuznets
    <tolik@cs.stanford.edu>. */
 
+#ifdef MLFQS
+#error This test not applicable with MLFQS enabled.
+#endif
+
 #include "threads/test.h"
 #include <stdio.h>
 #include "threads/synch.h"
