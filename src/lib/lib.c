@@ -186,6 +186,37 @@ strcmp (const char *a_, const char *b_)
   return *a < *b ? -1 : *a > *b;
 }
 
+/* Breaks a string into tokens separated by DELIMITERS.  The
+   first time this function is called, S should be the string to
+   tokenize, and in subsequent calls it must be a null pointer.
+   SAVE_PTR is the address of a `char *' variable used to keep
+   track of the tokenizer's position.  The return value each time
+   is the next token in the string, or a null pointer if no
+   tokens remain.
+
+   This function treats multiple adjacent delimiters as a single
+   delimiter.  The returned tokens will never be length 0.
+   DELIMITERS may change from one call to the next within a
+   single string.
+
+   strtok_r() modifies the string S, changing delimiters to null
+   bytes.  Thus, S must be a modifiable string.
+
+   Example usage:
+
+   char s[] = "  String to  tokenize. ";
+   char *token, *save_ptr;
+
+   for (token = strtok_r (s, " ", &save_ptr); token != NULL;
+        token = strtok_r (NULL, " ", &save_ptr))
+     printf ("'%s'\n", token);
+
+   outputs:
+
+     'String'
+     'to'
+     'tokenize.'
+*/
 char *
 strtok_r (char *s, const char *delimiters, char **save_ptr) 
 {
