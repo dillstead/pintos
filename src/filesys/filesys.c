@@ -24,10 +24,12 @@ do_format (void)
   struct filehdr *map_hdr, *dir_hdr;
   struct dir dir;
 
+  printk ("Formatting filesystem...");
+
   /* Create the initial bitmap and reserve sectors for the
      free map and root directory file headers. */
   if (!bitmap_init (&free_map, disk_size (filesys_disk)))
-    panic ("bitmap creation failed--disk is too large");
+    PANIC ("bitmap creation failed--disk is too large");
   bitmap_mark (&free_map, FREE_MAP_SECTOR);
   bitmap_mark (&free_map, ROOT_DIR_SECTOR);
 
@@ -35,7 +37,7 @@ do_format (void)
      and write its file header to disk. */
   map_hdr = filehdr_allocate (&free_map, bitmap_storage_size (&free_map));
   if (map_hdr == NULL)
-    panic ("free map creation failed--disk is too large");
+    PANIC ("free map creation failed--disk is too large");
   filehdr_write (map_hdr, FREE_MAP_SECTOR);
   filehdr_destroy (map_hdr);
 
@@ -43,26 +45,28 @@ do_format (void)
      and write its file header to disk. */
   dir_hdr = filehdr_allocate (&free_map, ROOT_DIR_FILE_SIZE);
   if (dir_hdr == NULL)
-    panic ("root directory creation failed");
+    PANIC ("root directory creation failed");
   filehdr_write (dir_hdr, ROOT_DIR_SECTOR);
   filehdr_destroy (dir_hdr);
 
   /* Write out the free map now that we have space reserved
      for it. */
   if (!file_open (&free_map_file, FREE_MAP_SECTOR))
-    panic ("can't open free map file");
+    PANIC ("can't open free map file");
   bitmap_write (&free_map, &free_map_file);
   bitmap_destroy (&free_map);
   file_close (&free_map_file);
 
   /* Write out the root directory in the same way. */
   if (!file_open (&root_dir_file, ROOT_DIR_SECTOR))
-    panic ("can't open root directory");
+    PANIC ("can't open root directory");
   if (!dir_init (&dir, NUM_DIR_ENTRIES))
-    panic ("can't initialize root directory");
+    PANIC ("can't initialize root directory");
   dir_write (&dir, &root_dir_file);
   dir_destroy (&dir);
   file_close (&free_map_file);
+
+  printk ("done.\n");
 }
 
 void
@@ -70,15 +74,15 @@ filesys_init (bool format)
 {
   filesys_disk = disk_get (1);
   if (filesys_disk == NULL)
-    panic ("ide1:1 not present, filesystem initialization failed");
+    PANIC ("ide1:1 not present, filesystem initialization failed");
 
   if (format) 
     do_format ();
   
   if (!file_open (&free_map_file, FREE_MAP_SECTOR))
-    panic ("can't open free map file");
+    PANIC ("can't open free map file");
   if (!file_open (&root_dir_file, ROOT_DIR_SECTOR))
-    panic ("can't open root dir file");
+    PANIC ("can't open root dir file");
 }
 
 bool
@@ -195,13 +199,50 @@ filesys_remove (const char *name)
   return success;
 }
 
-static void must_succeed_function (int, int) ATTRIBUTE((noinline));
+bool
+filesys_list (void) 
+{
+  struct dir dir;
+
+  if (!dir_init (&dir, NUM_DIR_ENTRIES))
+    return false;
+  dir_read (&dir, &root_dir_file);
+  dir_list (&dir);
+  dir_destroy (&dir);
+
+  return true;
+}
+
+bool
+filesys_dump (void) 
+{
+  struct bitmap free_map;
+  struct dir dir;  
+
+  printk ("Free map:\n");
+  if (!bitmap_init (&free_map, disk_size (filesys_disk)))
+    return false;
+  bitmap_read (&free_map, &free_map_file);
+  bitmap_dump (&free_map);
+  bitmap_destroy (&free_map);
+  printk ("\n");
+  
+  if (!dir_init (&dir, NUM_DIR_ENTRIES))
+    return false;
+  dir_read (&dir, &root_dir_file);
+  dir_dump (&dir);
+  dir_destroy (&dir);
+
+  return true;
+}
+
+static void must_succeed_function (int, int) NO_INLINE;
 
 static void 
 must_succeed_function (int line_no, int success) 
 {
   if (!success)
-    panic ("filesys_self_test: operation failed on line %d", line_no);
+    PANIC ("filesys_self_test: operation failed on line %d", line_no);
 }
 
 #define MUST_SUCCEED(EXPR) must_succeed_function (__LINE__, EXPR)
