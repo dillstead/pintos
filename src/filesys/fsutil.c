@@ -32,7 +32,7 @@ static void
 copy (const char *filename, off_t size) 
 {
   struct disk *src;
-  struct file dst;
+  struct file *dst;
   disk_sector_t sector;
   void *buffer;
 
@@ -47,7 +47,8 @@ copy (const char *filename, off_t size)
   /* Create destination file. */
   if (!filesys_create (filename, size))
     PANIC ("%s: create failed", filename);
-  if (!filesys_open (filename, &dst))
+  dst = filesys_open (filename);
+  if (dst == NULL)
     PANIC ("%s: open failed", filename);
 
   /* Do copy. */
@@ -57,14 +58,14 @@ copy (const char *filename, off_t size)
     {
       int chunk_size = size > DISK_SECTOR_SIZE ? DISK_SECTOR_SIZE : size;
       disk_read (src, sector++, buffer);
-      if (file_write (&dst, buffer, chunk_size) != chunk_size)
+      if (file_write (dst, buffer, chunk_size) != chunk_size)
         PANIC ("%s: write failed with %lld bytes unwritten",
                filename, (unsigned long long) size);
       size -= chunk_size;
     }
   palloc_free (buffer);
 
-  file_close (&dst);
+  file_close (dst);
 }
 
 /* Executes the filesystem operations described by the variables
@@ -107,20 +108,21 @@ fsutil_run (void)
 void
 fsutil_print (const char *filename) 
 {
-  struct file file;
+  struct file *file;
   char *buffer;
 
-  if (!filesys_open (filename, &file))
+  file = filesys_open (filename);
+  if (file == NULL)
     PANIC ("%s: open failed", filename);
   buffer = palloc_get (PAL_ASSERT);
   for (;;) 
     {
-      off_t n = file_read (&file, buffer, PGSIZE);
+      off_t n = file_read (file, buffer, PGSIZE);
       if (n == 0)
         break;
 
       hex_dump (buffer, n, true);
     }
   palloc_free (buffer);
-  file_close (&file);
+  file_close (file);
 }

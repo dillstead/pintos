@@ -96,8 +96,7 @@ bool
 addrspace_load (struct thread *t, const char *filename, void (**start) (void)) 
 {
   struct Elf32_Ehdr ehdr;
-  struct file file;
-  bool file_open = false;
+  struct file *file = NULL;
   off_t file_ofs;
   bool success = false;
   int i;
@@ -108,12 +107,12 @@ addrspace_load (struct thread *t, const char *filename, void (**start) (void))
     LOAD_ERROR (("page directory allocation failed"));
 
   /* Open executable file. */
-  file_open = filesys_open (filename, &file);
-  if (!file_open)
+  file = filesys_open (filename);
+  if (file == NULL)
     LOAD_ERROR (("open failed"));
 
   /* Read and verify executable header. */
-  if (file_read (&file, &ehdr, sizeof ehdr) != sizeof ehdr) 
+  if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr) 
     LOAD_ERROR (("error reading executable header"));
   if (memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7) != 0)
     LOAD_ERROR (("file is not ELF"));
@@ -135,8 +134,8 @@ addrspace_load (struct thread *t, const char *filename, void (**start) (void))
     {
       struct Elf32_Phdr phdr;
 
-      file_seek (&file, file_ofs);
-      if (file_read (&file, &phdr, sizeof phdr) != sizeof phdr)
+      file_seek (file, file_ofs);
+      if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
         LOAD_ERROR (("error reading program header"));
       file_ofs += sizeof phdr;
       switch (phdr.p_type) 
@@ -157,7 +156,7 @@ addrspace_load (struct thread *t, const char *filename, void (**start) (void))
           printf ("unknown ELF segment type %08x\n", phdr.p_type);
           break;
         case PT_LOAD:
-          if (!load_segment (t, &file, &phdr))
+          if (!load_segment (t, file, &phdr))
             goto done;
           break;
         }
@@ -175,8 +174,7 @@ addrspace_load (struct thread *t, const char *filename, void (**start) (void))
  done:
   /* We arrive here whether the load is successful or not.
      We can distinguish based on `success'. */
-  if (file_open)
-    file_close (&file);
+  file_close (file);
   if (!success) 
     addrspace_destroy (t);
   return success;
@@ -274,7 +272,7 @@ load_segment (struct thread *t, struct file *file,
          file into the page and zero the rest. */
       size_t read_bytes = filesz_left >= PGSIZE ? PGSIZE : filesz_left;
       size_t zero_bytes = PGSIZE - read_bytes;
-      uint8_t *kpage = palloc_get (0);
+      uint8_t *kpage = palloc_get (PAL_USER);
       if (kpage == NULL)
         return false;
 
@@ -306,7 +304,7 @@ setup_stack (struct thread *t)
   uint8_t *kpage;
   bool success = false;
 
-  kpage = palloc_get (PAL_ZERO);
+  kpage = palloc_get (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
       success = install_page (t, ((uint8_t *) PHYS_BASE) - PGSIZE, kpage);

@@ -10,23 +10,9 @@
    (This macro name comes from POSIX.1.) */
 #define NAME_MAX 14
 
-/* A directory. */
-struct dir 
-  {
-    size_t entry_cnt;           /* Number of entries. */
-    struct dir_entry *entries;  /* Array of entries. */
-  };
-
-/* A single directory entry. */
-struct dir_entry 
-  {
-    bool in_use;                        /* In use or free? */
-    char name[NAME_MAX + 1];            /* Null terminated file name. */
-    disk_sector_t filehdr_sector;       /* Sector number of header. */
-  };
-
 struct file;
-bool dir_init (struct dir *, size_t entry_cnt);
+struct dir *dir_create (size_t entry_cnt);
+size_t dir_size (size_t entry_cnt);
 void dir_destroy (struct dir *);
 void dir_read (struct dir *, struct file *);
 void dir_write (struct dir *, struct file *);

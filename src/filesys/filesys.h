@@ -2,16 +2,18 @@
 #define FILESYS_FILESYS_H
 
 #include <stdbool.h>
-#include <stdint.h>
 #include "filesys/off_t.h"
 
 /* Disk used for filesystem. */
 extern struct disk *filesys_disk;
 
-struct file;
+/* The free map file, opened by filesys_init() and never
+   closed. */
+extern struct file *free_map_file;
+
 void filesys_init (bool format);
 bool filesys_create (const char *name, off_t initial_size);
-bool filesys_open (const char *name, struct file *);
+struct file *filesys_open (const char *name);
 bool filesys_remove (const char *name);
 bool filesys_list (void);
 bool filesys_dump (void);

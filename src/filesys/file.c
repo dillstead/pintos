@@ -2,32 +2,56 @@
 #include <debug.h>
 #include <string.h>
 #include "filesys/directory.h"
-#include "filesys/filehdr.h"
+#include "filesys/inode.h"
 #include "filesys/filesys.h"
 #include "threads/malloc.h"
 
-bool
-file_open (struct file *file, disk_sector_t hdr_sector) 
+/* An open file. */
+struct file 
+  {
+    struct inode *inode;        /* File's inode. */
+    uint8_t *bounce;            /* Bounce buffer for reads and writes. */
+    off_t pos;                  /* Current position. */
+  };
+
+/* Opens and returns the file whose inode is in sector
+   INODE_SECTOR.  Returns a null pointer if unsuccessful. */
+struct file *
+file_open (disk_sector_t inode_sector) 
 {
-  file->hdr = filehdr_read (hdr_sector);
+  struct file *file = calloc (1, sizeof *file);
+  if (file == NULL)
+    return NULL;
+  
+  file->inode = inode_open (inode_sector);
   file->bounce = malloc (DISK_SECTOR_SIZE);
   file->pos = 0;
-  if (file->hdr != NULL && file->bounce != NULL)
-    return true;
-  else
+  if (file->inode == NULL || file->bounce == NULL)
     {
-      filehdr_destroy (file->hdr);
+      inode_close (file->inode);
       free (file->bounce);
-      return false;
+      return NULL;
     }
+
+  return file;
 }
 
+/* Closes FILE. */
 void
 file_close (struct file *file) 
 {
-  filehdr_destroy (file->hdr);
+  if (file == NULL)
+    return;
+  
+  inode_close (file->inode);
+  free (file->bounce);
 }
 
+/* Reads SIZE bytes from FILE into BUFFER,
+   starting at the file's current position,
+   and advances the current position.
+   Returns the number of bytes actually read,
+   which may be less than SIZE if end of file is reached. */
 off_t
 file_read (struct file *file, void *buffer, off_t size) 
 {
@@ -36,6 +60,11 @@ file_read (struct file *file, void *buffer, off_t size)
   return bytes_read;
 }
 
+/* Reads SIZE bytes from FILE into BUFFER,
+   starting at offset FILE_OFS in the file.
+   The file's current position is unaffected
+   Returns the number of bytes actually read,
+   which may be less than SIZE if end of file is reached. */
 off_t
 file_read_at (struct file *file, void *buffer_, off_t size,
               off_t file_ofs) 
@@ -46,11 +75,11 @@ file_read_at (struct file *file, void *buffer_, off_t size,
   while (size > 0) 
     {
       /* Disk sector to read, starting byte offset within sector. */
-      off_t sector_idx = filehdr_byte_to_sector (file->hdr, file_ofs);
+      off_t sector_idx = inode_byte_to_sector (file->inode, file_ofs);
       int sector_ofs = file_ofs % DISK_SECTOR_SIZE;
 
       /* Bytes left in file, bytes left in sector, lesser of the two. */
-      off_t file_left = filehdr_length (file->hdr) - file_ofs;
+      off_t file_left = inode_length (file->inode) - file_ofs;
       int sector_left = DISK_SECTOR_SIZE - sector_ofs;
       int min_left = file_left < sector_left ? file_left : sector_left;
 
@@ -73,6 +102,13 @@ file_read_at (struct file *file, void *buffer_, off_t size,
   return bytes_read;
 }
 
+/* Writes SIZE bytes from BUFFER into FILE,
+   starting at the file's current position,
+   and advances the current position.
+   Returns the number of bytes actually written,
+   which may be less than SIZE if end of file is reached.
+   (Normally we'd grow the file in that case, but file growth is
+   not yet implemented.) */
 off_t
 file_write (struct file *file, const void *buffer, off_t size) 
 {
@@ -81,6 +117,13 @@ file_write (struct file *file, const void *buffer, off_t size)
   return bytes_written;
 }
 
+/* Writes SIZE bytes from BUFFER into FILE,
+   starting at offset FILE_OFS in the file.
+   The file's current position is unaffected
+   Returns the number of bytes actually written,
+   which may be less than SIZE if end of file is reached.
+   (Normally we'd grow the file in that case, but file growth is
+   not yet implemented.) */
 off_t
 file_write_at (struct file *file, const void *buffer_, off_t size,
                off_t file_ofs) 
@@ -91,11 +134,11 @@ file_write_at (struct file *file, const void *buffer_, off_t size,
   while (size > 0) 
     {
       /* Starting byte offset within sector to read. */
-      off_t sector_idx = filehdr_byte_to_sector (file->hdr, file_ofs);
+      off_t sector_idx = inode_byte_to_sector (file->inode, file_ofs);
       int sector_ofs = file_ofs % DISK_SECTOR_SIZE;
 
       /* Bytes left in file, bytes left in sector, lesser of the two. */
-      off_t file_left = filehdr_length (file->hdr) - file_ofs;
+      off_t file_left = inode_length (file->inode) - file_ofs;
       int sector_left = DISK_SECTOR_SIZE - sector_ofs;
       int min_left = file_left < sector_left ? file_left : sector_left;
 
@@ -123,13 +166,16 @@ file_write_at (struct file *file, const void *buffer_, off_t size,
   return bytes_written;
 }
 
+/* Returns the size of FILE in bytes. */
 off_t
 file_length (struct file *file) 
 {
   ASSERT (file != NULL);
-  return filehdr_length (file->hdr);
+  return inode_length (file->inode);
 }
 
+/* Sets the current position in FILE to an offset of FILE_OFS
+   bytes from the start of the file. */
 void
 file_seek (struct file *file, off_t file_ofs) 
 {
@@ -138,6 +184,8 @@ file_seek (struct file *file, off_t file_ofs)
   file->pos = file_ofs;
 }
 
+/* Returns the current position in FILE as a byte offset from the
+   start of the file. */
 off_t
 file_tell (struct file *file) 
 {
