@@ -72,7 +72,7 @@ inode_create (struct bitmap *b, disk_sector_t sector, off_t length)
   idx->data.length = length;
   while (idx->data.sector_cnt < sector_cnt)
     {
-      size_t sector = bitmap_scan_and_flip (b, 0, bitmap_size (b), false);
+      size_t sector = bitmap_scan_and_flip (b, 0, 1, false);
       if (sector == BITMAP_ERROR)
         goto error;
 

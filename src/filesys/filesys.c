@@ -166,8 +166,7 @@ filesys_create (const char *name, off_t initial_size)
   if (free_map == NULL)
     goto done;
   bitmap_read (free_map, free_map_file);
-  inode_sector = bitmap_scan_and_flip (free_map, 0, disk_size (filesys_disk),
-                                       false);
+  inode_sector = bitmap_scan_and_flip (free_map, 0, 1, false);
   if (inode_sector == BITMAP_ERROR)
     goto done;
 
