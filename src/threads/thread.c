@@ -4,11 +4,13 @@
 #include "interrupt.h"
 #include "intr-stubs.h"
 #include "lib.h"
-#include "gdt.h"
 #include "mmu.h"
 #include "palloc.h"
 #include "random.h"
 #include "switch.h"
+#ifdef USERPROG
+#include "gdt.h"
+#endif
 
 #define THREAD_MAGIC 0x1234abcdu
 

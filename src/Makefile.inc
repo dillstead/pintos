@@ -17,8 +17,6 @@ ASFLAGS = -Wa,--gstabs+ $(INCLUDES) $(DEFINES)
 # Core kernel.
 THREADS_SRC  = start.S		# Must be linked first.
 THREADS_SRC += init.c		# Main program.
-THREADS_SRC += gdt.c		# GDT initialization.
-THREADS_SRC += tss.c		# TSS management.
 THREADS_SRC += thread.c		# Thread management core.
 THREADS_SRC += switch.S		# Thread switch routine.
 THREADS_SRC += interrupt.c	# Interrupt core.
@@ -51,13 +49,16 @@ FILESYS_SRC += fsutil.c		# Utilities.
 
 # User process code.
 USERPROG_SRC  = addrspace.c	# Address spaces.
+USERPROG_SRC += exception.c	# User exception handler.
+USERPROG_SRC += gdt.c		# GDT initialization.
+USERPROG_SRC += tss.c		# TSS management.
 
 # Objects.
 OBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))
 
 all: diskimage.bin
 
-intr-stubs.S: $(TOP_SRCDIR)/threads/intr-stubs.pl $(TOP_SRCDIR)/threads/gdt.h
+intr-stubs.S: $(TOP_SRCDIR)/threads/intr-stubs.pl $(TOP_SRCDIR)/threads/loader.h
 	$< > $@
 
 kernel.lds.s: $(TOP_SRCDIR)/threads/kernel.lds.S $(TOP_SRCDIR)/threads/loader.h

@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include "intr-stubs.h"
 #include "debug.h"
-#include "gdt.h"
 #include "io.h"
 #include "lib.h"
 #include "mmu.h"
@@ -40,11 +39,10 @@ static void pic_end_of_interrupt (int irq);
 /* Interrupt Descriptor Table helpers. */
 static uint64_t make_intr_gate (void (*) (void), int dpl);
 static uint64_t make_trap_gate (void (*) (void), int dpl);
+static inline uint64_t make_idtr_operand (uint16_t limit, void *base);
 
 /* Interrupt handlers. */
 void intr_handler (struct intr_frame *args);
-static intr_handler_func panic NO_RETURN;
-static intr_handler_func kill NO_RETURN;
 
 /* Returns the current interrupt status. */
 enum intr_level
@@ -90,40 +88,34 @@ intr_init (void)
   uint64_t idtr_operand;
   int i;
 
+  /* Initialize interrupt controller. */
   pic_init ();
+
+  /* Load IDT register. */
+  idtr_operand = make_idtr_operand (sizeof idt - 1, idt);
+  asm volatile ("lidt %0" :: "m" (idtr_operand));
 
   /* Initialize intr_names. */
   for (i = 0; i < INTR_CNT; i++)
     intr_names[i] = "unknown";
-
-  /* Most exceptions require ring 0.
-     Exceptions 3, 4, and 5 can be caused by ring 3 directly. */
-  intr_register (0, 0, INTR_ON, kill, "#DE Divide Error");
-  intr_register (1, 0, INTR_ON, kill, "#DB Debug Exception");
-  intr_register (2, 0, INTR_ON, panic, "NMI Interrupt");
-  intr_register (3, 3, INTR_ON, kill, "#BP Breakpoint Exception");
-  intr_register (4, 3, INTR_ON, kill, "#OF Overflow Exception");
-  intr_register (5, 3, INTR_ON, kill, "#BR BOUND Range Exceeded Exception");
-  intr_register (6, 0, INTR_ON, kill, "#UD Invalid Opcode Exception");
-  intr_register (7, 0, INTR_ON, kill, "#NM Device Not Available Exception");
-  intr_register (8, 0, INTR_ON, panic, "#DF Double Fault Exception");
-  intr_register (9, 0, INTR_ON, panic, "Coprocessor Segment Overrun");
-  intr_register (10, 0, INTR_ON, panic, "#TS Invalid TSS Exception");
-  intr_register (11, 0, INTR_ON, kill, "#NP Segment Not Present");
-  intr_register (12, 0, INTR_ON, kill, "#SS Stack Fault Exception");
-  intr_register (13, 0, INTR_ON, kill, "#GP General Protection Exception");
-  intr_register (16, 0, INTR_ON, kill, "#MF x87 FPU Floating-Point Error");
-  intr_register (17, 0, INTR_ON, panic, "#AC Alignment Check Exception");
-  intr_register (18, 0, INTR_ON, panic, "#MC Machine-Check Exception");
-  intr_register (19, 0, INTR_ON, kill, "#XF SIMD Floating-Point Exception");
-
-  /* Most exceptions can be handled with interrupts turned on.
-     We need to disable interrupts for page faults because the
-     fault address is stored in CR2 and needs to be preserved. */
-  intr_register (14, 0, INTR_OFF, kill, "#PF Page-Fault Exception");
-
-  idtr_operand = make_dtr_operand (sizeof idt - 1, idt);
-  asm volatile ("lidt %0" :: "m" (idtr_operand));
+  intr_names[0] = "#DE Divide Error";
+  intr_names[1] = "#DB Debug Exception";
+  intr_names[2] = "NMI Interrupt";
+  intr_names[3] = "#BP Breakpoint Exception";
+  intr_names[4] = "#OF Overflow Exception";
+  intr_names[5] = "#BR BOUND Range Exceeded Exception";
+  intr_names[6] = "#UD Invalid Opcode Exception";
+  intr_names[7] = "#NM Device Not Available Exception";
+  intr_names[8] = "#DF Double Fault Exception";
+  intr_names[9] = "Coprocessor Segment Overrun";
+  intr_names[10] = "#TS Invalid TSS Exception";
+  intr_names[11] = "#NP Segment Not Present";
+  intr_names[12] = "#SS Stack Fault Exception";
+  intr_names[13] = "#GP General Protection Exception";
+  intr_names[16] = "#MF x87 FPU Floating-Point Error";
+  intr_names[17] = "#AC Alignment Check Exception";
+  intr_names[18] = "#MC Machine-Check Exception";
+  intr_names[19] = "#XF SIMD Floating-Point Exception";
 }
 
 /* Registers interrupt VEC_NO to invoke HANDLER, which is named
@@ -286,22 +278,28 @@ make_trap_gate (void (*function) (void), int dpl)
 {
   return make_gate (function, dpl, 15);
 }
+
+/* Returns a descriptor that yields the given LIMIT and BASE when
+   used as an operand for the LIDT instruction. */
+static inline uint64_t
+make_idtr_operand (uint16_t limit, void *base)
+{
+  return limit | ((uint64_t) (uint32_t) base << 16);
+}
 
 /* Interrupt handlers. */
 
-static void dump_intr_frame (struct intr_frame *);
-
 /* Handler for all interrupts, faults, and exceptions.  This
    function is called by the assembly language interrupt stubs in
-   intr-stubs.S (see intr-stubs.pl).  ARGS describes the
+   intr-stubs.S (see intr-stubs.pl).  FRAME describes the
    interrupt and the interrupted thread's registers. */
 void
-intr_handler (struct intr_frame *args) 
+intr_handler (struct intr_frame *frame) 
 {
   bool external;
   intr_handler_func *handler;
 
-  external = args->vec_no >= 0x20 && args->vec_no < 0x30;
+  external = frame->vec_no >= 0x20 && frame->vec_no < 0x30;
   if (external) 
     {
       ASSERT (intr_get_level () == INTR_OFF);
@@ -314,10 +312,13 @@ intr_handler (struct intr_frame *args)
   /* Invoke the interrupt's handler.
      If there is no handler, invoke the unexpected interrupt
      handler. */
-  handler = intr_handlers[args->vec_no];
+  handler = intr_handlers[frame->vec_no];
   if (handler == NULL)
-    handler = panic;
-  handler (args);
+    {
+      intr_dump_frame (frame);
+      PANIC ("Unexpected interrupt");
+    }
+  handler (frame);
 
   /* Complete the processing of an external interrupt. */
   if (external) 
@@ -326,65 +327,16 @@ intr_handler (struct intr_frame *args)
       ASSERT (intr_context ());
 
       in_external_intr = false;
-      pic_end_of_interrupt (args->vec_no); 
+      pic_end_of_interrupt (frame->vec_no); 
 
       if (yield_on_return) 
         thread_yield (); 
     }
 }
 
-/* Handler for an interrupt that should not have been invoked. */
-static void
-panic (struct intr_frame *regs) 
-{
-  dump_intr_frame (regs);
-  PANIC ("Panic!");
-}
-
-/* Handler for an exception (probably) caused by a user process. */
-static void
-kill (struct intr_frame *f) 
-{
-  /* This interrupt is one (probably) caused by a user process.
-     For example, the process might have tried to access unmapped
-     virtual memory (a page fault).  For now, we simply kill the
-     user process.  Later, we'll want to handle page faults in
-     the kernel.  Real Unix-like operating systems pass most
-     exceptions back to the process via signals, but we don't
-     implement them. */
-     
-  /* The interrupt frame's code segment value tells us where the
-     exception originated. */
-  switch (f->cs)
-    {
-    case SEL_UCSEG:
-      /* User's code segment, so it's a user exception, as we
-         expected. */
-      printk ("%s: dying due to interrupt %#04x (%s).\n",
-              thread_name (thread_current ()),
-              f->vec_no, intr_names[f->vec_no]);
-      dump_intr_frame (f);
-      thread_exit (); 
-
-    case SEL_KCSEG:
-      /* Kernel's code segment, which indicates a kernel bug.
-         Kernel code shouldn't throw exceptions.  (Page faults
-         may cause kernel exceptions--but they shouldn't arrive
-         here.) */
-      printk ("Kernel bug - unexpected interrupt in kernel\n");
-      panic (f);
-
-    default:
-      /* Some other code segment?  Shouldn't happen. */
-      printk ("Interrupt %#04x (%s) in unknown segment %04x\n",
-             f->vec_no, intr_names[f->vec_no], f->cs);
-      thread_exit ();
-    }
-}
-
 /* Dumps interrupt frame F to the console, for debugging. */
-static void
-dump_intr_frame (struct intr_frame *f) 
+void
+intr_dump_frame (const struct intr_frame *f) 
 {
   uint32_t cr2, ss;
   asm ("movl %%cr2, %0" : "=r" (cr2));
@@ -401,3 +353,9 @@ dump_intr_frame (struct intr_frame *f)
           f->cs, f->ds, f->es, f->cs != SEL_KCSEG ? f->ss : ss);
 }
 
+/* Returns the name of interrupt VEC. */
+const char *
+intr_name (uint8_t vec) 
+{
+  return intr_names[vec];
+}

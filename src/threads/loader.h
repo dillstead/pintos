@@ -24,4 +24,10 @@
                                                 /* Kernel command line. */
 #define LOADER_RAM_PAGES (LOADER_CMD_LINE - 4)  /* # of pages of RAM. */
 
+/* GDT selectors defined by loader.
+   More selectors are defined by userprog/gdt.h. */
+#define SEL_NULL        0x00    /* Null selector. */
+#define SEL_KCSEG       0x08    /* Kernel code selector. */
+#define SEL_KDSEG       0x10    /* Kernel data selector. */
+
 #endif /* loader.h */

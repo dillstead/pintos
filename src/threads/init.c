@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <limits.h>
 #include "debug.h"
-#include "gdt.h"
 #include "interrupt.h"
 #include "io.h"
 #include "kbd.h"
@@ -17,8 +16,12 @@
 #include "serial.h"
 #include "thread.h"
 #include "timer.h"
-#include "tss.h"
 #include "vga.h"
+#ifdef USERPROG
+#include "exception.h"
+#include "gdt.h"
+#include "tss.h"
+#endif
 #ifdef FILESYS
 #include "filesys.h"
 #include "disk.h"
@@ -59,8 +62,10 @@ main (void)
   /* Initialize memory system, segments, paging. */
   palloc_init ();
   paging_init ();
+#ifdef USERPROG
   tss_init ();
   gdt_init ();
+#endif
   malloc_init ();
 
   /* Set random seed if not already done. */
@@ -70,6 +75,9 @@ main (void)
   intr_init ();
   timer_init ();
   kbd_init ();
+#ifdef USERPROG
+  exception_init ();
+#endif
 
   /* Do everything else in a system thread. */
   thread_init ();
@@ -92,6 +100,8 @@ main_thread (void *aux UNUSED)
     thread_execute (initial_program);
   else
     PANIC ("no initial program specified");
+#else
+  PANIC ("boot successful");
 #endif
 }
 
@@ -174,8 +184,9 @@ argv_init (void)
           " -p FILENAME         Print the contents of FILENAME\n"
           " -r FILENAME         Delete FILENAME\n"
           " -ls                 List the files in the filesystem\n"
-          " -D                  Dump complete filesystem contents\n");
+          " -D                  Dump complete filesystem contents\n"
 #endif
+          );
       }
     else 
       PANIC ("unknown option `%s'", argv[i]);

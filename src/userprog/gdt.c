@@ -23,10 +23,11 @@
    [IA32-v3] sections 3.2 through 3.5. */
 static uint64_t gdt[SEL_CNT];
 
-/* Creating descriptors. */
+/* GDT helpers. */
 static uint64_t make_code_desc (int dpl);
 static uint64_t make_data_desc (int dpl);
 static uint64_t make_tss_desc (void *laddr);
+static uint64_t make_gdtr_operand (uint16_t limit, void *base);
 
 /* Sets up a proper GDT.  The bootstrap loader's GDT didn't
    include user-mode selectors or a TSS, but we need both now. */
@@ -44,7 +45,7 @@ gdt_init (void)
   gdt[SEL_TSS / sizeof *gdt] = make_tss_desc (tss_get ());
 
   /* Load GDTR, TR. */
-  gdtr_operand = make_dtr_operand (sizeof gdt - 1, gdt);
+  gdtr_operand = make_gdtr_operand (sizeof gdt - 1, gdt);
   asm volatile ("lgdt %0" :: "m" (gdtr_operand));
   asm volatile ("ltr %w0" :: "r" (SEL_TSS));
 }
@@ -131,3 +132,11 @@ make_tss_desc (void *laddr)
   return make_seg_desc ((uint32_t) laddr, 0x67, CLS_SYSTEM, 9, 0, GRAN_BYTE);
 }
 
+
+/* Returns a descriptor that yields the given LIMIT and BASE when
+   used as an operand for the LGDT instruction. */
+static uint64_t
+make_gdtr_operand (uint16_t limit, void *base)
+{
+  return limit | ((uint64_t) (uint32_t) base << 16);
+}
