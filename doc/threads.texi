@@ -655,7 +655,8 @@ off interrupts.
 @item
 Examples of synchronization mechanisms have been presented in lecture.
 Going over these examples should help you understand when each type is
-useful or needed.
+useful or needed.  @xref{Synchronization}, for specific information
+about synchronization in Pintos.
 @end enumerate
 
 @item
@@ -672,8 +673,8 @@ wake ups.  I think it's a problem in the test program.  What gives?}
 @anchor{Out of Order 1-1}
 
 This test is inherently full of race conditions.  On a real system it
-wouldn't work perfectly all the time either.  However, you can help it
-work more reliably:
+wouldn't work perfectly all the time either.  There are a few ways you
+can help it work more reliably:
 
 @itemize @bullet
 @item
@@ -683,17 +684,11 @@ Make time slices longer by increasing @code{TIME_SLICE} in
 @item
 Make the timer tick more slowly by decreasing @code{TIMER_FREQ} in
 @file{timer.h} to its minimum value of 19.
-
-@item
-Increase the serial output speed to the maximum of 115,200 bps by
-modifying the call to @func{set_serial} in @func{serial_init_poll} in
-@file{devices/serial.c}.
 @end itemize
 
 The former two changes are only desirable for testing problem 1-1 and
 possibly 1-3.  You should revert them before working on other parts
-of the project or turn in the project.  The latter is harmless, so you
-can retain it or revert it at your option.
+of the project or turn in the project.
 
 @item
 @b{Should @file{p1-1.c} be expected to work with the MLFQS turned on?}
