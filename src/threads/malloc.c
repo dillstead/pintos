@@ -158,7 +158,7 @@ malloc (size_t size)
    kernel to panic in normal operation, so this function should
    only be used during kernel initialization. */
 void *
-xmalloc (size_t size) 
+malloc_or_panic (size_t size) 
 {
   void *p = malloc (size);
   if (p == NULL && size > 0)
@@ -192,7 +192,7 @@ calloc (size_t a, size_t b)
    kernel to panic in normal operation, so this function should
    only be used during kernel initialization. */
 void *
-xcalloc (size_t a, size_t b) 
+calloc_or_panic (size_t a, size_t b) 
 {
   void *p = calloc (a, b);
   if (p == NULL && a > 0 && b > 0)
