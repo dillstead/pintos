@@ -40,7 +40,7 @@ put_file ("sample.txt")
 	     qw (open-normal open-boundary open-twice
 		 close-normal close-twice
 		 read-normal read-bad-ptr read-boundary read-zero
-		 write-normal write-boundary write-zero));		 
+		 write-normal write-bad-ptr write-boundary write-zero));
 
 sub put_file {
     my ($fn) = @_;

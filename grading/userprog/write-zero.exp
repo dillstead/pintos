@@ -1,0 +1,3 @@
+(write-zero) begin
+(write-zero) end
+write-zero: exit(0)

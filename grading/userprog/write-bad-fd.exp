@@ -1,0 +1,6 @@
+(write-bad-fd) begin
+(write-bad-fd) end
+write-bad-fd: exit(0)
+--OR--
+(write-bad-fd) begin
+write-bad-fd: exit(-1)

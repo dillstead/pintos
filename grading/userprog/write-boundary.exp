@@ -1,0 +1,3 @@
+(write-boundary) begin
+(write-boundary) end
+write-boundary: exit(0)

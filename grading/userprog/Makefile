@@ -7,7 +7,8 @@ SINGLETONS = \
 	$(addprefix create-, normal empty null bad-ptr long exists bound) \
 	$(addprefix open-, normal missing boundary empty null bad-ptr twice) \
 	$(addprefix close-, normal twice stdin stdout bad-fd) \
-	$(addprefix read-, normal bad-ptr boundary zero stdout bad-fd)
+	$(addprefix read-, normal bad-ptr boundary zero stdout bad-fd) \
+	$(addprefix write-, normal bad-ptr boundary zero stdin bad-fd)
 
 define SINGLETON_PROG
 PROGS += $(1)

@@ -1,0 +1,3 @@
+(write-normal) begin
+(write-normal) end
+write-normal: exit(0)

@@ -1,15 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <syscall.h>
+#include "sample.inc"
 
-char expected[] = {
-  "Amazing Electronic Fact: If you scuffed your feet long enough without\n"
-  "touching anything, you would build up so many electrons that your\n"
-  "finger would explode!  But this is nothing to worry about unless you\n"
-  "have carpeting.\n" 
-};
-
-char actual[sizeof expected];
+char actual[sizeof sample];
 
 int
 main (void) 
@@ -25,7 +19,7 @@ main (void)
   if (byte_cnt != sizeof actual - 1)
     printf ("(read-normal) fail: read() returned %d instead of %d\n",
             byte_cnt, sizeof actual - 1);
-  else if (strcmp (expected, actual))
+  else if (strcmp (sample, actual))
     printf ("(read-normal) fail: expected text differs from actual:\n%s",
             actual);
   

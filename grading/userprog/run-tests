@@ -48,6 +48,8 @@ sub usage {
 	     close-normal close-twice close-stdin close-stdout close-bad-fd
 	     read-normal read-bad-ptr read-boundary read-zero read-stdout
 	     read-bad-fd
+	     write-normal write-bad-ptr write-boundary write-zero write-stdin
+	     write-bad-fd
 	     ) unless @TESTS > 0;
 
 our (%args);
@@ -271,15 +273,15 @@ sub grade_test {
 
     my (@output) = snarf ("output/$test/run.out");
 
-    if (-e "$GRADES_DIR/$test.exp") {
+    my ($grade_func) = "grade_$test";
+    $grade_func =~ s/-/_/g;
+    if (-e "$GRADES_DIR/$test.exp" && !defined (&$grade_func)) {
 	eval {
 	    verify_common (@output);
 	    compare_output ("$GRADES_DIR/$test.exp", @output);
 	}
     } else {
-	my ($grade_func);
-	($grade_func = $test) =~ s/-/_/g;
-	eval "grade_$grade_func (\@output)";
+	eval "$grade_func (\@output)";
     }
     if ($@) {
 	die $@ if $@ =~ /at \S+ line \d+$/;
@@ -288,42 +290,24 @@ sub grade_test {
     return "ok";
 }
 
-sub grade_alarm_multiple {
-    verify_alarm (7, @_);
-}
-
-sub verify_alarm {
-    my ($iterations, @output) = @_;
-
-    verify_common (@output);
-
-    my (@products);
-    for (my ($i) = 0; $i < $iterations; $i++) {
-	for (my ($t) = 0; $t < 5; $t++) {
-	    push (@products, ($i + 1) * ($t + 1) * 10);
-	}
-    }
-    @products = sort {$a <=> $b} @products;
-
-    local ($_);
-    foreach (@output) {
-	die $_ if /Out of order/;
-
-	my ($p) = /product=(\d+)$/;
-	next if !defined $p;
-
-	my ($q) = shift (@products);
-	die "Too many wakeups.\n" if !defined $q;
-	die "Out of order wakeups ($p vs. $q).\n" if $p != $q; # FIXME
-    }
-    die scalar (@products) . " fewer wakeups than expected.\n"
-	if @products != 0;
-}
-
-sub grade_alarm_zero {
+sub grade_write_normal {
     my (@output) = @_;
     verify_common (@output);
-    die "Crashed in timer_sleep()\n" if !grep (/^Success\.$/, @output);
+    compare_output ("$GRADES_DIR/write-normal.exp", @output);
+    my ($test_txt) = "output/$test/test.txt";
+    get_file ("test.txt", $test_txt) if ! -e $test_txt;
+    compare_output ("$GRADES_DIR/sample.txt", snarf ($test_txt));
+}
+
+sub get_file {
+    my ($guest_fn, $host_fn) = @_;
+    xsystem ("pintos "
+	     . "--os-disk=pintos/src/userprog/build/os.dsk "
+	     . "--fs-disk=output/$test/fs.dsk "
+	     . "-v get $guest_fn $host_fn",
+	     LOG => "$test/get-$guest_fn",
+	     TIMEOUT => 10)
+	or die "get $guest_fn failed\n";
 }
 
 sub grade_alarm_negative {

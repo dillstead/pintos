@@ -18,24 +18,21 @@ main (void)
 {
   int handle;
   int byte_cnt;
-  char *actual_p;
+  char *sample_p;
 
-  actual_p = mk_boundary_string (sample);
+  sample_p = mk_boundary_string (sample);
 
-  printf ("(read-boundary) begin\n");
+  printf ("(write-boundary) begin\n");
 
   handle = open ("sample.txt");
   if (handle < 2)
-    printf ("(read-boundary) fail: open() returned %d\n", handle);
+    printf ("(write-boundary) fail: open() returned %d\n", handle);
 
-  byte_cnt = read (handle, actual_p, sizeof sample - 1);
+  byte_cnt = write (handle, sample_p, sizeof sample - 1);
   if (byte_cnt != sizeof sample - 1)
-    printf ("(read-boundary) fail: read() returned %d instead of %d\n",
+    printf ("(write-boundary) fail: write() returned %d instead of %d\n",
             byte_cnt, sizeof sample - 1);
-  else if (strcmp (sample, actual_p))
-    printf ("(read-boundary) fail: expected text differs from actual:\n%s",
-            actual_p);
   
-  printf ("(read-boundary) end\n");
+  printf ("(write-boundary) end\n");
   return 0;
 }

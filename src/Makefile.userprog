@@ -7,7 +7,7 @@ SHELL = /bin/sh
 VPATH = $(SRCDIR)
 
 DEFINES = -DUSER
-CPPFLAGS = -nostdinc -I$(SRCDIR) -I- -I$(SRCDIR)/lib -I$(SRCDIR)/lib/user
+CPPFLAGS = -nostdinc -I$(SRCDIR) -I- -I$(SRCDIR)/lib -I$(SRCDIR)/lib/user -I.
 
 # Linker flags.
 LDFLAGS = -nostdlib -static -s
