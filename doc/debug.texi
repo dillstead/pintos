@@ -11,6 +11,7 @@ introduces you to a few of them.
 * UNUSED NO_RETURN NO_INLINE PRINTF_FORMAT::  
 * Backtraces::                  
 * i386-elf-gdb::                
+* Debugging by Infinite Loop::  
 * Modifying Bochs::             
 * Debugging Tips::              
 @end menu
