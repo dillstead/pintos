@@ -16,10 +16,63 @@ static void putchar_unlocked (uint8_t c);
    from mixing their output, which looks confusing. */
 static struct lock console_lock;
 
+/* It's possible, if you add enough debug output to Pintos, to
+   try to recursively grab console_lock from a single thread.  As
+   a real example, I added a printf() call to palloc_free().
+   Here's a real backtrace that resulted:
+
+   lock_console()
+   vprintf()
+   printf()             - palloc() tries to grab the lock again
+   palloc_free()        
+   schedule_tail()      - another thread dying as we switch threads
+   schedule()
+   thread_yield()
+   intr_handler()       - timer interrupt
+   intr_set_level()
+   serial_putc()
+   putchar_unlocked()
+   putbuf()
+   sys_write()          - one process writing to the console
+   syscall_handler()
+   intr_handler()
+
+   This kind of thing is very difficult to debug, so we avoid the
+   problem by simulating a recursive lock with a depth
+   counter. */
+static int console_lock_depth;
+
+/* Initializes the console. */
 void
 console_init (void) 
 {
   lock_init (&console_lock, "console");
+}
+
+/* Acquires the console lock. */
+static void
+acquire_console (void) 
+{
+  if (!intr_context ()) 
+    {
+      if (lock_held_by_current_thread (&console_lock)) 
+        console_lock_depth++; 
+      else
+        lock_acquire (&console_lock); 
+    }
+}
+
+/* Releases the console lock. */
+static void
+release_console (void) 
+{
+  if (!intr_context ()) 
+    {
+      if (console_lock_depth > 0)
+        console_lock_depth--;
+      else
+        lock_release (&console_lock); 
+    }
 }
 
 /* The standard vprintf() function,
@@ -30,13 +83,9 @@ vprintf (const char *format, va_list args)
 {
   int char_cnt = 0;
 
-  if (!intr_context ())
-    lock_acquire (&console_lock);
-
+  acquire_console ();
   __vprintf (format, args, vprintf_helper, &char_cnt);
-
-  if (!intr_context ())
-    lock_release (&console_lock);
+  release_console ();
 
   return char_cnt;
 }
@@ -46,15 +95,11 @@ vprintf (const char *format, va_list args)
 int
 puts (const char *s) 
 {
-  if (!intr_context ())
-    lock_acquire (&console_lock);
-
+  acquire_console ();
   while (*s != '\0')
     putchar_unlocked (*s++);
   putchar_unlocked ('\n');
-
-  if (!intr_context ())
-    lock_release (&console_lock);
+  release_console ();
 
   return 0;
 }
@@ -63,28 +108,20 @@ puts (const char *s)
 void
 putbuf (const char *buffer, size_t n) 
 {
-  if (!intr_context ())
-    lock_acquire (&console_lock);
-
+  acquire_console ();
   while (n-- > 0)
     putchar_unlocked (*buffer++);
-
-  if (!intr_context ())
-    lock_release (&console_lock);
+  release_console ();
 }
 
 /* Writes C to the vga display and serial port. */
 int
 putchar (int c) 
 {
-  if (!intr_context ())
-    lock_acquire (&console_lock);
-
+  acquire_console ();
   putchar_unlocked (c);
-
-  if (!intr_context ())
-    lock_release (&console_lock);
-
+  release_console ();
+  
   return c;
 }
 
