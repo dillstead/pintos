@@ -59,6 +59,8 @@
 
 # Code runs in real mode, which is a 16-bit segment.
 
+.globl start
+start:
 	.code16
 
 # Disable interrupts.
