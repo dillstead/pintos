@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "debug.h"
+#include "interrupt.h"
 #include "lib.h"
 #include "serial.h"
 #include "vga.h"
@@ -128,7 +129,9 @@ output_console (char ch, void *aux __attribute__ ((unused)))
 void
 vprintk (const char *format, va_list args) 
 {
+  enum if_level old_level = intr_disable ();
   vprintf_core (format, args, output_console, NULL);
+  intr_set_level (old_level);
 }
 
 void
