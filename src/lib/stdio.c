@@ -562,9 +562,10 @@ __printf (const char *format,
 }
 
 /* Dumps the SIZE bytes in BUF to the console as hex bytes
-   arranged 16 per line, plus offsets listed starting at OFS for
-   the first byte in BU.  If ASCII is true then the corresponding
-   ASCII characters are also rendered alongside. */   
+   arranged 16 per line.  Numeric offsets are also included,
+   starting at OFS for the first byte in BUF.  If ASCII is true
+   then the corresponding ASCII characters are also rendered
+   alongside. */   
 void
 hex_dump (uintptr_t ofs, const void *buf_, size_t size, bool ascii)
 {
