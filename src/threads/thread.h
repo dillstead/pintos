@@ -45,7 +45,6 @@ void thread_exit (void) NO_RETURN;
 
 void thread_yield (void);
 void thread_sleep (void);
-void thread_schedule (void);
 
 void thread_self_test (void);
 
