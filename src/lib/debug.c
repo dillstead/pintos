@@ -15,5 +15,20 @@ panic (const char *format, ...)
   printk ("\n");
   va_end (args);
 
+  backtrace ();
+
   for (;;);
+}
+
+void
+backtrace (void) 
+{
+  void **frame;
+  
+  printk ("Call stack:");
+  for (frame = __builtin_frame_address (0);
+       frame != NULL && frame[0] != NULL;
+       frame = frame[0]) 
+    printk (" %p", frame[1]);
+  printk (".\n");
 }
