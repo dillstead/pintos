@@ -52,18 +52,26 @@ serial_putc (uint8_t byte)
 {
   enum intr_level old_level = intr_disable ();
 
-  if (mode == POLL || old_level == INTR_OFF)
+  if (mode == POLL)
     {
       /* If we're not set up for interrupt-driven I/O yet,
-         or if interrupts are off,
-         use dumb polling for serial I/O. */
-      serial_flush ();
+         use dumb polling to transmit a byte. */
       putc_poll (byte); 
     }
-  else
+  else 
     {
       /* Otherwise, queue a byte and update the interrupt enable
          register. */
+      if (old_level == INTR_OFF && intq_full (&txq)) 
+        {
+          /* Interrupts are off and the transmit queue is full.
+             If we wanted to wait for the queue to empty,
+             we'd have to reenable interrupts.
+             That's impolite, so we'll send a character via
+             polling instead. */
+          putc_poll (intq_getc (&txq)); 
+        }
+
       intq_putc (&txq, byte); 
       write_ier ();
     }
