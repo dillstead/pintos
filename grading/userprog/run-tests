@@ -51,6 +51,7 @@ sub usage {
 	     write-normal write-bad-ptr write-boundary write-zero write-stdin
 	     write-bad-fd
 	     exec-once exec-arg exec-multiple exec-missing exec-bad-ptr
+	     multi-recurse multi-oom
 	     ) unless @TESTS > 0;
 
 our (%args);
@@ -59,6 +60,8 @@ for my $key ('args-argc', 'args-argv0', 'args-argvn', 'args-multiple') {
 }
 $args{'args-single'} = "onearg";
 $args{'args-dbl-space'} = "two  args";
+$args{'multi-recurse'} = "15";
+$args{'multi-oom'} = "0";
 
 # Handle final grade mode.
 if ($grade) {
@@ -257,6 +260,7 @@ sub really_run_test {
 
     # Run.
     my ($timeout) = 10;
+    $timeout = 60 if $test eq 'multi-oom';
     my ($testargs) = defined ($args{$test}) ? " $args{$test}" : "";
     xsystem ("pintos "
 	     . "--os-disk=pintos/src/userprog/build/os.dsk "
@@ -322,6 +326,32 @@ sub grade_write_normal {
     }
 }
 
+sub grade_multi_oom {
+    my (@output) = @_;
+    verify_common (@output);
+
+    @output = fix_exit_codes (get_core_output (@output));
+    my ($n) = 0;
+    while (my ($m) = $output[0] =~ /^\(multi-oom\) begin (\d+)$/) {
+	die "Child process $m started out of order.\n" if $m != $n;
+	$n = $m + 1;
+	shift @output;
+    }
+    die "Only $n child processes started.\n" if $n < 15;
+    while (--$n >= 0) {
+	die "Output ended unexpectedly before process $n finished.\n"
+	    if @output < 2;
+	die "Child process $n ended out of order.\n"
+	    if $output[0] !~ /^\(multi-oom\) end $n$/;
+	shift @output;
+
+	die "Child process $n didn't print proper exit message.\n"
+	    if $output[0] !~ /^multi-oom: exit\($n\)$/;
+	shift @output;
+    }
+    die "Spurious output at end: '$output[0]'.\n" if @output;
+}
+
 sub get_file {
     my ($guest_fn, $host_fn) = @_;
     xsystem ("pintos "
@@ -333,196 +363,6 @@ sub get_file {
 	or die "get $guest_fn failed\n";
 }
 
-sub grade_alarm_negative {
-    my (@output) = @_;
-    verify_common (@output);
-    die "Crashed in timer_sleep()\n" if !grep (/^Success\.$/, @output);
-}
-
-sub grade_join_invalid {
-    my (@output) = @_;
-    verify_common (@output);
-    grep (/Testing invalid join/, @output) or die "Test didn't start\n";
-    grep (/Invalid join test done/, @output) or die "Test didn't complete\n";
-}
-
-sub grade_join_no {
-    my (@output) = @_;
-    verify_common (@output);
-    grep (/Testing no join/, @output) or die "Test didn't start\n";
-    grep (/No join test done/, @output) or die "Test didn't complete\n";
-}
-
-sub grade_join_multiple {
-    my (@output) = @_;
-
-    verify_common (@output);
-    my (@t);
-    $t[4] = $t[5] = $t[6] = -1;
-    local ($_);
-    foreach (@output) {
-	my ($idx) = /^Thread (\d+)/ or next;
-	my ($iter) = /iteration (\d+)$/;
-	$iter = 5 if /done!$/;
-	die "Malformed output\n" if !defined $iter;
-	if ($idx == 6) {
-	    die "Thread 6 started before either other thread finished\n"
-		if $t[4] < 5 && $t[5] < 5;
-	    die "Thread 6 started before thread 4 finished\n"
-		if $t[4] < 5;
-	    die "Thread 6 started before thread 5 finished\n"
-		if $t[5] < 5;
-	}
-	die "Thread $idx out of order output\n" if $t[$idx] != $iter - 1;
-	$t[$idx] = $iter;
-    }
-
-    my ($err) = "";
-    for my $idx (4, 5, 6) {
-	if ($t[$idx] == -1) {
-	    $err .= "Thread $idx did not run at all\n";
-	} elsif ($t[$idx] != 5) {
-	    $err .= "Thread $idx only completed $t[$idx] iterations\n";
-	}
-    }
-    die $err if $err ne '';
-}
-
-sub grade_priority_fifo {
-    my (@output) = @_;
-
-    verify_common (@output);
-    my ($thread_cnt) = 10;
-    my ($iter_cnt) = 5;
-    my (@order);
-    my (@t) = (-1) x $thread_cnt;
-    local ($_);
-    foreach (@output) {
-	my ($idx) = /^Thread (\d+)/ or next;
-	my ($iter) = /iteration (\d+)$/;
-	$iter = $iter_cnt if /done!$/;
-	die "Malformed output\n" if !defined $iter;
-	if (@order < $thread_cnt) {
-	    push (@order, $idx);
-	    die "Thread $idx repeated within first $thread_cnt iterations: "
-		. join (' ', @order) . ".\n"
-		if grep ($_ == $idx, @order) != 1;
-	} else {
-	    die "Thread $idx ran when $order[0] should have.\n"
-		if $idx != $order[0];
-	    push (@order, shift @order);
-	}
-	die "Thread $idx out of order output.\n" if $t[$idx] != $iter - 1;
-	$t[$idx] = $iter;
-    }
-
-    my ($err) = "";
-    for my $idx (0..$#t) {
-	if ($t[$idx] == -1) {
-	    $err .= "Thread $idx did not run at all.\n";
-	} elsif ($t[$idx] != $iter_cnt) {
-	    $err .= "Thread $idx only completed $t[$idx] iterations.\n";
-	}
-    }
-    die $err if $err ne '';
-}
-
-sub grade_mlfqs_on {
-    my (@output) = @_;
-    verify_common (@output);
-    our (@mlfqs_on_stats) = mlfqs_stats (@output);
-}
-
-sub grade_mlfqs_off {
-    my (@output) = @_;
-    verify_common (@output);
-    our (@mlfqs_off_stats) = mlfqs_stats (@output);
-}
-
-sub grade_mlfqs_speedup {
-    our (@mlfqs_off_stats);
-    our (@mlfqs_on_stats);
-    eval {
-	check_mlfqs ();
-	my ($off_ticks) = $mlfqs_off_stats[1];
-	my ($on_ticks) = $mlfqs_on_stats[1];
-	die "$off_ticks ticks without MLFQS, $on_ticks with MLFQS\n"
-	    if $on_ticks >= $off_ticks;
-	die "ok\n";
-    };
-    chomp $@;
-    $result{'mlfqs-speedup'} = $@;
-}
-
-sub grade_mlfqs_priority {
-    our (@mlfqs_off_stats);
-    our (@mlfqs_on_stats);
-    eval {
-	check_mlfqs () if !defined (@mlfqs_on_stats);
-	for my $cat qw (CPU IO MIX) {
-	    die "Priority changed away from PRI_DEFAULT (29) without MLFQS\n"
-		if $mlfqs_off_stats[0]{$cat}{MIN} != 29
-		|| $mlfqs_off_stats[0]{$cat}{MAX} != 29;
-	    die "Minimum priority never changed from PRI_DEFAULT (29) "
-		. "with MLFQS\n"
-		if $mlfqs_on_stats[0]{$cat}{MIN} == 29;
-	    die "Maximum priority never changed from PRI_DEFAULT (29) "
-		. "with MLFQS\n"
-		if $mlfqs_on_stats[0]{$cat}{MAX} == 29;
-	}
-	die "ok\n";
-    };
-    chomp $@;
-    $result{'mlfqs-priority'} = $@;
-}
-
-sub check_mlfqs {
-    our (@mlfqs_off_stats);
-    our (@mlfqs_on_stats);
-    die "p1-4 didn't finish with MLFQS on or off\n"
-	if !defined (@mlfqs_off_stats) && !defined (@mlfqs_on_stats);
-    die "p1-4 didn't finish with MLFQS on\n"
-	if !defined (@mlfqs_on_stats);
-    die "p1-4 didn't finish with MLFQS off\n"
-	if !defined (@mlfqs_off_stats);
-}
-
-sub mlfqs_stats {
-    my (@output) = @_;
-    my (%stats) = (CPU => {}, IO => {}, MIX => {});
-    my (%map) = ("CPU intensive" => 'CPU',
-		 "IO intensive" => 'IO',
-		 "Alternating IO/CPU" => 'MIX');
-    my (%rmap) = reverse %map;
-    my ($ticks);
-    local ($_);
-    foreach (@output) {
-	$ticks = $1 if /Timer: (\d+) ticks/;
-	my ($thread, $pri) = /^([A-Za-z\/ ]+): (\d+)$/ or next;
-	my ($t) = $map{$thread} or next;
-	
-	my ($s) = $stats{$t};
-	$$s{N}++;
-	$$s{SUM} += $pri;
-	$$s{SUM2} += $pri * $pri;
-	$$s{MIN} = $pri if !defined ($$s{MIN}) || $pri < $$s{MIN};
-	$$s{MAX} = $pri if !defined ($$s{MAX}) || $pri > $$s{MAX};
-    }
-
-    my (%expect_n) = (CPU => 5000, IO => 1000, MIX => 12000);
-    for my $cat (values (%map)) {
-	my ($s) = $stats{$cat};
-	die "$rmap{$cat} printed $$s{N} times, not $expect_n{$cat}\n"
-	    if $$s{N} != $expect_n{$cat};
-	die "$rmap{$cat} priority dropped to $$s{MIN}, below PRI_MIN (0)\n"
-	    if $$s{MIN} < 0;
-	die "$rmap{$cat} priority rose to $$s{MAX}, above PRI_MAX (59)\n"
-	    if $$s{MAX} > 59;
-	$$s{MEAN} = $$s{SUM} / $$s{N};
-    }
-
-    return (\%stats, $ticks);
-}
 
 sub verify_common {
     my (@output) = @_;
@@ -593,19 +433,25 @@ sub get_core_output {
     return @output[$first ... $last];
 }
 
-sub compare_output {
-    my ($exp, @actual) = @_;
-    @actual = get_core_output (map ("$_\n", @actual));
+sub fix_exit_codes {
+    my (@output) = @_;
 
     # Fix up lines that look like exit codes.
-    for my $i (0...$#actual) {
+    for my $i (0...$#output) {
 	if (my ($process, $code)
-	    = $actual[$i] =~ /^([-a-zA-Z0-9 ]+):.*[ \(](-?\d+)\b\)?$/) {
+	    = $output[$i] =~ /^([-a-zA-Z0-9 ]+):.*[ \(](-?\d+)\b\)?$/) {
 	    $process = substr ($process, 0, 15);
 	    $process =~ s/\s.*//;
-	    $actual[$i] = "$process: exit($code)\n";
+	    $output[$i] = "$process: exit($code)\n";
 	}
     }
+
+    return @output;
+}
+
+sub compare_output {
+    my ($exp, @actual) = @_;
+    @actual = fix_exit_codes (get_core_output (map ("$_\n", @actual)));
 
     my ($details) = "";
     $details .= "$test actual output:\n";

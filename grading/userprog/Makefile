@@ -11,7 +11,8 @@ TESTS = \
 	$(addprefix read-, normal bad-ptr boundary zero stdout bad-fd) \
 	$(addprefix write-, normal bad-ptr boundary zero stdin bad-fd) \
 	$(addprefix exec-, once arg multiple missing bad-ptr) \
-	$(addprefix join-, simple twice killed bad-pid)
+	$(addprefix join-, simple twice killed bad-pid) \
+	$(addprefix multi-, recurse oom)
 
 define TEST_PROG
 PROGS += $(1)
