@@ -50,7 +50,9 @@ this documentation (@pxref{References}).
 If you remove existing Pintos code, please delete it from your source
 file entirely.  Don't just put it into a comment or a conditional
 compilation directive, because that makes the resulting code hard to
-read.  If you're worried about 
+read.  We're only going to do a compile in the directory for the current
+project, so you don't need to make sure that the previous projects also
+compile.
 
 @node Conditional Compilation
 @section Conditional Compilation
