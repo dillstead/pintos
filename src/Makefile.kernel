@@ -1,6 +1,6 @@
 include Makefile.vars
 BUILD_SUBDIRS = $(addprefix build/, $(SUBDIRS))
-LN = ln
+LN_S = ln -s
 MKDIR = mkdir
 
 all: build build/Makefile $(BUILD_SUBDIRS)
@@ -11,7 +11,7 @@ $(BUILD_SUBDIRS):
 build:
 	$(MKDIR) $@
 build/Makefile: ../Makefile.build
-	$(LN) -f $< $@
+	$(LN_S) -Xf ../../Makefile.build $@
 
 clean:
 	rm -rf build
