@@ -667,22 +667,22 @@ struct condition not_full; /* @r{Signaled when the buffer is not full.} */
 
 void put (char ch) @{
   lock_acquire (&lock);
-  while (n == BUF_SIZE)         /* @r{Can't add to @var{buf} as long as it's full.} */
-    cond_wait (&not_full);
-  buf[head++ % BUF_SIZE] = ch;  /* @r{Add @var{ch} to @var{buf}.} */
+  while (n == BUF_SIZE)            /* @r{Can't add to @var{buf} as long as it's full.} */
+    cond_wait (&not_full, &lock);
+  buf[head++ % BUF_SIZE] = ch;     /* @r{Add @var{ch} to @var{buf}.} */
   n++;
-  cond_signal (&not_empty);     /* @r{@var{buf} can't be empty anymore.} */
+  cond_signal (&not_empty, &lock); /* @r{@var{buf} can't be empty anymore.} */
   lock_release (&lock);
 @}
 
 char get (void) @{
   char ch;
   lock_acquire (&lock);
-  while (n == 0)                /* @r{Can't read from @var{buf} as long as it's empty.} */
-    cond_wait (&not_empty);
-  ch = buf[tail++ % BUF_SIZE];  /* @r{Get @var{ch} from @var{buf}.} */
+  while (n == 0)                  /* @r{Can't read from @var{buf} as long as it's empty.} */
+    cond_wait (&not_empty, &lock);
+  ch = buf[tail++ % BUF_SIZE];    /* @r{Get @var{ch} from @var{buf}.} */
   n--;
-  cond_signal (&not_full);      /* @r{@var{buf} can't be full anymore.} */
+  cond_signal (&not_full, &lock); /* @r{@var{buf} can't be full anymore.} */
   lock_release (&lock);
 @}
 @end example
