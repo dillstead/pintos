@@ -14,6 +14,9 @@
 #include "thread.h"
 #include "timer.h"
 #include "vga.h"
+#ifdef FILESYS
+#include "filesys.h"
+#endif
 
 /* Size of kernel static code and data, in 4 kB pages. */
 size_t kernel_pages;
@@ -38,7 +41,7 @@ tfunc (void *aux UNUSED)
           printk ("%s exiting\n", thread_current ()->name);
           break;
         }
-      count = random_ulong () % 25 * 1000000;
+      count = random_ulong () % 25 * 10000;
       printk ("%s waiting %zu: ", thread_current ()->name, count);
       for (i = 0; i < count; i++);
       printk ("%s\n", thread_current ()->name);
@@ -78,7 +81,10 @@ main (void)
   intr_init ();
   timer_init ();
   kbd_init ();
-  intr_enable ();
+
+#ifdef FILESYS
+  filesys_init (false);
+#endif
 
   thread_init ();
 

@@ -44,7 +44,7 @@ malloc_init (void)
 static struct arena *
 slot_to_arena (struct slot *s)
 {
-  return (struct arena *) ((uint32_t) s & (NBPG - 1));
+  return (struct arena *) ((uint32_t) s & ~(NBPG - 1));
 }
 
 static void *

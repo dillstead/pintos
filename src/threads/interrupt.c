@@ -260,7 +260,6 @@ intr_unexpected (struct intr_args *regs)
 {
   uint32_t cr2;
   asm ("movl %%cr2, %0" : "=r" (cr2));
-  printk ("Unexpected interrupt 0x%02x, error code %08x, cr2=%08x, eip=%08x\n",
-          regs->vec_no, regs->error_code, cr2, regs->eip);
-  for (;;);
+  panic ("Unexpected interrupt 0x%02x, error code %08x, cr2=%08x, eip=%08x",
+         regs->vec_no, regs->error_code, cr2, regs->eip);
 }

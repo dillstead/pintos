@@ -112,6 +112,8 @@ thread_schedule (void)
 {
   struct thread *cur, *next, *prev;
 
+  ASSERT (intr_get_level () == IF_OFF);
+
   cur = thread_current ();
   ASSERT (cur->status != THREAD_RUNNING);
 
@@ -120,14 +122,23 @@ thread_schedule (void)
 
   next->status = THREAD_RUNNING;
   prev = thread_switch (cur, next);
+
+  /* Prevent GCC from reordering anything around the thread
+     switch. */
+  asm volatile ("" : : : "memory");
+
   if (prev != NULL && prev->status == THREAD_DYING) 
     thread_destroy (prev);
+
+  intr_enable ();
 }
 
 void
 thread_yield (void) 
 {
   ASSERT (!intr_context ());
+
+  intr_disable ();
   thread_ready (thread_current ());
   thread_schedule ();
 }
@@ -135,6 +146,8 @@ thread_yield (void)
 void
 thread_start (struct thread *t) 
 {
+  ASSERT (intr_get_level () == IF_OFF);
+
   if (t->status == THREAD_READY) 
     list_remove (&t->rq_elem);
   t->status = THREAD_RUNNING;
@@ -144,14 +157,17 @@ thread_start (struct thread *t)
 void
 thread_exit (void) 
 {
-  struct thread *t = thread_current ();
-  t->status = THREAD_DYING;
+  ASSERT (!intr_context ());
+
+  intr_disable ();
+  thread_current ()->status = THREAD_DYING;
   thread_schedule ();
 }
 
 void
 thread_sleep (void) 
 {
+  ASSERT (!intr_context ());
   ASSERT (intr_get_level () == IF_OFF);
 
   thread_current ()->status = THREAD_BLOCKED;

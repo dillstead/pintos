@@ -8,10 +8,10 @@ VPATH := $(VPATH):$(TOP_SRCDIR)/filesys
 
 -include *.d
 
-DEFINES =
+DEFINES += -DCNACHOS86
 WARNINGS = -Wall -W -Wstrict-prototypes -Wmissing-prototypes
 CFLAGS = -g -O3 -MMD $(WARNINGS) $(INCLUDES) $(DEFINES)
-ASFLAGS = $(INCLUDES) $(DEFINES)
+ASFLAGS = -Wa,--gstabs+ $(INCLUDES) $(DEFINES)
 
 # Core kernel.
 THREADS_SRC  = start.S		# Must be linked first.
@@ -69,5 +69,3 @@ diskimage.bin: loader.bin kernel.bin
 
 clean:
 	rm -f *.o *.d *.bin kernel.bin.data kernel.bin.pad intr-stubs.S
-
-

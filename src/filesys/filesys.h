@@ -8,4 +8,6 @@ bool filesys_create (const char *name);
 struct file *filesys_open (const char *name);
 bool filesys_remove (const char *name);
 
+void filesys_self_test (void);
+
 #endif /* filesys.h */
