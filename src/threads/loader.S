@@ -17,6 +17,7 @@
 #define CR0_PE 0x00000001      /* Protection Enable. */
 #define CR0_EM 0x00000004      /* (Floating-point) Emulation. */
 #define CR0_PG 0x80000000      /* Paging. */
+#define CR0_WP 0x00010000      /* Write-Protect enable in kernel mode. */
 
 .globl start				# Entry point	
 start:	.code16				# This runs in real mode
@@ -165,9 +166,9 @@ read_sector:
 	addl $0x1000, %eax
 	loop 1b
 
-	# Turn on paging.
+	# Turn on paging and kernel write-protect.
 	movl %cr0, %eax
-	orl $CR0_PG, %eax
+	orl $CR0_PG | CR0_WP, %eax
 	movl %eax, %cr0
 	jmp 1f
 1:
