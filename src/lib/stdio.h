@@ -19,7 +19,10 @@ int putchar (int);
 int puts (const char *);
 
 /* Nonstandard functions. */
-#ifndef KERNEL
+#ifdef KERNEL
+void putbuf (const char *, size_t);
+#endif
+#ifdef USER
 int hprintf (int, const char *, ...) PRINTF_FORMAT (2, 3);
 int vhprintf (int, const char *, va_list) PRINTF_FORMAT (2, 0);
 #endif

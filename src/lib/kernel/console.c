@@ -59,6 +59,20 @@ puts (const char *s)
   return 0;
 }
 
+/* Writes the N characters in BUFFER to the console. */
+void
+putbuf (const char *buffer, size_t n) 
+{
+  if (!intr_context ())
+    lock_acquire (&console_lock);
+
+  while (n-- > 0)
+    putchar_unlocked (*buffer++);
+
+  if (!intr_context ())
+    lock_release (&console_lock);
+}
+
 /* Writes C to the vga display and serial port. */
 int
 putchar (int c) 
