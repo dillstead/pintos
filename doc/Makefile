@@ -38,3 +38,10 @@ dist: pintos.html pintos.pdf
 	mkdir WWW WWW/specs
 	cp *.html *.png *.pdf *.css WWW
 	(cd ../specs && cp -r *.pdf freevga kbd sysv-abi-update.html ../doc/WWW/specs)
+
+install: dist
+	rm -rf /usr/class/cs140/WWW/projects/pintos.old
+	rm -rf /usr/class/cs140/WWW/projects/pintos.new
+	mv WWW /usr/class/cs140/WWW/projects/pintos.new
+	cd /usr/class/cs140/WWW/projects && mv pintos pintos.old && \
+		mv pintos.new pintos
