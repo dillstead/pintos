@@ -4,18 +4,28 @@ include ../Makefile.vars
 
 SHELL = /bin/sh
 
-# Utilities.  
-# On a system where i386-elf is native (e.g. on an x86 GNU/Linux
-# machine) you want to set BINUTIL_PREFIX to expand to null, as shown
-# in the line that's commented out.
-BINUTIL_PREFIX = i386-elf-
-#BINUTIL_PREFIX =
-CC = $(BINUTIL_PREFIX)gcc
-LD = $(BINUTIL_PREFIX)ld
-OBJCOPY = $(BINUTIL_PREFIX)objcopy
+# Binary utilities.
+# If the host appears to be x86, use the normal tools.
+# Otherwise assume cross-tools are installed as i386-elf-*.
+X86 = i.86\|pentium.*\|[pk][56]\|nexgen\|viac3\|6x86\|athlon.*
+ifneq (0, $(shell expr `uname -m` : '$(X86)'))
+CC = gcc
+LD = ld
+OBJCOPY = objcopy
+else
+CC = i386-elf-gcc
+LD = i386-elf-ld
+OBJCOPY = i386-elf-objcopy
+endif
+
+# Other utilities.
+DD = dd
+RM = rm
+CAT = cat
 
 VPATH = ../..
 
+# Compiler and assembler options.
 DEFINES += -DKERNEL
 WARNINGS = -Wall -W -Wstrict-prototypes -Wmissing-prototypes
 INCLUDES = -nostdinc -I../.. -I- -I../../lib -I../../lib/kernel
@@ -87,8 +97,8 @@ kernel.o: threads/kernel.lds.s $(OBJECTS)
 
 kernel.bin: kernel.o
 	$(OBJCOPY) -O binary -R .note -R .comment -S $< $@.tmp
-	../../pad 4096 < $@.tmp > $@
-	rm $@.tmp
+	$(DD) if=$@.tmp of=$@ bs=4096 conv=sync
+	$(RM) $@.tmp
 
 threads/loader.o: threads/loader.S kernel.bin
 	$(CC) -c $< -o $@ $(ASFLAGS) -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
@@ -97,12 +107,12 @@ loader.bin: threads/loader.o
 	$(LD) -N -e start -Ttext 0x7c00 --oformat binary -o $@ $<
 
 os.dsk: loader.bin kernel.bin
-	cat $^ > $@
+	$(CAT) $^ > $@
 
 clean:
-	rm -f $(OBJECTS) $(DEPENDS) 
-	rm -f threads/intr-stubs.S threads/loader.o
-	rm -f kernel.o kernel.lds.s
-	rm -f kernel.bin loader.bin
+	$(RM) -f $(OBJECTS) $(DEPENDS) 
+	$(RM) -f threads/intr-stubs.S threads/loader.o
+	$(RM) -f kernel.o kernel.lds.s
+	$(RM) -f kernel.bin loader.bin
 
 -include $(DEPENDS)
