@@ -1,0 +1,7 @@
+* malloc() needs to block until memory is available?
+
+* Should we use a task gate for hardware interrupts?  Then we could
+  dedicate a stack to interrupt handling and not worry about interrupt
+  usage of kernel stacks.
+
+* Filesystem dumps should include filehdrs?
