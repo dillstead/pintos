@@ -50,7 +50,10 @@ enum intr_level
 intr_get_level (void) 
 {
   uint32_t flags;
-  
+
+  /* Push the flags register on the processor stack, then pop the
+     value off the stack into `flags'.  See [IA32-v2b] "PUSHF"
+     and "POP" and [IA32-v3] 5.8.1. */
   asm volatile ("pushfl; popl %0" : "=g" (flags));
 
   return flags & FLAG_IF ? INTR_ON : INTR_OFF;
@@ -70,7 +73,11 @@ intr_enable (void)
 {
   enum intr_level old_level = intr_get_level ();
   ASSERT (!intr_context ());
+
+  /* Enable interrupts by setting the interrupt flag.
+     See [IA32-v2b] "STI" and [IA32-v3] 5.8.1. */
   asm volatile ("sti");
+
   return old_level;
 }
 
@@ -79,7 +86,11 @@ enum intr_level
 intr_disable (void) 
 {
   enum intr_level old_level = intr_get_level ();
+
+  /* Disable interrupts by clearing the interrupt flag.
+     See [IA32-v2b] "CLI" and [IA32-v3] 5.8.1. */
   asm volatile ("cli");
+
   return old_level;
 }
 
@@ -97,7 +108,8 @@ intr_init (void)
   for (i = 0; i < INTR_CNT; i++)
     idt[i] = make_intr_gate (intr_stubs[i], 0);
 
-  /* Load IDT register. */
+  /* Load IDT register.
+     See [IA32-v2a] "LIDT" and [IA32-v3] 5.10. */
   idtr_operand = make_idtr_operand (sizeof idt - 1, idt);
   asm volatile ("lidt %0" :: "m" (idtr_operand));
 
@@ -349,9 +361,14 @@ intr_handler (struct intr_frame *frame)
 void
 intr_dump_frame (const struct intr_frame *f) 
 {
-  uint32_t cr2, ss;
+  uint32_t cr2;
+
+  /* Store current value of CR2 into `cr2'.
+     CR2 is the linear address of the last page fault.
+     See [IA32-v2a] "MOV--Move to/from Control Registers" and
+     [IA32-v3] 5.14 "Interrupt 14--Page Fault Exception
+     (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (cr2));
-  asm ("movl %%ss, %0" : "=r" (ss));
 
   printf ("Interrupt %#04x (%s) at eip=%p\n",
           f->vec_no, intr_names[f->vec_no], f->eip);
@@ -361,7 +378,7 @@ intr_dump_frame (const struct intr_frame *f)
   printf (" esi=%08"PRIx32" edi=%08"PRIx32" esp=%08"PRIx32" ebp=%08"PRIx32"\n",
           f->esi, f->edi, (uint32_t) f->esp, f->ebp);
   printf (" cs=%04"PRIx16" ds=%04"PRIx16" es=%04"PRIx16" ss=%04"PRIx16"\n",
-          f->cs, f->ds, f->es, f->cs != SEL_KCSEG ? f->ss : ss);
+          f->cs, f->ds, f->es, f->ss);
 }
 
 /* Returns the name of interrupt VEC. */

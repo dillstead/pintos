@@ -187,6 +187,11 @@ pagedir_activate (uint32_t *pd)
 {
   if (pd == NULL)
     pd = base_page_dir;
+
+  /* Store the physical address of the page directory into CR3
+     aka PDBR (page directory base register).  This activates our
+     new page tables immediately.  See [IA32-v2a] "MOV--Move
+     to/from Control Registers" and [IA32-v3] 3.7.5. */
   asm volatile ("movl %0,%%cr3" :: "r" (vtop (pd)));
 }
 
@@ -196,6 +201,9 @@ active_pd (void)
 {
   uint32_t *pd;
 
+  /* Copy CR3, the page directory base register (PDBR), into `pd'
+     for us to exmaine.  See [IA32-v2a] "MOV--Move to/from
+     Control Registers" and [IA32-v3] 3.7.5. */
   asm ("movl %%cr3,%0" : "=r" (pd));
   return pd;
 }

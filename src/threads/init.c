@@ -190,6 +190,10 @@ paging_init (void)
       pt[pte_idx] = pte_create_kernel (vaddr, true);
     }
 
+  /* Store the physical address of the page directory into CR3
+     aka PDBR (page directory base register).  This activates our
+     new page tables immediately.  See [IA32-v2a] "MOV--Move
+     to/from Control Registers" and [IA32-v3] 3.7.5. */
   asm volatile ("movl %0,%%cr3" :: "r" (vtop (base_page_dir)));
 }
 

@@ -132,7 +132,10 @@ page_fault (struct intr_frame *f)
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
      data.  It is not necessarily the address of the instruction
-     that caused the fault (that's f->eip).  */
+     that caused the fault (that's f->eip).
+     See [IA32-v2a] "MOV--Move to/from Control Registers" and
+     [IA32-v3] 5.14 "Interrupt 14--Page Fault Exception
+     (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
   /* Turn interrupts back on (they were only off so that we could

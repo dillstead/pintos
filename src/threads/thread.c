@@ -285,7 +285,8 @@ idle (void *aux UNUSED)
       thread_block ();
       intr_enable ();
 
-      /* Use CPU `hlt' instruction to wait for interrupt. */
+      /* Use CPU `hlt' instruction to wait for interrupt.
+         See [IA32-v2a] "HLT" and [IA32-v3] 7.7. */
       asm ("hlt");
     }
 }
