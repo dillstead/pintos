@@ -82,10 +82,9 @@ sub run_test {
 
     # Run.
     my ($timeout) = $test !~ /^multi-/ ? 10 : 600;
-    my ($result) = run_pintos ("pintos "
-			       . "--os-disk=pintos/src/userprog/build/os.dsk "
-			       . "--fs-disk=output/$test/fs.dsk "
-			       . "-v run -q -ex \"$test$args\"",
+    my ($result) = run_pintos (["--os-disk=pintos/src/userprog/build/os.dsk",
+				"--fs-disk=output/$test/fs.dsk",
+				"-v", "run", "-q", "-ex", "$test$args"],
 			       LOG => "$test/run",
 			       TIMEOUT => $timeout);
     rename "output/$test/fs.dsk", "output/$test/fs.dsk.keep"
@@ -164,10 +163,9 @@ sub grade_multi_oom {
 
 sub get_file {
     my ($guest_fn, $host_fn) = @_;
-    my ($result) = run_pintos ("pintos "
-			       . "--os-disk=pintos/src/userprog/build/os.dsk "
-			       . "--fs-disk=output/$test/fs.dsk.keep "
-			       . "-v get $guest_fn $host_fn",
+    my ($result) = run_pintos (["--os-disk=pintos/src/userprog/build/os.dsk",
+				"--fs-disk=output/$test/fs.dsk.keep",
+				"-v", "get", "$guest_fn", "$host_fn"],
 			       LOG => "$test/get-$guest_fn",
 			       TIMEOUT => 10);
     die "`pintos get $guest_fn' failed - $result\n"

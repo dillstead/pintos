@@ -64,13 +64,12 @@ sub run_test {
 	     DIE => "failed to create swap disk");
 
     # Format disk, install test.
-    my ($pintos_base_cmd) =
-	"pintos "
-	. "--os-disk=pintos/src/$hw/build/os.dsk "
-	. "--fs-disk=output/$test/fs.dsk "
-	. "--swap-disk=output/$test/swap.dsk "
-	. "-v";
-    $result = run_pintos ("$pintos_base_cmd put -f $GRADES_DIR/$test $test",
+    my (@base_opts) = ("--os-disk=pintos/src/$hw/build/os.dsk",
+		       "--fs-disk=output/$test/fs.dsk",
+		       "--swap-disk=output/$test/swap.dsk",
+		       "-v");
+    $result = run_pintos ([@base_opts,
+			   "put", "-f", "$GRADES_DIR/$test", $test],
 			  LOG => "$test/put", TIMEOUT => 60);
     return $result if $result ne 'ok';
 
@@ -79,13 +78,13 @@ sub run_test {
     push (@extra_files, "child-syn-wrt") if $test eq 'syn-write';
     push (@extra_files, "child-syn-rw") if $test eq 'syn-rw';
     for my $fn (@extra_files) {
-	$result = run_pintos ("$pintos_base_cmd put $GRADES_DIR/$fn $fn",
+	$result = run_pintos ([@base_opts, "put", "$GRADES_DIR/$fn", $fn],
 			      LOG => "$test/put-$fn", TIMEOUT => 60);
 	return "Error running `put $fn': $result" if $result ne 'ok';
     }
     
     # Run.
-    return run_pintos ("$pintos_base_cmd run -q -ex \"$test\"",
+    return run_pintos ([@base_opts, "run", "-q", "-ex", $test],
 		       LOG => "$test/run", TIMEOUT => 120);
 }
 

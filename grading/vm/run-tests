@@ -52,11 +52,10 @@ sub run_test {
 	     DIE => "failed to create swap disk");
 
     # Run.
-    return run_pintos ("pintos "
-		       . "--os-disk=pintos/src/vm/build/os.dsk "
-		       . "--fs-disk=output/$test/fs.dsk "
-		       . "--swap-disk=output/$test/swap.dsk "
-		       . "-v run -q -ex \"$test\"",
+    return run_pintos (["--os-disk=pintos/src/vm/build/os.dsk",
+			"--fs-disk=output/$test/fs.dsk",
+			"--swap-disk=output/$test/swap.dsk",
+		        "-v", "run", "-q", "-ex", "$test"],
 		       LOG => "$test/run",
 		       TIMEOUT => 600);
 }

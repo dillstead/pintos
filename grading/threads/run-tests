@@ -95,7 +95,8 @@ sub run_test {
 
     # Run.
     my ($timeout) = $test !~ /^mlfqs/ ? 10 : 600;
-    return run_pintos ("cd pintos/src/threads/build && pintos -v run -q",
+    return run_pintos (["-v", "run", "-q"],
+		       CHDIR => "pintos/src/threads/build",
 		       LOG => "$test/run",
 		       TIMEOUT => $timeout);
 }

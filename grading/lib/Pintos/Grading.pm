@@ -316,7 +316,13 @@ sub xsystem {
 		open (STDOUT, ">output/$log.out");
 		open (STDERR, ">output/$log.err");
 	    }
-	    exec ($command);
+	    chdir $options{CHDIR} or die "$options{CHDIR}: chdir: $!\n"
+	      if defined ($options{CHDIR});
+	    if (!defined ($options{EXEC})) {
+		exec ($command);
+	    } else {
+		exec (@{$options{EXEC}});
+	    }
 	    exit (-1);
 	}
 	waitpid ($pid, 0);
@@ -399,7 +405,8 @@ sub get_test_result {
 
 sub run_pintos {
     my ($cmd_line, %args) = @_;
-    my ($retval) = xsystem ($cmd_line, %args);
+    unshift (@$cmd_line, 'pintos');
+    my ($retval) = xsystem (join (' ', @$cmd_line), %args, EXEC => $cmd_line);
     return 'ok' if $retval eq 'ok';
     if ($retval eq 'timeout') {
 	my ($msg) = "Timed out after $args{TIMEOUT} seconds";
