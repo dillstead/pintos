@@ -1,4 +1,4 @@
-@node Project 1--Threads, Project 2--User Programs, Top, Top
+@node Project 1--Threads, Project 2--User Programs, Introduction, Top
 @chapter Project 1: Threads
 
 In this assignment, we give you a minimally functional thread system.
@@ -19,11 +19,11 @@ side.  Compilation should be done in the @file{threads} directory.
 * Problem 1-2 Join::            
 * Problem 1-3 Priority Scheduling::  
 * Problem 1-4 Advanced Scheduler::  
-* Threads FAQ::
+* Threads FAQ::                 
 * Multilevel Feedback Scheduling::
 @end menu
 
-@node Understanding Threads, Debugging versus Testing, Project 1--Threads, Project 1--Threads
+@node Understanding Threads
 @section Understanding Threads
 
 The first step is to read and understand the initial thread system.
@@ -82,7 +82,7 @@ in @file{threads/malloc.c}.  Note that the page allocator doles out
 limit.  If you need larger chunks, consider using a linked structure
 instead.
 
-@node Debugging versus Testing, Tips, Understanding Threads, Project 1--Threads
+@node Debugging versus Testing
 @section Debugging versus Testing
 
 When you're debugging code, it's useful to be able to be able to run a
@@ -121,7 +121,7 @@ execution will still be reproducible, but timer behavior will change
 as @var{seed} is varied.  Thus, for the highest degree of confidence
 you should test your code with many seed values.
 
-@node Tips, Problem 1-1 Alarm Clock, Debugging versus Testing, Project 1--Threads
+@node Tips
 @section Tips
 
 There should be no busy-waiting in any of your solutions to this
@@ -156,7 +156,7 @@ would be a good idea to divide up the work among your team members
 such that you have Problem 3 fully working before you begin to tackle
 Problem 4.
 
-@node Problem 1-1 Alarm Clock, Problem 1-2 Join, Tips, Project 1--Threads
+@node Problem 1-1 Alarm Clock
 @section Problem 1-2: Alarm Clock
 
 Improve the implementation of the timer device defined in
@@ -179,7 +179,7 @@ solution should not busy wait.
 The argument to @code{timer_sleep()} is expressed in timer ticks, not
 in milliseconds or some other unit.
 
-@node Problem 1-2 Join, Problem 1-3 Priority Scheduling, Problem 1-1 Alarm Clock, Project 1--Threads
+@node Problem 1-2 Join
 @section Problem 1-2: Join
 
 Implement @code{thread_join(struct thread *)} in
@@ -220,7 +220,7 @@ join works for.  Don't overdo the output volume, please!
 Be careful to program this function correctly.  You will need its
 functionality for project 2.
 
-@node Problem 1-3 Priority Scheduling, Problem 1-4 Advanced Scheduler, Problem 1-2 Join, Project 1--Threads
+@node Problem 1-3 Priority Scheduling
 @section Problem 1-3 Priority Scheduling
 
 Implement priority scheduling in Pintos.  Priority
@@ -262,7 +262,7 @@ for a lock held by a lower-priority thread. You do not need to
 implement this fix for semaphores, condition variables or joins.
 However, you do need to implement priority scheduling in all cases.
 
-@node Problem 1-4 Advanced Scheduler, Threads FAQ, Problem 1-3 Priority Scheduling, Project 1--Threads
+@node Problem 1-4 Advanced Scheduler
 @section Problem 1-4 Advanced Scheduler
 
 Implement Solaris's multilevel feedback queue scheduler (MLFQS) to
@@ -279,7 +279,7 @@ You may assume a static priority for this problem. It is not necessary
 to ``re-donate'' a thread's priority if it changes (although you are
 free to do so).
 
-@node Threads FAQ,  , Problem 1-4 Advanced Scheduler, Project 1--Threads
+@node Threads FAQ, Multilevel Feedback Scheduling, Problem 1-4 Advanced Scheduler, Project 1--Threads
 @section FAQ
 
 @enumerate 1
@@ -288,7 +288,7 @@ free to do so).
 @enumerate 1
 @item
 @b{I am adding a new @file{.h} or @file{.c} file.  How do I fix the
-@file{Makefile}s?}
+@file{Makefile}s?}@anchor{Adding c or h Files}
 
 To add a @file{.c} file, edit the top-level @file{Makefile.build}.
 You'll want to add your file to variable @samp{@var{dir}_SRC}, where
@@ -297,6 +297,14 @@ project, that means you should add it to @code{threads_SRC}, or
 possibly @code{devices_SRC} if you put in the @file{devices}
 directory.  Then run @code{make}.  If your new file doesn't get
 compiled, run @code{make clean} and then try again.
+
+When you modify the top-level @file{Makefile.build}, the modified
+version should be automatically copied to
+@file{threads/build/Makefile} when you re-run make.  The opposite is
+not true, so any changes will be lost the next time you run @code{make
+clean} from the @file{threads} directory.  Therefore, you should
+prefer to edit @file{Makefile.build} (unless your changes are meant to
+be truly temporary).
 
 There is no need to edit the @file{Makefile}s to add a @file{.h} file.
 

@@ -1,4 +1,4 @@
-@node Multilevel Feedback Scheduling, , , Project 1--Threads
+@node Multilevel Feedback Scheduling, , Threads FAQ, Project 1--Threads
 @section Multilevel Feedback Scheduling
 
 This section gives a brief overview of the behavior of the Solaris 2.6

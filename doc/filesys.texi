@@ -55,7 +55,7 @@ and copy that over whenever you trash your disk beyond a useful state
 * File System FAQs::            
 @end menu
 
-@node File System New Code, Problem 4-1 Large Files, Project 4--File Systems, Project 4--File Systems
+@node File System New Code
 @section New Code
 
 Here are some files that are probably new to you.  These are in the
@@ -110,7 +110,7 @@ which you will remove.
 While most of your work will be in @file{filesys}, you should be
 prepared for interactions with all previous parts (as usual).
 
-@node Problem 4-1 Large Files, Problem 4-2 File Growth, File System New Code, Project 4--File Systems
+@node Problem 4-1 Large Files
 @section Problem 4-1: Large Files
 
 Modify the file system to allow the maximum size of a file to be as
@@ -123,7 +123,7 @@ size of a file is limited by the number of pointers that will fit in
 one disk sector.  Increasing the limit to 8 MB will require you to
 implement doubly-indirect blocks.
 
-@node Problem 4-2 File Growth, Problem 4-3 Subdirectories, Problem 4-1 Large Files, Project 4--File Systems
+@node Problem 4-2 File Growth
 @section Problem 4-2: File Growth
 
 Implement extensible files.  In the basic file system, the file size
@@ -136,7 +136,7 @@ the root directory file to expand beyond its current limit of ten
 files.  Make sure that concurrent accesses to the file header remain
 properly synchronized.
 
-@node Problem 4-3 Subdirectories, Problem 4-4 Buffer Cache, Problem 4-2 File Growth, Project 4--File Systems
+@node Problem 4-3 Subdirectories
 @section Problem 4-3: Subdirectories
 
 Implement a hierarchical name space.  In the basic file system, all
@@ -179,7 +179,7 @@ is straightforward once the above syscalls are implemented.  If Unix,
 these are programs rather than built-in shell commands, but
 @command{cd} is a shell command.  (Why?)
 
-@node Problem 4-4 Buffer Cache, File System Design Document Requirements, Problem 4-3 Subdirectories, Project 4--File Systems
+@node Problem 4-4 Buffer Cache
 @section Problem 4-4: Buffer Cache
 
 Modify the file system to keep a cache of file blocks.  When a request
@@ -235,7 +235,7 @@ making any read-ahead and write-behind threads halt when Pintos is
 ``done'' (when the user program has completed, etc), so that Pintos
 will halt normally and print its various statistics.
 
-@node File System Design Document Requirements, File System FAQs, Problem 4-4 Buffer Cache, Project 4--File Systems
+@node File System Design Document Requirements
 @section Design Document Requirements
 
 As always, submit a design document file summarizing your design.  Be
@@ -254,7 +254,7 @@ in the cache? How did you choose elements to evict from the cache?
 How and when did you flush the cache?
 @end itemize
 
-@node File System FAQs,  , File System Design Document Requirements, Project 4--File Systems
+@node File System FAQs
 @section FAQ
 
 @enumerate 1

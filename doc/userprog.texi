@@ -47,7 +47,7 @@ from being run.
 * System Calls::                
 @end menu
 
-@node Project 2 Code to Hack, How User Programs Work, Project 2--User Programs, Project 2--User Programs
+@node Project 2 Code to Hack
 @section Code to Hack
 
 The easiest way to get an overview of the programming you will be
@@ -121,7 +121,7 @@ of the usage of a large array of (identical) resources: if resource
 @var{n} is in use, then bit @var{n} of the bitmap is true.  You might
 find it useful for tracking memory pages, for example.
 
-@node How User Programs Work, Global Requirements, Project 2 Code to Hack, Project 2--User Programs
+@node How User Programs Work
 @section How User Programs Work
 
 Pintos can run normal C programs.  In fact, it can run any program you
@@ -143,7 +143,7 @@ default, the @file{Makefile} in this directory will compile the test
 programs we provide.  You can edit the @file{Makefile} to compile your
 own test programs as well.
 
-@node Global Requirements, Problem 2-1 Argument Passing, How User Programs Work, Project 2--User Programs
+@node Global Requirements
 @section Global Requirements
 
 For testing and grading purposes, we have some simple requirements for
@@ -159,7 +159,7 @@ is already there---you just need to make sure you enable it!  For
 example, running @code{pintos -ex "testprogram 1 2 3 4"} will spawn
 @samp{testprogram 1 2 3 4} as the first process.
 
-@node Problem 2-1 Argument Passing, Problem 2-2 System Calls, Global Requirements, Project 2--User Programs
+@node Problem 2-1 Argument Passing
 @section Problem 2-1: Argument Passing
 
 Currently, @code{thread_execute()} does not support passing arguments
@@ -178,7 +178,7 @@ this right, a lot of things will not appear to work correctly with our
 tests.  If the tests fail, so do you.  Fortunately, this part
 shouldn't be too hard.
 
-@node Problem 2-2 System Calls, User Programs FAQ, Problem 2-1 Argument Passing, Project 2--User Programs
+@node Problem 2-2 System Calls
 @section Problem 2-2: System Calls
 
 Implement the system call handler in @file{userprog/syscall.c} to
@@ -297,7 +297,7 @@ exception is a call to the @code{halt} system call.
 
 @xref{System Calls}, for more information on how syscalls work.
 
-@node User Programs FAQ, 80x86 Calling Convention, Problem 2-2 System Calls, Project 2--User Programs
+@node User Programs FAQ
 @section FAQ
 
 @enumerate 1
@@ -476,7 +476,7 @@ e.g.@: @samp{example 1 2 3 4: 0}.
 @end enumerate
 @end enumerate
 
-@node 80x86 Calling Convention, System Calls, User Programs FAQ, Project 2--User Programs
+@node 80x86 Calling Convention
 @appendixsec 80@var{x}86 Calling Convention
 
 What follows is a quick and dirty discussion of the 80@var{x}86
@@ -626,7 +626,7 @@ Your code should start the stack at the very top of the user virtual
 address space, in the page just below virtual address @code{PHYS_BASE}
 (defined in @file{threads/mmu.h}).
 
-@node System Calls,  , 80x86 Calling Convention, Project 2--User Programs
+@node System Calls
 @appendixsec System Calls
 
 We have already been dealing with one way that the operating system

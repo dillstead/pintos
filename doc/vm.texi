@@ -34,7 +34,7 @@ so those bugs don't keep haunting you.
 * Virtual Memory FAQ::          
 @end menu
 
-@node VM Design, Page Faults, Project 3--Virtual Memory, Project 3--Virtual Memory
+@node VM Design
 @section A Word about Design
 
 It is important for you to note that in addition to getting virtual
@@ -52,7 +52,7 @@ In keeping with this, you will find that we are going to say as little
 as possible about how to do things.  Instead we will focus on what end
 functionality we require your OS to support.
 
-@node Page Faults, Disk as Backing Store, VM Design, Project 3--Virtual Memory
+@node Page Faults
 @section Page Faults
 
 For the last assignment, whenever a context switch occurred, the new
@@ -144,7 +144,7 @@ back in userprog project
 FIXME need to mention that there are many possible implementations and
 that the above is just an outline
 
-@node Disk as Backing Store, Memory Mapped Files, Page Faults, Project 3--Virtual Memory
+@node Disk as Backing Store
 @section Disk as Backing Store
 
 In VM systems, since memory is less plentiful than disk, you will
@@ -170,7 +170,7 @@ page can be brought in.  Many virtual memory systems avoid this extra
 overhead by writing modified pages to disk in advance, so that later
 page faults can be completed more quickly.
 
-@node Memory Mapped Files, Stack, Disk as Backing Store, Project 3--Virtual Memory
+@node Memory Mapped Files
 @section Memory Mapped Files
 
 The traditional way to access the file system is via @code{read} and
@@ -196,7 +196,7 @@ file (plus one each for code, data, and stack).  You will implement
 memory mapped files for problem 3 of this assignment, but you should
 design your solutions to problems 1 and 2 to account for this.
 
-@node Stack, Problem 3-1 Page Table Management, Memory Mapped Files, Project 3--Virtual Memory
+@node Stack
 @section Stack
 
 In project 2, the stack was a single page at the top of the user
@@ -207,7 +207,7 @@ system should allocate additional pages for the stack as necessary,
 unless those pages are unavailable because they are in use by another
 segment, in which case some sort of fault should occur.
 
-@node Problem 3-1 Page Table Management, Problem 3-2 Paging To and From Disk, Stack, Project 3--Virtual Memory
+@node Problem 3-1 Page Table Management
 @section Problem 3-1: Page Table Management
 
 Implement page directory and page table management to support virtual
@@ -276,7 +276,7 @@ probably want to leave the code that reads the pages from disk, but
 use your new page table management code to construct the page tables
 only as page faults occur for them.
 
-@node Problem 3-2 Paging To and From Disk, Problem 3-3 Memory Mapped Files, Problem 3-1 Page Table Management, Project 3--Virtual Memory
+@node Problem 3-2 Paging To and From Disk
 @section Problem 3-2: Paging To and From Disk
 
 Implement paging to and from disk.
@@ -364,7 +364,7 @@ segments for each process.  If you carefully designed your data
 structures in part 1, sharing of read-only pages should not make this
 part significantly harder.
 
-@node Problem 3-3 Memory Mapped Files, Virtual Memory FAQ, Problem 3-2 Paging To and From Disk, Project 3--Virtual Memory
+@node Problem 3-3 Memory Mapped Files
 @section Problem 3-3: Memory Mapped Files
 
 Implement memory mapped files.
@@ -402,7 +402,7 @@ the changes to the @code{mmap} segment will eventually be written to
 the file.  (In fact, you may choose to implement executable mappings
 as a special case of file mappings.)
 
-@node Virtual Memory FAQ,  , Problem 3-3 Memory Mapped Files, Project 3--Virtual Memory
+@node Virtual Memory FAQ
 @section FAQ
 
 @enumerate 1
