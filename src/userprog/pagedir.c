@@ -202,7 +202,7 @@ active_pd (void)
   uint32_t *pd;
 
   /* Copy CR3, the page directory base register (PDBR), into `pd'
-     for us to exmaine.  See [IA32-v2a] "MOV--Move to/from
+     for us to examine.  See [IA32-v2a] "MOV--Move to/from
      Control Registers" and [IA32-v3] 3.7.5. */
   asm ("movl %%cr3,%0" : "=r" (pd));
   return pd;
