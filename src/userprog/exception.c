@@ -1,10 +1,12 @@
 #include "exception.h"
+#include <inttypes.h>
 #include "lib.h"
 #include "gdt.h"
 #include "interrupt.h"
 #include "thread.h"
 
 static void kill (struct intr_frame *);
+static void page_fault (struct intr_frame *);
 
 /* Registers handlers for interrupts that can be caused by user
    programs.
@@ -48,7 +50,7 @@ exception_init (void)
   /* Most exceptions can be handled with interrupts turned on.
      We need to disable interrupts for page faults because the
      fault address is stored in CR2 and needs to be preserved. */
-  intr_register (14, 0, INTR_OFF, kill, "#PF Page-Fault Exception");
+  intr_register (14, 0, INTR_OFF, page_fault, "#PF Page-Fault Exception");
 }
 
 /* Handler for an exception (probably) caused by a user process. */
@@ -69,7 +71,7 @@ kill (struct intr_frame *f)
     {
     case SEL_UCSEG:
       /* User's code segment, so it's a user exception, as we
-         expected. */
+         expected.  Kill the user process.  */
       printk ("%s: dying due to interrupt %#04x (%s).\n",
               thread_name (thread_current ()),
               f->vec_no, intr_name (f->vec_no));
@@ -80,15 +82,62 @@ kill (struct intr_frame *f)
       /* Kernel's code segment, which indicates a kernel bug.
          Kernel code shouldn't throw exceptions.  (Page faults
          may cause kernel exceptions--but they shouldn't arrive
-         here.) */
+         here.)  Panic the kernel to make the point.  */
       intr_dump_frame (f);
       PANIC ("Kernel bug - unexpected interrupt in kernel"); 
 
     default:
-      /* Some other code segment?  Shouldn't happen. */
+      /* Some other code segment?  Shouldn't happen.  Panic the
+         kernel. */
       printk ("Interrupt %#04x (%s) in unknown segment %04x\n",
              f->vec_no, intr_name (f->vec_no), f->cs);
       thread_exit ();
     }
+}
+
+/* Page fault error code bits that describe the cause of the exception.  */
+#define PF_P 0x1    /* 0: not-present page. 1: access rights violation. */
+#define PF_W 0x2    /* 0: read, 1: write. */
+#define PF_U 0x4    /* 0: kernel, 1: user process. */
+
+/* Page fault handler.  This is a skeleton that must be filled in
+   to implement virtual memory.
+
+   At entry, the address that faulted is in CR2 (Control Register
+   2) and information about the fault, formatted as described in
+   the PF_* macros above, is in F's error_code member.  The
+   example code here shows how to parse that information.  You
+   can find more information about both of these in the
+   description of "Interrupt 14--Page Fault Exception (#PF)" in
+   [IA32-v3] section 5.14, which is pages 5-46 to 5-49. */
+static void
+page_fault (struct intr_frame *f) 
+{
+  bool not_present, write, user;
+  uint32_t fault_addr;
+
+  /* Determine cause. */
+  not_present = (f->error_code & PF_P) == 0;
+  write = (f->error_code & PF_W) != 0;
+  user = (f->error_code & PF_U) != 0;
+
+  /* Obtain faulting address.
+
+     (The faulting address is not necesarily the address of the
+     instruction that caused the fault--that's in F's eip
+     member.  Rather, it's the linear address that was accessed
+     to cause the fault, which is probably an address of data,
+     not code.) */
+  asm ("movl %%cr2, %0" : "=r" (fault_addr));
+
+  /* To implement virtual memory, delete the rest of the function
+     body, and replace it with code that brings in the page to
+     which fault_addr refers. */
+  printk ("Page fault on address %08"PRIx32": %s %s page in %s context.\n",
+          fault_addr,
+          not_present ? "not present" : "rights violation",
+          write ? "writing" : "reading",
+          user ? "user" : "kernel");
+  kill (f);
 }
 
