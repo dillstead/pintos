@@ -9,9 +9,12 @@
 #include "threads/mmu.h"
 #include "threads/palloc.h"
 
-/* Filename and file size to use for copy operations,
-   as "filename:size". */
-char *fsutil_copy_arg;
+/* Destination filename and size for copy-in operations. */
+char *fsutil_copyin_file;
+int fsutil_copyin_size;
+
+/* Source filename for copy-out operations. */
+char *fsutil_copyout_file;
 
 /* Name of a file print to print to console. */
 char *fsutil_print_file;
@@ -29,7 +32,7 @@ bool fsutil_dump_filesys;
    to a file named FILENAME in the filesystem.
    The file will be SIZE bytes in length. */
 static void
-copy (const char *filename, off_t size) 
+copy_in (const char *filename, off_t size) 
 {
   struct disk *src;
   struct file *dst;
@@ -68,22 +71,65 @@ copy (const char *filename, off_t size)
   file_close (dst);
 }
 
+/* Copies FILENAME from the file system to the scratch disk.
+   The first four bytes of the first sector in the disk
+   receive the file's size in bytes as a little-endian integer.
+   The second and subsequent sectors receive the file's data. */
+static void
+copy_out (const char *filename) 
+{
+  void *buffer;
+  struct file *src;
+  struct disk *dst;
+  off_t size;
+  disk_sector_t sector;
+
+  buffer = palloc_get (PAL_ASSERT | PAL_ZERO);
+
+  /* Open source file. */
+  src = filesys_open (filename);
+  if (src == NULL)
+    PANIC ("%s: open failed", filename);
+  size = file_length (src);
+
+  /* Open target disk. */
+  dst = disk_get (1, 0);
+  if (dst == NULL)
+    PANIC ("couldn't open target disk (hdc or hd1:0)");
+  if (size + DISK_SECTOR_SIZE > (off_t) disk_size (dst) * DISK_SECTOR_SIZE)
+    PANIC ("target disk is too small for %lld-byte file",
+           (unsigned long long) size);
+  
+  /* Write size to sector 0. */
+  *(uint32_t *) buffer = size;
+  disk_write (dst, 0, buffer);
+  
+  /* Do copy. */
+  sector = 1;
+  while (size > 0) 
+    {
+      int chunk_size = size > DISK_SECTOR_SIZE ? DISK_SECTOR_SIZE : size;
+      if (file_read (src, buffer, chunk_size) != chunk_size)
+        PANIC ("%s: read failed with %lld bytes unread",
+               filename, (unsigned long long) size);
+      disk_write (dst, sector++, buffer);
+      size -= chunk_size;
+    }
+  palloc_free (buffer);
+
+  file_close (src);
+}
+
 /* Executes the filesystem operations described by the variables
    declared in fsutil.h. */
 void
 fsutil_run (void) 
 {
-  if (fsutil_copy_arg != NULL) 
-    {
-      char *save;
-      char *filename = strtok_r (fsutil_copy_arg, ":", &save);
-      char *size = strtok_r (NULL, "", &save);
+  if (fsutil_copyin_file != NULL) 
+    copy_in (fsutil_copyin_file, fsutil_copyin_size);
 
-      if (filename == NULL || size == NULL)
-        PANIC ("bad format for -cp option; use -u for usage");
-
-      copy (filename, atoi (size));
-    }
+  if (fsutil_copyout_file != NULL)
+    copy_out (fsutil_copyout_file);
 
   if (fsutil_print_file != NULL)
     fsutil_print (fsutil_print_file);

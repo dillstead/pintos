@@ -46,8 +46,12 @@ static bool format_filesys;
 static char *initial_program;
 #endif
 
+/* Power off after running requested actions? */
+static bool power_off;
+
 static void ram_init (void);
 static void argv_init (void);
+static void do_power_off (void);
 
 int main (void) NO_RETURN;
 
@@ -112,6 +116,9 @@ main (void)
   test ();
 #endif
 
+  if (power_off) 
+    do_power_off ();
+
   /* Terminate this thread. */
   thread_exit ();
 }
@@ -138,7 +145,7 @@ static void
 argv_init (void) 
 {
   char *cmd_line, *pos;
-  char *argv[LOADER_CMD_LINE_LEN / 2 + 1];
+  char *argv[LOADER_CMD_LINE_LEN / 2 + 2];
   int argc = 0;
   int i;
 
@@ -154,6 +161,7 @@ argv_init (void)
       pos = strchr (pos, '\0') + 1;
     }
   argv[argc] = "";
+  argv[argc + 1] = "";
 
   /* Parse the words. */
   for (i = 0; i < argc; i++)
@@ -161,6 +169,8 @@ argv_init (void)
       random_init (atoi (argv[++i]));
     else if (!strcmp (argv[i], "-d")) 
       debug_enable (argv[++i]);
+    else if (!strcmp (argv[i], "-q"))
+      power_off = true;
 #ifdef USERPROG
     else if (!strcmp (argv[i], "-ex")) 
       initial_program = argv[++i];
@@ -168,8 +178,13 @@ argv_init (void)
 #ifdef FILESYS
   else if (!strcmp (argv[i], "-f"))
       format_filesys = true;
-    else if (!strcmp (argv[i], "-cp")) 
-      fsutil_copy_arg = argv[++i];
+    else if (!strcmp (argv[i], "-ci")) 
+      {
+        fsutil_copyin_file = argv[++i]; 
+        fsutil_copyin_size = atoi (argv[++i]); 
+      }
+    else if (!strcmp (argv[i], "-co"))
+      fsutil_copyout_file = argv[++i];
     else if (!strcmp (argv[i], "-p")) 
       fsutil_print_file = argv[++i];
     else if (!strcmp (argv[i], "-r"))
@@ -190,15 +205,34 @@ argv_init (void)
 #endif
 #ifdef FILESYS
           " -f                  Format the filesystem disk (hdb or hd0:1).\n"
-          " -cp FILENAME:SIZE   Copy SIZE bytes from the scratch disk (hdc\n"
+          " -ci FILENAME SIZE   Copy SIZE bytes from the scratch disk (hdc\n"
           "                     or hd1:0) into the filesystem as FILENAME\n"
+          " -co FILENAME        Copy FILENAME to the scratch disk, with\n"
+          "                     size at start of sector 0 and data afterward\n"
           " -p FILENAME         Print the contents of FILENAME\n"
           " -r FILENAME         Delete FILENAME\n"
           " -ls                 List the files in the filesystem\n"
           " -D                  Dump complete filesystem contents\n"
 #endif
+          " -q                  Power off after doing requested actions.\n"
           );
       }
     else 
       PANIC ("unknown option `%s'", argv[i]);
+}
+
+void
+do_power_off (void) 
+{
+  const char s[] = "Shutdown";
+  const char *p;
+
+#ifdef FILESYS
+  filesys_done ();
+#endif
+
+  printf ("Powering off...\n");
+  for (p = s; *p != '\0'; p++)
+    outb (0x8900, *p);
+  for (;;);
 }

@@ -131,6 +131,15 @@ filesys_init (bool format)
     PANIC ("can't open root dir file");
 }
 
+/* Shuts down the filesystem module, writing any unwritten data
+   to disk.
+   Currently there's nothing to do.  You'll need to add code here
+   when you implement write-behind caching. */
+void
+filesys_done (void) 
+{
+}
+
 /* Creates a file named NAME with the given INITIAL_SIZE.
    Returns true if successful, false otherwise.
    Fails if a file named NAME already exists,
