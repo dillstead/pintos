@@ -1,0 +1,115 @@
+The first two patches are needed for Bochs to properly compile and run
+under Solaris on Sparc.  The first should probably be handled by
+Autoconf; I'm not sure why it isn't.  The second is needed to make GCC
+accept X.h's frequent use of "extern foo(...)", because use of an
+implicit int return type is forbidden in C++.
+
+The third patch makes the gdb stubs work on Solaris/Sparc, by doing
+proper byteswapping.
+
+diff -urp orig/bochs-2.1.1/Makefile.in bochs-2.1.1/Makefile.in
+--- orig/bochs-2.1.1/Makefile.in	2004-02-11 14:28:02.000000000 -0800
++++ bochs-2.1.1/Makefile.in	2004-09-13 15:05:26.281550000 -0700
+@@ -92,7 +92,7 @@ CXX = @CXX@
+ CFLAGS = @CFLAGS@ @GUI_CFLAGS@ $(MCH_CFLAGS) $(FLA_FLAGS) @DEFINE_PLUGIN_PATH@ -DBX_SHARE_PATH='"$(sharedir)"'
+ CXXFLAGS = @CXXFLAGS@ @GUI_CXXFLAGS@ $(MCH_CFLAGS) $(FLA_FLAGS) @DEFINE_PLUGIN_PATH@ -DBX_SHARE_PATH='"$(sharedir)"'
+ 
+-LDFLAGS = @LDFLAGS@
++LDFLAGS = @LDFLAGS@ -lsocket
+ LIBS = @LIBS@
+ # To compile with readline:
+ #   linux needs just -lreadline
+
+diff -urp orig/bochs-2.1.1/gui/Makefile.in bochs-2.1.1/gui/Makefile.in
+--- orig/bochs-2.1.1/gui/Makefile.in	2003-11-28 07:07:28.000000000 -0800
++++ bochs-2.1.1/gui/Makefile.in	2004-09-13 15:05:09.402039000 -0700
+@@ -44,7 +44,7 @@ SHELL = /bin/sh
+ @SET_MAKE@
+ 
+ CXX = @CXX@
+-CXXFLAGS = $(BX_INCDIRS) @CXXFLAGS@  @GUI_CXXFLAGS@
++CXXFLAGS = $(BX_INCDIRS) @CXXFLAGS@  @GUI_CXXFLAGS@ -fms-extensions
+ LOCAL_CXXFLAGS =
+ LDFLAGS = @LDFLAGS@
+ LIBS = @LIBS@
+
+
+diff -urp orig/bochs-2.1.1/gdbstub.cc bochs-2.1.1/gdbstub.cc
+--- orig/bochs-2.1.1/gdbstub.cc	2004-02-11 14:28:41.000000000 -0800
++++ bochs-2.1.1/gdbstub.cc	2004-09-13 16:41:59.652988000 -0700
+@@ -474,11 +475,13 @@ static void debug_loop(void)
+           case 'P':
+               {
+                  int reg;
+-                 int value;
++                 Bit8u vbits[4];
++                 Bit32u value;
+                  char* ebuf;
+                  
+                  reg = strtoul(&buffer[1], &ebuf, 16);
+-                 value = ntohl(strtoul(ebuf + 1, &ebuf, 16));
++                 hex2mem(ebuf + 1, vbits, sizeof value);
++                 ReadHostDWordFromLittleEndian(vbits, value);
+                  
+                  BX_INFO (("reg %d set to %x", reg, value));
+                  
+@@ -527,35 +530,36 @@ static void debug_loop(void)
+               }
+             
+           case 'g':
+-            registers[0] = EAX;
+-            registers[1] = ECX;
+-            registers[2] = EDX;
+-            registers[3] = EBX;
+-            registers[4] = ESP;
+-            registers[5] = EBP;
+-            registers[6] = ESI;
+-            registers[7] = EDI;
++            WriteHostDWordToLittleEndian(registers + 0, EAX);
++            WriteHostDWordToLittleEndian(registers + 1, ECX);
++            WriteHostDWordToLittleEndian(registers + 2, EDX);
++            WriteHostDWordToLittleEndian(registers + 3, EBX);
++            WriteHostDWordToLittleEndian(registers + 4, ESP);
++            WriteHostDWordToLittleEndian(registers + 5, EBP);
++            WriteHostDWordToLittleEndian(registers + 6, ESI);
++            WriteHostDWordToLittleEndian(registers + 7, EDI);
+             if (last_stop_reason == GDBSTUB_EXECUTION_BREAKPOINT)
+               {
+-                 registers[8] = EIP + 1;
++                WriteHostDWordToLittleEndian(registers + 8, EIP + 1);
+               }
+             else
+               {
+-                 registers[8] = EIP;
++                WriteHostDWordToLittleEndian(registers + 8, EIP);
+               }
+-            registers[9] = BX_CPU_THIS_PTR read_eflags();
+-            registers[10] = 
+-              BX_CPU_THIS_PTR sregs[BX_SEG_REG_CS].selector.value;
+-            registers[11] = 
+-              BX_CPU_THIS_PTR sregs[BX_SEG_REG_SS].selector.value;
+-            registers[12] = 
+-              BX_CPU_THIS_PTR sregs[BX_SEG_REG_DS].selector.value;
+-            registers[13] = 
+-              BX_CPU_THIS_PTR sregs[BX_SEG_REG_ES].selector.value;
+-            registers[14] = 
+-              BX_CPU_THIS_PTR sregs[BX_SEG_REG_FS].selector.value;
+-            registers[15] = 
+-              BX_CPU_THIS_PTR sregs[BX_SEG_REG_GS].selector.value;
++            WriteHostDWordToLittleEndian(registers + 9,
++                                         BX_CPU_THIS_PTR read_eflags());
++            WriteHostDWordToLittleEndian(registers + 10,
++              BX_CPU_THIS_PTR sregs[BX_SEG_REG_CS].selector.value);
++            WriteHostDWordToLittleEndian(registers + 11,
++              BX_CPU_THIS_PTR sregs[BX_SEG_REG_SS].selector.value);
++            WriteHostDWordToLittleEndian(registers + 12,
++              BX_CPU_THIS_PTR sregs[BX_SEG_REG_DS].selector.value);
++            WriteHostDWordToLittleEndian(registers + 13,
++              BX_CPU_THIS_PTR sregs[BX_SEG_REG_ES].selector.value);
++            WriteHostDWordToLittleEndian(registers + 14,
++              BX_CPU_THIS_PTR sregs[BX_SEG_REG_FS].selector.value);
++            WriteHostDWordToLittleEndian(registers + 15,
++              BX_CPU_THIS_PTR sregs[BX_SEG_REG_GS].selector.value);
+             mem2hex((char *)registers, obuf, NUMREGSBYTES);
+             put_reply(obuf);
+             break;
