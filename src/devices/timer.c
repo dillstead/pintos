@@ -21,7 +21,7 @@ static volatile int64_t ticks;
 
 static intr_handler_func timer_interrupt;
 
-/* Sets up the 8254 Programmable Interrupt Timer (PIT) to
+/* Sets up the 8254 Programmable Interval Timer (PIT) to
    interrupt PIT_FREQ times per second, and registers the
    corresponding interrupt. */
 void
