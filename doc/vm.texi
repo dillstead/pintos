@@ -256,9 +256,7 @@ It is impossible to predict how large the stack will grow at compile
 time, so we must allocate pages as necessary.  You should only allocate
 additional pages if they ``appear'' to be stack accesses.  You must
 devise a heuristic that attempts to distinguish stack accesses from
-other accesses.@footnote{You might find it useful to know that the
-80@var{x}86 instruction @code{pusha} pushes all 8 registers (32 bytes)
-on the stack at once.}  Document and explain the heuristic in your
+other accesses.  Document and explain the heuristic in your
 design documentation.
 
 The first stack page need not be loaded lazily.  You can initialize it
