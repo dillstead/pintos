@@ -49,13 +49,13 @@ scan_partitions:
 	call read_sector
 	jc no_such_drive
 	
-2:	pusha
+2:	cmp word ptr [es:510], 0xaa55
+	jnz no_boot_partition
+	
+	pusha
 	mov edx, [es:508]
 	call outw
 	popa
-	
-	cmp word ptr [es:510], 0xaa55
-	jnz no_boot_partition
 	
 	mov si, 446
 1:	mov al, [es:si+4]

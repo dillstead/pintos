@@ -1,12 +1,10 @@
 #ifndef THREADS_LOADER_H
 #define THREADS_LOADER_H
 
-/* Constants fixed by the PC BIOS. */
-#define LOADER_BASE 0x7c00      /* Physical address of loader's base. */
-#define LOADER_END  0x7e00      /* Physical address of end of loader. */
-
-/* Physical address of kernel base. */
-#define LOADER_KERN_BASE 0x100000       /* 1 MB. */
+/* Physical addresses of important kernel components. */
+#define LOADER_PD_BASE   0x0f000 /* Page directory: 4 kB starting at 60 kB. */
+#define LOADER_PT_BASE   0x10000 /* Page tables: 64 kB starting at 64 kB. */
+#define LOADER_KERN_BASE 0x20000 /* Kernel: up to 512 kB starting at 128 kB. */
 
 /* Kernel virtual address at which all physical memory is mapped.
 
@@ -16,13 +14,6 @@
 
    This must be aligned on a 4 MB boundary. */
 #define LOADER_PHYS_BASE 0xc0000000     /* 3 GB. */
-
-/* Offsets within the loader. */
-#define LOADER_BIOS_SIG (LOADER_END - 2)        /* 0xaa55 BIOS signature. */
-#define LOADER_CMD_LINE_LEN 0x80                /* Command line length. */
-#define LOADER_CMD_LINE (LOADER_BIOS_SIG - LOADER_CMD_LINE_LEN)
-                                                /* Kernel command line. */
-#define LOADER_RAM_PAGES (LOADER_CMD_LINE - 4)  /* # of pages of RAM. */
 
 /* GDT selectors defined by loader.
    More selectors are defined by userprog/gdt.h. */

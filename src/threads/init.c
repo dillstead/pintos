@@ -34,9 +34,6 @@
 #include "filesys/fsutil.h"
 #endif
 
-/* Amount of physical memory, in 4 kB pages. */
-size_t ram_pages;
-
 /* Page directory with kernel mappings only. */
 uint32_t *base_page_dir;
 
@@ -81,9 +78,9 @@ main (void)
   argv_init ();
 
   /* Initialize memory system. */
+  paging_init ();
   palloc_init ();
   malloc_init ();
-  paging_init ();
 
   /* Segmentation. */
 #ifdef USERPROG
@@ -154,9 +151,6 @@ ram_init (void)
      linker as _start_bss and _end_bss.  See kernel.lds. */
   extern char _start_bss, _end_bss;
   memset (&_start_bss, 0, &_end_bss - &_start_bss);
-
-  /* Get RAM size from loader.  See loader.S. */
-  ram_pages = *(uint32_t *) ptov (LOADER_RAM_PAGES);
 }
 
 /* Populates the base page directory and page table with the
@@ -165,8 +159,8 @@ ram_init (void)
    directory it creates.
 
    At the time this function is called, the active page table
-   (set up by loader.S) only maps the first 4 MB of RAM, so we
-   should not try to use extravagant amounts of memory.
+   (set up by start.S) only maps the first 4 MB of RAM, so we
+   should not try to access memory beyond that limit.
    Fortunately, there is no need to do so. */
 static void
 paging_init (void)
@@ -174,8 +168,8 @@ paging_init (void)
   uint32_t *pd, *pt;
   size_t page;
 
-  pd = base_page_dir = palloc_get_page (PAL_ASSERT | PAL_ZERO);
-  pt = NULL;
+  pd = base_page_dir = ptov (LOADER_PD_BASE);
+  pt = ptov (LOADER_PT_BASE);
   for (page = 0; page < ram_pages; page++) 
     {
       uintptr_t paddr = page * PGSIZE;
@@ -185,16 +179,22 @@ paging_init (void)
 
       if (pd[pde_idx] == 0)
         {
-          pt = palloc_get_page (PAL_ASSERT | PAL_ZERO);
+          pt += PGSIZE / sizeof *pt;
+          memset (pt, 0, PGSIZE);
           pd[pde_idx] = pde_create (pt);
         }
 
       pt[pte_idx] = pte_create_kernel (vaddr, true);
     }
 
+  /* start.S mapped the beginning of physical memory to virtual
+     address 0.  We don't want that mapping anymore, so erase
+     it. */
+  pd[0] = 0;
+
   /* Store the physical address of the page directory into CR3
-     aka PDBR (page directory base register).  This activates our
-     new page tables immediately.  See [IA32-v2a] "MOV--Move
+     aka PDBR (page directory base register).  This flushes the
+     TLB to make sure .  See [IA32-v2a] "MOV--Move
      to/from Control Registers" and [IA32-v3] 3.7.5. */
   asm volatile ("mov %%cr3, %0" :: "r" (vtop (base_page_dir)));
 }
