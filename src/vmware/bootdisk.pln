@@ -1,0 +1,8 @@
+DRIVETYPE      ide
+#vm|VERSION           2
+#vm|TOOLSVERSION      0
+CYLINDERS      8
+HEADS         16
+SECTORS       63
+#vm|CAPACITY       8064
+ACCESS "bootdisk.bin" 0 8064

@@ -1,0 +1,23 @@
+#!/usr/bin/vmware
+config.version = "6"
+virtualHW.version = 2
+displayName = ""
+gui.powerOnAtStartUp = FALSE
+apmSuspend = FALSE
+suspendToDisk = TRUE
+gui.exitAtPowerOff = FALSE
+hard-disk.enableIBR = FALSE
+gui.fullScreenResize = TRUE
+resume.repeatable = FALSE
+disable_acceleration = FALSE
+guestOS = "linux"
+ide0:0.present = TRUE
+ide0:0.deviceType = "plainDisk"
+ide0:0.fileName = "bootdisk.pln"
+gui.fullScreenAtPowerOn = FALSE
+redoLogDir = ""
+logging = TRUE
+debug = FALSE
+uuid.location = "56 4d 89 06 87 3f cf 97-13 c7 37 a8 10 ca e8 69"
+
+floppy0.present = "false"
