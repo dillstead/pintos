@@ -79,7 +79,7 @@ test_donate_return (void)
   printf ("This thread should have priority %d.  Actual priority: %d.\n",
           PRI_DEFAULT + 2, thread_get_priority ());
   lock_release (&lock);
-  printf ("acquire1 and acquire2 must already have finished, in that order.\n"
+  printf ("acquire2 and acquire1 must already have finished, in that order.\n"
           "This should be the last line before finishing this test.\n"
           "Priority donation test done.\n");
 }
