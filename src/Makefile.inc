@@ -7,8 +7,6 @@ VPATH := $(VPATH):$(TOP_SRCDIR)/lib
 VPATH := $(VPATH):$(TOP_SRCDIR)/filesys
 VPATH := $(VPATH):$(TOP_SRCDIR)/userprog
 
--include *.d
-
 DEFINES += -DCNACHOS86
 WARNINGS = -Wall -W -Wstrict-prototypes -Wmissing-prototypes
 CFLAGS = -g -O3 -MMD $(WARNINGS) $(INCLUDES) $(DEFINES)
@@ -74,3 +72,5 @@ diskimage.bin: loader.bin kernel.bin
 
 clean:
 	rm -f *.o *.d *.bin kernel.bin.data kernel.bin.pad intr-stubs.S
+
+-include *.d
