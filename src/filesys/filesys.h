@@ -2,6 +2,7 @@
 #define HEADER_FILESYS_H 1
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifndef OFF_T
 #define OFF_T

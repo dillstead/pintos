@@ -21,7 +21,8 @@ do_format (void)
 
   /* Create the initial bitmap and reserve sectors for the
      free map and root directory file headers. */
-  bitmap_init (&free_map, disk_size (disk));
+  if (!bitmap_init (&free_map, disk_size (disk)))
+    panic ("bitmap creation failed");
   bitmap_mark (&free_map, FREE_MAP_SECTOR);
   bitmap_mark (&free_map, ROOT_DIR_SECTOR);
 
@@ -85,7 +86,8 @@ filesys_create (const char *name, off_t initial_size)
     goto exit1;
 
   /* Allocate a block for the file header. */
-  bitmap_init (&free_map, disk_size (disk));
+  if (!bitmap_init (&free_map, disk_size (disk)))
+    goto exit1;
   bitmapio_read (&free_map, &free_map_file);
   hdr_sector = bitmap_find_and_set (&free_map);
   if (hdr_sector == BITMAP_ERROR)
@@ -129,13 +131,15 @@ filesys_remove (const char *name)
   dir_init (&dir, NUM_DIR_ENTRIES);
   dir_read (&dir, &root_dir_file);
   if (!dir_lookup (&dir, name, &hdr_sector))
-    goto exit;
+    goto exit1;
 
   /* Read the file header. */
-  filehdr_read (&filehdr, hdr_sector);
+  if (!filehdr_read (&filehdr, hdr_sector))
+    goto exit1;
 
   /* Allocate a block for the file header. */
-  bitmap_init (&free_map, disk_size (disk));
+  if (!bitmap_init (&free_map, disk_size (disk)))
+    goto exit2;
   bitmapio_read (&free_map, &free_map_file);
 
   /* Deallocate. */
@@ -150,9 +154,10 @@ filesys_remove (const char *name)
   success = true;
 
   /* Clean up. */
-  filehdr_destroy (&filehdr);
   bitmap_destroy (&free_map);
- exit:
+ exit2:
+  filehdr_destroy (&filehdr);
+ exit1:
   dir_destroy (&dir);
 
   return success;

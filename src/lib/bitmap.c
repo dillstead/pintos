@@ -5,7 +5,6 @@
 #include "lib.h"
 #include "malloc.h"
 
-typedef unsigned long elem_type;
 #define ELEM_BITS (sizeof (elem_type) * CHAR_BIT)
 #define ELEM_IDX(BIT_IDX) ((BIT_IDX) / ELEM_BITS)
 #define BIT_MASK(BIT_IDX) ((elem_type) 1 << ((BIT_IDX) % ELEM_BITS))
@@ -22,16 +21,16 @@ byte_cnt (const struct bitmap *b)
   return sizeof (elem_type) * elem_cnt (b);
 }
 
-void
+bool
 bitmap_init (struct bitmap *b, size_t bit_cnt) 
 {
   b->bit_cnt = bit_cnt;
   b->bits = malloc (byte_cnt (b));
   if (b->bits == NULL && bit_cnt > 0) 
-    return NULL;
+    return false;
 
   bitmap_set_all (b, false);
-  return b;
+  return true;
 }
 
 size_t

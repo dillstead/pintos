@@ -4,16 +4,19 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+typedef unsigned long elem_type;
+
 struct bitmap
   {
     size_t bit_cnt;
     elem_type *bits;
   };
 
-void bitmap_init (struct bitmap *, size_t bit_cnt);
+bool bitmap_init (struct bitmap *, size_t bit_cnt);
 void bitmap_destroy (struct bitmap *);
 
 size_t bitmap_size (const struct bitmap *);
+size_t bitmap_storage_size (const struct bitmap *);
 
 void bitmap_set (struct bitmap *, size_t idx, bool);
 void bitmap_set_all (struct bitmap *, bool);
