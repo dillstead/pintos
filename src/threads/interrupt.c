@@ -280,6 +280,7 @@ intr_kill (struct intr_frame *f)
     case SEL_UCSEG:
       printk ("%s: dying due to interrupt %#04x (%s).\n",
               thread_current ()->name, f->vec_no, intr_name (f->vec_no));
+      dump_intr_frame (f);
       thread_exit (); 
 
     case SEL_KCSEG:
