@@ -38,10 +38,11 @@
 
 /* Filesystem.
 
-   For the purposes of the "user processes" assignment (project
-   2), please treat all the code in the filesys directory as a
-   black box.  No changes should be needed.  For that project, a
-   single lock external to the filesystem code suffices.
+   For the purposes of the "user processes" and "virtual memory"
+   assignments (projects 2 and 3), please treat all the code in
+   the filesys directory as a black box.  No changes should be
+   needed.  For those projects, a single lock external to the
+   filesystem code suffices.
 
    The filesystem consists of a set of files.  Each file has a
    header called an `index node' or `inode', represented by
