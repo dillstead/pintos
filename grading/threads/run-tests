@@ -40,8 +40,7 @@ sub usage {
 	  "join-dummy", "join-invalid", "join-no",
 	  "priority-preempt", "priority-fifo", "priority-donate-one",
 	  "priority-donate-multiple", "priority-donate-nest",
-	  #"mlfqs-on", "mlfqs-off"
-	  )
+	  "mlfqs-on", "mlfqs-off")
     unless @TESTS > 0;
 
 # Find the directory that contains the grading files.
