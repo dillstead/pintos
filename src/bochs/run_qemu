@@ -1,0 +1,17 @@
+#! /usr/bin/perl
+
+die "command line includes empty string" if grep (/^$/, @ARGV);
+$cmdline = join ("\0", @ARGV) . "\0\0";
+die "command line exceeds 128 bytes" if length ($cmdline) > 128;
+$cmdline .= "\0" x (128 - length ($cmdline));
+
+open (DISK, "+<os.dsk");
+seek (DISK, 0x17e, 0);
+syswrite (DISK, $cmdline);
+close (DISK);
+exec "/home/blp/cs140/qemu/i386-softmmu/qemu "
+    . "-hda os.dsk "
+    . "-hdb filesys.bin "
+    . "-hdc scratch.bin "
+    . " -nographic"
+    ;

@@ -1,0 +1,8 @@
+romimage: file=$HOME/cs140/bochs-2.1.1/bios/BIOS-bochs-latest, address=0xf0000
+vgaromimage: $HOME/cs140/bochs-2.1.1/bios/VGABIOS-lgpl-latest
+ata0-master: type=disk, path=os.dsk, mode=flat, cylinders=306, heads=4, spt=17, translation=none
+ata0-slave: type=disk, path=filesys.bin, mode=flat, cylinders=1, heads=16, spt=63, translation=none
+boot: c
+ips: 1000000
+megs: 32
+com1: dev=/dev/tty
