@@ -30,7 +30,6 @@ have the entire machine, when you load into memory and run more than
 one process at a time, you must manage things correctly to maintain
 this illusion.
 
-FIXME
 Before we delve into the details of the new code that you'll be
 working with, you should probably undo the test cases from project 1.
 All you need to do is make sure the original @file{threads/test.c} is
@@ -67,6 +66,13 @@ it knows which memory the process is using).  Address spaces also
 handle loading the program into memory and starting up the process's
 execution.
 
+@item pagedir.c
+@itemx pagedir.h
+A simple manager for 80@var{x} page directories and page tables.
+Although you probably won't want to modify this code for this project,
+you may want to call some of its functions.  In particular,
+@code{pagedir_get_page()} may be helpful for accessing user memory.
+
 @item syscall.c
 @itemx syscall.h
 Whenever a user process wants to access some kernel functionality, it
@@ -83,8 +89,8 @@ will treat these terms as synonymous.  There is no standard
 distinction between them, although the Intel processor manuals define
 them slightly differently on 80@var{x}86.}  These files handle
 exceptions.  Currently all exceptions simply print a message and
-terminate the process.  @strong{You should not need to modify this
-file for project 2.}
+terminate the process.  Some, but not all, solutions to project 2
+require modifying @code{page_fault()} in this file.
 
 @item gdt.c
 @itemx gdt.c
@@ -120,10 +126,11 @@ system calls you must implement deal with the file system.  However,
 the focus of this project is not on the file system code, so we have
 provided a simple file system in the @file{filesys} directory.  You
 will want to look over the @file{filesys.h} and @file{file.h}
-interfaces to understand how to use the file system.  @strong{You
-should not modify the file system code for this project}.  Proper use
-of the file system routines now will make life much easier for project
-4, when you improve the file system implementation.
+interfaces to understand how to use the file system, and especially
+its many limitations.  @strong{You should not modify the file system
+code for this project}.  Proper use of the file system routines now
+will make life much easier for project 4, when you improve the file
+system implementation.
 
 You need to be able to create and format simulated disks.  The
 @command{pintos} program provides this functionality with its
@@ -185,15 +192,49 @@ reference disk and copy that over whenever you trash your
 @file{fs.dsk} beyond a useful state, which may happen occasionally
 while debugging.
 
+@node Virtual Memory Layout
+@section Virtual Memory Layout
+
+Virtual memory in Pintos is divided into two regions: user virtual
+memory and kernel virtual memory.  User virtual memory ranges from
+virtual address 0 up to @code{PHYS_BASE}, which is defined in
+@file{threads/mmu.h} and defaults to @t{0xc0000000} (3 GB).  Kernel
+virtual memory occupies the rest of the virtual address space, from
+@code{PHYS_BASE} up to 4 GB.
+
+User virtual memory is per-process.  Conceptually, each process is
+free to use the entire space of user virtual memory however it
+chooses.  When the kernel switches from one process to another, it
+also switches user virtual address spaces by switching the processor's
+page directory base register (see @code{pagedir_activate() in
+@file{userprog/pagedir.c}}.
+
+Kernel virtual memory is global.  It is always mapped the same way,
+regardless of what user process or kernel thread is running.  In
+Pintos, kernel virtual memory is mapped one-to-one to physical
+memory.  That is, virtual address @code{PHYS_ADDR} accesses physical
+address 0, virtual address @code{PHYS_ADDR} + @t{0x1234} access
+physical address @t{0x1234}, and so on up to the size of the machine's
+physical memory.
+
+User programs can only access user virtual memory.  An attempt to
+access kernel virtual memory will cause a page fault, handled by
+@code{page_fault()} in @file{userprog/exception.c}, and the process
+will be terminated.  Kernel threads can access both kernel virtual
+memory and, if a user process is running, the user virtual memory of
+the running process.  However, an attempt to access memory at a user
+virtual address that doesn't have a page mapped into it will also
+cause a page fault.
+
 @node Global Requirements
 @section Global Requirements
 
 For testing and grading purposes, we have some simple requirements for
 your output.  The kernel should print out the program's name and exit
-status whenever a process exits.  Aside from this, it should print out
-no other messages.  You may understand all those debug messages, but
-we won't, and it just clutters our ability to see the stuff we care
-about.
+status whenever a process exits, e.g.@: @code{shell: exit(-1)}.  Aside
+from this, it should print out no other messages.  You may understand
+all those debug messages, but we won't, and it just clutters our
+ability to see the stuff we care about.
 
 Additionally, while it may be useful to hard-code which process will
 run at startup while debugging, before you submit your code you must
@@ -406,18 +447,26 @@ a one-to-one mapping, so that the same values in both identify the
 same process, or you can use a more complex mapping.  It's up to you.
 
 @item
-@b{I can't seem to figure out how to read from and write to
+@b{I can't seem to figure out how to read from and write to user
 memory. What should I do?}
 
-Here are some pointers:
+The kernel must treat user memory delicately.  The user can pass a
+null pointer or an invalid pointer (one that doesn't point to any
+memory at all), or a kernel pointer (above @code{PHYS_BASE}).  All of
+these must be rejected without harm to the kernel or other running
+processes.
 
-FIXME
+There are at least two reasonable ways to access user memory.  First,
+you can translate user addresses (below @code{PHYS_BASE}) into kernel
+addresses (above @code{PHYS_BASE}) using the functions in
+@file{pagedir.c}, and then access kernel memory.  Second, you can
+dereference user pointers directly and handle page faults by
+terminating the process.  In either case, you'll need to reject kernel
+pointers as a special case.
 
 @item
 @b{I'm also confused about reading from and writing to the stack. Can
 you help?}
-
-FIXME: relevant?
 
 @itemize @bullet
 @item
@@ -730,7 +779,7 @@ are also the means by which a user program can request services
 In the 80@var{x}86 architecture, the @samp{int} instruction is the
 most commonly used means for invoking system calls.  This instruction
 is handled in the same way as other software exceptions.  In Pintos,
-user program invoke @samp{int $0x30} to make a system call.  The
+user programs invoke @samp{int $0x30} to make a system call.  The
 system call number and any additional arguments are expected to be
 pushed on the stack in the normal fashion before invoking the
 interrupt.
