@@ -189,17 +189,17 @@ schedule_tail (struct thread *prev)
 {
   struct thread *cur = thread_current ();
 
+  ASSERT (intr_get_level () == IF_OFF);
+
 #ifdef USERPROG
   addrspace_activate (&cur->addrspace);
 #endif
 
   if (prev != NULL && prev->status == THREAD_DYING) 
     thread_destroy (prev);
-
-  intr_enable ();
 }
 
-void
+static void
 thread_schedule (void) 
 {
   struct thread *cur, *next, *prev;
@@ -228,11 +228,14 @@ thread_schedule (void)
 void
 thread_yield (void) 
 {
+  enum if_level old_level;
+  
   ASSERT (!intr_context ());
 
-  intr_disable ();
+  old_level = intr_disable ();
   thread_ready (thread_current ());
   thread_schedule ();
+  intr_set_level (old_level);
 }
 
 void
