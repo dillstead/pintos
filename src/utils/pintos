@@ -1,22 +1,30 @@
 #! /usr/bin/perl
 
-$sim = "bochs";
-$debug = "";
 $mem = 4;
-$headless = 0;
+$serial_out = 1;
 while (@ARGV) {
     my ($arg) = shift (@ARGV);
     if ($arg =~ /--(bochs|qemu|gsx)$/) {
+	die "$arg conflicts with --$sim\n" if defined $sim;
 	$sim = $1;
-    } elsif ($arg =~ /--(monitor|gdb)$/) {
+    } elsif ($arg =~ /--(no-debug|monitor|gdb)$/) {
+	die "$debug conflicts with --$debug" if defined $debug;
 	$debug = $1;
     } elsif ($arg eq 'run') {
 	run_vm (@ARGV);
 	exit 0;
     } elsif ($arg =~ /^mem(?:ory)?=(\d+)/) {
 	$mem = $1;
-    } elsif ($arg eq '--headless') {
-	$headless = 1;
+    } elsif ($arg eq '--no-vga' || $arg eq '-nv') {
+	print "warning: --no-vga conflicts with --terminal\n"
+	    if $vga eq 'terminal';
+	$vga = 'none';
+    } elsif ($arg eq '--no-serial' || $arg eq '-ns') {
+	$serial_out = 0;
+    } elsif ($arg eq '--terminal' || $arg eq '-t') {
+	print "warning: --terminal conflicts with --no-vga\n"
+	    if $vga eq 'none';
+	$vga = 'terminal';
     } elsif ($arg eq 'make-disk') {
 	my ($force) = @ARGV > 0 && $ARGV[0] eq '--force';
 	shift @ARGV if $force;
@@ -77,6 +85,8 @@ while (@ARGV) {
 	close (SRC);
 
 	exit 0;
+    } elsif ($arg eq 'help' || $arg eq '--help') {
+	usage (0);
     } else {
 	die "unknown option `$arg'\n";
     }
@@ -94,14 +104,20 @@ sub usage {
     print "  put HOSTFN [GUESTFN]    copy HOSTFN into VM (as GUESTFN)\n";
     print "  get GUESTFN [HOSTFN]    copy GUESTFN out of VM (to HOSTFN)\n";
     print "  help                    print this help message and exit\n";
-    print "Available options:\n";
-    print "  --bochs       Use Bochs as simulator (default)\n";
-    print "  --qemu        Use qemu as simulator\n";
-    print "  --gsx         Use VMware GSX Server 3.x as simulator\n";
-    print "  --monitor     Debug with simulator's monitor\n";
-    print "  --gdb	   Debug with gdb\n";
-    print "  --mem=MB	   Run VM with MB megabytes of physical memory\n";
-    print "  --headless    No VGA display.  Send VM output to stdout\n";
+    print "Simulator options:\n";
+    print "  --bochs          (default) Use Bochs as simulator\n";
+    print "  --qemu           Use qemu as simulator\n";
+    print "  --gsx            Use VMware GSX Server 3.x as simulator\n";
+    print "Debugger options:\n";
+    print "  --no-debug       (default) No debugger\n";
+    print "  --monitor        Debug with simulator's monitor\n";
+    print "  --gdb            Debug with gdb\n";
+    print "Display options: (default is VGA + serial)\n";
+    print "  -nv, --no-vga    No VGA display\n";
+    print "  -ns, --no-serial No serial output\n";
+    print "  -t, --terminal   Display VGA in terminal (Bochs only)\n";
+    print "VM options:\n";
+    print "  --mem=MB         Run VM with MB megabytes of physical memory\n";
     exit $exitcode;
 }
 
@@ -118,6 +134,10 @@ sub create_disk {
 sub run_vm {
     my (@disks) = (undef, undef, undef, undef);
 
+    $sim = "bochs" if !defined $sim;
+    $debug = "no-debug" if !defined $debug;
+    $vga = "window" if !defined $vga;
+
     $disks[0] = "os.dsk";
     $disks[1] = "fs.dsk" if -e "fs.dsk";
     $disks[2] = "scratch.dsk" if -e "scratch.dsk";
@@ -127,7 +147,7 @@ sub run_vm {
     write_cmd_line ($disks[0], @_);
 
     if ($sim eq 'bochs') {
-	if ($debug eq '') {
+	if ($debug eq 'no-debug') {
 	    $bin = 'bochs';
 	} elsif ($debug eq 'monitor') {
 	    $bin = 'bochs-dbg';
@@ -150,23 +170,38 @@ sub run_vm {
 	print BOCHSRC "ips: 1000000\n";
 	print BOCHSRC "clock: sync=none, time0=0\n";
 	print BOCHSRC "megs: $mem\n";
-	print BOCHSRC "com1: dev=/dev/tty\n" if $headless;
+	print BOCHSRC "log: bochsout.txt\n";
+	if ($vga ne 'terminal') {
+	    print BOCHSRC "com1: enabled=1, dev=/dev/tty\n"
+		if $serial_stdio;
+	    print BOCHSRC "display_library: nogui\n"
+		if $vga eq 'none';
+	} else {
+	    print BOCHSRC "display_library: term\n";
+	}
 	close (BOCHSRC);
 	run_command ($bin, '-q');
     } elsif ($sim eq 'qemu') {
+	print "warning: qemu doesn't support --terminal\n"
+	    if $vga eq 'terminal';
 	my (@cmd) = ('qemu');
 	push (@cmd, '-hda', $disks[0]) if defined $disks[0];
 	push (@cmd, '-hdb', $disks[1]) if defined $disks[1];
 	push (@cmd, '-hdc', $disks[2]) if defined $disks[2];
 	push (@cmd, '-hdd', $disks[3]) if defined $disks[3];
 	push (@cmd, '-m', $mem);
-	push (@cmd, '-nographic') if $headless;
+	push (@cmd, '-nographic') if $vga eq 'none';
+	push (@cmd, '-serial', 'stdio') if $serial_stdio && $vga ne 'none';
 	push (@cmd, '-S') if $debug eq 'monitor';
 	push (@cmd, '-s') if $debug eq 'gdb';
 	run_command (@cmd);
     } elsif ($sim eq 'gsx') {
-	print "warning: --$debug not supported by VMware GSX Server, ignoring"
-	    if $debug ne '';
+	print "warning: VMware GSX Server doesn't support --$debug\n"
+	    if $debug ne 'no-debug';
+	print "warning: VMware GSX Server doesn't support --no-vga\n"
+	    if $vga eq 'none';
+	print "warning: VMware GSX Server doesn't support --terminal\n"
+	    if $vga eq 'terminal';
 
 	open (VMX, ">pintos.vmx") or die "pintos.vmx: create: $!\n";
 	chmod 0777 & ~umask, "pintos.vmx";
