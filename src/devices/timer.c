@@ -66,9 +66,9 @@ timer_sleep (int64_t ticks)
 {
   int64_t start = timer_ticks ();
 
+  ASSERT (intr_get_level () == INTR_ON);
   while (timer_elapsed (start) < ticks) 
-    if (intr_get_level () == INTR_ON)
-      thread_yield ();
+    thread_yield ();
 }
 
 /* Returns MS milliseconds in timer ticks, rounding up. */
