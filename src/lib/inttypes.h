@@ -1,48 +1,48 @@
 #ifndef __LIB_INTTYPES_H
 #define __LIB_INTTYPES_H
 
+#include <stdint.h>
+
 #define PRId8 "hhd"
-#define PRId16 "hd"
-#define PRId32 "d"
-#define PRId64 "lld"
-
 #define PRIi8 "hhi"
-#define PRIi16 "hi"
-#define PRIi32 "i"
-#define PRIi64 "lli"
-
 #define PRIo8 "hho"
-#define PRIo16 "ho"
-#define PRIo32 "o"
-#define PRIo64 "llo"
-
 #define PRIu8 "hhu"
-#define PRIu16 "hu"
-#define PRIu32 "u"
-#define PRIu64 "llu"
-
 #define PRIx8 "hhx"
-#define PRIx16 "hx"
-#define PRIx32 "x"
-#define PRIx64 "llx"
-
 #define PRIX8 "hhX"
+
+#define PRId16 "hd"
+#define PRIi16 "hi"
+#define PRIo16 "ho"
+#define PRIu16 "hu"
+#define PRIx16 "hx"
 #define PRIX16 "hX"
+
+#define PRId32 "d"
+#define PRIi32 "i"
+#define PRIo32 "o"
+#define PRIu32 "u"
+#define PRIx32 "x"
 #define PRIX32 "X"
+
+#define PRId64 "lld"
+#define PRIi64 "lli"
+#define PRIo64 "llo"
+#define PRIu64 "llu"
+#define PRIx64 "llx"
 #define PRIX64 "llX"
 
-#define PRIdMAX "lld"
-#define PRIiMAX "lli"
-#define PRIoMAX "llo"
-#define PRIuMAX "llu"
-#define PRIxMAX "llx"
-#define PRIXMAX "llX"
+#define PRIdMAX "jd"
+#define PRIiMAX "ji"
+#define PRIoMAX "jo"
+#define PRIuMAX "ju"
+#define PRIxMAX "jx"
+#define PRIXMAX "jX"
 
-#define PRIdPTR "d"
-#define PRIiPTR "i"
-#define PRIoPTR "o"
-#define PRIuPTR "u"
-#define PRIxPTR "x"
-#define PRIXPTR "X"
+#define PRIdPTR "td"
+#define PRIiPTR "ti"
+#define PRIoPTR "to"
+#define PRIuPTR "tu"
+#define PRIxPTR "tx"
+#define PRIXPTR "tX"
 
 #endif /* lib/inttypes.h */
