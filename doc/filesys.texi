@@ -47,7 +47,9 @@ kernel command line.
 
 @item filesys.h
 @itemx filesys.c
-Top-level interface to the file system.
+Top-level interface to the file system.  Please read the long comment
+near the top of @file{filesys.c}, which introduces some details of the
+file system code as provided.
 
 @item directory.h
 @itemx directory.c
@@ -83,6 +85,44 @@ which you will remove.
 
 While most of your work will be in @file{filesys}, you should be
 prepared for interactions with all previous parts (as usual).
+
+@node File System Synchronization
+@section Synchronization
+
+The file system as provided requires external synchronization, that is,
+callers must ensure that only one thread can be running in the file
+system code at once.  Your submission should use a more finely granular
+synchronization strategy.  You will need to consider synchronization for
+each type of file system object.  The provided code uses the following
+strategies:
+
+@itemize @bullet
+@item
+The free map and root directory are read each time they are needed for
+an operation, and if they are modified, they are written back before the
+operation completes.  Thus, the free map is always consistent from an
+external viewpoint.
+
+@item
+Inodes are immutable in the provided file system, that is, their content
+never changes between creation and deletion, and furthermore only one
+copy of an inode's data is maintained in memory at once, even if the
+file is open in multiple contexts.
+
+@item
+File data doesn't have to be consistent because it's just not part of
+the model.  In Unix and many other operating systems, a read of a file
+by one process when the file is being written by another process can
+show inconsistent results: it can show that none, all, or part of the
+write has completed.  (However, after the write system call returns to
+its caller, all subsequent readers must see the change.)  Similarly,
+when two threads write to the same part of a file at the same time,
+their data may be arbitrarily interleaved.
+
+External synchronization of the provided file system ensures that reads
+and writes are fully serialized, but your file system doesn't have to
+maintain full serialization as long as it follows the rules above.
+@end itemize
 
 @node Problem 4-1 Large Files
 @section Problem 4-1: Large Files
@@ -248,6 +288,9 @@ As always, submit a design document file summarizing your design.  Be
 sure to cover the following points:
 
 @itemize @bullet
+@item
+How did you choose to synchronize file system operations?
+
 @item
 How did you structure your inodes? How many blocks did you access
 directly, via single-indirection, and/or via double-indirection?  Why?
@@ -437,13 +480,9 @@ without the @code{length} or @code{sector_cnt} members.
 That means you'll have to change the way the inode implementation
 accesses its corresponding on-disk inode right now, since it currently
 just embeds a @struct{inode_disk} in @struct{inode} and reads the
-corresponding sector in from disk when it's created.
-
-There are two reasons for not storing inode data in @struct{inode}.
-First, keeping extra copies of inodes would be cheating the 64-block
-limitation that we place on your cache.  Second, if two processes have
-the same file open, you will create a huge synchronization headache for
-yourself if each @struct{inode} has its own copy of the on-disk inode.
+corresponding sector in from disk when it's created.  Keeping extra
+copies of inodes would be cheating the 64-block limitation that we place
+on your cache.
 
 You can store pointers to inode data in @struct{inode}, if you want, and
 you can store some other small amount of information to help you find
