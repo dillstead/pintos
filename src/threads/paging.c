@@ -85,10 +85,26 @@ void
 pagedir_destroy (uint32_t *pd) 
 {
   void *kpage, *upage;
+  unsigned pde_idx;
 
+  /* Destroy user pages. */
   for (kpage = pagedir_first (pd, &upage); kpage != NULL;
        kpage = pagedir_next (pd, &upage)) 
     palloc_free (kpage);
+
+  /* Destroy page table pages. */
+  for (pde_idx = 0; pde_idx < pd_no (PHYS_BASE); pde_idx++) 
+    {
+      uint32_t pde = pd[pde_idx];
+
+      if (pde != 0) 
+        {
+          uint32_t *pt = pde_get_pt (pde);
+          palloc_free (pt);
+        }
+    }
+
+  /* Destroy page directory. */
   palloc_free (pd);
 }
 
