@@ -295,6 +295,17 @@ Write @var{size} bytes from @var{buffer} to the open file @var{fd}.
 Returns the number of bytes actually written, or -1 if the file could
 not be written.
 
+@item SYS_seek
+@itemx void seek (int @var{fd}, unsigned @var{position})
+Changes the next byte to be read or written in open file @var{fd} to
+@var{position}, expressed in bytes from the beginning of the file.
+(Thus, a @var{position} of 0 is the file's start.)
+
+@item SYS_tell
+@itemx unsigned tell (int @var{fd})
+Returns the position of the next byte to be read or written in open
+file @var{fd}, expressed in bytes from the beginning of the file.
+
 @item SYS_close
 @itemx void close (int @var{fd})
 Close file descriptor @var{fd}.
@@ -378,20 +389,21 @@ free.
 You need to modify @file{tests/Makefile}.
 
 @item
-@b{Help, Solaris only allows 128 open files at once!}
+@b{What's the difference between @code{tid_t} and @code{pid_t}?}
 
-Solaris limits the number of file descriptors a process may keep open
-at any given time.  The default limit is 128 open file descriptors.
+A @code{tid_t} identifies a kernel thread, which may have a user
+process running in it (if created with @code{thread_execute()}) or not
+(if created with @code{thread_create()}).  It is a data type used only
+in the kernel.
 
-To see the current limit for all new processes type @samp{limit} at
-the shell prompt and look at the line titled ``descriptors''. To
-increase this limit to the maximum allowed type @code{ulimit
-descriptors} in a @command{csh} derived shell or @code{unlimit
-descriptors} in a @command{sh} derived shell.  This will increase the
-number of open file descriptors your Pintos process can use, but it
-will still be limited.
+A @code{pid_t} identifies a user process.  It is used by user
+processes and the kernel in the @code{exec} and @code{join} system
+calls.
 
-Refer to the @command{limit(1)} man page for more information.
+You can choose whatever suitable types you like for @code{tid_t} and
+@code{pid_t}.  By default, they're both @code{int}.  You can make them
+a one-to-one mapping, so that the same values in both identify the
+same process, or you can use a more complex mapping.  It's up to you.
 
 @item
 @b{I can't seem to figure out how to read from and write to
@@ -465,7 +477,7 @@ Also, the stack should always be aligned to a 4-byte boundary, but
 @b{Is @code{PHYS_BASE} fixed?}
 
 No.  You should be able to support @code{PHYS_BASE} values that are
-any multiple of @t{0x10000000) from @t{0x80000000} to @t{0xc0000000},
+any multiple of @t{0x10000000} from @t{0x80000000} to @t{0xc0000000},
 simply via recompilation.
 @end enumerate
 
