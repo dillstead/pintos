@@ -665,7 +665,7 @@ Make the timer tick more slowly by decreasing @code{TIMER_FREQ} in
 @file{timer.h} to its minimum value of 19.
 
 @item
-Increase the serial output speed to the maximum of 115200 bps by
+Increase the serial output speed to the maximum of 115,200 bps by
 modifying the call to @func{set_serial} in @func{serial_init_poll} in
 @file{devices/serial.c}.
 @end itemize
