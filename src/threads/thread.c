@@ -337,7 +337,9 @@ destroy_thread (struct thread *t)
   ASSERT (t->status == THREAD_DYING);
   ASSERT (t != thread_current ());
 
+#ifdef USERPROG
   addrspace_destroy (t);
+#endif
   palloc_free (t);
 }
 
