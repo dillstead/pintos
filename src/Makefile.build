@@ -115,4 +115,7 @@ clean:
 	$(RM) -f kernel.o kernel.lds.s
 	$(RM) -f kernel.bin loader.bin
 
+Makefile: ../../Makefile.build
+	cp $< $@
+
 -include $(DEPENDS)
