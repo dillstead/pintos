@@ -1,11 +1,19 @@
 #include "devices/timer.h"
 #include <debug.h>
+#include <round.h>
 #include "threads/interrupt.h"
 #include "threads/io.h"
   
 #if TIMER_FREQ < 19
 #error 8254 timer requires TIMER_FREQ >= 19
 #endif
+#if TIMER_FREQ > 1000
+#error TIMER_FREQ <= 1000 recommended
+#endif
+
+/* Number of timer ticks that a process gets before being
+   preempted. */
+#define TIME_SLICE 1
 
 /* Number of timer ticks since OS booted. */
 static volatile int64_t ticks;
@@ -51,7 +59,7 @@ timer_elapsed (int64_t then)
 void
 timer_msleep (int64_t ms) 
 {
-  int64_t ticks = (int64_t) ms * TIMER_FREQ / 1000;
+  int64_t ticks = (int64_t) DIV_ROUND_UP (ms * TIMER_FREQ, 1000);
   int64_t start = timer_ticks ();
 
   while (timer_elapsed (start) < ticks) 
@@ -79,5 +87,6 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
-  intr_yield_on_return ();
+  if (ticks % TIME_SLICE == 0)
+    intr_yield_on_return ();
 }
