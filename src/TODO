@@ -1,5 +1,3 @@
-* Write user test programs.
-
 * Write, test join.
 
 * Write, test user programs.
@@ -17,8 +15,6 @@
   - Test gdb version.
 
 * Write "tour".
-
-* Get rid of 16550a.h header.
 
 ----------------------------------------------------------------------
 

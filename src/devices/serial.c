@@ -1,20 +1,52 @@
 #include "devices/serial.h"
 #include <debug.h>
-#include "devices/16550a.h"
 #include "devices/intq.h"
 #include "devices/timer.h"
 #include "threads/io.h"
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+
+/* Register definitions for the 16550A UART used in PCs.
+   The 16550A has a lot more going on than shown here, but this
+   is all we need. */
 
+/* I/O port base address for the first serial port. */
+#define IO_BASE 0x3f8
+
+/* DLAB=0 registers. */
+#define RBR_REG (IO_BASE + 0)   /* Receiver Buffer Reg. (read-only). */
+#define THR_REG (IO_BASE + 0)   /* Transmitter Holding Reg. (write-only). */
+#define IER_REG (IO_BASE + 1)   /* Interrupt Enable Reg. (read-only). */
+#define FCR_REG (IO_BASE + 2)   /* FIFO Control Reg. (write-only). */
+#define LCR_REG (IO_BASE + 3)   /* Line Control Register. */
+#define MCR_REG (IO_BASE + 4)   /* MODEM Control Register. */
+#define LSR_REG (IO_BASE + 5)   /* Line Status Register (read-only). */
+
+/* DLAB=1 registers. */
+#define LS_REG (IO_BASE + 0)    /* Divisor Latch (LSB). */
+#define MS_REG (IO_BASE + 1)    /* Divisor Latch (MSB). */
+
+/* Interrupt Enable Register bits. */
+#define IER_XMIT 0x02           /* Interrupt when transmit finishes. */
+
+/* Line Control Register bits. */
+#define LCR_N81 0x03            /* No parity, 8 data bits, 1 stop bit. */
+#define LCR_DLAB 0x80           /* Divisor Latch Access Bit (DLAB). */
+
+/* MODEM Control Register. */
+#define MCR_OUT2 0x08           /* Output line 2. */
+
+/* Line Status Register. */
+#define LSR_THRE 0x20           /* THR Empty. */
+
 /* Transmission mode. */
 static enum { UNINIT, POLL, QUEUE } mode;
 
 /* Data to be transmitted. */
 static struct intq txq;
 
-static void set_serial (int bps, int bits, enum parity_type parity, int stop);
+static void set_serial (int bps);
 static void putc_poll (uint8_t);
 static void write_ier (void);
 static intr_handler_func serial_interrupt;
@@ -29,8 +61,8 @@ serial_init_poll (void)
   ASSERT (mode == UNINIT);
   outb (IER_REG, 0);                    /* Turn off all interrupts. */
   outb (FCR_REG, 0);                    /* Disable FIFO. */
-  set_serial (9600, 8, NONE, 1);        /* 9600 bps, N-8-1. */
-  outb (MCR_REG, 8);                    /* Turn on OUT2 output line. */
+  set_serial (9600);                    /* 9600 bps, N-8-1. */
+  outb (MCR_REG, MCR_OUT2);             /* Turn on OUT2 output line. */
   intq_init (&txq, "serial xmit");
   mode = POLL;
 } 
@@ -89,24 +121,23 @@ serial_flush (void)
     putc_poll (intq_getc (&txq));
   intr_set_level (old_level);
 }
-
-/* Configures the serial port for BPS bits per second, BITS bits
-   per byte, the given PARITY, and STOP stop bits. */
+
+/* Configures the serial port for BPS bits per second. */
 static void
-set_serial (int bps, int bits, enum parity_type parity, int stop)
+set_serial (int bps)
 {
   int baud_base = 1843200 / 16;         /* Base rate of 16550A. */
   uint16_t divisor = baud_base / bps;   /* Clock rate divisor. */
 
   /* Enable DLAB. */
-  outb (LCR_REG, make_lcr (bits, parity, stop, false, true));
+  outb (LCR_REG, LCR_N81 | LCR_DLAB);
 
   /* Set baud rate. */
   outb (LS_REG, divisor & 0xff);
   outb (MS_REG, divisor >> 8);
   
   /* Reset DLAB. */
-  outb (LCR_REG, make_lcr (bits, parity, stop, false, false));
+  outb (LCR_REG, LCR_N81);
 }
 
 /* Update interrupt enable register.
@@ -116,7 +147,6 @@ write_ier (void)
 {
   outb (IER_REG, intq_empty (&txq) ? 0 : IER_XMIT);
 }
-
 
 /* Polls the serial port until it's ready,
    and then transmits BYTE. */
