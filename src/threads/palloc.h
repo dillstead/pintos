@@ -1,10 +1,6 @@
 #ifndef HEADER_PALLOC_H
 #define HEADER_PALLOC_H 1
 
-/* Page allocator.  Hands out memory in page-size chunks.
-   See malloc.h for an allocator that hands out smaller
-   chunks. */
-
 #include <stdint.h>
 
 enum palloc_flags

@@ -41,9 +41,10 @@ static bool format_filesys;
 static char *initial_program;
 #endif
 
-static thread_func main_thread;
 static void ram_init (void);
 static void argv_init (void);
+
+int main (void) NO_RETURN;
 
 int
 main (void)
@@ -60,6 +61,7 @@ main (void)
   argv_init ();
 
   /* Initialize memory system, segments, paging. */
+  thread_init ();
   palloc_init ();
   paging_init ();
 #ifdef USERPROG
@@ -79,30 +81,29 @@ main (void)
   exception_init ();
 #endif
 
-  /* Do everything else in a system thread. */
-  thread_init ();
-  thread_create ("main", main_thread, NULL);
+  /* Start thread scheduler and enable interrupts. */
   thread_start ();
-}
 
-/* Initial thread. */
-static void
-main_thread (void *aux UNUSED) 
-{
 #ifdef FILESYS
+  /* Initialize filesystem. */
   disk_init ();
   filesys_init (format_filesys);
   fsutil_run ();
 #endif
 
+  printk ("Boot complete.\n");
+
 #ifdef USERPROG
+  /* Run a user program. */
   if (initial_program != NULL)
-    thread_execute (initial_program);
-  else
-    PANIC ("no initial program specified");
-#else
-  PANIC ("boot successful");
+    {
+      printk ("\nExecuting '%s':\n", initial_program);
+      thread_execute (initial_program); 
+    }
 #endif
+
+  /* Terminate this thread. */
+  thread_exit ();
 }
 
 /* Clear BSS and obtain RAM size from loader. */

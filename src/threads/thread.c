@@ -32,43 +32,52 @@ struct kernel_thread_frame
 
 static void kernel_thread (thread_func *, void *aux);
 
+static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
 static struct thread *new_thread (const char *name);
-static bool is_thread (struct thread *t);
-static void *alloc_frame (struct thread *t, size_t size);
-static void destroy_thread (struct thread *t);
+static void init_thread (struct thread *, const char *name);
+static bool is_thread (struct thread *);
+static void *alloc_frame (struct thread *, size_t size);
+static void destroy_thread (struct thread *);
 static void schedule (void);
 void schedule_tail (struct thread *prev);
 
-/* Initializes the threading system.  After calling, create some
-   threads with thread_create() or thread_execute(), then start
-   the scheduler with thread_start(). */
+/* Initializes the threading system by transforming the code
+   that's currently running into a thread.  Note that this is
+   possible only because the loader was careful to put the bottom
+   of the stack at a page boundary; it won't work in general.
+   Also initializes the run queue.
+
+   After calling this function, be sure to initialize the page
+   allocator before trying to create any threads with
+   thread_create(). */
 void
 thread_init (void) 
 {
+  struct thread *t;
+  
   ASSERT (intr_get_level () == INTR_OFF);
+
+  /* Set up a thread structure for the running thread. */
+  t = running_thread ();
+  init_thread (t, "main");
+  t->status = THREAD_RUNNING;
 
   /* Initialize run queue. */
   list_init (&run_queue);
-
-  /* Create idle thread. */
-  idle_thread = thread_create ("idle", idle, NULL);
-  idle_thread->status = THREAD_BLOCKED;
 }
 
-/* Starts the thread scheduler.  The caller should have created
-   some threads with thread_create() or thread_execute().  Never
-   returns to the caller. */
+/* Starts preemptive thread scheduling by enabling interrupts.
+   Also creates the idle thread. */
 void
 thread_start (void) 
 {
-  struct thread *t = next_thread_to_run ();
-  if (t->status == THREAD_READY)
-    list_remove (&t->rq_elem);
-  t->status = THREAD_RUNNING;
-  switch_threads (NULL, t);
+  /* Create idle thread. */
+  idle_thread = thread_create ("idle", idle, NULL);
+  idle_thread->status = THREAD_BLOCKED;
 
-  NOT_REACHED ();
+  /* Enable interrupts. */
+  intr_enable ();
 }
 
 /* Creates a new kernel thread named NAME, which executes
@@ -180,26 +189,20 @@ thread_name (struct thread *t)
   return t->name;
 }
 
-/* Returns the running thread. */
+/* Returns the running thread.
+   This is running_thread() plus a couple of sanity checks. */
 struct thread *
 thread_current (void) 
 {
-  uint32_t *esp;
-  struct thread *t;
-
-  /* Copy the CPU's stack pointer into `esp', and then round that
-     down to the start of a page.  Because `struct thread' is
-     always at the beginning of a page and the stack pointer is
-     somewhere in the middle, this locates the curent thread. */
-  asm ("movl %%esp, %0\n" : "=g" (esp));
-  t = pg_round_down (esp);
-
+  struct thread *t = running_thread ();
+  
   /* Make sure T is really a thread.
-     If this assertion fires, then your thread may have
-     overflowed its stack.  Each thread has less than 4 kB of
-     stack, so a few big automatic arrays or moderate recursion
-     can cause stack overflow. */
+     If either of these assertions fire, then your thread may
+     have overflowed its stack.  Each thread has less than 4 kB
+     of stack, so a few big automatic arrays or moderate
+     recursion can cause stack overflow. */
   ASSERT (is_thread (t));
+  ASSERT (t->status == THREAD_RUNNING);
 
   return t;
 }
@@ -274,6 +277,20 @@ kernel_thread (thread_func *function, void *aux)
   thread_exit ();       /* If function() returns, kill the thread. */
 }
 
+/* Returns the running thread. */
+struct thread *
+running_thread (void) 
+{
+  uint32_t *esp;
+
+  /* Copy the CPU's stack pointer into `esp', and then round that
+     down to the start of a page.  Because `struct thread' is
+     always at the beginning of a page and the stack pointer is
+     somewhere in the middle, this locates the curent thread. */
+  asm ("movl %%esp, %0\n" : "=g" (esp));
+  return pg_round_down (esp);
+}
+
 /* Returns true if T appears to point to a valid thread. */
 static bool
 is_thread (struct thread *t) 
@@ -293,14 +310,20 @@ new_thread (const char *name)
   
   t = palloc_get (PAL_ZERO);
   if (t != NULL)
-    {
-      strlcpy (t->name, name, sizeof t->name);
-      t->stack = (uint8_t *) t + PGSIZE;
-      t->status = THREAD_BLOCKED;
-      t->magic = THREAD_MAGIC;
-    }
-  
+    init_thread (t, name);
+
   return t;
+}
+
+/* Initializes T as a new thread named NAME. */
+static void
+init_thread (struct thread *t, const char *name)
+{
+  memset (t, 0, sizeof *t);
+  strlcpy (t->name, name, sizeof t->name);
+  t->stack = (uint8_t *) t + PGSIZE;
+  t->status = THREAD_BLOCKED;
+  t->magic = THREAD_MAGIC;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -360,7 +383,7 @@ destroy_thread (struct thread *t)
 void
 schedule_tail (struct thread *prev) 
 {
-  struct thread *cur = thread_current ();
+  struct thread *cur = running_thread ();
   
   ASSERT (intr_get_level () == INTR_OFF);
 
@@ -380,18 +403,17 @@ schedule_tail (struct thread *prev)
 static void
 schedule (void) 
 {
-  struct thread *cur = thread_current ();
+  struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
+  struct thread *prev = NULL;
 
   ASSERT (intr_get_level () == INTR_OFF);
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
 
   if (cur != next)
-    {
-      struct thread *prev = switch_threads (cur, next);
-      schedule_tail (prev); 
-    }
+    prev = switch_threads (cur, next);
+  schedule_tail (prev); 
 }
 
 /* Offset of `stack' member within `struct thread'.

@@ -181,9 +181,10 @@ read_sector:
 	
 ##### Jump to kernel entry point.
 
-	movl $LOADER_PHYS_BASE + LOADER_BASE, %esp
+	movl $LOADER_PHYS_BASE + 0x20000, %esp
 	movl $LOADER_PHYS_BASE + LOADER_KERN_BASE, %eax
-	jmp *%eax
+	call *%eax
+	jmp panic
 
 ##### GDT
 
