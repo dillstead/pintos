@@ -553,8 +553,10 @@ A semaphore initialized to 0 can be useful for waiting for an event
 that will happen exactly once.  For example, suppose thread @var{A}
 starts another thread @var{B} and wants to wait for @var{B} to signal
 that some activity is complete.  @var{A} can create a semaphore
-initialized to 0, pass it to @var{B}, and then ``down'' the semaphore.
-When @var{B} finishes its activity, it ``ups'' the semaphore.
+initialized to 0, pass it to @var{B} as it starts it, and then
+``down'' the semaphore.  When @var{B} finishes its activity, it
+``ups'' the semaphore.  This works regardless of whether @var{A}
+``downs'' the semaphore or @var{B} ``ups'' it first.
 
 Pintos declared its semaphore type and operations on them in
 @file{threads/synch.h}.
