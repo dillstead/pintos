@@ -6,6 +6,8 @@
 #include "threads/mmu.h"
 #include "threads/palloc.h"
 
+static uint32_t *active_pd (void);
+
 /* Creates a new page directory that has mappings for kernel
    virtual addresses, but none for user virtual addresses.
    Returns the new page directory, or a null pointer if memory
@@ -43,10 +45,11 @@ pagedir_destroy (uint32_t *pd)
   palloc_free_page (pd);
 }
 
-/* Returns the mapping of user virtual address UADDR in page
-   directory PD into a kernel virtual address.
-   If UADDR is unmapped, behavior varies based on CREATE:
-   if CREATE is true, then a new, zeroed page is created and a
+/* Returns the address of the page table entry for user virtual
+   address UADDR in page directory PD.
+   If PD does not have a page table for UADDR, behavior varies
+   based on CREATE:
+   if CREATE is true, then a new page table is created and a
    pointer into it is returned,
    otherwise a null pointer is returned.
    Also returns a null pointer if UADDR is a kernel address. */
@@ -121,6 +124,69 @@ pagedir_get_page (uint32_t *pd, const void *uaddr)
   return pte != NULL && *pte != 0 ? pte_get_page (*pte) : NULL;
 }
 
+/* Clears any mapping for user virtual address UPAGE in page
+   directory PD.
+   UPAGE need not already be mapped. */
+void
+pagedir_clear_page (uint32_t *pd, void *upage) 
+{
+  uint32_t *pte = lookup_page (pd, upage, false);
+  if (pte != NULL && *pte != 0)
+    {
+      *pte = 0;
+
+      if (active_pd () == pd) 
+        {
+          /* We cleared a page-table entry in the active page
+             table, so we have to invalidate the TLB.  See
+             [IA32-v3], section 3.11. */
+          pagedir_activate (pd);
+        }
+    }
+
+}
+
+/* Returns true if the PTE for user virtual page UPAGE in PD is
+   dirty, that is, if the page has been modified since the PTE
+   was installed.
+   Returns false if PD contains no PDE for UPAGE. */
+bool
+pagedir_test_dirty (uint32_t *pd, const void *upage) 
+{
+  uint32_t *pte = lookup_page (pd, (void *) upage, false);
+  return pte != NULL && (*pte & PG_D) != 0;
+}
+
+/* Returns true if the PTE for user virtual page UPAGE in PD has
+   been accessed recently, that is, between the time the PTE was
+   installed and the last time it was cleared.
+   Returns false if PD contains no PDE for UPAGE. */
+bool
+pagedir_test_accessed (uint32_t *pd, const void *upage) 
+{
+  uint32_t *pte = lookup_page (pd, (void *) upage, false);
+  return pte != NULL && (*pte & PG_A) != 0;
+}
+
+/* Returns true if the PTE for user virtual page UPAGE in PD has
+   been accessed recently, and then resets the accessed bit for
+   that page.
+   Returns false and has no effect if PD contains no PDE for
+   UPAGE. */
+bool
+pagedir_test_accessed_and_clear (uint32_t *pd, const void *upage) 
+{
+  uint32_t *pte = lookup_page (pd, (void *) upage, false);
+  if (pte != NULL) 
+    {
+      bool accessed = (*pte & PG_A) != 0;
+      *pte &= ~(uint32_t) PG_A;
+      return accessed;
+    }
+  else
+    return false;
+}
+
 /* Loads page directory PD into the CPU's page directory base
    register. */
 void
@@ -129,4 +195,14 @@ pagedir_activate (uint32_t *pd)
   if (pd == NULL)
     pd = base_page_dir;
   asm volatile ("movl %0,%%cr3" :: "r" (vtop (pd)));
+}
+
+/* Returns the currently active page directory. */
+static uint32_t *
+active_pd (void) 
+{
+  uint32_t *pd;
+
+  asm ("movl %%cr3,%0" : "=r" (pd));
+  return pd;
 }
