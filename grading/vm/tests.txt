@@ -1,0 +1,29 @@
+CORRECTNESS [[total]]
+---------------------
+
+Page table management
+  -4 pt-grow-stack: stack should be able to grow beyond one page
+  -1 pt-big-stk-obj: stack should be able to handle large objects
+  -3 pt-bad-addr: accesses to invalid virtual memory should fault
+  -1 pt-write-code: should not be able to write to the code segment
+Score: /9
+
+Paging
+  -4 page-linear: sequentially read/modify/write memory twice then read it back
+  -2 page-parallel: write then read lots of memory--3 processes at once
+  -2 page-merge-seq: sequential merge sort of large data set
+  -1 page-merge-par: parallel merge sort of large data set
+  -3 page-shuffle: shuffle content of large static buffer
+Score: /12
+
+Memory mapping
+  -4 mmap-read: use mmap to read a file, munmap
+  -1 mmap-close: use mmap, close file, read from mapping, munmap
+  -1 mmap-unmap: after munmap virtual memory area should be invalid
+  -1 mmap-overlap: try to mmap files in overlapping virtual memory areas
+  -2 mmap-twice: mmap'ing same file twice should work
+  -4 mmap-write: after mmap-modify-munmap a read should reflect changes
+  -4 mmap-exit: after mmap-modify-exit a read should reflect changes
+  -2 mmap-shuffle: shuffle content of mapped file
+Score: /19
+

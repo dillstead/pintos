@@ -1,0 +1,9 @@
+(page-parallel) begin
+(page-parallel) start child 0
+(page-parallel) start child 1
+(page-parallel) start child 2
+(page-parallel) join child 0
+(page-parallel) join child 1
+(page-parallel) join child 2
+(page-parallel) end
+page-parallel: exit(0)
