@@ -169,6 +169,18 @@ measured by the number of disk accesses.  (For example, metadata is
 generally more valuable to cache than data.)  Document your
 replacement algorithm in your design document.
 
+The provided file system code uses a ``bounce buffer'' in @struct{file}
+to translate the disk's sector-by-sector interface into the system call
+interface's byte-by-byte interface.  It needs per-file buffers because,
+without them, there's no other good place to put sector
+data.@footnote{The stack is not a good place because large objects
+should not be allocated on the stack.  A 512-byte sector is pushing the
+limit there.}  As part of implementing the buffer cache, you should get
+rid of these bounce buffers.  Instead, copy data into and out of sectors
+in the buffer cache directly.  You will probably need some
+synchronization to prevent sectors from being evicted from the cache
+while you are using them.
+
 In addition to the basic file caching scheme, your implementation
 should also include the following enhancements:
 
