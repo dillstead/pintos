@@ -6,6 +6,7 @@ Here are some tools that you might find useful while developing code.
 @menu
 * Tags::                        
 * CVS::                         
+* SourceForge::                 
 * VNC::                         
 @end menu
 
@@ -44,6 +45,17 @@ the projects.
 
 For more information, visit the @uref{https://www.cvshome.org/, , CVS
 home page}.
+
+@node SourceForge
+@section SourceForge
+
+SourceForge is a web-based system for facilitating software
+development.  It provides you with a version-control system (typically
+CVS, as described above) and other tools for tracking your software.
+You can use it to store files, track bugs, and post notes about
+development progress.  It's also free.  You can set up your own
+project in SourceForge at @uref{http://sourceforge.net, ,
+sourceforge.net}.
 
 @node VNC
 @section VNC
