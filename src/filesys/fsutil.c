@@ -22,9 +22,9 @@ copy (const char *filename, off_t size)
   void *buffer;
 
   /* Open source disk. */
-  src = disk_get (2);
+  src = disk_get (1, 0);
   if (src == NULL)
-    PANIC ("couldn't open source disk (hdc or ide1:0)");
+    PANIC ("couldn't open source disk (hdc or hd1:0)");
   if (size > (off_t) disk_size (src) * DISK_SECTOR_SIZE)
     PANIC ("source disk is too small for %Ld-byte file",
            (unsigned long long) size);

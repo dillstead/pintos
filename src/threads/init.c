@@ -237,9 +237,9 @@ argv_init (void)
           " -ex 'PROG [ARG...]' Run PROG, passing the optional arguments.\n"
 #endif
 #ifdef FILESYS
-          " -f                  Format the filesystem disk (hdb or ide0:1).\n"
+          " -f                  Format the filesystem disk (hdb or hd0:1).\n"
           " -cp FILENAME:SIZE   Copy SIZE bytes from the scratch disk (hdc\n"
-          "                     ide1:0) into the filesystem as FILENAME\n"
+          "                     or hd1:0) into the filesystem as FILENAME\n"
           " -p FILENAME         Print the contents of FILENAME\n"
           " -r FILENAME         Delete FILENAME\n"
           " -ls                 List the files in the filesystem\n"
