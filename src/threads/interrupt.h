@@ -4,16 +4,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-enum if_level 
+enum intr_level 
   {
-    IF_OFF,             /* Interrupts disabled. */
-    IF_ON               /* Interrupts enabled. */
+    INTR_OFF,             /* Interrupts disabled. */
+    INTR_ON               /* Interrupts enabled. */
   };
 
-enum if_level intr_get_level (void);
-enum if_level intr_set_level (enum if_level);
-enum if_level intr_enable (void);
-enum if_level intr_disable (void);
+enum intr_level intr_get_level (void);
+enum intr_level intr_set_level (enum intr_level);
+enum intr_level intr_enable (void);
+enum intr_level intr_disable (void);
 
 struct intr_frame
   {
@@ -44,7 +44,7 @@ struct intr_frame
 typedef void intr_handler_func (struct intr_frame *);
 
 void intr_init (void);
-void intr_register (uint8_t vec, int dpl, enum if_level, intr_handler_func *,
+void intr_register (uint8_t vec, int dpl, enum intr_level, intr_handler_func *,
                     const char *name);
 bool intr_context (void);
 void intr_yield_on_return (void);

@@ -14,5 +14,5 @@ irq21_keyboard (struct intr_frame *args UNUSED)
 void
 kbd_init (void) 
 {
-  intr_register (0x21, 0, IF_OFF, irq21_keyboard, "8042 Keyboard");
+  intr_register (0x21, 0, INTR_OFF, irq21_keyboard, "8042 Keyboard");
 }

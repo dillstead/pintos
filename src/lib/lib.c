@@ -245,7 +245,7 @@ vprintk_helper (char ch, void *aux UNUSED)
 void
 vprintk (const char *format, va_list args) 
 {
-  enum if_level old_level = intr_disable ();
+  enum intr_level old_level = intr_disable ();
   vprintf_core (format, args, vprintk_helper, NULL);
   intr_set_level (old_level);
 }

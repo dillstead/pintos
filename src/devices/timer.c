@@ -30,13 +30,13 @@ timer_init (void)
   outb (0x40, count & 0xff);
   outb (0x40, count >> 8);
 
-  intr_register (0x20, 0, IF_OFF, irq20_timer, "8254 Timer");
+  intr_register (0x20, 0, INTR_OFF, irq20_timer, "8254 Timer");
 }
 
 int64_t
 timer_ticks (void) 
 {
-  enum if_level old_level = intr_disable ();
+  enum intr_level old_level = intr_disable ();
   int64_t t = ticks;
   intr_set_level (old_level);
   return t;

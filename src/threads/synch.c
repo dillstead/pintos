@@ -40,7 +40,7 @@ sema_init (struct semaphore *sema, unsigned value, const char *name)
 void
 sema_down (struct semaphore *sema) 
 {
-  enum if_level old_level;
+  enum intr_level old_level;
 
   ASSERT (sema != NULL);
   ASSERT (!intr_context ());
@@ -64,7 +64,7 @@ sema_down (struct semaphore *sema)
 void
 sema_up (struct semaphore *sema) 
 {
-  enum if_level old_level;
+  enum intr_level old_level;
 
   ASSERT (sema != NULL);
 
@@ -154,7 +154,7 @@ lock_init (struct lock *lock, const char *name)
 void
 lock_acquire (struct lock *lock)
 {
-  enum if_level old_level;
+  enum intr_level old_level;
 
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
@@ -174,7 +174,7 @@ lock_acquire (struct lock *lock)
 void
 lock_release (struct lock *lock) 
 {
-  enum if_level old_level;
+  enum intr_level old_level;
 
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));

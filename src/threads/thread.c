@@ -43,7 +43,7 @@ void schedule_tail (struct thread *prev);
 void
 thread_init (void) 
 {
-  ASSERT (intr_get_level () == IF_OFF);
+  ASSERT (intr_get_level () == INTR_OFF);
 
   /* Initialize run queue. */
   list_init (&run_queue);
@@ -220,7 +220,7 @@ void
 thread_yield (void) 
 {
   struct thread *cur = thread_current ();
-  enum if_level old_level;
+  enum intr_level old_level;
   
   ASSERT (!intr_context ());
 
@@ -237,7 +237,7 @@ void
 thread_sleep (void) 
 {
   ASSERT (!intr_context ());
-  ASSERT (intr_get_level () == IF_OFF);
+  ASSERT (intr_get_level () == INTR_OFF);
 
   thread_current ()->status = THREAD_BLOCKED;
   schedule ();
@@ -357,7 +357,7 @@ schedule_tail (struct thread *prev)
 {
   struct thread *cur = thread_current ();
   
-  ASSERT (intr_get_level () == IF_OFF);
+  ASSERT (intr_get_level () == INTR_OFF);
 
   cur->status = THREAD_RUNNING;
   if (prev != NULL && prev->status == THREAD_DYING) 
@@ -378,7 +378,7 @@ schedule (void)
   struct thread *cur = thread_current ();
   struct thread *next = next_thread_to_run ();
 
-  ASSERT (intr_get_level () == IF_OFF);
+  ASSERT (intr_get_level () == INTR_OFF);
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
 

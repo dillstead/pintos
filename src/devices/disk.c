@@ -133,7 +133,7 @@ disk_init (void)
         }
 
       /* Register interrupt handler. */
-      intr_register (c->irq, 0, IF_OFF, interrupt_handler, c->name);
+      intr_register (c->irq, 0, INTR_OFF, interrupt_handler, c->name);
 
       /* Reset hardware. */
       reset_channel (c);
@@ -406,7 +406,7 @@ issue_pio_command (struct channel *c, uint8_t command)
 {
   /* Interrupts must be enabled or our semaphore will never be
      up'd by the completion handler. */
-  ASSERT (intr_get_level () == IF_ON);
+  ASSERT (intr_get_level () == INTR_ON);
 
   c->expecting_interrupt = true;
   outb (reg_command (c), command);

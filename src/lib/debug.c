@@ -53,7 +53,7 @@ debug_message (const char *file, int line, const char *function,
     {
       va_list args;
 
-      enum if_level old_level = intr_disable ();
+      enum intr_level old_level = intr_disable ();
       printk ("%s:%d: %s(): ", file, line, function);
       va_start (args, message);
       vprintk (message, args);
