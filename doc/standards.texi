@@ -71,7 +71,7 @@ this function.
 
 @item
 Problem 1-4, the advanced scheduler.  We must be able to turn this on
-and off with a compile time directive.  You must use the macro name we
+and off with a compile-time directive.  You must use the macro name we
 specify for that part.  @xref{Problem 1-4 Advanced Scheduler}, for
 details.
 
@@ -140,7 +140,7 @@ the C compiler concatenates adjacent string literals:
 #include <inttypes.h>
 @dots{}
 int32_t value = @dots{};
-printf ("value=%08"PRId32"\n");
+printf ("value=%08"PRId32"\n", value);
 @end example
 @noindent
 The @samp{%} is not supplied by the @code{PRI} macros.  As shown

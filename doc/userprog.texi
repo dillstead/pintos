@@ -391,9 +391,6 @@ exception is a call to the @code{halt} system call.
 @section FAQ
 
 @enumerate 1
-@item General FAQs
-
-@enumerate 1
 @item
 @b{Do we need a working project 1 to implement project 2?}
 
@@ -535,7 +532,13 @@ Serial input isn't implemented.  Don't use @option{-v} if you want to
 use the shell or otherwise type at the keyboard.
 @end enumerate
 
-@item Argument Passing FAQs
+@menu
+* Problem 2-1 Argument Passing FAQ::  
+* Problem 2-2 System Calls FAQ::  
+@end menu
+
+@node Problem 2-1 Argument Passing FAQ
+@subsection Problem 2-1: Argument Passing FAQ
 
 @enumerate 1
 @item
@@ -578,7 +581,8 @@ any multiple of @t{0x10000000} from @t{0x80000000} to @t{0xc0000000},
 simply via recompilation.
 @end enumerate
 
-@item System Calls FAQs
+@node Problem 2-2 System Calls FAQ
+@subsection Problem 2-2: System Calls FAQ
 
 @enumerate 1
 @item
@@ -606,6 +610,7 @@ maximum.  That said, if your design calls for it, you may impose a
 limit of 128 open files per process (as the Solaris machines here do).
 
 @item
+@anchor{Removing an Open File}
 @b{What happens when two (or more) processes have a file open and one of
 them removes it?}
 
@@ -638,7 +643,6 @@ stack space for each process.
 You should print the complete thread name (as specified in the
 @code{SYS_exec} call) followed by the exit status code,
 e.g.@: @samp{example 1 2 3 4: 0}.
-@end enumerate
 @end enumerate
 
 @node 80x86 Calling Convention

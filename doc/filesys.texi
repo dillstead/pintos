@@ -31,7 +31,7 @@ Your submission should define @code{THREAD_JOIN_IMPLEMENTED} in
 * Problem 4-3 Subdirectories::  
 * Problem 4-4 Buffer Cache::    
 * File System Design Document Requirements::  
-* File System FAQs::            
+* File System FAQ::            
 @end menu
 
 @node File System New Code
@@ -51,11 +51,11 @@ Top-level interface to the file system.
 
 @item directory.h
 @itemx directory.c
-Translates file names to disk file headers; the
-directory data structure is stored as a file.
+Translates file names to inodes.  The directory data structure is
+stored as a file.
 
-@item filehdr.h
-@itemx filehdr.c
+@item inode.h
+@itemx inode.c
 Manages the data structure representing the layout of a
 file's data on disk.
 
@@ -63,11 +63,6 @@ file's data on disk.
 @itemx file.c
 Translates file reads and writes to disk sector reads
 and writes.
-
-@item devices/disk.h
-@itemx devices/disk.c
-Provides access to the physical disk, abstracting away the rather
-awful IDE interface.
 
 @item lib/kernel/bitmap.h
 @itemx lib/kernel/bitmap.c
@@ -95,25 +90,26 @@ prepared for interactions with all previous parts (as usual).
 Modify the file system to allow the maximum size of a file to be as
 large as the disk.  You can assume that the disk will not be larger
 than 8 MB.  In the basic file system, each file is limited to a file
-size of just under 64 kB.  Each file has a header (@code{struct
-filehdr}) that is a table of direct pointers to the disk blocks for
-that file.  Since the header is stored in one disk sector, the maximum
-size of a file is limited by the number of pointers that will fit in
-one disk sector.  Increasing the limit to 8 MB will require you to
-implement doubly-indirect blocks.
+size of just under 64 kB.  Each file has a header called an index node
+or @dfn{inode} (represented by @code{struct inode}) that is a table of
+direct pointers to the disk blocks for that file.  Since the inode is
+stored in one disk sector, the maximum size of a file is limited by
+the number of pointers that will fit in one disk sector.  Increasing
+the limit to 8 MB will require you to implement doubly-indirect
+blocks.
 
 @node Problem 4-2 File Growth
 @section Problem 4-2: File Growth
 
 Implement extensible files.  In the basic file system, the file size
 is specified when the file is created.  One advantage of this is that
-the FileHeader data structure, once created, never changes.  In UNIX
-and most other file systems, a file is initially created with size 0
-and is then expanded every time a write is made off the end of the
-file.  Modify the file system to allow this.  As one test case, allow
-the root directory file to expand beyond its current limit of ten
-files.  Make sure that concurrent accesses to the file header remain
-properly synchronized.
+the inode data structure, once created, never changes.  In UNIX and
+most other file systems, a file is initially created with size 0 and
+is then expanded every time a write is made off the end of the file.
+Modify the file system to allow this.  As one test case, allow the
+root directory file to expand beyond its current limit of ten files.
+Make sure that concurrent accesses to the inode remain properly
+synchronized.
 
 @node Problem 4-3 Subdirectories
 @section Problem 4-3: Subdirectories
@@ -167,7 +163,7 @@ cache, and if so, fetch it immediately from the cache without going to
 disk.  (Otherwise, fetch the block from disk into cache, evicting an
 older entry if necessary.)  You are limited to a cache no greater than
 64 sectors in size.  Be sure to choose an intelligent cache
-replacement algorithm.  Experiment to see what combination of use,
+replacement algorithm.  Experiment to see what combination of accessed,
 dirty, and other information results in the best performance, as
 measured by the number of disk accesses.  (For example, metadata is
 generally more valuable to cache than data.)  Document your
@@ -232,7 +228,7 @@ in the cache? How did you choose elements to evict from the cache?
 How and when did you flush the cache?
 @end itemize
 
-@node File System FAQs
+@node File System FAQ
 @section FAQ
 
 @enumerate 1
@@ -296,14 +292,21 @@ be implemented properly in @file{threads/init.c} and
 No, @code{DISK_SECTOR_SIZE} will not change.
 
 @item
-@b{Will the @code{struct filehdr} take up space on the disk too?}
+@b{Will the @code{struct inode} take up space on the disk too?}
 
-Yes.  Anything stored in @code{struct filehdr} takes up space on disk,
+Yes.  Anything stored in @code{struct inode} takes up space on disk,
 so you must include this in your calculation of how many entires will
 fit in a single disk sector.
+@end enumerate
 
-@item
-File Growth FAQs
+@menu
+* Problem 4-2 File Growth FAQ::  
+* Problem 4-3 Subdirectory FAQ::  
+* Problem 4-4 Buffer Cache FAQ::  
+@end menu
+
+@node Problem 4-2 File Growth FAQ
+@subsection Problem 4-2: File Growth FAQ
 
 @enumerate 1
 @item
@@ -311,12 +314,12 @@ File Growth FAQs
 
 The disk we create will be 8 MB or smaller.  However, individual files
 will have to be smaller than the disk to accommodate the metadata.
-You'll need to consider this when deciding your @code{struct filehdr}
-(inode) organization.
+You'll need to consider this when deciding your @code{struct inode}
+organization.
 @end enumerate
 
-@item
-Subdirectory FAQs
+@node Problem 4-3 Subdirectory FAQ
+@subsection Problem 4-3: Subdirectory FAQ
 
 @enumerate 1
 @item
@@ -375,19 +378,19 @@ regular files and directories.  You may assume that directories can
 only be deleted if they are empty, as in Unix.
 @end enumerate
 
-@item
-Buffer Cache FAQs
+@node Problem 4-4 Buffer Cache FAQ
+@subsection Problem 4-4: Buffer Cache FAQ
 
 @enumerate 1
 @item
 @b{We're limited to a 64-block cache, but can we also keep a copy of
-each @code{struct filehdr} for an open file inside @code{struct file},
+each @code{struct inode} for an open file inside @code{struct file},
 the way the stub code does?}
 
 No, you shouldn't keep any disk sectors stored anywhere outside the
 cache.  That means you'll have to change the way the file
 implementation accesses its corresponding inode right now, since it
-currently just creates a new @code{struct filehdr} in its constructor
+currently just creates a new @code{struct inode} in its constructor
 and reads the corresponding sector in from disk when it's created.
 
 There are two reasons for not storing inodes in @code{struct file}.
@@ -407,16 +410,15 @@ amount of metadata for each of your 64 cache entries, that's fine.
 @b{But why can't we store copies of inodes in @code{struct file}? We
 don't understand the answer to the previous question.}
 
-The issue regarding storing @code{struct filehdr}s has to do with
+The issue regarding storing @code{struct inode}s has to do with
 implementation of the buffer cache.  Basically, you can't store a
-@code{struct filehdr *} in @code{struct filehdr}.  Each time you need
-to read a @code{struct filehdr}, you'll have to get it either from the
+@code{struct inode *} in @code{struct inode}.  Each time you need
+to read a @code{struct inode}, you'll have to get it either from the
 buffer cache or from disk.
 
-If you look at @code{file_read_at()}, it uses @code{hdr} directly
+If you look at @code{file_read_at()}, it uses the inode directly
 without having first read in that sector from wherever it was in the
 storage hierarchy.  You are no longer allowed to do this.  You will
 need to change @code{file_read_at} (and similar functions) so that it
-reads @code{hdr} from the storage hierarchy before using it.
-@end enumerate
+reads the inode from the storage hierarchy before using it.
 @end enumerate
