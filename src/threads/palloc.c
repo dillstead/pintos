@@ -72,10 +72,12 @@ palloc_init (void)
   init_pool (&user_pool, free_middle, free_end, "user pool");
 }
 
-/* Obtains and returns a free page.  If PAL_ZERO is set in FLAGS,
-   then the page is filled with zeros.  If no pages are
-   available, returns a null pointer, unless PAL_ASSERT is set in
-   FLAGS, in which case the kernel panics. */
+/* Obtains and returns a free page.  If PAL_USER is set, the page
+   is obtained from the user pool, otherwise from the kernel
+   pool.  If PAL_ZERO is set in FLAGS, then the page is filled
+   with zeros.  If no pages are available, returns a null
+   pointer, unless PAL_ASSERT is set in FLAGS, in which case the
+   kernel panics. */
 void *
 palloc_get (enum palloc_flags flags)
 {
