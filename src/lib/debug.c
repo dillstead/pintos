@@ -8,6 +8,8 @@ static bool all_enabled;
 static const char *enabled_classes[MAX_CLASSES];
 static size_t enabled_cnt;
 
+static bool class_is_enabled (const char *class);
+
 /* Enables the debug message classes specified in CLASSES.  The
    string CLASSES is modified by and becomes owned by this
    function. */
@@ -24,22 +26,6 @@ debug_enable (char *classes)
       else
         all_enabled = true;
     }
-}
-
-/* Checks whether CLASS is enabled. */
-static bool
-class_is_enabled (const char *class) 
-{
-  size_t i;
-  
-  if (all_enabled)
-    return true;
-
-  for (i = 0; i < enabled_cnt; i++)
-    if (!strcmp (enabled_classes[i], class))
-      return true;
-
-  return false;
 }
 
 /* Prints a debug message along with the source file name, line
@@ -99,4 +85,21 @@ debug_backtrace (void)
        frame = frame[0]) 
     printk (" %p", frame[1]);
   printk (".\n");
+}
+
+
+/* Returns true if CLASS is enabled, false otherwise. */
+static bool
+class_is_enabled (const char *class) 
+{
+  size_t i;
+  
+  if (all_enabled)
+    return true;
+
+  for (i = 0; i < enabled_cnt; i++)
+    if (!strcmp (enabled_classes[i], class))
+      return true;
+
+  return false;
 }
