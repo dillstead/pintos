@@ -3,6 +3,7 @@
 #include <round.h>
 #include "threads/interrupt.h"
 #include "threads/io.h"
+#include "threads/thread.h"
   
 #if TIMER_FREQ < 19
 #error 8254 timer requires TIMER_FREQ >= 19
@@ -55,14 +56,15 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
-/* Suspends executions for approximately TICKS timer ticks. */
+/* Suspends execution for approximately TICKS timer ticks. */
 void
 timer_sleep (int64_t ticks) 
 {
   int64_t start = timer_ticks ();
 
   while (timer_elapsed (start) < ticks) 
-    continue;
+    if (intr_get_level () == INTR_ON)
+      thread_yield ();
 }
 
 /* Returns MS milliseconds in timer ticks, rounding up. */
