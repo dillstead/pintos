@@ -43,12 +43,12 @@ struct thread *thread_create (const char *name, thread_func *, void *);
 bool thread_execute (const char *filename);
 #endif
 
-void thread_wake (struct thread *);
+void thread_unblock (struct thread *);
 const char *thread_name (struct thread *);
 
 struct thread *thread_current (void);
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
-void thread_sleep (void);
+void thread_block (void);
 
 #endif /* thread.h */

@@ -273,7 +273,6 @@ addrspace_activate (struct thread *t)
 {
   ASSERT (t != NULL);
   
-  if (t->pagedir != NULL)
-    pagedir_activate (t->pagedir);
+  pagedir_activate (t->pagedir);
   tss_set_esp0 ((uint8_t *) t + PGSIZE);
 }

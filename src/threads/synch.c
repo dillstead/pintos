@@ -51,7 +51,7 @@ sema_down (struct semaphore *sema)
       struct thread_elem te;
       te.thread = thread_current ();
       list_push_back (&sema->waiters, &te.elem);
-      thread_sleep ();
+      thread_block ();
     }
   sema->value--;
   intr_set_level (old_level);
@@ -70,8 +70,8 @@ sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) 
-    thread_wake (list_entry (list_pop_front (&sema->waiters),
-                             struct thread_elem, elem)->thread);
+    thread_unblock (list_entry (list_pop_front (&sema->waiters),
+                                struct thread_elem, elem)->thread);
   sema->value++;
   intr_set_level (old_level);
 }

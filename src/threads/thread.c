@@ -113,7 +113,7 @@ thread_create (const char *name, thread_func *function, void *aux)
   sf->eip = switch_entry;
 
   /* Add to run queue. */
-  thread_wake (t);
+  thread_unblock (t);
 
   return t;
 }
@@ -160,25 +160,29 @@ thread_execute (const char *filename)
   sf->eip = switch_entry;
 
   /* Add to run queue. */
-  thread_wake (t);
+  thread_unblock (t);
 
   return true;
 }
 #endif
 
-/* Transitions T from its current state to THREAD_READY, the
-   ready-to-run state.  On entry, T must be ready or blocked.
+/* Transitions a blocked thread T from its current state to the
+   ready-to-run state.  If T is not blocked, there is no effect.
    (Use thread_yield() to make the running thread ready.) */
 void
-thread_wake (struct thread *t) 
+thread_unblock (struct thread *t) 
 {
+  enum intr_level old_level;
+
   ASSERT (is_thread (t));
-  ASSERT (t->status == THREAD_READY || t->status == THREAD_BLOCKED);
-  if (t->status != THREAD_READY) 
+
+  old_level = intr_disable ();
+  if (t->status == THREAD_BLOCKED) 
     {
       list_push_back (&run_queue, &t->rq_elem);
       t->status = THREAD_READY;
     }
+  intr_set_level (old_level);
 }
 
 /* Returns the name of thread T. */
@@ -238,9 +242,9 @@ thread_yield (void)
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
-   again until awoken by thread_wake(). */
+   again until awoken by thread_unblock(). */
 void
-thread_sleep (void) 
+thread_block (void) 
 {
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
@@ -261,7 +265,7 @@ idle (void *aux UNUSED)
 
       /* Let someone else run. */
       intr_disable ();
-      thread_sleep ();
+      thread_block ();
       intr_enable ();
     }
 }
@@ -388,12 +392,13 @@ schedule_tail (struct thread *prev)
   ASSERT (intr_get_level () == INTR_OFF);
 
   cur->status = THREAD_RUNNING;
-  if (prev != NULL && prev->status == THREAD_DYING) 
-    destroy_thread (prev);
 
 #ifdef USERPROG
   addrspace_activate (cur);
 #endif
+
+  if (prev != NULL && prev->status == THREAD_DYING) 
+    destroy_thread (prev);
 }
 
 /* Schedules a new process.  At entry, interrupts must be off and
