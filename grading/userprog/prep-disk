@@ -62,6 +62,7 @@ sub put_file {
 sub xsystem {
     my ($expect, $cmd) = @_;
     print "$cmd\n";
+    my ($code) = system ($cmd);
     WIFEXITED ($code) && WEXITSTATUS ($code) == $expect
 	or die "command failed\n";
 }
