@@ -215,7 +215,7 @@ check_device_type (struct disk *d)
 }
 
 static void
-execute_command (struct disk *d, uint8_t command) 
+issue_command (struct disk *d, uint8_t command) 
 {
   struct channel *c = d->channel;
 
@@ -229,9 +229,6 @@ execute_command (struct disk *d, uint8_t command)
   c->expecting_interrupt = true;
   outb (reg_command (c), command);
   intr_enable ();
-
-  /* Wait for the command to complete. */
-  sema_down (&c->completion_wait);
 }
 
 static bool
@@ -282,9 +279,12 @@ printk_ata_string (char *string, size_t word_cnt)
   int last;
   int i;
 
-  for (last = word_cnt * 2 - 1; last >= 0; last--)
-    if (string[last ^ 1] != ' ')
-      break;
+  for (last = word_cnt * 2 - 1; last >= 0; last--) 
+    {
+      int c = string[last ^ 1];
+      if (c != '\0' && !isspace (c))
+        break; 
+    }
 
   for (i = 0; i <= last; i++)
     printk ("%c", string[i ^ 1]);
@@ -298,7 +298,8 @@ identify_ata_device (struct disk *d)
   ASSERT (d->is_ata);
 
   select_device_wait (d);
-  execute_command (d, CMD_IDENTIFY);
+  issue_command (d, CMD_IDENTIFY);
+  sema_down (&d->channel->completion_wait);
   wait_while_busy (d);
 
   if (!input_sector (d->channel, id)) 
@@ -321,9 +322,9 @@ identify_ata_device (struct disk *d)
     printk ("%"PRDSNu" kB", d->capacity / (1024 / DISK_SECTOR_SIZE));
   else
     printk ("%"PRDSNu" byte", d->capacity * DISK_SECTOR_SIZE);
-  printk (") disk \"");
+  printk (") disk, model \"");
   printk_ata_string ((char *) &id[27], 20);
-  printk (" ");
+  printk ("\", serial \"");
   printk_ata_string ((char *) &id[10], 10);
   printk ("\"\n");
 }
@@ -453,10 +454,12 @@ disk_read (struct disk *d, disk_sector_no sec_no, void *buffer)
 
   lock_acquire (&d->channel->lock);
   select_sector (d, sec_no);
-  execute_command (d, CMD_READ_SECTOR_RETRY);
+  issue_command (d, CMD_READ_SECTOR_RETRY);
+  sema_down (&d->channel->completion_wait);
   wait_while_busy (d);
   if (!input_sector (d->channel, buffer))
     panic ("%s: disk read failed, sector=%"PRDSNu, d->name, sec_no);
+  lock_release (&d->channel->lock);
 }
 
 void
@@ -467,9 +470,10 @@ disk_write (struct disk *d, disk_sector_no sec_no, const void *buffer)
 
   lock_acquire (&d->channel->lock);
   select_sector (d, sec_no);
-  execute_command (d, CMD_WRITE_SECTOR_RETRY);
+  issue_command (d, CMD_WRITE_SECTOR_RETRY);
   wait_while_busy (d);
   if (!output_sector (d->channel, buffer))
     panic ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
+  sema_down (&d->channel->completion_wait);
   lock_release (&d->channel->lock);
 }
