@@ -162,7 +162,6 @@ lock_init (struct lock *lock, const char *name)
   ASSERT (lock != NULL);
   ASSERT (name != NULL);
 
-  strlcpy (lock->name, name, sizeof lock->name);
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1, name);
 }
@@ -226,7 +225,7 @@ lock_name (const struct lock *lock)
 {
   ASSERT (lock != NULL);
 
-  return lock->name;
+  return sema_name (&lock->semaphore);
 }
 
 /* One semaphore in a list. */

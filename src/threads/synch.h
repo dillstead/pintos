@@ -21,7 +21,6 @@ void sema_self_test (void);
 /* Lock. */
 struct lock 
   {
-    char name[16];              /* Name (for debugging purposes only). */
     struct thread *holder;      /* Thread holding lock (for debugging). */
     struct semaphore semaphore; /* Binary semaphore controlling access. */
   };
