@@ -6,7 +6,7 @@ while ($function = <A2L>) {
     $line = <A2L>;
     chomp $function;
     chomp $line;
-    print "$function ($line)\n";
+    print shift (@ARGV), ": $function ($line)\n";
 }
    
 sub search_path {
