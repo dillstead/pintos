@@ -51,7 +51,7 @@ intr_get_level (void)
 {
   uint32_t flags;
   
-  asm ("pushfl; popl %0" : "=g" (flags));
+  asm volatile ("pushfl; popl %0" : "=g" (flags));
 
   return flags & FLAG_IF ? INTR_ON : INTR_OFF;
 }
