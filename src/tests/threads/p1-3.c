@@ -8,6 +8,7 @@
 
 #include "threads/test.h"
 #include <stdio.h>
+#include "threads/synch.h"
 #include "threads/thread.h"
 
 static void test_preempt (void);
@@ -77,7 +78,7 @@ test_donate_return (void)
   thread_create ("acquire2", PRI_DEFAULT + 2, acquire_thread_func, &lock);
   printf ("This thread should have priority %d.  Actual priority: %d.\n",
           PRI_DEFAULT + 2, thread_get_priority ());
-  lock_release ();
+  lock_release (&lock);
   printf ("acquire1 and acquire2 must already have finished, in that order.\n"
           "This should be the last line before finishing this test.\n"
           "Priority donation test done.\n");
