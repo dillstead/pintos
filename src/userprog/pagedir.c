@@ -203,7 +203,7 @@ active_pd (void)
      `pd'.
      See [IA32-v2a] "MOV--Move to/from Control Registers" and
      [IA32-v3] 3.7.5. */
-  uint32_t *pd;
+  uintptr_t pd;
   asm ("mov %0, %%cr3" : "=r" (pd));
-  return pd;
+  return ptov (pd);
 }
