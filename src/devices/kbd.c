@@ -40,11 +40,12 @@ kbd_init (void)
 uint8_t
 kbd_getc (void) 
 {
+  enum intr_level old_level;
   uint8_t key;
-  
-  intq_lock (&buffer);
+
+  old_level = intr_disable ();
   key = intq_getc (&buffer);
-  intq_unlock (&buffer);
+  intr_set_level (old_level);
   
   return key;
 }

@@ -15,6 +15,7 @@ static enum { UNINIT, POLL, QUEUE } mode;
 static struct intq txq;
 
 static void set_serial (int bps, int bits, enum parity_type parity, int stop);
+static void putc_poll (uint8_t);
 static void write_ier (void);
 static intr_handler_func serial_interrupt;
 
@@ -30,6 +31,7 @@ serial_init_poll (void)
   outb (FCR_REG, 0);                    /* Disable FIFO. */
   set_serial (9600, 8, NONE, 1);        /* 9600 bps, N-8-1. */
   outb (MCR_REG, 8);                    /* Turn on OUT2 output line. */
+  intq_init (&txq, "serial xmit");
   mode = POLL;
 } 
 
@@ -40,7 +42,6 @@ void
 serial_init_queue (void) 
 {
   ASSERT (mode == POLL);
-  intq_init (&txq, "serial xmit");
   intr_register (0x20 + 4, 0, INTR_OFF, serial_interrupt, "serial");
   mode = QUEUE;
 }
@@ -49,23 +50,36 @@ serial_init_queue (void)
 void
 serial_putc (uint8_t byte) 
 {
-  if (mode == POLL || intr_context ())
+  enum intr_level old_level = intr_disable ();
+
+  if (mode == POLL || old_level == INTR_OFF)
     {
-      /* Poll the serial port until it's ready for a byte, and
-         then transmit. */
-      while ((inb (LSR_REG) & LSR_THRE) == 0)
-        continue;
-      outb (THR_REG, byte);
+      /* If we're not set up for interrupt-driven I/O yet,
+         or if interrupts are off,
+         use dumb polling for serial I/O. */
+      serial_flush ();
+      putc_poll (byte); 
     }
   else
     {
-      /* Lock the queue, add a byte, and update the interrupt
-         enable register. */
-      intq_lock (&txq);
+      /* Otherwise, queue a byte and update the interrupt enable
+         register. */
       intq_putc (&txq, byte); 
       write_ier ();
-      intq_unlock (&txq);
     }
+  
+  intr_set_level (old_level);
+}
+
+/* Flushes anything in the serial buffer out the port in polling
+   mode. */
+void
+serial_flush (void) 
+{
+  enum intr_level old_level = intr_disable ();
+  while (!intq_empty (&txq))
+    putc_poll (intq_getc (&txq));
+  intr_set_level (old_level);
 }
 
 /* Configures the serial port for BPS bits per second, BITS bits
@@ -93,6 +107,19 @@ static void
 write_ier (void) 
 {
   outb (IER_REG, intq_empty (&txq) ? 0 : IER_XMIT);
+}
+
+
+/* Polls the serial port until it's ready,
+   and then transmits BYTE. */
+static void
+putc_poll (uint8_t byte) 
+{
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  while ((inb (LSR_REG) & LSR_THRE) == 0)
+    continue;
+  outb (THR_REG, byte);
 }
 
 /* Serial interrupt handler.
