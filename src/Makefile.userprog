@@ -20,7 +20,6 @@ LIB_SRC += lib/stdio.c			# I/O library.
 LIB_SRC += lib/stdlib.c			# atoi()
 LIB_SRC += lib/string.c			# String functions.
 LIB_SRC += lib/user/syscall.c		# System calls.
-LIB_SRC += lib/user/syscall-stub.S	# System call stub.
 LIB_SRC += lib/user/console.c		# Console code.
 
 LIB_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(LIB_SRC)))
