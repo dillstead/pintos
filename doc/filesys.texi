@@ -128,6 +128,12 @@ only once).
 Make sure that directories can expand beyond their original size just
 as any other file can.
 
+Each program has its own current directory.  When one process starts
+another with the @code{exec} system call, the child process inherits its
+parent's current directory.  After that, the two processes' current
+directories are independent, so that either changing its own current
+directory has no effect on the other.
+
 Update the existing system calls so that, anywhere a file name is
 provided by the caller, an absolute or relative path name may used.
 Also, implement the following new system calls:
@@ -404,42 +410,38 @@ only be deleted if they are empty, as in Unix.
 
 @enumerate 1
 @item
-@b{We're limited to a 64-block cache, but can we also keep a copy of
-each @struct{inode} for an open file inside @struct{file},
-the way the stub code does?}
+@b{We're limited to a 64-block cache, but can we also keep an
+@struct{inode_disk} inside @struct{file}, the way the provided code
+does?}
 
-No, you shouldn't keep any disk sectors stored anywhere outside the
-cache.  That means you'll have to change the way the file
-implementation accesses its corresponding inode right now, since it
-currently just creates a new @struct{inode} in its constructor
-and reads the corresponding sector in from disk when it's created.
+The goal of the 64-block limit is to bound the amount of cached file
+system data.  If you keep a block of disk data anywhere in kernel
+memory, whether it's file data or metadata, then you have to count it
+against the 64-block limit.  The same rule applies to anything that's
+``similar'' to a block of disk data, such as a @struct{inode_disk}
+without the @code{length} or @code{sector_cnt} members.
 
-There are two reasons for not storing inodes in @struct{file}.
+That means you'll have to change the way the file implementation
+accesses its corresponding inode right now, since it currently just
+creates a new @struct{inode} containing an @struct{inode_disk} in
+@func{inode_open} and reads the corresponding sector in from disk when
+it's created.
+
+There are two reasons for not storing inode data in @struct{inode}.
 First, keeping extra copies of inodes would be cheating the 64-block
 limitation that we place on your cache.  Second, if two processes have
-the same file open, you will create a huge synchronization headache
-for yourself if each @struct{file} has its own copy of the inode.
+the same file open, you will create a huge synchronization headache for
+yourself if each @struct{inode} has its own copy of the on-disk inode.
 
-Note that you can store pointers to inodes in @struct{file} if
-you want, and you can store some other small amount of information to
-help you find the inode when you need it.
+You can store pointers to inode data in @struct{inode_disk}, if you
+want, and you can store some other small amount of information to help
+you find the inode when you need it.  Similarly, if you want to store
+one block of data plus some small amount of metadata for each of your 64
+cache entries, that's fine.
 
-Similarly, if you want to store one block of data plus some small
-amount of metadata for each of your 64 cache entries, that's fine.
-
-@item
-@b{But why can't we store copies of inodes in @struct{file}? We
-don't understand the answer to the previous question.}
-
-The issue regarding storing @struct{inode}s has to do with
-implementation of the buffer cache.  Basically, you can't store a
-@code{struct inode *} in @struct{inode}.  Each time you need
-to read a @struct{inode}, you'll have to get it either from the
-buffer cache or from disk.
-
-If you look at @func{file_read_at}, it uses the inode directly
-without having first read in that sector from wherever it was in the
-storage hierarchy.  You are no longer allowed to do this.  You will
-need to change @code{file_read_at} (and similar functions) so that it
-reads the inode from the storage hierarchy before using it.
+If you look at @func{file_read_at}, it uses the inode directly without
+having first read in that sector from wherever it was in the storage
+hierarchy.  This will no longer work.  You will need to change
+@code{file_read_at} (and similar functions) so that it reads the inode
+from the storage hierarchy before using it.
 @end enumerate
