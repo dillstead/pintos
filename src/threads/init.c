@@ -88,12 +88,6 @@ main (void)
 
   thread_init ();
 
-#if 0
-  printk ("running semaphore test...  ");
-  sema_self_test ();
-  printk ("  done.\n");
-#endif
-
   {
     struct thread *t;
     int i;
