@@ -12,7 +12,7 @@
 #include "tss.h"
 
 /* We load ELF binaries.  The following definitions are taken
-   from the ELF specification more-or-less verbatim. */
+   from the ELF specification, [ELF], more-or-less verbatim.  */
 
 /* ELF types. */
 typedef uint32_t Elf32_Word, Elf32_Addr, Elf32_Off;
@@ -72,6 +72,12 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
+static bool install_page (struct thread *, void *upage, void *kpage);
+static bool load_segment (struct thread *, struct file *,
+                          const struct Elf32_Phdr *);
+static bool setup_stack (struct thread *);
+
+/* Aborts loading an executable, with an error message. */
 #define LOAD_ERROR(MSG)                                         \
         do {                                                    \
                 printk ("addrspace_load: %s: ", filename);      \
@@ -79,95 +85,6 @@ struct Elf32_Phdr
                 printk ("\n");                                  \
                 goto error;                                     \
         } while (0)
-
-static bool
-install_page (struct thread *t, void *upage, void *kpage)
-{
-  /* Verify that there's not already a page at that virtual
-     address, then map our page there. */
-  if (pagedir_get_page (t->pagedir, upage) == NULL
-      && pagedir_set_page (t->pagedir, upage, kpage, true))
-    return true;
-  else
-    {
-      palloc_free (kpage);
-      return false;
-    }
-}
-
-static bool
-load_segment (struct thread *t, struct file *file,
-              const struct Elf32_Phdr *phdr) 
-{
-  void *start, *end;
-  uint8_t *upage;
-  off_t filesz_left;
-
-  ASSERT (t != NULL);
-  ASSERT (file != NULL);
-  ASSERT (phdr != NULL);
-  ASSERT (phdr->p_type == PT_LOAD);
-
-  /* p_offset and p_vaddr must be congruent modulo PGSIZE. */
-  if (phdr->p_offset % PGSIZE != phdr->p_vaddr % PGSIZE) 
-    {
-      printk ("%#08"PE32Ox" and %#08"PE32Ax" not congruent modulo %#x\n",
-              phdr->p_offset, phdr->p_vaddr, (unsigned) PGSIZE);
-      return false; 
-    }
-
-  /* p_memsz must be at least as big as p_filesz. */
-  if (phdr->p_memsz < phdr->p_filesz) 
-    {
-      printk ("p_memsz (%08"PE32Wx") < p_filesz (%08"PE32Wx")\n",
-              phdr->p_memsz, phdr->p_filesz);
-      return false; 
-    }
-
-  /* Validate virtual memory region to be mapped. */
-  start = pg_round_down ((void *) phdr->p_vaddr);
-  end = pg_round_up ((void *) (phdr->p_vaddr + phdr->p_memsz));
-  if (start >= PHYS_BASE || end >= PHYS_BASE || end < start) 
-    {
-      printk ("bad virtual region %08lx...%08lx\n",
-              (unsigned long) start, (unsigned long) end);
-      return false; 
-    }
-
-  filesz_left = phdr->p_filesz + (phdr->p_vaddr & PGMASK);
-  file_seek (file, ROUND_DOWN (phdr->p_offset, PGSIZE));
-  for (upage = start; upage < (uint8_t *) end; upage += PGSIZE) 
-    {
-      size_t read_bytes = filesz_left >= PGSIZE ? PGSIZE : filesz_left;
-      size_t zero_bytes = PGSIZE - read_bytes;
-      uint8_t *kpage = palloc_get (0);
-      if (kpage == NULL)
-        return false;
-
-      if (file_read (file, kpage, read_bytes) != (int) read_bytes)
-        return false;
-      memset (kpage + read_bytes, 0, zero_bytes);
-      filesz_left -= read_bytes;
-
-      if (!install_page (t, upage, kpage))
-        return false;
-    }
-
-  return true;
-}
-
-static bool
-setup_stack (struct thread *t) 
-{
-  uint8_t *kpage = palloc_get (PAL_ZERO);
-  if (kpage == NULL)
-    {
-      printk ("failed to allocate process stack\n");
-      return false;
-    }
-
-  return install_page (t, ((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
-}
 
 bool
 addrspace_load (struct thread *t, const char *filename,
@@ -276,3 +193,95 @@ addrspace_activate (struct thread *t)
   pagedir_activate (t->pagedir);
   tss_set_esp0 ((uint8_t *) t + PGSIZE);
 }
+
+/* addrspace_load() helpers. */
+
+static bool
+install_page (struct thread *t, void *upage, void *kpage)
+{
+  /* Verify that there's not already a page at that virtual
+     address, then map our page there. */
+  if (pagedir_get_page (t->pagedir, upage) == NULL
+      && pagedir_set_page (t->pagedir, upage, kpage, true))
+    return true;
+  else
+    {
+      palloc_free (kpage);
+      return false;
+    }
+}
+
+static bool
+load_segment (struct thread *t, struct file *file,
+              const struct Elf32_Phdr *phdr) 
+{
+  void *start, *end;
+  uint8_t *upage;
+  off_t filesz_left;
+
+  ASSERT (t != NULL);
+  ASSERT (file != NULL);
+  ASSERT (phdr != NULL);
+  ASSERT (phdr->p_type == PT_LOAD);
+
+  /* p_offset and p_vaddr must be congruent modulo PGSIZE. */
+  if (phdr->p_offset % PGSIZE != phdr->p_vaddr % PGSIZE) 
+    {
+      printk ("%#08"PE32Ox" and %#08"PE32Ax" not congruent modulo %#x\n",
+              phdr->p_offset, phdr->p_vaddr, (unsigned) PGSIZE);
+      return false; 
+    }
+
+  /* p_memsz must be at least as big as p_filesz. */
+  if (phdr->p_memsz < phdr->p_filesz) 
+    {
+      printk ("p_memsz (%08"PE32Wx") < p_filesz (%08"PE32Wx")\n",
+              phdr->p_memsz, phdr->p_filesz);
+      return false; 
+    }
+
+  /* Validate virtual memory region to be mapped. */
+  start = pg_round_down ((void *) phdr->p_vaddr);
+  end = pg_round_up ((void *) (phdr->p_vaddr + phdr->p_memsz));
+  if (start >= PHYS_BASE || end >= PHYS_BASE || end < start) 
+    {
+      printk ("bad virtual region %08lx...%08lx\n",
+              (unsigned long) start, (unsigned long) end);
+      return false; 
+    }
+
+  filesz_left = phdr->p_filesz + (phdr->p_vaddr & PGMASK);
+  file_seek (file, ROUND_DOWN (phdr->p_offset, PGSIZE));
+  for (upage = start; upage < (uint8_t *) end; upage += PGSIZE) 
+    {
+      size_t read_bytes = filesz_left >= PGSIZE ? PGSIZE : filesz_left;
+      size_t zero_bytes = PGSIZE - read_bytes;
+      uint8_t *kpage = palloc_get (0);
+      if (kpage == NULL)
+        return false;
+
+      if (file_read (file, kpage, read_bytes) != (int) read_bytes)
+        return false;
+      memset (kpage + read_bytes, 0, zero_bytes);
+      filesz_left -= read_bytes;
+
+      if (!install_page (t, upage, kpage))
+        return false;
+    }
+
+  return true;
+}
+
+static bool
+setup_stack (struct thread *t) 
+{
+  uint8_t *kpage = palloc_get (PAL_ZERO);
+  if (kpage == NULL)
+    {
+      printk ("failed to allocate process stack\n");
+      return false;
+    }
+
+  return install_page (t, ((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
+}
+
