@@ -2,6 +2,9 @@ TESTS = threads p1-1 p1-2 p1-3 list stdlib userprog p2 vm filesys
 
 PATH := $(shell pwd)/../src/utils:$(PATH)
 
+all:
+	@echo This Makefile has only `check' targets.
+
 check:
 	$(MAKE) -C .. distclean
 	for d in $(TESTS); do $(MAKE) $$d || exit 1; done
