@@ -12,10 +12,12 @@ this assignment, with some work in the @file{devices} directory on the
 side.  Compilation should be done in the @file{threads} directory.
 
 Before you read the description of this project, you should read all
-of the following sections: @ref{Introduction}, @ref{Threads Tour},
-@ref{Coding Standards}, @ref{Project Documentation}, @ref{Debugging
-Tools}, and @ref{Development Tools}.  To complete this project you
-will also need to read @ref{Multilevel Feedback Scheduling}.
+of the following sections: @ref{Introduction}, @ref{Coding Standards},
+@ref{Project Documentation}, @ref{Debugging Tools}, and
+@ref{Development Tools}.  You should at least skim the material in
+@ref{Threads Tour}, but there's no need to fret over the details.  To
+complete this project you will also need to read @ref{Multilevel
+Feedback Scheduling}.
 
 @menu
 * Understanding Threads::       

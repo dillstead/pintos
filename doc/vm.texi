@@ -608,7 +608,7 @@ your design document.  Please make sure to justify your decision.
 
 @item
 @b{Why do I need to pass @code{PAL_USER} to @func{palloc_get_page}
-when I allocate physical page frames?}
+when I allocate physical page frames?}@anchor{Why PAL_USER?}
 
 You can layer some other allocator on top of @func{palloc_get_page}
 if you like, but it should be the underlying mechanism, directly or

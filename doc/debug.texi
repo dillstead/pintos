@@ -8,6 +8,7 @@ introduces you to a few of them.
 * printf::                      
 * ASSERT::                      
 * DEBUG::                       
+* UNUSED NO_RETURN NO_INLINE PRINTF_FORMAT::  
 * Backtraces::                  
 * i386-elf-gdb::                
 * Modifying Bochs::             
@@ -39,7 +40,7 @@ Eventually you can narrow the problem down to a single statement.
 
 Assertions are useful because they can catch problems early, before
 they'd otherwise be notices.  Pintos provides a macro for assertions
-named @code{ASSERT}, defined in @code{<debug.h>}, that you can use for
+named @code{ASSERT}, defined in @file{<debug.h>}, that you can use for
 this purpose.  Ideally, each function should begin with a set of
 assertions that check its arguments for validity.  (Initializers for
 functions' local variables are evaluated before assertions are
@@ -54,7 +55,7 @@ backtraces below for more information.
 @node DEBUG
 @section @code{DEBUG}
 
-The @code{DEBUG} macro, also defined in @code{<debug.h>}, is a sort of
+The @code{DEBUG} macro, also defined in @file{<debug.h>}, is a sort of
 conditional @func{printf}.  It takes as its arguments the name of a
 ``message class'' and a @func{printf}-like format string and
 arguments.  The message class is used to filter the messages that are
@@ -75,6 +76,39 @@ a command line like this:
 @example
 pintos run -d thread
 @end example
+
+@node UNUSED NO_RETURN NO_INLINE PRINTF_FORMAT
+@section UNUSED, NO_RETURN, NO_INLINE, and PRINTF_FORMAT
+
+These macros defined in @file{<debug.h>} tell the compiler special
+attributes of a function or function parameter.  Their expansions are
+GCC-specific.
+
+@defmac UNUSED
+Appended to a function parameter to tell the compiler that the
+parameter might not be used within the function.  It suppresses the
+warning that would otherwise appear.
+@end defmac
+
+@defmac NO_RETURN
+Appended to a function prototype to tell the compiler that the
+function never returns.  It allows the compiler to fine-tune its
+warnings and its code generation.
+@end defmac
+
+@defmac NO_INLINE
+Appended to a function prototype to tell the compiler to never emit
+the function in-line.  Occasionally useful to improve the quality of
+backtraces (see below).
+@end defmac
+
+@defmac PRINTF_FORMAT (@var{format}, @var{first})
+Appended to a function prototype to tell the compiler that the
+function takes a @func{printf}-like format string as its
+@var{format}th argument and that the corresponding value arguments
+start at the @var{first}th argument.  This lets the compiler tell you
+if you pass the wrong argument types.
+@end defmac
 
 @node Backtraces
 @section Backtraces
