@@ -128,7 +128,7 @@ only once).
 Make sure that directories can expand beyond their original size just
 as any other file can.
 
-Each program has its own current directory.  When one process starts
+Each process has its own current directory.  When one process starts
 another with the @code{exec} system call, the child process inherits its
 parent's current directory.  After that, the two processes' current
 directories are independent, so that either changing its own current
