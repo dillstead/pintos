@@ -217,6 +217,38 @@ that there is a bug in the original Pintos code.  The first and second
 are quite likely, and you should seriously consider both.  We hope
 that the third is less likely, but it is also possible.
 
+@node Debugging by Infinite Loop
+@section Debugging by Infinite Loop
+
+If you get yourself into a situation where the machine reboots in a
+loop, you've probably hit a ``triple fault.''  In such a situation you
+might not be able to use @func{printf} for debugging, because the
+reboots might be happening even before everything needed for
+@func{printf} is initialized.  In such a situation, you might want to
+try what I call ``debugging by infinite loop.''
+
+What you do is pick a place in the Pintos code, insert the statement
+@code{for (;;);} there, and recompile and run.  There are two likely
+possibilities:
+
+@itemize @bullet
+@item
+The machine hangs without rebooting.  If this happens, you know that
+the infinite loop is running.  That means that whatever caused the
+problem must be @emph{after} the place you inserted the infinite loop.
+Now move the infinite loop later in the code sequence.
+
+@item
+The machine reboots in a loop.  If this happens, you know that the
+machine didn't make it to the infinite loop.  Thus, whatever caused the
+reboot must be @emph{before} the place you inserted the infinite loop.
+Now move the infinite loop earlier in the code sequence.
+@end itemize
+
+If you move around the infinite loop in a ``binary search'' fashion, you
+can use this technique to pin down the exact spot that everything goes
+wrong.  It should only take a few minutes at most.
+
 @node Modifying Bochs
 @section Modifying Bochs
 
