@@ -12,9 +12,6 @@
    <gmh@leland.stanford.edu>, Yu Ping Hu <yph@cs.stanford.edu>.
    Modified by arens and yph. */
 
-/* If you've implemented thread_join(), you can uncomment this. */
-/*#define THREAD_JOIN_IMPLEMENTED*/
-
 /* Uncomment to print progress messages. */
 /*#define SHOW_PROGRESS*/
 

@@ -10,9 +10,6 @@
    Taskar <btaskar@cs.stanford.edu>, and Toli Kuznets
    <tolik@cs.stanford.edu>. */
 
-/* If you've implemented thread_join(), you can uncomment this. */
-/*#define THREAD_JOIN_IMPLEMENTED*/
-
 #include "threads/test.h"
 #include <stdio.h>
 #include "threads/synch.h"
