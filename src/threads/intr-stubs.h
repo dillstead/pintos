@@ -1,5 +1,5 @@
-#ifndef THREADS_INTR-STUBS_H
-#define THREADS_INTR-STUBS_H
+#ifndef THREADS_INTR_STUBS_H
+#define THREADS_INTR_STUBS_H
 
 /* Interrupt stubs.
 
