@@ -1,99 +1,123 @@
-#! /usr/bin/perl
+#! /usr/bin/perl -w
 
-$mem = 4;
-$serial_out = 1;
-while (@ARGV) {
-    my ($arg) = shift (@ARGV);
-    if ($arg =~ /--(bochs|qemu|gsx)$/) {
-	die "$arg conflicts with --$sim\n" if defined $sim;
-	$sim = $1;
-    } elsif ($arg =~ /--(no-debug|monitor|gdb)$/) {
-	die "$debug conflicts with --$debug" if defined $debug;
-	$debug = $1;
-    } elsif ($arg eq 'run') {
-	run_vm (@ARGV);
-	exit 0;
-    } elsif ($arg =~ /^--mem(?:ory)?=(\d+)/) {
-	$mem = $1;
-    } elsif ($arg eq '-m') {
-	die "-m needs integer argument\n" if !@ARGV || $ARGV[0] !~ /^-?\d+$/;
-	$mem = shift (@ARGV);
-    } elsif ($arg eq '-j') {
-	die "-j need random seed argument\n" if !@ARGV;
-	die "-j need integer argument\n" if $ARGV[0] !~ /^-?\d+$/;
-	$jitter = shift (@ARGV);
-    } elsif ($arg =~ /--jitter=(-?\d+)$/) {
-	$jitter = $1;
-    } elsif ($arg eq '--no-vga' || $arg eq '-v') {
-	print "warning: --no-vga conflicts with --terminal\n"
-	    if $vga eq 'terminal';
-	$vga = 'none';
-    } elsif ($arg eq '--no-serial' || $arg eq '-s') {
-	$serial_out = 0;
-    } elsif ($arg eq '--terminal' || $arg eq '-t') {
-	print "warning: --terminal conflicts with --no-vga\n"
-	    if $vga eq 'none';
-	$vga = 'terminal';
-    } elsif ($arg eq 'make-disk') {
-	usage () if @ARGV != 2;
-	my ($file, $mb) = @ARGV;
-	usage () if $mb !~ /^\d+(\.\d+)?|\.\d+$/;
-	die "$file: already exists\n" if -e $file;
+use strict;
 
-	create_disk ($file, int ($mb * 1008));
-	exit 0;
-    } elsif ($arg eq 'put') {
-	usage () if @ARGV != 1 && @ARGV != 2;
-	my ($hostfn, $guestfn) = @ARGV;
-	$guestfn = $hostfn if !defined $guestfn;
+our ($mem) = 4;
+our ($serial_out) = 1;
+our (@disks) = ("os.dsk", "fs.dsk", "scratch.dsk", "swap.dsk");
+our ($sim);
+our ($debug);
+our ($vga);
+our ($jitter);
 
-	# Create scratch disk from file.
-	die "$hostfn: $!\n" if ! -e $hostfn;
-	my ($size) = -s _;
-	copy_pad ($hostfn, "scratch.dsk", 512);
+use Getopt::Long qw(:config require_order bundling);
+GetOptions ("bochs|qemu|gsx" => \&set_sim,
+	    "no-debug|monitor|gdb" => \&set_debug,
+	    "run|get|put|make-disk" => \&cmd_option,
+	    "m|memory=i" => \$mem,
+	    "j|jitter=i" => \$jitter,
+	    "v|no-vga" => sub { set_vga ('none'); },
+	    "s|no-serial" => sub { $serial_out = 0; },
+	    "t|terminal" => sub { set_vga ('terminal'); },
+	    "h|help" => sub { usage (0); },
+	    "0|os-disk|disk-0|hda=s" => \$disks[0],
+	    "1|fs-disk|disk-1|hdb=s" => \$disks[1],
+	    "2|scratch-disk|disk-2|hdc=s" => \$disks[2],
+	    "3|swap-disk|disk-3|hdd=s" => \$disks[3])
+    or exit 1;
 
-	# Do copy.
-	run_vm ("-ci", $guestfn, $size, "-q");
-	exit 0;
-    } elsif ($arg eq 'get') {
-	usage () if @ARGV != 1 && @ARGV != 2;
-	my ($guestfn, $hostfn) = @ARGV;
-	$hostfn = $guestfn if !defined $hostfn;
-	die "$hostfn: already exists\n" if -e $file;
+$sim = "bochs" if !defined $sim;
+$debug = "no-debug" if !defined $debug;
+$vga = "window" if !defined $vga;
 
-	# Create scratch disk big enough for any file in the filesystem
-	# (modulo sparse files).
-	die "fs.dsk: $!\n" if ! -e "fs.dsk";
-	my ($fs_size) = -s _;
-	my ($scratch_size) = -s "scratch.dsk";
-	$scratch_size = 0 if !defined $scratch_size;
-	create_disk ("scratch.dsk", $fs_size / 1024 + 16)
-	    if $scratch_size < $fs_size + 16384;
-
-	# Do copy.
-	run_vm ("-co", $guestfn, "-q");
-
-	# Read out scratch disk.
-	print "copying $guestfn from scratch.dsk to $hostfn...\n";
-	open (SRC, "<scratch.dsk") or die "scratch.dsk: open: $!\n";
-	open (DST, ">$hostfn") or die "$hostfn: create: $!\n";
-	my ($input);
-	read (SRC, $input, 512) == 512 or die "scratch.dsk: read error\n";
-	my ($size) = unpack ("%V", $input);
-	$size != 0xffffffff or die "$guestfn: too big for scratch.dsk?";
-	read (SRC, $src, $size) == $size or die "scratch.dsk: read error\n";
-	print DST $src or die "$hostfn: write error\n";
-	close (DST);
-	close (SRC);
-
-	exit 0;
-    } elsif ($arg eq 'help' || $arg eq '--help') {
-	usage (0);
-    } else {
-	die "unknown option `$arg'\n";
-    }
+sub set_sim {
+    my ($option) = @_;
+    die "--$option conflicts with --$sim\n" if defined $sim;
+    our ($sim) = $option;
 }
-usage ();
+
+sub set_debug {
+    my ($option) = @_;
+    die "--$option conflicts with --$debug\n" if defined $debug;
+    our ($debug) = $option;
+}
+
+sub set_vga {
+    my ($new_vga) = @_;
+    if (defined ($vga) && $vga ne $new_vga) {
+	print "warning: conflicting vga display options\n";
+    }
+    our ($vga) = $new_vga;
+}
+
+sub cmd_option {
+    our ($cmd) = @_;
+
+    # Force an end to option processing, as with --.
+    die ("!FINISH");
+}
+
+die "no command specified; use --help for help\n"
+    if @ARGV < 1;
+my ($cmd) = shift @ARGV;
+if ($cmd eq 'run') {
+    run_vm (@ARGV);
+} elsif ($cmd eq 'make-disk') {
+    usage () if @ARGV != 2;
+    my ($file, $mb) = @ARGV;
+    usage () if $mb !~ /^\d+(\.\d+)?|\.\d+$/;
+    die "$file: already exists\n" if -e $file;
+
+    create_disk ($file, int ($mb * 1008));
+} elsif ($cmd eq 'put') {
+    usage () if @ARGV != 1 && @ARGV != 2;
+    my ($hostfn, $guestfn) = @ARGV;
+    $guestfn = $hostfn if !defined $guestfn;
+
+    # Create scratch disk from file.
+    die "$hostfn: $!\n" if ! -e $hostfn;
+    my ($size) = -s _;
+    copy_pad ($hostfn, "scratch.dsk", 512);
+
+    # Do copy.
+    run_vm ("-ci", $guestfn, $size, "-q");
+} elsif ($cmd eq 'get') {
+    usage () if @ARGV != 1 && @ARGV != 2;
+    my ($guestfn, $hostfn) = @ARGV;
+    $hostfn = $guestfn if !defined $hostfn;
+    die "$hostfn: already exists\n" if -e $hostfn;
+
+    # Create scratch disk big enough for any file in the filesystem
+    # (modulo sparse files).
+    die "fs.dsk: $!\n" if ! -e "fs.dsk";
+    my ($fs_size) = -s _;
+    my ($scratch_size) = -s "scratch.dsk";
+    $scratch_size = 0 if !defined $scratch_size;
+    create_disk ("scratch.dsk", $fs_size / 1024 + 16)
+	if $scratch_size < $fs_size + 16384;
+
+    # Do copy.
+    run_vm ("-co", $guestfn, "-q");
+
+    # Read out scratch disk.
+    print "copying $guestfn from scratch.dsk to $hostfn...\n";
+    open (SRC, "<scratch.dsk") or die "scratch.dsk: open: $!\n";
+    open (DST, ">$hostfn") or die "$hostfn: create: $!\n";
+    my ($input);
+    read (SRC, $input, 512) == 512 or die "scratch.dsk: read error\n";
+    my ($size) = unpack ("%V", $input);
+    $size != 0xffffffff or die "$guestfn: too big for scratch.dsk?";
+    my ($src);
+    read (SRC, $src, $size) == $size or die "scratch.dsk: read error\n";
+    print DST $src or die "$hostfn: write error\n";
+    close (DST);
+    close (SRC);
+} elsif ($cmd eq 'help') {
+    usage (0);
+} else {
+    die "unknown command `$cmd'; use --help for help\n";
+}
+exit 0;
 
 sub usage {
     my ($exitcode) = @_;
@@ -121,6 +145,11 @@ sub usage {
     print "VM options:\n";
     print "  -j SEED          Randomize timer interrupts (Bochs only)\n";
     print "  -m, --mem=MB     Run VM with MB megabytes of physical memory\n";
+    print "Disk options:\n";
+    print "  --os-disk=DISK    Set OS disk file (default: os.dsk)\n";
+    print "  --fs-disk=DISK    Set FS disk file (default: fs.dsk)\n";
+    print "  --scratch-disk=DISK   Set scratch disk (default: scratch.dsk)\n";
+    print "  --swap-disk=DISK  Set swap disk file (default: swap.dsk)\n";
     exit $exitcode;
 }
 
@@ -135,21 +164,17 @@ sub create_disk {
 }
 
 sub run_vm {
-    my (@disks) = (undef, undef, undef, undef);
-
-    $sim = "bochs" if !defined $sim;
-    $debug = "no-debug" if !defined $debug;
-    $vga = "window" if !defined $vga;
-
-    $disks[0] = "os.dsk";
-    $disks[1] = "fs.dsk" if -e "fs.dsk";
-    $disks[2] = "scratch.dsk" if -e "scratch.dsk";
-    $disks[3] = "swap.dsk" if -e "swap.dsk";
+    our (@disks);
 
     die "$disks[0]: can't find OS disk\n" if ! -e $disks[0];
+    for my $i (1...3) {
+	undef $disks[$i] if ! -e $disks[$i];
+    }
+
     write_cmd_line ($disks[0], @_);
 
     if ($sim eq 'bochs') {
+	my ($bin);
 	if ($debug eq 'no-debug') {
 	    $bin = 'bochs';
 	} elsif ($debug eq 'monitor') {
@@ -157,14 +182,14 @@ sub run_vm {
 	} elsif ($debug eq 'gdb') {
 	    $bin = 'bochs-gdb';
 	}
-	$bochsbin = search_path ($bin);
-	$bochsshare = "$bochsbin/../share/bochs";
-	$romimage = "$bochsshare/BIOS-bochs-latest";
-	$vgaromimage = "$bochsshare/VGABIOS-lgpl-latest";
+
+	my ($bochsbin) = search_path ($bin);
+	my ($bochsshare) = "$bochsbin/../share/bochs";
 
 	open (BOCHSRC, ">bochsrc.txt") or die "bochsrc.txt: create: $!\n";
-	print BOCHSRC "romimage: file=$romimage, address=0xf0000\n";
-	print BOCHSRC "vgaromimage: $vgaromimage\n";
+	print BOCHSRC "romimage: file=$bochsshare/BIOS-bochs-latest, "
+	    . "address=0xf0000\n";
+	print BOCHSRC "vgaromimage: $bochsshare/VGABIOS-lgpl-latest\n";
 	print BOCHSRC bochs_disk_line ("ata0-master", $disks[0]);
 	print BOCHSRC bochs_disk_line ("ata0-slave", $disks[1]);
 	print BOCHSRC "ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15\n"
@@ -185,7 +210,8 @@ sub run_vm {
 	    print BOCHSRC "display_library: term\n";
 	}
 	close (BOCHSRC);
-	@cmd = ($bin, '-q');
+
+	my (@cmd) = ($bin, '-q');
 	push (@cmd, '-j', $jitter) if defined $jitter;
 	run_command_no_die (@cmd);
     } elsif ($sim eq 'qemu') {
@@ -229,12 +255,12 @@ sub run_vm {
 	for (my ($i) = 0; $i < 4; $i++) {
 	    my ($dsk) = $disks[$i];
 	    next if !defined $dsk;
-	    $device = "ide" . int ($i / 2) . ":" . ($i % 2);
 
 	    my ($pln) = $dsk;
 	    $pln =~ s/\.dsk//;
 	    $pln .= ".pln";
 
+	    my ($device) = "ide" . int ($i / 2) . ":" . ($i % 2);
 	    print VMX "\n$device.present = TRUE\n";
 	    print VMX "$device.deviceType = \"plainDisk\"\n";
 	    print VMX "$device.fileName = \"$pln\"\n";
@@ -254,7 +280,7 @@ sub run_vm {
 	close (VMX);
 
 	use Cwd;
-	$vmx = getcwd () . "/pintos.vmx";
+	my ($vmx) = getcwd () . "/pintos.vmx";
 	system ("vmware-cmd -s register $vmx >&/dev/null");
 	system ("vmware-cmd $vmx stop hard >&/dev/null");
 	system ("vmware -l -G -x -q $vmx");
@@ -266,7 +292,7 @@ sub write_cmd_line {
     my ($disk, @args) = @_;
 
     die "command line includes empty string" if grep (/^$/, @args);
-    $args = join ("\0", @args) . "\0\0";
+    my ($args) = join ("\0", @args) . "\0\0";
     die "command line exceeds 128 bytes" if length ($args) > 128;
     $args .= "\0" x (128 - length ($args));
 
@@ -289,7 +315,7 @@ sub run_command_no_die {
 
 sub search_path {
     my ($target) = @_;
-    for $dir (split (':', $ENV{PATH})) {
+    for my $dir (split (':', $ENV{PATH})) {
 	return $dir if -e "$dir/$target";
     }
     die "$target not in PATH\n";
@@ -309,7 +335,7 @@ sub disk_geometry {
     my ($size) = -s $file;
     die "$file: stat: $!\n" if !defined $size;
     die "$file: size not a multiple of 512 bytes\n" if $size % 512;
-    $cylinders = int ($size / (512 * 16 * 63));
+    my ($cylinders) = int ($size / (512 * 16 * 63));
     $cylinders++ if $size % (512 * 16 * 63);
 
     return (CAPACITY => $size / 512,
