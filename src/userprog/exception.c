@@ -101,7 +101,8 @@ kill (struct intr_frame *f)
 #define PF_U 0x4    /* 0: kernel, 1: user process. */
 
 /* Page fault handler.  This is a skeleton that must be filled in
-   to implement virtual memory.
+   to implement virtual memory.  Some solutions to project 2 may
+   also require modifying this code.
 
    At entry, the address that faulted is in CR2 (Control Register
    2) and information about the fault, formatted as described in
