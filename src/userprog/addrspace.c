@@ -79,6 +79,21 @@ struct Elf32_Phdr
         } while (0)
 
 static bool
+install_page (struct addrspace *as, void *upage, void *kpage)
+{
+  /* Verify that there's not already a page at that virtual
+     address, then map our page there. */
+  if (pagedir_get_page (as->pagedir, upage) == NULL
+      && pagedir_set_page (as->pagedir, upage, kpage, true))
+    return true;
+  else
+    {
+      palloc_free (kpage);
+      return false;
+    }
+}
+
+static bool
 load_segment (struct addrspace *as, struct file *file,
               const struct Elf32_Phdr *phdr) 
 {
@@ -132,19 +147,29 @@ load_segment (struct addrspace *as, struct file *file,
       memset (kpage + read_bytes, 0, zero_bytes);
       filesz_left -= read_bytes;
 
-      if (pagedir_get_page (as->pagedir, upage))
-        {
-          palloc_free (kpage);
-          return false;
-        }
-      pagedir_set_page (as->pagedir, upage, kpage, true);
+      if (!install_page (as, upage, kpage))
+        return false;
     }
 
   return true;
 }
 
+static bool
+setup_stack (struct addrspace *as) 
+{
+  uint8_t *kpage = palloc_get (PAL_ZERO);
+  if (kpage == NULL)
+    {
+      printk ("failed to allocate process stack\n");
+      return false;
+    }
+
+  return install_page (as, ((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
+}
+
 bool
-addrspace_load (struct addrspace *as, const char *filename) 
+addrspace_load (struct addrspace *as, const char *filename,
+                void (**start) (void)) 
 {
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
@@ -177,7 +202,6 @@ addrspace_load (struct addrspace *as, const char *filename)
 
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;
-  printk ("e_phnum=%d\n", ehdr.e_phnum);
   for (i = 0; i < ehdr.e_phnum; i++) 
     {
       struct Elf32_Phdr phdr;
@@ -196,7 +220,7 @@ addrspace_load (struct addrspace *as, const char *filename)
         case PT_NULL:
         case PT_NOTE:
         case PT_PHDR:
-        case PT_STACK: /* Stack segment. */
+        case PT_STACK:
           /* Ignore this segment. */
           break;
         case PT_DYNAMIC:
@@ -214,6 +238,14 @@ addrspace_load (struct addrspace *as, const char *filename)
           break;
         }
     }
+
+  /* Set up stack. */
+  if (!setup_stack (as))
+    goto error;
+
+  /* Start address. */
+  *start = (void (*) (void)) ehdr.e_entry;
+
   success = true;
 
  error:

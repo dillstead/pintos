@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include "debug.h"
 #include "interrupt.h"
+#include "intr-stubs.h"
 #include "lib.h"
 #include "mmu.h"
 #include "palloc.h"
@@ -105,13 +106,42 @@ thread_current (void)
 bool
 thread_execute (const char *filename) 
 {
-  struct thread *t = new_thread (filename);
+  struct thread *t;
+  struct intr_frame *if_;
+  struct switch_thunk_frame *tf;
+  struct switch_frame *sf;
+  void (*start) (void);
+
+  ASSERT (filename != NULL);
+
+  t = new_thread (filename);
   if (t == NULL)
     return false;
   
-  if (!addrspace_load (&t->addrspace, filename)) 
+  if (!addrspace_load (&t->addrspace, filename, &start)) 
     panic ("%s: program load failed", filename);
-  printk ("%s: loaded\n", filename);
+
+  /* Interrupt frame. */
+  if_ = alloc_frame (t, sizeof *if_);
+  if_->es = SEL_UDSEG;
+  if_->ds = SEL_UDSEG;
+  if_->eip = start;
+  if_->cs = SEL_UCSEG;
+  if_->eflags = FLAG_IF | 2;
+  if_->esp = PHYS_BASE;
+  if_->ss = SEL_UDSEG;
+  
+  /* Stack frame for switch_thunk(). */
+  tf = alloc_frame (t, sizeof *tf);
+  tf->eip = (void (*) (void)) intr_exit;
+
+  /* Stack frame for thread_switch(). */
+  sf = alloc_frame (t, sizeof *sf);
+  sf->eip = (void (*) (void)) switch_thunk;
+
+  /* Add to run queue. */
+  thread_ready (t);
+
   return true;
 }
 #endif
