@@ -273,11 +273,6 @@ Some way of translating in software from virtual page frames to
 physical page frames.  Consider using a hash table (@pxref{Hash
 Table}).
 
-@item
-Some way of translating from physical page frames back to virtual page
-frames, so that when you evict a physical page from its frame, you can
-invalidate its translation(s).
-
 It is possible to do this translation without adding a new data
 structure, by modifying the code in @file{userprog/pagedir.c}.  However,
 if you do that you'll need to carefully study and understand section 3.7
@@ -288,6 +283,15 @@ data structure.
 Some way of finding a page on disk if it is not in memory.  You won't
 need this data structure until problem 3-2, but planning ahead is a
 good idea.
+
+You can generalize the virtual-to-physical page table, so that it allows
+you to locate a page wherever it is in physical memory or on disk, or
+you can make this a separate table.
+
+@item
+Some way of translating from physical page frames back to virtual page
+frames, so that when you evict a physical page from its frame, you can
+invalidate its translation(s).
 @end itemize
 
 The page fault handler, @func{page_fault} in
