@@ -321,6 +321,10 @@ join works for.  Don't overdo the output volume, please!
 Be careful to program this function correctly.  You will need its
 functionality for project 2.
 
+Once you've implemented @code{thread_join()}, define
+@code{THREAD_JOIN_IMPLEMENTED} in @file{constants.h}.
+@xref{Conditional Compilation}, for more information.
+
 @node Problem 1-3 Priority Scheduling
 @section Problem 1-3: Priority Scheduling
 

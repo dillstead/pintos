@@ -11,6 +11,7 @@ introduces you to a few of them.
 * Backtraces::                  
 * i386-elf-gdb::                
 * Modifying Bochs::             
+* Debugging Tips::              
 @end menu
 
 @node printf

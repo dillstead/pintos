@@ -15,7 +15,9 @@ other part of the code for this assignment. We will describe the
 relevant parts below. If you are confident in your HW1 code, you can
 build on top of it.  However, if you wish you can start with a fresh
 copy of the code and re-implement @code{thread_join()}, which is the
-only part of project #1 required for this assignment.
+only part of project #1 required for this assignment.  Your submission
+should define @code{THREAD_JOIN_IMPLEMENTED} in @file{constants.h}
+(@pxref{Conditional Compilation}).
 
 Up to now, all of the code you have written for Pintos has been part
 of the operating system kernel.  This means, for example, that all the
@@ -39,6 +41,7 @@ in place.  This will stop the tests from being run.
 * Project 2 Code::              
 * Using the File System::       
 * How User Programs Work::      
+* Virtual Memory Layout::       
 * Global Requirements::         
 * Problem 2-1 Argument Passing::  
 * Problem 2-2 System Calls::    
@@ -444,23 +447,64 @@ same process, or you can use a more complex mapping.  It's up to you.
 @b{I can't seem to figure out how to read from and write to user
 memory. What should I do?}
 
-The kernel must treat user memory delicately.  The user can pass a
-null pointer or an invalid pointer (one that doesn't point to any
-memory at all), or a kernel pointer (above @code{PHYS_BASE}).  All of
-these must be rejected without harm to the kernel or other running
-processes.
+The kernel must treat user memory delicately.  As part of a system
+call, the user can pass to the kernel a null pointer, a pointer to
+unmapped virtual memory, or a pointer to kernel virtual address space
+(above @code{PHYS_BASE}).  All of these types of invalid pointers must
+be rejected without harm to the kernel or other running processes.  At
+your option, the kernel may handle invalid pointers by terminating the
+process or returning from the system call with an error.
 
-There are at least two reasonable ways to access user memory.  First,
-you can translate user addresses (below @code{PHYS_BASE}) into kernel
-addresses (above @code{PHYS_BASE}) using the functions in
-@file{pagedir.c}, and then access kernel memory.  Second, you can
-dereference user pointers directly and handle page faults by
-terminating the process.  In either case, you'll need to reject kernel
-pointers as a special case.
+There are at least two reasonable ways to do this correctly.  The
+first method is to ``verify then access'':@footnote{These terms are
+made up for this document.  They are not standard terminology.} verify
+the validity of a user-provided pointer, then dereference it.  If you
+choose this route, you'll want to look at the functions in
+@file{userprog/pagedir.c} and in @file{threads/mmu.h}.  This is the
+simplest way to handle user memory access.
 
-If you choose to translate user addresses into kernel addresses,
-you'll want to look at @file{threads/mmu.h}, which has all kinds of
-useful functions for manipulating virtual addresses.
+The second method is to ``assume and react'': directly dereference
+user pointers, after checking that they point below @code{PHYS_BASE}.
+Invalid user pointers will then cause a ``page fault'' that you can
+handle by modifying the code for @code{page_fault()} in
+@file{userprog/exception.cc}.  This technique is normally faster
+because it takes advantage of the processor's MMU, so it tends to be
+used in real kernels (including Linux).
+
+In either case, you need to make sure not to ``leak'' resources.  For
+example, suppose that your system call has acquired a lock or
+allocated a page of memory.  If you encounter an invalid user pointer
+afterward, you must still be sure to release the lock or free the page
+of memory.  If you choose to ``verify then access,'' then this should
+be straightforward, but for ``assume and react'' it's more difficult,
+because there's no way to return an error code from a memory access.
+Therefore, for those who want to try the latter technique, we'll
+provide a little bit of helpful code:
+
+@example
+/* Tries to copy a byte from user address USRC to kernel address DST.
+   Returns true if successful, false if USRC is invalid. */
+static inline bool get_user (uint8_t *dst, const uint8_t *usrc) @{
+  int eax;
+  asm ("movl $1f, %%eax; movb %2, %%al; movb %%al, %0; 1:"
+       : "=m" (*dst), "=&a" (eax) : "m" (*usrc));
+  return eax != 0;
+@}
+
+/* Tries write BYTE to user address UDST.
+   Returns true if successful, false if UDST is invalid. */
+static inline bool put_user (uint8_t *udst, uint8_t byte) @{
+  int eax;
+  asm ("movl $1f, %%eax; movb %b2, %0; 1:"
+       : "=m" (*udst), "=&a" (eax) : "r" (byte));
+  return eax != 0;
+@}
+@end example
+
+Each of these functions assumes that the user address has already been
+verified to be below @code{PHYS_BASE}.  They also assume that you've
+modified @code{page_fault()} so that a page fault in the kernel causes
+@code{eax} to be set to 0 and its former value copied into @code{eip}.
 
 @item
 @b{I'm also confused about reading from and writing to the stack. Can

@@ -21,6 +21,9 @@ parts work together so that you can run VM and your filesystem at the
 same time.  Plus, keeping VM is a great way to stress-test your
 filesystem implementation.
 
+Your submission should define @code{THREAD_JOIN_IMPLEMENTED} in
+@file{constants.h} (@pxref{Conditional Compilation}).
+
 FIXME FIXME FIXME
 The first step is to understand the default filesystem provided by the
 base code.  

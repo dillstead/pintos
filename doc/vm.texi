@@ -25,6 +25,9 @@ All the test programs from the previous project should also work with
 this project.  You should also write programs to test the new features
 introduced in this project.
 
+Your submission should define @code{THREAD_JOIN_IMPLEMENTED} in
+@file{constants.h} (@pxref{Conditional Compilation}).
+
 @menu
 * VM Design::                   
 * Page Faults::                 

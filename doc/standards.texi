@@ -65,6 +65,11 @@ There are a few exceptions:
 
 @itemize @bullet
 @item
+Problem 1-2, @code{thread_join()}.  Some other code expects
+@code{THREAD_JOIN_IMPLEMENTED} to be defined once you've implemented
+this function.
+
+@item
 Problem 1-4, the advanced scheduler.  We must be able to turn this on
 and off with a compile time directive.  You must use the macro name we
 specify for that part.  @xref{Problem 1-4 Advanced Scheduler}, for
