@@ -151,6 +151,19 @@ you're very curious, you can look at the @command{pintos} program as
 well as @file{filesys/fsutil.c} to learn the implementation details,
 but it's really not relevant for this project.
 
+Here's a summary of how you would create and format a disk, copy the
+@command{echo} program into the new disk, and then run @command{echo}.
+It assumes that you've already built the tests in
+@file{tests/userprog} and that the current directory is
+@file{userprog/build}:
+
+@example
+pintos make-disk fs.dsk 2
+pintos run -f
+pintos put ../../tests/userprog/echo echo
+pintos run -ex echo
+@end example
+
 You can delete a file from the Pintos file system using the @option{-r
 @var{file}} kernel option, e.g.@: @code{pintos run -r @var{file}}.
 Also, @option{-ls} lists the files in the file system and @option{-p
@@ -202,7 +215,8 @@ free to use the entire space of user virtual memory however it
 chooses.  When the kernel switches from one process to another, it
 also switches user virtual address spaces by switching the processor's
 page directory base register (see @func{pagedir_activate in
-@file{userprog/pagedir.c}}.
+@file{userprog/pagedir.c}}.  @struct{thread} contains a pointer to a
+process's page directory.
 
 Kernel virtual memory is global.  It is always mapped the same way,
 regardless of what user process or kernel thread is running.  In
@@ -221,11 +235,16 @@ the running process.  However, even in the kernel, an attempt to
 access memory at a user virtual address that doesn't have a page
 mapped into it will cause a page fault.
 
+You must handle memory fragmentation gracefully, that is, a process
+that needs @var{N} pages of memory must not require that all @var{N}
+be contiguous.  In fact, it must not require that any of the pages be
+contiguous.
+
 @node Global Requirements
 @section Global Requirements
 
-For testing and grading purposes, we have some simple requirements for
-your output:
+For testing and grading purposes, we have some simple overall
+requirements:
 
 @itemize @bullet
 @item
@@ -476,6 +495,14 @@ isn't properly set up yet, this causes a page fault.
 @b{I implemented 2-1 and now all my user programs die with
 @samp{system call!}.}
 
+Every reasonable program tries to make at least one system call
+(@func{exit}) and most programs make more than that.  The default
+system call handler just prints @samp{system call!} and terminates the
+program.  You'll have to implement 2-2 before you see anything more
+interesting.  Until then, you can use @func{hex_dump} to convince
+yourself that 2-1 is implemented correctly (@pxref{Argument Passing to
+main}).
+
 @item
 @b{Is there a way I can disassemble user programs?}
 
@@ -611,10 +638,10 @@ Each character is 1 byte.
 @end itemize
 
 @item
-@b{Why doesn't keyboard input work with @option{-v}?}
+@b{Why doesn't keyboard input work with @samp{pintos -v}?}
 
-Serial input isn't implemented.  Don't use @option{-v} if you want to
-use the shell or otherwise type at the keyboard.
+Serial input isn't implemented.  Don't use @samp{pintos -v} if you
+want to use the shell or otherwise provide keyboard input.
 @end enumerate
 
 @menu
