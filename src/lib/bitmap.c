@@ -101,9 +101,12 @@ bitmap_set_all (struct bitmap *b, bool value)
   
   ASSERT (b != NULL);
 
-  for (i = 0; i < elem_cnt (b); i++)
-    b->bits[i] = value ? (elem_type) -1 : 0;
-  b->bits[elem_cnt (b) - 1] &= last_mask (b);
+  if (b->bit_cnt > 0)
+    {
+      for (i = 0; i < elem_cnt (b); i++)
+        b->bits[i] = value ? (elem_type) -1 : 0;
+      b->bits[elem_cnt (b) - 1] &= last_mask (b); 
+    }
 }
 
 /* Sets the bit numbered IDX in B to true. */
@@ -274,8 +277,11 @@ bitmap_file_size (const struct bitmap *b)
 void
 bitmap_read (struct bitmap *b, struct file *file) 
 {
-  file_read_at (file, b->bits, byte_cnt (b), 0);
-  b->bits[elem_cnt (b) - 1] &= last_mask (b);
+  if (b->bit_cnt > 0) 
+    {
+      file_read_at (file, b->bits, byte_cnt (b), 0);
+      b->bits[elem_cnt (b) - 1] &= last_mask (b);
+    }
 }
 
 /* Writes FILE to B, ignoring errors. */
