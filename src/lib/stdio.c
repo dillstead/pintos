@@ -132,14 +132,14 @@ struct integer_base
   {
     int base;                   /* Base. */
     const char *digits;         /* Collection of digits. */
-    const char *signifier;      /* Prefix used with # flag. */
+    int x;                      /* `x' character to use, for base 16 only. */
     int group;                  /* Number of digits to group with ' flag. */
   };
 
-static const struct integer_base base_d = {10, "0123456789", "", 3};
-static const struct integer_base base_o = {8, "01234567", "0", 3};
-static const struct integer_base base_x = {16, "0123456789abcdef", "0x", 4};
-static const struct integer_base base_X = {16, "0123456789ABCDEF", "0X", 4};
+static const struct integer_base base_d = {10, "0123456789", 0, 3};
+static const struct integer_base base_o = {8, "01234567", 0, 3};
+static const struct integer_base base_x = {16, "0123456789abcdef", 'x', 4};
+static const struct integer_base base_X = {16, "0123456789ABCDEF", 'X', 4};
 
 static const char *parse_conversion (const char *format,
                                      struct printf_conversion *,
@@ -474,15 +474,34 @@ format_integer (uintmax_t value, bool is_signed, bool negative,
                 void (*output) (char, void *), void *aux)
 {
   char buf[64], *cp;            /* Buffer and current position. */
-  const char *signifier;        /* b->signifier or "". */
+  int x;                        /* `x' character to use or 0 if none. */
+  int sign;                     /* Sign character or 0 if none. */
   int precision;                /* Rendered precision. */
   int pad_cnt;                  /* # of pad characters to fill field width. */
   int digit_cnt;                /* # of digits output so far. */
 
+  /* Determine sign character, if any.
+     An unsigned conversion will never have a sign character,
+     even if one of the flags requests one. */
+  sign = 0;
+  if (is_signed) 
+    {
+      if (c->flags & PLUS)
+        sign = negative ? '-' : '+';
+      else if (c->flags & SPACE)
+        sign = negative ? '-' : ' ';
+      else if (negative)
+        sign = '-';
+    }
+
+  /* Determine whether to include `0x' or `0X'.
+     It will only be included with a hexadecimal conversion of a
+     nonzero value with the # flag. */
+  x = (c->flags & POUND) && value ? b->x : 0;
+
   /* Accumulate digits into buffer.
      This algorithm produces digits in reverse order, so later we
-     will output the buffer's content in reverse.  This is also
-     the reason that later we append zeros and the sign. */
+     will output the buffer's content in reverse. */
   cp = buf;
   digit_cnt = 0;
   while (value > 0) 
@@ -496,33 +515,30 @@ format_integer (uintmax_t value, bool is_signed, bool negative,
 
   /* Append enough zeros to match precision.
      If requested precision is 0, then a value of zero is
-     rendered as a null string, otherwise as "0". */
+     rendered as a null string, otherwise as "0".
+     If the # flag is used with base 0, the result must always
+     begin with a zero. */
   precision = c->precision < 0 ? 1 : c->precision;
-  while (cp - buf < precision && cp - buf < (int) sizeof buf - 8)
+  while (cp - buf < precision && cp < buf + sizeof buf - 1)
+    *cp++ = '0';
+  if ((c->flags & POUND) && b->base == 8 && (cp == buf || cp[-1] != '0'))
     *cp++ = '0';
 
-  /* Append sign. */
-  if (is_signed) 
-    {
-      if (c->flags & PLUS)
-        *cp++ = negative ? '-' : '+';
-      else if (c->flags & SPACE)
-        *cp++ = negative ? '-' : ' ';
-      else if (negative)
-        *cp++ = '-';
-    }
-  
   /* Calculate number of pad characters to fill field width. */
-  signifier = c->flags & POUND ? b->signifier : "";
-  pad_cnt = c->width - (cp - buf) - strlen (signifier);
+  pad_cnt = c->width - (cp - buf) - (x ? 2 : 0) - (sign != 0);
   if (pad_cnt < 0)
     pad_cnt = 0;
 
   /* Do output. */
   if ((c->flags & (MINUS | ZERO)) == 0)
     output_dup (' ', pad_cnt, output, aux);
-  while (*signifier != '\0')
-    output (*signifier++, aux);
+  if (sign)
+    output (sign, aux);
+  if (x) 
+    {
+      output ('0', aux);
+      output (x, aux); 
+    }
   if (c->flags & ZERO)
     output_dup ('0', pad_cnt, output, aux);
   while (cp > buf)
@@ -547,10 +563,11 @@ format_string (const char *string, int length,
                struct printf_conversion *c,
                void (*output) (char, void *), void *aux) 
 {
+  int i;
   if (c->width > length && (c->flags & MINUS) == 0)
     output_dup (' ', c->width - length, output, aux);
-  while (length-- > 0)
-    output (*string++, aux);
+  for (i = 0; i < length; i++)
+    output (string[i], aux);
   if (c->width > length && (c->flags & MINUS) != 0)
     output_dup (' ', c->width - length, output, aux);
 }
