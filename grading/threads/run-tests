@@ -156,7 +156,7 @@ sub run_test {
     }
 
     # Really run the test.
-    $status = really_run_test ($test);
+    my ($status) = really_run_test ($test);
 
     # Save the results for later.
     open (DONE, ">output/$test/done") or die "output/$test/done: create: $!\n";
