@@ -447,9 +447,9 @@ Implement priority scheduling in Pintos.  Priority scheduling is a key
 building block for real-time systems.  Implement functions
 @func{thread_set_priority} to set the priority of the running thread
 and @func{thread_get_priority} to get the running thread's priority.
-(A thread can examine and modify only its own priority.)  There are
-already prototypes for these functions in @file{threads/thread.h},
-which you should not change.
+(This API only allows a thread to examine and modify its own
+priority.)  There are already prototypes for these functions in
+@file{threads/thread.h}, which you should not change.
 
 Thread priority ranges from @code{PRI_MIN} (0) to @code{PRI_MAX} (59).
 The initial thread priority is passed as an argument to
