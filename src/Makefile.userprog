@@ -10,7 +10,11 @@ DEFINES = -DPINTOS -DUSER
 CPPFLAGS = -nostdinc -I$(SRCDIR) -I- -I$(SRCDIR)/lib -I$(SRCDIR)/lib/user -I.
 
 # Linker flags.
-LDFLAGS = -nostdlib -static -s
+# If you want to include debug symbols, comment out the STRIP assignment,
+# or invoke `make' as `make STRIP='.
+# Otherwise debug symbols will be omitted from executables to save space.
+STRIP = -s
+LDFLAGS = -nostdlib -static $(STRIP)
 LDLIBS = $(shell $(CC) -print-libgcc-file-name)
 
 # C library sources linked into every test program.
