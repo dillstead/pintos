@@ -61,6 +61,7 @@ struct channel
     uint16_t reg_base;
     uint8_t irq;
 
+    struct lock lock;
     bool expecting_interrupt;
     struct semaphore completion_wait;
 
@@ -306,13 +307,25 @@ identify_ata_device (struct disk *d)
       return;
     }
 
+  /* Calculate capacity. */
   d->capacity = id[60] | ((uint32_t) id[61] << 16);
-  printk ("%s: detected %'"PRDSNu" sector (%d MB) disk: ",
-          d->name, d->capacity, d->capacity * DISK_SECTOR_SIZE / 1024 / 1024);
+
+  /* Print identification message. */
+  printk ("%s: detected %'"PRDSNu" sector (", d->name, d->capacity);
+  if (d->capacity > 1024 / DISK_SECTOR_SIZE * 1024 * 1024)
+    printk ("%"PRDSNu" GB",
+            d->capacity / (1024 / DISK_SECTOR_SIZE * 1024 * 1024));
+  else if (d->capacity > 1024 / DISK_SECTOR_SIZE * 1024)
+    printk ("%"PRDSNu" MB", d->capacity / (1024 / DISK_SECTOR_SIZE * 1024));
+  else if (d->capacity > 1024 / DISK_SECTOR_SIZE)
+    printk ("%"PRDSNu" kB", d->capacity / (1024 / DISK_SECTOR_SIZE));
+  else
+    printk ("%"PRDSNu" byte", d->capacity * DISK_SECTOR_SIZE);
+  printk (") disk \"");
   printk_ata_string ((char *) &id[27], 20);
   printk (" ");
   printk_ata_string ((char *) &id[10], 10);
-  printk ("\n");
+  printk ("\"\n");
 }
 
 static void
@@ -364,6 +377,7 @@ disk_init (void)
         default:
           NOT_REACHED ();
         }
+      lock_init (&c->lock, c->name);
       c->expecting_interrupt = false;
       sema_init (&c->completion_wait, 0, c->name);
  
@@ -437,6 +451,7 @@ disk_read (struct disk *d, disk_sector_no sec_no, void *buffer)
   ASSERT (d != NULL);
   ASSERT (buffer != NULL);
 
+  lock_acquire (&d->channel->lock);
   select_sector (d, sec_no);
   execute_command (d, CMD_READ_SECTOR_RETRY);
   wait_while_busy (d);
@@ -450,9 +465,11 @@ disk_write (struct disk *d, disk_sector_no sec_no, const void *buffer)
   ASSERT (d != NULL);
   ASSERT (buffer != NULL);
 
+  lock_acquire (&d->channel->lock);
   select_sector (d, sec_no);
   execute_command (d, CMD_WRITE_SECTOR_RETRY);
   wait_while_busy (d);
   if (!output_sector (d->channel, buffer))
     panic ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
+  lock_release (&d->channel->lock);
 }
