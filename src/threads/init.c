@@ -278,6 +278,8 @@ power_off (void)
 #endif
 
   printf ("Powering off...\n");
+  serial_flush ();
+
   for (p = s; *p != '\0'; p++)
     outb (0x8900, *p);
   for (;;);
