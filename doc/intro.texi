@@ -36,6 +36,7 @@ projects.
 
 @menu
 * Getting Started::             
+* Pintos License::              
 * Pintos Trivia::               
 @end menu
 
@@ -240,6 +241,23 @@ options.  These options must be specified @emph{after} the
 @option{run} command.  These options are not very interesting for now,
 but you can see a list of them using the @option{-u} option, e.g.@:
 @code{pintos run -u}.
+
+@node Pintos License
+@section Pintos License
+
+Pintos is distributed under a liberal license that allows it to be
+freely used, modified, and distributed.  Students and others own their
+own code and may use it for any purpose.  In the context of Stanford's
+CS 140 course, please respect the spirit and the letter of the honor
+code by refraining from reading any homework solutions available
+online or elsewhere.  (Source code for other operating system kernels,
+such as Linux or FreeBSD, is of course fair game.)
+
+Please refer to the @file{LICENSE} file at the top level of the Pintos
+source distribution for license details.
+
+There is NO WARRANTY for Pintos, not even for MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.
 
 @node Pintos Trivia
 @section Pintos Trivia
