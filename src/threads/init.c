@@ -38,9 +38,46 @@ static bool format_filesys;
 static char *initial_program;
 #endif
 
+static thread_func main_thread;
 static void ram_init (void);
 static void argv_init (void);
 
+int
+main (void)
+{
+  /* Needed by printk(), so initialize them very early. */
+  ram_init ();
+  vga_init ();
+  serial_init ();
+
+  /* Greet user. */
+  printk ("Booting cnachos86 with %'d kB RAM...\n", ram_pages * 4);
+
+  /* Parse command line. */
+  argv_init ();
+
+  /* Initialize memory system, segments, paging. */
+  palloc_init ();
+  paging_init ();
+  tss_init ();
+  gdt_init ();
+  malloc_init ();
+
+  /* Set random seed if not already done. */
+  random_init (0);
+
+  /* Initialize interrupt handlers. */
+  intr_init ();
+  timer_init ();
+  kbd_init ();
+
+  /* Do everything else in a system thread. */
+  thread_init ();
+  thread_create ("main", main_thread, NULL);
+  thread_start ();
+}
+
+/* Initial thread. */
 static void
 main_thread (void *aux UNUSED) 
 {
@@ -57,42 +94,8 @@ main_thread (void *aux UNUSED)
     PANIC ("no initial program specified");
 #endif
 }
-
-int
-main (void)
-{
-  /* Initialize prerequisites for calling printk(). */
-  ram_init ();
-  vga_init ();
-  serial_init ();
-
-  /* Greet user. */
-  printk ("Booting cnachos86 with %'d kB RAM...\n", ram_pages * 4);
-
-  /* Parse command line. */
-  argv_init ();
-
-  /* Initialize memory system. */
-  palloc_init ();
-  paging_init ();
-  tss_init ();
-  gdt_init ();
-  malloc_init ();
-
-  random_init (0);
-
-  /* Initialize interrupt handlers. */
-  intr_init ();
-  timer_init ();
-  kbd_init ();
-
-  /* Do everything else in a system thread. */
-  thread_init ();
-  thread_create ("main", main_thread, NULL);
-  thread_start ();
-}
-
-
+
+/* Clear BSS and obtain RAM size from loader. */
 static void
 ram_init (void) 
 {
@@ -105,10 +108,11 @@ ram_init (void)
   extern char _start_bss, _end_bss;
   memset (&_start_bss, 0, &_end_bss - &_start_bss);
 
-  /* Get RAM size from loader. */
+  /* Get RAM size from loader.  See loader.S. */
   ram_pages = *(uint32_t *) ptov (LOADER_RAM_PAGES);
 }
-
+
+/* Parses the command line. */
 static void
 argv_init (void) 
 {

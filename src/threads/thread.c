@@ -24,11 +24,11 @@ static void idle (void *aux UNUSED);    /* Thread function. */
 struct kernel_thread_frame 
   {
     void *eip;                  /* Return address. */
-    void (*function) (void *);  /* Function to call. */
+    thread_func *function;      /* Function to call. */
     void *aux;                  /* Auxiliary data for function. */
   };
 
-static void kernel_thread (void (*function) (void *aux), void *aux);
+static void kernel_thread (thread_func *, void *aux);
 
 static struct thread *next_thread_to_run (void);
 static struct thread *new_thread (const char *name);
@@ -76,7 +76,7 @@ thread_start (void)
    semaphore or some other form of synchronization if you need to
    ensure ordering. */
 struct thread *
-thread_create (const char *name, void (*function) (void *aux), void *aux) 
+thread_create (const char *name, thread_func *function, void *aux) 
 {
   struct thread *t;
   struct kernel_thread_frame *kf;
@@ -263,7 +263,7 @@ idle (void *aux UNUSED)
 
 /* Function used as the basis for a kernel thread. */
 static void
-kernel_thread (void (*function) (void *aux), void *aux) 
+kernel_thread (thread_func *function, void *aux) 
 {
   ASSERT (function != NULL);
 

@@ -1,6 +1,7 @@
 #include "random.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include "debug.h"
 
 /* RC4-based pseudo-random state. */
 static uint8_t s[256];

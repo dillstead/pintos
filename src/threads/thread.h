@@ -37,7 +37,8 @@ struct thread
 void thread_init (void);
 void thread_start (void) NO_RETURN;
 
-struct thread *thread_create (const char *name, void (*) (void *aux), void *);
+typedef void thread_func (void *aux);
+struct thread *thread_create (const char *name, thread_func *, void *);
 #ifdef USERPROG
 bool thread_execute (const char *filename);
 #endif
