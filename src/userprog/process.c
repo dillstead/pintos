@@ -82,17 +82,24 @@ execute_thread (void *filename_)
   NOT_REACHED ();
 }
 
-/* Destroys the user address space in T and frees all of its
-   resources. */
+/* Free the current process's resources. */
 void
-process_destroy (struct thread *t)
+process_exit (void)
 {
-  ASSERT (t != thread_current ());
+  struct thread *cur = thread_current ();
+  uint32_t *pd;
 
-  if (t->pagedir != NULL) 
+  /* Destroy the current process's page directory and switch back
+     to the kernel-only page directory.  We have to set
+     cur->pagedir to NULL before switching page directories, or a
+     timer interrupt might switch back to the process page
+     directory. */
+  pd = cur->pagedir;
+  if (pd != NULL) 
     {
-      pagedir_destroy (t->pagedir);
-      t->pagedir = NULL; 
+      cur->pagedir = NULL;
+      pagedir_activate (NULL);
+      pagedir_destroy (pd);
     }
 }
 
@@ -103,10 +110,11 @@ process_activate (void)
 {
   struct thread *t = thread_current ();
 
-  /* Activate T's page tables. */
+  /* Activate thread's page tables. */
   pagedir_activate (t->pagedir);
 
-  /* Set T's kernel stack for use in processing interrupts. */
+  /* Set thread's kernel stack for use in processing
+     interrupts. */
   tss_set_esp0 ((uint8_t *) t + PGSIZE);
 }
 

@@ -49,7 +49,6 @@ static struct thread *next_thread_to_run (void);
 static void init_thread (struct thread *, const char *name, int priority);
 static bool is_thread (struct thread *);
 static void *alloc_frame (struct thread *, size_t size);
-static void destroy_thread (struct thread *);
 static void schedule (void);
 void schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
@@ -198,6 +197,10 @@ thread_exit (void)
 {
   ASSERT (!intr_context ());
 
+#ifdef USERPROG
+  process_exit ();
+#endif
+
   /* Just set our status to dying and schedule another process.
      We will be destroyed during the call to schedule_tail(). */
   intr_disable ();
@@ -333,20 +336,6 @@ next_thread_to_run (void)
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
 }
 
-/* Destroys T, which must not be the running thread. */
-static void
-destroy_thread (struct thread *t) 
-{
-  ASSERT (is_thread (t));
-  ASSERT (t != thread_current ());
-
-#ifdef USERPROG
-  process_destroy (t);
-#endif
-  if (t != initial_thread)
-    palloc_free (t);
-}
-
 /* Completes a thread switch by activating the new thread's page
    tables, and, if the previous thread is dying, destroying it.
 
@@ -374,11 +363,15 @@ schedule_tail (struct thread *prev)
   process_activate ();
 #endif
 
-  /* If the thread we switched from is dying, destroy it.
-     This must happen late because it's not a good idea to
-     e.g. destroy the page table you're currently using. */
+  /* If the thread we switched from is dying, destroy its struct
+     thread.  This must happen late so that thread_exit() doesn't
+     pull out the rug under itself. */
   if (prev != NULL && prev->status == THREAD_DYING) 
-    destroy_thread (prev);
+    {
+      ASSERT (prev != cur);
+      if (prev != initial_thread)
+        palloc_free (prev);
+    }
 }
 
 /* Schedules a new process.  At entry, interrupts must be off and
