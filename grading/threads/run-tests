@@ -423,7 +423,6 @@ sub verify_common {
 	    $details .= "Translation of backtrace:\n";
 	    my (@addrs) = $stack_line[0] =~ /Call stack:((?: 0x[0-9a-f]+)+)/;
 
-	    print "addrs: '@addrs'\n";
 	    my ($A2L);
 	    if (`uname -m`
 		=~ /i.86|pentium.*|[pk][56]|nexgen|viac3|6x86|athlon.*/) {
@@ -432,7 +431,8 @@ sub verify_common {
 		$A2L = "i386-elf-addr2line";
 	    }
 	    open (A2L, "$A2L -fe output/$test/kernel.o @addrs|");
-	    while (my $function = <A2L>) {
+	    my ($function);
+	    while ($function = <A2L>) {
 		my ($line) = <A2L>;
 		chomp $function;
 		chomp $line;
