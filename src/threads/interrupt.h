@@ -37,7 +37,7 @@ struct intr_frame
     void (*eip) (void);
     uint16_t cs, :16;
     uint32_t eflags;
-    uint32_t esp;
+    void *esp;
     uint16_t ss, :16;
   };
 

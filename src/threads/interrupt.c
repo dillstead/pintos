@@ -1,5 +1,6 @@
 #include "interrupt.h"
 #include <stdint.h>
+#include "intr-stubs.h"
 #include "debug.h"
 #include "io.h"
 #include "lib.h"
@@ -93,8 +94,6 @@ pic_eoi (void)
 }
 
 uint64_t idt[256];
-
-extern void (*intr_stubs[256]) (void);
 
 intr_handler_func *intr_handlers[256];
 

@@ -17,7 +17,9 @@ for $i (0...255) {
     $x = sprintf ("%02x", $i);
     print "\t.globl intr${x}_stub\n";
     print "intr${x}_stub:\n";
-    print "\tpushl \$0\n" if $i != 8 && $i != 10 && $i != 11 && $i != 13 && $i != 14 && $i != 17;
+    print "\tpushl \$0\n"
+	if ($i != 8 && $i != 10 && $i != 11
+	    && $i != 13 && $i != 14 && $i != 17);
     print "\tpushl \$0x$x\n";
     print "\tjmp intr_entry\n";
 }
@@ -40,6 +42,9 @@ intr_entry:
 	pushl %esp
 	.globl intr_handler
 	call intr_handler
+
+	.globl intr_exit
+intr_exit:
 	addl $4, %esp
 
 	# Restore caller's registers.
