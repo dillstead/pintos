@@ -373,11 +373,11 @@ first page fault.
 @item
 If neither @code{read_bytes} nor @code{zero_bytes} equals
 @code{PGSIZE}, then part of the page is to be read from disk and the
-remainder zeroed.  This is a special case, which you should handle by
+remainder zeroed.  This is a special case.  You may handle it by
 reading the partial page from disk at executable load time and zeroing
-the rest of the page.  It is the only case in which loading should not
-be ``lazy''; even real OSes such as Linux do not load partial pages
-lazily.
+the rest of the page.  This is the only case in which we will allow
+you to load a page in a non-``lazy'' fashion.  Many real OSes such as
+Linux do not load partial pages lazily.
 @end itemize
 
 Incidentally, if you have trouble handling the third case above, you
@@ -487,12 +487,7 @@ that we need it to do. What gives?}
 
 You are welcome to modify it.  It is not used by any of the code we
 provided, so modifying it won't affect any code but yours.  Do
-whatever it takes to make it work like you want it to.
-
-@item
-@b{Is the data segment page-aligned?}
-
-No.
+whatever it takes to make it work the way you want.
 
 @item
 @b{What controls the layout of user programs?}
