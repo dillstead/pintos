@@ -39,4 +39,10 @@ bool bitmap_any (const struct bitmap *);
 bool bitmap_none (const struct bitmap *);
 bool bitmap_all (const struct bitmap *);
 
+#ifdef FILESYS
+struct file;
+void bitmap_read (struct bitmap *, struct file *);
+void bitmap_write (const struct bitmap *, struct file *);
+#endif
+
 #endif /* bitmap.h */

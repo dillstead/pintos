@@ -4,6 +4,9 @@
 #include "debug.h"
 #include "lib.h"
 #include "malloc.h"
+#ifdef FILESYS
+#include "file.h"
+#endif
 
 #define ELEM_BITS (sizeof (elem_type) * CHAR_BIT)
 #define ELEM_IDX(BIT_IDX) ((BIT_IDX) / ELEM_BITS)
@@ -218,3 +221,17 @@ bitmap_all (const struct bitmap *b)
   else
     return b->bits[i] == ((elem_type) 1 << leftover_bits) - 1;
 }
+
+#ifdef FILESYS
+void
+bitmap_read (struct bitmap *b, struct file *file) 
+{
+  file_read_at (file, b->bits, byte_cnt (b), 0);
+}
+
+void
+bitmap_write (const struct bitmap *b, struct file *file)
+{
+  file_write_at (file, b->bits, byte_cnt (b), 0);
+}
+#endif /* FILESYS */
