@@ -21,17 +21,13 @@ our (%details);
 our (%result);
 our ($action);
 
-parse_cmd_line ();
-
-# Default set of tests.
-@TESTS = ("alarm-single", "alarm-multiple", "alarm-zero", "alarm-negative",
-	  "join-simple",
-	  "join-quick", "join-multiple", "join-nested",
-	  "join-dummy", "join-invalid", "join-no",
-	  "priority-preempt", "priority-fifo", "priority-donate-one",
-	  "priority-donate-multiple", "priority-donate-nest",
-	  "mlfqs-on", "mlfqs-off")
-    unless @TESTS > 0;
+parse_cmd_line qw (alarm-single alarm-multiple alarm-zero alarm-negative
+		   join-simple
+		   join-quick join-multiple join-nested
+		   join-dummy join-invalid join-no
+		   priority-preempt priority-fifo priority-donate-one
+		   priority-donate-multiple priority-donate-nest
+		   mlfqs-on mlfqs-off);
 
 clean_dir (), exit if $action eq 'clean';
 

@@ -13,13 +13,15 @@ our $action;
 our $hw;
 
 use POSIX;
-use Getopt::Long;
+use Getopt::Long qw(:config no_ignore_case);
 use Algorithm::Diff;
 
 sub parse_cmd_line {
+    my ($do_regex, $no_regex);
     GetOptions ("v|verbose+" => \$verbose,
 		"h|help" => sub { usage (0) },
-		"tests=s" => \@TESTS,
+		"d|do-tests=s" => \$do_regex,
+		"n|no-tests=s" => \$no_regex,
 		"c|clean" => sub { set_action ('clean'); },
 		"x|extract" => sub { set_action ('extract'); },
 		"b|build" => sub { set_action ('build'); },
@@ -33,6 +35,11 @@ sub parse_cmd_line {
     if (!defined $action) {
 	$action = -e 'review.txt' ? 'assemble' : 'test';
     }
+
+    my (@default_tests) = @_;
+    @TESTS = @default_tests;
+    @TESTS = grep (/$do_regex/, @TESTS) if defined $do_regex;
+    @TESTS = grep (!/$no_regex/, @TESTS) if defined $no_regex;
 }
 
 sub set_action {
@@ -70,7 +77,8 @@ Workflow:
 
 Options:
   -c, --clean        Delete test results and temporary files, then exit.
-  --tests=TESTS      Run only the specified comma-separated tests.
+  -d, --do-tests=RE  Run only tests that match the given regular expression.
+  -n, --no-tests=RE  Do not run tests that match the given regular expression.
   -x, --extract      Stop after step 1.
   -b, --build        Stop after step 2.
   -t, --test         Stop after step 3 (default if "review.txt" not present).

@@ -19,24 +19,20 @@ our (@TESTS);		# Tests to run.
 our ($test);
 our ($action);
 
-parse_cmd_line ();
+parse_cmd_line qw (sm-create sm-full sm-seq-block sm-seq-random sm-random
 
-# Default set of tests.
-@TESTS = qw (sm-create sm-full sm-seq-block sm-seq-random sm-random
+		   lg-create lg-full lg-seq-block lg-seq-random lg-random
 
-	     lg-create lg-full lg-seq-block lg-seq-random lg-random
+		   grow-create grow-seq-sm grow-seq-lg grow-file-size grow-tell
+		   grow-sparse grow-too-big grow-root-sm grow-root-lg
+		   grow-dir-lg grow-two-files
 
-	     grow-create grow-seq-sm grow-seq-lg grow-file-size grow-tell
-	     grow-sparse grow-too-big grow-root-sm grow-root-lg grow-dir-lg 
-	     grow-two-files
+		   dir-mkdir dir-rmdir dir-mk-vine dir-rm-vine dir-mk-tree
+		   dir-rm-tree dir-lsdir dir-rm-cwd dir-rm-cwd-cd
+		   dir-rm-parent dir-rm-root dir-over-file dir-under-file
+		   dir-empty-name dir-open
 
-	     dir-mkdir dir-rmdir dir-mk-vine dir-rm-vine dir-mk-tree
-	     dir-rm-tree dir-lsdir dir-rm-cwd dir-rm-cwd-cd
-	     dir-rm-parent dir-rm-root dir-over-file dir-under-file
-	     dir-empty-name dir-open
-
-	     syn-remove syn-read syn-write syn-rw
-	     ) unless @TESTS > 0;
+		   syn-remove syn-read syn-write syn-rw);
 
 clean_dir (), exit if $action eq 'clean';
 
