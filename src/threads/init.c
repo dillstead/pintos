@@ -1,4 +1,5 @@
 #include "threads/init.h"
+#include <console.h>
 #include <debug.h>
 #include <limits.h>
 #include <random.h>
@@ -53,10 +54,12 @@ int main (void) NO_RETURN;
 int
 main (void)
 {
-  /* Needed by printf(), so initialize them very early. */
+  /* Initialize everything needed for printf() first. */
   ram_init ();
+  thread_init ();
   vga_init ();
   serial_init_poll ();
+  console_init ();
 
   /* Greet user. */
   printf ("Pintos booting with %'d kB RAM...\n", ram_pages * 4);
@@ -65,7 +68,6 @@ main (void)
   argv_init ();
 
   /* Initialize memory system, segments, paging. */
-  thread_init ();
   palloc_init ();
   paging_init ();
 #ifdef USERPROG
@@ -74,7 +76,7 @@ main (void)
 #endif
   malloc_init ();
 
-  /* Set random seed if not already done. */
+  /* Set random seed if argv_init() didn't. */
   random_init (0);
 
   /* Initialize interrupt handlers. */
