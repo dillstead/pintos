@@ -82,7 +82,7 @@ static bool
 load_segment (struct addrspace *as, struct file *file,
               const struct Elf32_Phdr *phdr) 
 {
-  uintptr_t start, end;
+  void *start, *end;
   uint8_t *upage;
   off_t filesz_left;
 
@@ -91,11 +91,11 @@ load_segment (struct addrspace *as, struct file *file,
   ASSERT (phdr != NULL);
   ASSERT (phdr->p_type == PT_LOAD);
 
-  /* p_offset and p_vaddr must be congruent modulo NBPG. */
-  if (phdr->p_offset % NBPG != phdr->p_vaddr % NBPG) 
+  /* p_offset and p_vaddr must be congruent modulo PGSIZE. */
+  if (phdr->p_offset % PGSIZE != phdr->p_vaddr % PGSIZE) 
     {
       printk ("%#08"PE32Ox" and %#08"PE32Ax" not congruent modulo %#x\n",
-              phdr->p_offset, phdr->p_vaddr, (unsigned) NBPG);
+              phdr->p_offset, phdr->p_vaddr, (unsigned) PGSIZE);
       return false; 
     }
 
@@ -108,8 +108,8 @@ load_segment (struct addrspace *as, struct file *file,
     }
 
   /* Validate virtual memory region to be mapped. */
-  start = PGROUNDDOWN (phdr->p_vaddr);
-  end = PGROUNDUP (phdr->p_vaddr + phdr->p_memsz);
+  start = pg_round_down ((void *) phdr->p_vaddr);
+  end = pg_round_up ((void *) (phdr->p_vaddr + phdr->p_memsz));
   if (start >= PHYS_BASE || end >= PHYS_BASE || end < start) 
     {
       printk ("bad virtual region %08lx...%08lx\n",
@@ -117,12 +117,12 @@ load_segment (struct addrspace *as, struct file *file,
       return false; 
     }
 
-  filesz_left = phdr->p_filesz + (phdr->p_vaddr - start);
-  file_seek (file, ROUND_DOWN (phdr->p_offset, NBPG));
-  for (upage = (uint8_t *) start; upage < (uint8_t *) end; upage += NBPG) 
+  filesz_left = phdr->p_filesz + (phdr->p_vaddr & PGMASK);
+  file_seek (file, ROUND_DOWN (phdr->p_offset, PGSIZE));
+  for (upage = start; upage < (uint8_t *) end; upage += PGSIZE) 
     {
-      size_t read_bytes = filesz_left >= NBPG ? NBPG : filesz_left;
-      size_t zero_bytes = NBPG - read_bytes;
+      size_t read_bytes = filesz_left >= PGSIZE ? PGSIZE : filesz_left;
+      size_t zero_bytes = PGSIZE - read_bytes;
       uint8_t *kpage = palloc_get (0);
       if (kpage == NULL)
         return false;

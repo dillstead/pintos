@@ -29,7 +29,7 @@ palloc_get (enum palloc_flags flags)
   if (free_pages == NULL && uninit_start < uninit_end) 
     {
       palloc_free (uninit_start);
-      uninit_start += NBPG;
+      uninit_start += PGSIZE;
     }
 
   page = free_pages;
@@ -37,7 +37,7 @@ palloc_get (enum palloc_flags flags)
     {
       free_pages = page->next;
       if (flags & PAL_ZERO)
-        memset (page, 0, NBPG);
+        memset (page, 0, PGSIZE);
     }
   else 
     {
@@ -52,9 +52,9 @@ void
 palloc_free (void *page_) 
 {
   struct page *page = page_;
-  ASSERT((uintptr_t) page % NBPG == 0);
+  ASSERT((uintptr_t) page % PGSIZE == 0);
 #ifndef NDEBUG
-  memset (page, 0xcc, NBPG);
+  memset (page, 0xcc, PGSIZE);
 #endif
   page->next = free_pages;
   free_pages = page;

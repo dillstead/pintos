@@ -57,8 +57,8 @@ main (void)
 
   /* Memory from the end of the kernel through the end of memory
      is free.  Give it to the page allocator. */
-  palloc_init ((void *) (KERN_BASE + kernel_pages * NBPG),
-               (void *) (PHYS_BASE + ram_pages * NBPG));
+  palloc_init ((void *) (KERN_BASE + kernel_pages * PGSIZE),
+               (void *) (PHYS_BASE + ram_pages * PGSIZE));
   paging_init ();
   gdt_init ();
 

@@ -11,7 +11,7 @@ static uint32_t *base_page_dir;
 static uint32_t
 make_pde (uint32_t *pagetab) 
 {
-  ASSERT (PGOFS ((uintptr_t) pagetab) == 0);
+  ASSERT (pg_ofs (pagetab) == 0);
   
   return vtop (pagetab) | PG_U | PG_P | PG_W;
 }
@@ -21,7 +21,7 @@ make_pte (uint32_t *page, bool writable)
 {
   uint32_t entry;
 
-  ASSERT (PGOFS ((uintptr_t) page) == 0);
+  ASSERT (pg_ofs (page) == 0);
   
   entry = vtop (page) | PG_U | PG_P;
   if (writable)
@@ -34,7 +34,7 @@ pde_get_pagetab (uint32_t pde)
 {
   ASSERT (pde & PG_P);
 
-  return ptov (PGROUNDDOWN (pde));
+  return ptov (pde & ~PGMASK);
 }
 
 static void *
@@ -42,7 +42,7 @@ pte_get_page (uint32_t pte)
 {
   ASSERT (pte & PG_P);
   
-  return ptov (PGROUNDDOWN (pte));
+  return ptov (pte & ~PGMASK);
 }
 
 /* Populates the base page directory and page table with the
@@ -63,10 +63,10 @@ paging_init (void)
   pt = NULL;
   for (page = 0; page < ram_pages; page++) 
     {
-      uintptr_t paddr = page * NBPG;
+      uintptr_t paddr = page * PGSIZE;
       void *vaddr = ptov (paddr);
-      size_t pde_idx = PDENO ((uintptr_t) vaddr);
-      size_t pte_idx = PTENO ((uintptr_t) vaddr);
+      size_t pde_idx = pd_no (vaddr);
+      size_t pte_idx = pt_no (vaddr);
 
       if (pd[pde_idx] == 0)
         {
@@ -85,7 +85,7 @@ uint32_t *
 pagedir_create (void) 
 {
   uint32_t *pd = palloc_get (0);
-  memcpy (pd, base_page_dir, NBPG);
+  memcpy (pd, base_page_dir, PGSIZE);
   return pd;
 }
 
@@ -107,12 +107,12 @@ lookup_page (uint32_t *pagedir, void *upage, bool create)
   uint32_t *pde;
 
   ASSERT (pagedir != NULL);
-  ASSERT (PGOFS ((uintptr_t) upage) == 0);
-  ASSERT ((uintptr_t) upage < PHYS_BASE);
+  ASSERT (pg_ofs (upage) == 0);
+  ASSERT (upage < PHYS_BASE);
 
   /* Check for a page table for UPAGE.
      If one is missing, create one if requested. */
-  pde = pagedir + PDENO ((uint32_t) upage);
+  pde = pagedir + pd_no (upage);
   if (*pde == 0) 
     {
       if (create)
@@ -129,7 +129,7 @@ lookup_page (uint32_t *pagedir, void *upage, bool create)
 
   /* Return the page table entry. */
   pagetab = pde_get_pagetab (*pde);
-  return &pagetab[PTENO ((uintptr_t) upage)];
+  return &pagetab[pt_no (upage)];
 }
 
 bool
@@ -138,7 +138,7 @@ pagedir_set_page (uint32_t *pagedir, void *upage, void *kpage,
 {
   uint32_t *pte;
 
-  ASSERT (PGOFS ((uintptr_t) kpage) == 0);
+  ASSERT (pg_ofs (kpage) == 0);
 
   pte = lookup_page (pagedir, upage, true);
   if (pte != NULL) 
@@ -168,7 +168,7 @@ pagedir_clear_page (uint32_t *pagedir, void *upage)
 static uint32_t *
 scan_pt (uint32_t *pt, unsigned pde_idx, unsigned pte_idx, void **upage) 
 {
-  for (; pte_idx < NBPG / sizeof *pt; pte_idx++) 
+  for (; pte_idx < PGSIZE / sizeof *pt; pte_idx++) 
     {
       uint32_t pte = pt[pte_idx];
 
@@ -177,8 +177,7 @@ scan_pt (uint32_t *pt, unsigned pde_idx, unsigned pte_idx, void **upage)
           void *kpage = pte_get_page (pte);
           if (kpage != NULL) 
             {
-              *upage = (void *) ((pde_idx << PDSHIFT)
-                                 | (pte_idx << PGSHIFT));
+              *upage = (void *) ((pde_idx << PDSHIFT) | (pte_idx << PTSHIFT));
               return kpage;
             }
         }
@@ -190,7 +189,7 @@ scan_pt (uint32_t *pt, unsigned pde_idx, unsigned pte_idx, void **upage)
 static void *
 scan_pd (uint32_t *pd, unsigned pde_idx, void **upage) 
 {
-  for (; pde_idx < PDENO (PHYS_BASE); pde_idx++) 
+  for (; pde_idx < pd_no (PHYS_BASE); pde_idx++) 
     {
       uint32_t pde = pd[pde_idx];
 
@@ -217,8 +216,8 @@ pagedir_next (uint32_t *pd, void **upage)
   unsigned pde_idx, pte_idx;
   void *kpage;
 
-  pde_idx = PDENO (*upage);
-  pte_idx = PTENO (*upage);
+  pde_idx = pd_no (*upage);
+  pte_idx = pt_no (*upage);
   kpage = scan_pt (pde_get_pagetab (pd[pde_idx]),
                    pde_idx, pte_idx + 1, upage);
   if (kpage == NULL)

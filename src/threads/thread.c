@@ -40,11 +40,11 @@ thread_create (const char *name, void (*function) (void *aux), void *aux)
   if (t == NULL)
     return NULL;
 
-  memset (t, 0, NBPG);
+  memset (t, 0, PGSIZE);
   strlcpy (t->name, name, sizeof t->name);
 
   /* Set up stack. */
-  t->stack = (uint32_t *) ((uint8_t *) t + NBPG);
+  t->stack = (uint32_t *) ((uint8_t *) t + PGSIZE);
   *--t->stack = (uint32_t) aux;
   *--t->stack = (uint32_t) function;
   --t->stack;
@@ -61,7 +61,7 @@ thread_create (const char *name, void (*function) (void *aux), void *aux)
 static struct thread *
 stack_to_thread (uint32_t *stack) 
 {
-  return (struct thread *) ((uint32_t) (stack - 1) & ~((uint32_t) NBPG - 1));
+  return (struct thread *) ((uint32_t) (stack - 1) & ~((uint32_t) PGSIZE - 1));
 }
 
 struct thread *

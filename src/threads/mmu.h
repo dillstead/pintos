@@ -40,170 +40,75 @@
 
 #ifndef __ASSEMBLER__
 #include <stdint.h>
+#include "debug.h"
 #endif
 
-// An Address:
-//  +--------10------+-------10-------+---------12----------+
-//  | Page Directory |   Page Table   | Offset within Page  |
-//  +----------------+----------------+---------------------+
+#define MASK(SHIFT, CNT) (((1ul << (CNT)) - 1) << (SHIFT))
 
-#define	PGSHIFT		12		/* LOG2(NBPG) */
-#define	NBPG		(1 << PGSHIFT)	/* bytes/page */
+/* Page offset (bits 0:11). */
+#define PGSHIFT         0                  /* First offset bit. */
+#define PGBITS          12                 /* Number of offset bits. */
+#define PGMASK          MASK(PGSHIFT, PGBITS)
+#define PGSIZE          (1 << PGBITS)
 
-/* Page tables (selected by VA[31:22] and indexed by VA[21:12]) */
-#define PGMASK (NBPG - 1)       /* Mask for page offset.  Terrible name! */
-#define PGOFS(va) ((va) & PGMASK)
-/* Page number of virtual page in the virtual page table. */
-#define PGNO(va) ((uint32_t) (va) >> PGSHIFT)
-/* Index of PTE for VA within the corresponding page table */
-#define PTENO(va) (((uint32_t) (va) >> PGSHIFT) & 0x3ff)
-/* Round up to a page */
-#define PGROUNDUP(va) (((va) + PGMASK) & ~PGMASK)
-/* Round down to a page */
-#define PGROUNDDOWN(va) ((va) & ~PGMASK)
-/* Page directories (indexed by VA[31:22]) */
-#define PDSHIFT 22             /* LOG2(NBPD) */
-#define NBPD (1 << PDSHIFT)    /* bytes/page dir */
-#define PDMASK (NBPD-1)        /* byte offset into region mapped by
-				  a page table */
-#define PDENO(va) ((uint32_t) (va) >> PDSHIFT)
-/* Round up  */
-#define PDROUNDUP(va) (((va) + PDMASK) & ~PDMASK)
-/* Round down */
-#define PDROUNDDOWN(va) ((va) & ~PDMASK)
+/* Page table (bits 12:21). */
+#define	PTSHIFT		PGBITS		   /* First page table bit. */
+#define PTBITS          10                 /* Number of page table bits. */
+#define PTMASK          MASK(PTSHIFT, PTBITS)
 
-/* At IOPHYSMEM (640K) there is a 384K hole for I/O.  From the kernel,
- * IOPHYSMEM can be addressed at KERNBASE + IOPHYSMEM.  The hole ends
- * at physical address EXTPHYSMEM. */
-#define IOPHYSMEM 0xa0000
-#define EXTPHYSMEM 0x100000
-
-
-/*
- * Virtual memory map:                                Permissions
- *                                                    kernel/user
- *
- *    4 Gig -------->  +------------------------------+
- *		       |			      | RW/--
- *		       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *                     :              .               :
- *                     :              .               :
- *                     :              .               :
- *  		       |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~| RW/--
- *		       |			      | RW/--
- *		       |  Physical Memory	      | RW/--
- *		       |			      | RW/--
- *    KERNBASE ----->  +------------------------------+
- *		       |  Kernel Virtual Page Table   | RW/--   NBPD
- *    VPT,KSTACKTOP--> +------------------------------+                 --+
- *             	       |        Kernel Stack          | RW/--  KSTKSIZE   |
- *                     | - - - - - - - - - - - - - - -|                 NBPD
- *		       |       Invalid memory 	      | --/--             |
- *    ULIM     ------> +------------------------------+                 --+
- *       	       |      R/O User VPT            | R-/R-   NBPD
- *    UVPT      ---->  +------------------------------+
- *                     |        R/O PPAGE             | R-/R-   NBPD
- *    UPPAGES   ---->  +------------------------------+
- *                     |        R/O UENVS             | R-/R-   NBPD
- * UTOP,UENVS -------> +------------------------------+
- * UXSTACKTOP -/       |      user exception stack    | RW/RW   NBPG  
- *                     +------------------------------+
- *                     |       Invalid memory         | --/--   NBPG
- *    USTACKTOP  ----> +------------------------------+
- *                     |     normal user stack        | RW/RW   NBPG
- *                     +------------------------------+
- *                     |                              |
- *                     |                              |
- *		       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *                     .                              .
- *                     .                              .
- *                     .                              .
- *  		       |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
- *		       |                              |
- *    UTEXT ------->   +------------------------------+
- *                     |                              |  2 * NBPD
- *    0 ------------>  +------------------------------+
- */
-
-
-#define	PHYS_BASE	0xc0000000	/* All physical memory mapped here. */
-#define KERN_BASE       0xc0100000      /* Kernel loaded here. */
-
-/* Virtual page table.  Last entry of all PDEs contains a pointer to
- * the PD itself, thereby turning the PD into a page table which
- * maps all PTEs over the last 4 Megs of the virtual address space */
-#define VPT (KERNBASE - NBPD)
-#define KSTACKTOP VPT
-#define KSTKSIZE (8 * NBPG)   		/* size of a kernel stack */
-#define ULIM (KSTACKTOP - NBPD) 
-
-/*
- * User read-only mappings! Anything below here til UTOP are readonly to user.
- * They are global pages mapped in at env allocation time.
- */
-
-/* Same as VPT but read-only for users */
-#define UVPT (ULIM - NBPD)
-/* Read-only copies of all ppage structures */
-#define UPPAGES (UVPT - NBPD)
-/* Read only copy of the global env structures */
-#define UENVS (UPPAGES - NBPD)
-
-
-
-/*
- * Top of user VM. User can manipulate VA from UTOP-1 and down!
- */
-#define UTOP UENVS
-#define UXSTACKTOP (UTOP)           /* one page user exception stack */
-/* leave top page invalid to guard against exception stack overflow */ 
-#define USTACKTOP (UTOP - 2*NBPG)   /* top of the normal user stack */
-#define UTEXT (2*NBPD)
-
-/* Number of page tables for mapping physical memory at KERNBASE.
- * (each PT contains 1K PTE's, for a total of 128 Megabytes mapped) */
-#define NPPT ((-KERNBASE)>>PDSHIFT)
+/* Page directory (bits 22:31). */
+#define PDSHIFT         (PTSHIFT + PTBITS) /* First page dir bit. */
+#define PDBITS          10                 /* Number of page dir bits. */
+#define PDMASK          MASK(PDSHIFT, PDBITS)
 
 #ifndef __ASSEMBLER__
-#include "debug.h"
+/* Offset within a page. */
+static inline unsigned pg_ofs (void *va) { return (uintptr_t) va & PGMASK; }
 
-/* Kernel virtual address at which physical address PADDR is
-   mapped. */
+/* Page number. */
+static inline uintptr_t pg_no (void *va) { return (uintptr_t) va >> PTSHIFT; }
+
+/* Page table number. */
+static inline unsigned pt_no (void *va) {
+  return ((uintptr_t) va & PTMASK) >> PTSHIFT;
+}
+
+/* Page directory number. */
+static inline uintptr_t pd_no (void *va) { return (uintptr_t) va >> PDSHIFT; }
+
+/* Round up to nearest page boundary. */
+static inline void *pg_round_up (void *va) {
+  return (void *) (((uintptr_t) va + PGSIZE - 1) & ~PGMASK);
+}
+
+/* Round down to nearest page boundary. */
+static inline void *pg_round_down (void *va) {
+  return (void *) ((uintptr_t) va & ~PGMASK);
+}
+
+#define	PHYS_BASE ((void *) 0xc0000000) /* Physical memory mapped here. */
+#define KERN_BASE ((void *) 0xc0100000) /* Kernel loaded here. */
+
+/* Returns kernel virtual address at which physical address PADDR
+   is mapped. */
 static inline void *
-ptov (uint32_t paddr) 
+ptov (uintptr_t paddr) 
 {
-  ASSERT (paddr < PHYS_BASE);
+  ASSERT ((void *) paddr < PHYS_BASE);
 
   return (void *) (paddr + PHYS_BASE);
 }
 
-/* Physical address at which kernel virtual address VADDR is
-   mapped. */
-static inline uint32_t
+/* Returns physical address at which kernel virtual address VADDR
+   is mapped. */
+static inline uintptr_t
 vtop (void *vaddr) 
 {
-  ASSERT ((uint32_t) vaddr >= PHYS_BASE);
+  ASSERT (vaddr >= PHYS_BASE);
 
-  return (uint32_t) vaddr - PHYS_BASE;
+  return (uintptr_t) vaddr - (uintptr_t) PHYS_BASE;
 }
 #endif
-
-#define PFM_NONE 0x0     /* No page faults expected.  Must be a kernel bug */
-#define PFM_KILL 0x1     /* On fault kill user process. */
-
-
-/*
- * Macros to build GDT entries in assembly.
- */
-#define SEG_NULL           \
-	.word 0, 0;        \
-	.byte 0, 0, 0, 0
-#define SEG(type,base,lim)                                    \
-	.word ((lim)&0xffff), ((base)&0xffff);                \
-	.byte (((base)>>16)&0xff), (0x90|(type)),             \
-		(0xc0|(((lim)>>16)&0xf)), (((base)>>24)&0xff)
-
-
 
 /* Page Table/Directory Entry flags
  *   these are defined by the hardware
