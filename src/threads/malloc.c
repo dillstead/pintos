@@ -153,6 +153,19 @@ malloc (size_t size)
   return b;
 }
 
+/* Obtains and returns a new block of at least SIZE bytes.
+   Panics if memory is not available.  It is unacceptable for the
+   kernel to panic in normal operation, so this function should
+   only be used during kernel initialization. */
+void *
+xmalloc (size_t size) 
+{
+  void *p = malloc (size);
+  if (p == NULL && size > 0)
+    PANIC ("memory exhausted");
+  return p;
+}
+
 /* Allocates and return A times B bytes initialized to zeroes.
    Returns a null pointer if memory is not available. */
 void *
@@ -171,6 +184,19 @@ calloc (size_t a, size_t b)
   if (p != NULL)
     memset (p, 0, size);
 
+  return p;
+}
+
+/* Allocates and return A times B bytes initialized to zeroes.
+   Panics if memory is not available.  It is unacceptable for the
+   kernel to panic in normal operation, so this function should
+   only be used during kernel initialization. */
+void *
+xcalloc (size_t a, size_t b) 
+{
+  void *p = calloc (a, b);
+  if (p == NULL && a > 0 && b > 0)
+    PANIC ("memory exhausted");
   return p;
 }
 
