@@ -4,7 +4,8 @@
 
    Run this test with and without the MLFQS enabled.  The
    threads' reported test should be better with MLFQS on than
-   with it off.
+   with it off.  You may have to tune the loop counts to get
+   reasonable numbers.
 
    Based on a test originally submitted for Stanford's CS 140 in
    winter 1999 by by Matt Franklin
@@ -17,8 +18,10 @@
 
 #include "threads/test.h"
 #include <stdio.h>
+#include <inttypes.h>
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "devices/timer.h"
 
 static thread_func io_thread;
 static thread_func cpu_thread;
@@ -27,10 +30,11 @@ static thread_func io_cpu_thread;
 void
 test (void) 
 {
-  static const thread_func *funcs[] = {io_thread, cpu_thread, io_cpu_thread};
+  static thread_func *funcs[] = {io_thread, cpu_thread, io_cpu_thread};
   static const char *names[] = {"IO", "CPU", "IO & CPU"};
   struct semaphore done[3];
   tid_t tids[3];
+  int i;
 
   printf ("\n"
           "Testing multilevel feedback queue scheduler.\n");
@@ -38,7 +42,7 @@ test (void)
   /* Start threads. */
   for (i = 0; i < 3; i++) 
     {
-      sema_init (&done[i], 0);
+      sema_init (&done[i], 0, names[i]);
       tids[i] = thread_create (names[i], PRI_DEFAULT, funcs[i], &done[i]);
     }
 
@@ -73,7 +77,7 @@ cpu_thread (void *sema_)
       lock_release (&lock);
     }
 
-  printf ("CPU bound thread finished in %"PRI64d" ticks.\n",
+  printf ("CPU bound thread finished in %"PRId64" ticks.\n",
           timer_elapsed (start));
   
   sema_up (sema);
@@ -94,7 +98,7 @@ io_thread (void *sema_)
 #endif
     }
 
-  printf ("IO bound thread finished in %"PRI64d" ticks.\n",
+  printf ("IO bound thread finished in %"PRId64" ticks.\n",
           timer_elapsed (start));
   
   sema_up (sema);
@@ -126,7 +130,7 @@ io_cpu_thread (void *sema_)
         }
     }
 
-  printf ("Alternating IO/CPU thread finished in %"PRI64d" ticks.\n",
+  printf ("Alternating IO/CPU thread finished in %"PRId64" ticks.\n",
           timer_elapsed (start));
   
   sema_up (sema);
