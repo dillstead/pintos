@@ -197,7 +197,8 @@ filesys_create (const char *name, off_t initial_size)
 
 /* Opens a file named NAME and initializes FILE for usage with
    the file_*() functions declared in file.h.
-   Returns true if successful, false on failure.
+   Returns the new file if successful or a null pointer
+   otherwise.
    Fails if no file named NAME exists,
    or if an internal memory allocation fails. */
 struct file *
