@@ -74,18 +74,22 @@
 #define PDMASK          MASK(PDSHIFT, PDBITS)
 
 /* Offset within a page. */
-static inline unsigned pg_ofs (void *va) { return (uintptr_t) va & PGMASK; }
+static inline unsigned pg_ofs (const void *va) {
+  return (uintptr_t) va & PGMASK;
+}
 
 /* Virtual page number. */
-static inline uintptr_t pg_no (void *va) { return (uintptr_t) va >> PTSHIFT; }
+static inline uintptr_t pg_no (const void *va) {
+  return (uintptr_t) va >> PTSHIFT;
+}
 
 /* Round up to nearest page boundary. */
-static inline void *pg_round_up (void *va) {
+static inline void *pg_round_up (const void *va) {
   return (void *) (((uintptr_t) va + PGSIZE - 1) & ~PGMASK);
 }
 
 /* Round down to nearest page boundary. */
-static inline void *pg_round_down (void *va) {
+static inline void *pg_round_down (const void *va) {
   return (void *) ((uintptr_t) va & ~PGMASK);
 }
 
@@ -104,7 +108,7 @@ ptov (uintptr_t paddr)
 /* Returns physical address at which kernel virtual address VADDR
    is mapped. */
 static inline uintptr_t
-vtop (void *vaddr)
+vtop (const void *vaddr)
 {
   ASSERT (vaddr >= PHYS_BASE);
 
@@ -136,7 +140,9 @@ vtop (void *vaddr)
 #define PG_D 0x40              /* 1=dirty, 0=not dirty (PTEs only). */
 
 /* Obtains page directory index from a virtual address. */
-static inline uintptr_t pd_no (void *va) { return (uintptr_t) va >> PDSHIFT; }
+static inline uintptr_t pd_no (const void *va) {
+  return (uintptr_t) va >> PDSHIFT;
+}
 
 /* Returns a PDE that points to page table PT. */
 static inline uint32_t pde_create (uint32_t *pt) {
