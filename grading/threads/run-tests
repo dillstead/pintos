@@ -432,7 +432,7 @@ sub verify_common {
 	    open (A2L, "$A2L -fe output/$test/kernel.o @addrs|");
 	    for (;;) {
 		my ($function, $line);
-		last unless $function = <A2L>;
+		last unless defined ($function = <A2L>);
 		$line = <A2L>;
 		chomp $function;
 		chomp $line;
