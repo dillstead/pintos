@@ -1,0 +1,61 @@
+TESTCASES [[/10]]
+-----------------
+  -3 Didn't test/explain large files
+  -3 Didn't test/explain file growth
+  -2 Didn't test/explain directories
+  -2 Didn't test/explain cache performance
+  +1...+3 Bonus for demonstrating VM running on file system
+
+
+DESIGN [[/40]]
+--------------
+
+DESIGNDOC
+  -5 Doesn't explain synchronization
+  -5 Doesn't explain inode design (e.g. direct, indirect, etc. structure)
+  -5 Doesn't explain block cache structure
+  -5 Doesn't explain read-ahead/write-behind design
+
+Overall:
+  -1 Gratuitous use of malloc() (e.g. for allocating a list or a lock)
+  -1 Inappropriate use of ASSERT (e.g. to verify that malloc() succeeded)
+
+Synchronization and consistency
+  -5 One big lock for entire file system
+  -3 Doesn't mark inode deleted in bitmap when file removed and closed
+  -2 Doesn't mark indirect blocks deleted in bitmap when file removed, closed
+  -5 Keeps copy of inode_disk in inode but doesn't account for it in cache
+
+Large Files
+  -5 No direct blocks
+  -10 No indirect or doubly indirect blocks of any sort
+
+Subdirectories
+  -2 Directories cannot grow
+  +1 Supports Unix-like . and ..
+  +2 Supports recursive directory removal
+
+Buffer Cache
+  -3 Uses linear search instead of hash table, etc.
+  -2 Poor cache replacement algorithm (not LRU, etc.)
+  -1 Does not prioritize metadata in cache
+  -2 Locks entire cache during I/O
+
+Read-Ahead/Write-Behind (max -10)
+  -7 No read-ahead
+  -7 No write-behind
+  -5 Busy-waiting in write-behind thread
+  -2 Spawns a new thread on every block read
+  +2 Prioritizes real reads over read-ahead
+    
+
+STYLE [[/10]]
+-------------
+  -5...-10 Fixing code after submission
+  -5 Doesn't compile as submitted
+  +1...+5 Cool test programs etc.
+
+
+COMMENTS
+--------
+

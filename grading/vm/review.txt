@@ -9,7 +9,7 @@ TESTCASES [[/10]]
 DESIGN [[/40]]
 --------------
 
-DESIGNDOC (per problem):
+DESIGNDOC:
   -10 Doesn't discuss page table design
   -10 Doesn't discuss swap design
   -5 Doesn't discuss page replacement algorithm

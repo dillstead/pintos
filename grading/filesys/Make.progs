@@ -1,6 +1,7 @@
 # -*- makefile -*-
 
 PROGS = sm-create sm-full sm-seq-block sm-seq-random sm-random		\
+lg-create lg-full lg-seq-block lg-seq-random lg-random		\
 grow-create grow-seq-sm grow-seq-lg grow-file-size grow-tell		\
 grow-sparse grow-too-big grow-root-sm grow-root-lg grow-dir-lg		\
 grow-two-files dir-mkdir dir-rmdir dir-mk-vine dir-rm-vine dir-mk-tree	\
@@ -14,6 +15,12 @@ sm_full_SRC = sm-full.c fslib.c fsmain.c
 sm_seq_block_SRC = sm-seq-block.c fslib.c fsmain.c
 sm_seq_random_SRC = sm-seq-random.c fslib.c fsmain.c
 sm_random_SRC = sm-random.c fslib.c fsmain.c
+
+lg_create_SRC = lg-create.c fslib.c fsmain.c
+lg_full_SRC = lg-full.c fslib.c fsmain.c
+lg_seq_block_SRC = lg-seq-block.c fslib.c fsmain.c
+lg_seq_random_SRC = lg-seq-random.c fslib.c fsmain.c
+lg_random_SRC = lg-random.c fslib.c fsmain.c
 
 grow_create_SRC = grow-create.c fslib.c fsmain.c
 grow_seq_sm_SRC = grow-seq-sm.c fslib.c fsmain.c

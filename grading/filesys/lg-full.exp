@@ -1,0 +1,8 @@
+(sm-full) begin
+(sm-full) create "quux"
+(sm-full) open "quux"
+(sm-full) writing "quux"
+(sm-full) close "quux"
+(sm-full) open "quux" for verification
+(sm-full) close "quux"
+(sm-full) end

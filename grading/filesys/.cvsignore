@@ -37,6 +37,11 @@ sm-full
 sm-random
 sm-seq-block
 sm-seq-random
+lg-create
+lg-full
+lg-random
+lg-seq-block
+lg-seq-random
 syn-read
 syn-remove
 syn-rw

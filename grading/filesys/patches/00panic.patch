@@ -1,6 +1,9 @@
-diff -up /home/blp/cs140/pintos/src/lib/debug.c.\~1.8.\~ /home/blp/cs140/pintos/src/lib/debug.c
---- /home/blp/cs140/pintos/src/lib/debug.c.~1.8.~	2004-09-12 13:14:11.000000000 -0700
-+++ /home/blp/cs140/pintos/src/lib/debug.c	2004-10-17 00:02:32.000000000 -0700
+This patch forces debug_panic() to terminate Bochs.
+It is in upstream now, so it is probably time to remove it.
+
+diff -up pintos/src/lib/debug.c~ pintos/src/lib/debug.c
+--- pintos/src/lib/debug.c~	2004-09-12 13:14:11.000000000 -0700
++++ pintos/src/lib/debug.c	2004-10-17 00:02:32.000000000 -0700
 @@ -5,6 +5,7 @@
  #include <stdio.h>
  #include <string.h>
