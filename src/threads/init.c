@@ -32,7 +32,7 @@ void power_off (void);
 static void
 main_thread (void *aux UNUSED) 
 {
-  thread_execute ("a.out");
+  printk ("execute=%d\n", (int) thread_execute ("a.out"));
 }
 
 int

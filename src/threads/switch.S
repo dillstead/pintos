@@ -1,7 +1,4 @@
-#### 0(%esp) - old registers
-#### 16(%esp) - return address
-#### 20(%esp) - current thread
-#### 24(%esp) - new thread
+#include "switch.h"
 
         .globl thread_switch 
 thread_switch:
@@ -18,14 +15,14 @@ thread_switch:
 	mov thread_stack_ofs, %edx
 
 	# Save current stack pointer to old thread's stack, if any.
-	movl 20(%esp), %eax
+	movl SWITCH_CUR(%esp), %eax
 	test %eax, %eax
 	jz 1f
 	movl %esp, (%eax,%edx,1)
 1:
 
 	# Restore stack pointer from new thread's stack.
-	movl 24(%esp), %ecx
+	movl SWITCH_NEXT(%esp), %ecx
 	movl (%ecx,%edx,1), %esp
 
 	# Restore caller's register state.

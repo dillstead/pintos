@@ -6,12 +6,11 @@
 #include "mmu.h"
 #include "palloc.h"
 #include "random.h"
+#include "switch.h"
 
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 static struct list run_queue;
-
-struct thread *thread_switch (struct thread *cur, struct thread *next);
 
 void
 thread_init (void) 
@@ -19,8 +18,16 @@ thread_init (void)
   list_init (&run_queue);
 }
 
+struct thread_root_frame 
+  {
+    void *eip;                  /* Return address. */
+    void (*function) (void *);  /* Function to call. */
+    void *aux;                  /* Auxiliary data for function. */
+  };
+
 static void
-thread_root (void (*function) (void *aux), void *aux) 
+thread_root (struct thread *cur UNUSED, struct thread *next UNUSED,
+             void (*function) (void *aux), void *aux) 
 {
   ASSERT (function != NULL);
   
@@ -28,40 +35,58 @@ thread_root (void (*function) (void *aux), void *aux)
   thread_exit ();
 }
 
-struct thread *
-thread_create (const char *name, void (*function) (void *aux), void *aux) 
+static struct thread *
+new_thread (const char *name) 
 {
   struct thread *t;
 
   ASSERT (name != NULL);
-  ASSERT (function != NULL);
-
-  t = palloc_get (0);
-  if (t == NULL)
-    return NULL;
-
-  memset (t, 0, PGSIZE);
-  strlcpy (t->name, name, sizeof t->name);
-
-  /* Set up stack. */
-  t->stack = (uint32_t *) ((uint8_t *) t + PGSIZE);
-  *--t->stack = (uint32_t) aux;
-  *--t->stack = (uint32_t) function;
-  --t->stack;
-  *--t->stack = (uint32_t) thread_root;
-  t->stack -= 4;
-
-  /* Add to run_queue. */
-  t->status = THREAD_BLOCKED;
-  thread_ready (t);
-
+  
+  t = palloc_get (PAL_ZERO);
+  if (t != NULL)
+    {
+      strlcpy (t->name, name, sizeof t->name);
+      t->stack = (uint8_t *) t + PGSIZE;
+      t->status = THREAD_BLOCKED;
+    }
+  
   return t;
 }
 
-static struct thread *
-stack_to_thread (uint32_t *stack) 
+static void *
+alloc_frame (struct thread *t, size_t size) 
 {
-  return (struct thread *) ((uint32_t) (stack - 1) & ~((uint32_t) PGSIZE - 1));
+  ASSERT (size % sizeof (uint32_t) == 0);
+
+  t->stack -= size;
+  return t->stack;
+}
+
+struct thread *
+thread_create (const char *name, void (*function) (void *aux), void *aux) 
+{
+  struct thread *t;
+  struct thread_root_frame *rf;
+  struct switch_frame *sf;
+
+  ASSERT (function != NULL);
+
+  t = new_thread (name);
+
+  /* Stack frame for thread_root(). */
+  rf = alloc_frame (t, sizeof *rf);
+  rf->eip = NULL;
+  rf->function = function;
+  rf->aux = aux;
+
+  /* Stack frame for thread_switch(). */
+  sf = alloc_frame (t, sizeof *sf);
+  sf->eip = (void (*) (void)) thread_root;
+
+  /* Add to run queue. */
+  thread_ready (t);
+
+  return t;
 }
 
 struct thread *
@@ -69,18 +94,21 @@ thread_current (void)
 {
   uint32_t *esp;
   asm ("movl %%esp, %0\n" : "=g" (esp));
-  return stack_to_thread (esp);
+  return pg_round_down (esp);
 }
 
 #ifdef USERPROG
-void
+bool
 thread_execute (const char *filename) 
 {
-  struct thread *t = thread_current ();
+  struct thread *t = new_thread (filename);
+  if (t == NULL)
+    return false;
   
   if (!addrspace_load (&t->addrspace, filename)) 
     panic ("%s: program load failed", filename);
-  panic ("%s: loaded", filename);
+  printk ("%s: loaded\n", filename);
+  return true;
 }
 #endif
 
@@ -139,6 +167,10 @@ thread_schedule (void)
   /* Prevent GCC from reordering anything around the thread
      switch. */
   asm volatile ("" : : : "memory");
+
+#ifdef USERPROG
+  addrspace_activate (&cur->addrspace);
+#endif
 
   if (prev != NULL && prev->status == THREAD_DYING) 
     thread_destroy (prev);

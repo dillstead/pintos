@@ -17,10 +17,11 @@ enum if_level intr_disable (void);
 
 struct intr_args
   {
+    /* Pushed by the stubs. */
     uint32_t edi;
     uint32_t esi;
     uint32_t ebp;
-    uint32_t esp;
+    uint32_t esp_dummy;
     uint32_t ebx;
     uint32_t edx;
     uint32_t ecx;
@@ -28,8 +29,16 @@ struct intr_args
     uint16_t es, :16;
     uint16_t ds, :16;
     uint32_t vec_no;
+
+    /* Sometimes pushed by the CPU, otherwise by the stubs. */
     uint32_t error_code;
-    uint32_t eip;
+
+    /* Pushed by the CPU. */
+    void (*eip) (void);
+    uint16_t cs, :16;
+    uint32_t eflags;
+    uint32_t esp;
+    uint16_t ss, :16;
   };
 
 typedef void intr_handler_func (struct intr_args *);

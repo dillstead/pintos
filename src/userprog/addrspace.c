@@ -230,3 +230,12 @@ addrspace_destroy (struct addrspace *as)
   if (as != NULL && as->pagedir != NULL) 
     pagedir_destroy (as->pagedir); 
 }
+
+void
+addrspace_activate (struct addrspace *as) 
+{
+  ASSERT (as != NULL);
+  
+  if (as->pagedir != NULL)
+    pagedir_activate (as->pagedir);
+}

@@ -77,8 +77,7 @@ paging_init (void)
       pt[pte_idx] = make_pte (vaddr, true);
     }
 
-  /* Set the page table. */
-  asm volatile ("movl %0,%%cr3" :: "r" (vtop (pd)));
+  pagedir_activate (pd);
 }
 
 uint32_t *
@@ -225,4 +224,8 @@ pagedir_next (uint32_t *pd, void **upage)
   return kpage;
 }
 
-void pagedir_activate (uint32_t *pagedir);
+void
+pagedir_activate (uint32_t *pagedir) 
+{
+  asm volatile ("movl %0,%%cr3" :: "r" (vtop (pagedir)));
+}

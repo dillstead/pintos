@@ -20,7 +20,7 @@ struct thread
   {
     enum thread_status status;
     char name[16];
-    uint32_t *stack;
+    uint8_t *stack;
     list_elem rq_elem;
 #ifdef USERPROG
     struct addrspace addrspace;
@@ -35,7 +35,7 @@ void thread_destroy (struct thread *);
 struct thread *thread_current (void);
 
 #ifdef USERPROG
-void thread_execute (const char *filename);
+bool thread_execute (const char *filename);
 #endif
 
 void thread_start (struct thread *);

@@ -12,4 +12,6 @@ struct addrspace
 bool addrspace_load (struct addrspace *, const char *);
 void addrspace_destroy (struct addrspace *);
 
+void addrspace_activate (struct addrspace *);
+
 #endif /* addrspace.h */
