@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+/* Number of timer interrupts per second. */
 #define TIMER_FREQ 100
 
 void timer_init (void);
