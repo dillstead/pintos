@@ -85,7 +85,7 @@ file_read_at (struct file *file, void *buffer_, off_t size,
 
       /* Number of bytes to actually copy out of this sector. */
       int chunk_size = size < min_left ? size : min_left;
-      if (chunk_size == 0)
+      if (chunk_size <= 0)
         break;
 
       /* Read sector into bounce buffer, then copy into caller's
@@ -142,15 +142,15 @@ file_write_at (struct file *file, const void *buffer_, off_t size,
       int sector_left = DISK_SECTOR_SIZE - sector_ofs;
       int min_left = file_left < sector_left ? file_left : sector_left;
 
-      /* Number of bytes to actually writen into this sector. */
+      /* Number of bytes to actually write into this sector. */
       int chunk_size = size < min_left ? size : min_left;
-      if (chunk_size == 0)
+      if (chunk_size <= 0)
         break;
 
       /* If the sector contains data before or after the chunk
          we're writing, then we need to read in the sector
          first.  Otherwise we start with a sector of all zeros. */
-      if (sector_ofs > 0 || chunk_size < sector_ofs)
+      if (sector_ofs > 0 || chunk_size < sector_left)
         disk_read (filesys_disk, sector_idx, file->bounce);
       else
         memset (file->bounce, 0, DISK_SECTOR_SIZE);
