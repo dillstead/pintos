@@ -152,14 +152,17 @@ argv_init (void)
   /* The command line is made up of null terminated strings
      followed by an empty string.  Break it up into words. */
   cmd_line = pos = ptov (LOADER_CMD_LINE);
+  printf ("Kernel command line:");
   while (pos < cmd_line + LOADER_CMD_LINE_LEN)
     {
       ASSERT (argc < LOADER_CMD_LINE_LEN / 2);
       if (*pos == '\0')
         break;
       argv[argc++] = pos;
+      printf (" %s", pos);
       pos = strchr (pos, '\0') + 1;
     }
+  printf ("\n");
   argv[argc] = "";
   argv[argc + 1] = "";
 
@@ -215,10 +218,12 @@ argv_init (void)
           " -D                  Dump complete filesystem contents\n"
 #endif
           " -q                  Power off after doing requested actions.\n"
+          " -u                  Print this help message and power off.\n"
           );
+        do_power_off ();
       }
     else 
-      PANIC ("unknown option `%s'", argv[i]);
+      PANIC ("unknown option `%s' (use -u for help)", argv[i]);
 }
 
 void
