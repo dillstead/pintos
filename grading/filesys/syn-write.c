@@ -19,7 +19,7 @@ test_main (void)
   CHECK (create (filename, sizeof buf1), "create \"%s\"", filename);
 
   exec_children ("child-syn-wrt", children, CHILD_CNT);
-  join_children (children, CHILD_CNT);
+  wait_children (children, CHILD_CNT);
 
   CHECK ((fd = open (filename)) > 1, "open \"%s\"", filename);
   CHECK (read (fd, buf1, sizeof buf1) > 0, "read \"%s\"", filename);

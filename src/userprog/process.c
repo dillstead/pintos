@@ -21,8 +21,9 @@ static thread_func execute_thread NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 /* Starts a new thread running a user program loaded from
-   FILENAME.  The new thread may be scheduled before
-   process_execute() returns.*/
+   FILENAME.  The new thread may be scheduled (and may even exit)
+   before process_execute() returns.  Returns the new process's
+   thread id, or TID_ERROR if the thread cannot be created. */
 tid_t
 process_execute (const char *filename) 
 {
@@ -54,22 +55,15 @@ execute_thread (void *filename_)
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
-  if_.gs = SEL_UDSEG;
-  if_.fs = SEL_UDSEG;
-  if_.es = SEL_UDSEG;
-  if_.ds = SEL_UDSEG;
+  if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  if_.ss = SEL_UDSEG;
   success = load (filename, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
   palloc_free_page (filename);
   if (!success) 
     thread_exit ();
-
-  /* Switch page tables. */
-  process_activate ();
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -81,6 +75,21 @@ execute_thread (void *filename_)
   NOT_REACHED ();
 }
 
+/* Waits for thread TID to die and returns its exit status.  If
+   it was terminated by the kernel (i.e. killed due to an
+   exception), returns -1.  If TID is invalid or if it was not a
+   child of the calling process, or if process_wait() has already
+   been successfully called for the given TID, returns -1
+   immediately, without waiting.
+
+   This function will be implemented in problem 2-2.  For now, it
+   does nothing. */
+int
+process_wait (tid_t child_tid UNUSED) 
+{
+  return -1;
+}
+
 /* Free the current process's resources. */
 void
 process_exit (void)
@@ -89,14 +98,18 @@ process_exit (void)
   uint32_t *pd;
 
   /* Destroy the current process's page directory and switch back
-     to the kernel-only page directory.  We have to set
-     cur->pagedir to NULL before switching page directories, or a
-     timer interrupt might switch back to the process page
-     directory. */
+     to the kernel-only page directory. */
   pd = cur->pagedir;
   if (pd != NULL) 
     {
+      /* We must set cur->pagedir to NULL before switching page
+         directories, or a timer interrupt might switch back to
+         the process page directory.  The asm statement prevents
+         GCC from reordering the assignment and the function
+         calls.  */
       cur->pagedir = NULL;
+      asm volatile ("");
+      
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
@@ -184,12 +197,12 @@ static bool load_segment (struct file *, const struct Elf32_Phdr *);
 static bool setup_stack (void **esp);
 
 /* Aborts loading an executable, with an error message. */
-#define LOAD_ERROR(MSG)                                         \
-        do {                                                    \
-                printf ("load: %s: ", filename);      \
-                printf MSG;                                     \
-                printf ("\n");                                  \
-                goto done;                                     \
+#define LOAD_ERROR(MSG)                                 \
+        do {                                            \
+                printf ("load: %s: ", filename);        \
+                printf MSG;                             \
+                printf ("\n");                          \
+                goto done;                              \
         } while (0)
 
 /* Loads an ELF executable from FILENAME into the current thread.
@@ -206,10 +219,11 @@ load (const char *filename, void (**eip) (void), void **esp)
   bool success = false;
   int i;
 
-  /* Allocate page directory. */
+  /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL)
     LOAD_ERROR (("page directory allocation failed"));
+  process_activate ();
 
   /* Open executable file. */
   file = filesys_open (filename);

@@ -11,7 +11,7 @@ TESTS = \
 	read-bad-ptr read-boundary read-zero read-stdout read-bad-fd \
 	write-normal write-bad-ptr write-boundary write-zero write-stdin \
 	write-bad-fd exec-once exec-arg exec-multiple exec-missing \
-	exec-bad-ptr join-simple join-twice join-killed join-bad-pid \
+	exec-bad-ptr wait-simple wait-twice wait-killed wait-bad-pid \
 	multi-recurse multi-oom multi-child-fd
 args_argc_SRC = args-argc.c
 args_argv0_SRC = args-argv0.c
@@ -60,10 +60,10 @@ exec_arg_SRC = exec-arg.c
 exec_multiple_SRC = exec-multiple.c
 exec_missing_SRC = exec-missing.c
 exec_bad_ptr_SRC = exec-bad-ptr.c
-join_simple_SRC = join-simple.c
-join_twice_SRC = join-twice.c
-join_killed_SRC = join-killed.c
-join_bad_pid_SRC = join-bad-pid.c
+wait_simple_SRC = wait-simple.c
+wait_twice_SRC = wait-twice.c
+wait_killed_SRC = wait-killed.c
+wait_bad_pid_SRC = wait-bad-pid.c
 multi_recurse_SRC = multi-recurse.c
 multi_oom_SRC = multi-oom.c
 multi_child_fd_SRC = multi-child-fd.c
@@ -85,9 +85,9 @@ null: null.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 null.dsk: null	
 
-exec-once.dsk exec-multiple.dsk join-simple.dsk join-twice.dsk: child-simple
+exec-once.dsk exec-multiple.dsk wait-simple.dsk wait-twice.dsk: child-simple
 exec-arg.dsk: child-arg
-join-killed.dsk: child-bad
+wait-killed.dsk: child-bad
 multi-child-fd.dsk: child-close
 
 %.dsk: %

@@ -22,9 +22,6 @@ our (%result);
 our ($action);
 
 parse_cmd_line qw (alarm-single alarm-multiple alarm-zero alarm-negative
-		   join-simple
-		   join-quick join-multiple join-nested
-		   join-dummy join-invalid join-no
 		   priority-preempt priority-fifo priority-donate-one
 		   priority-donate-multiple priority-donate-nest
 		   mlfqs-on mlfqs-off);
@@ -158,55 +155,6 @@ sub grade_alarm_negative {
     my (@output) = @_;
     verify_common (@output);
     die "Crashed in timer_sleep()\n" if !grep (/^Success\.$/, @output);
-}
-
-sub grade_join_invalid {
-    my (@output) = @_;
-    verify_common (@output);
-    grep (/Testing invalid join/, @output) or die "Test didn't start\n";
-    grep (/Invalid join test done/, @output) or die "Test didn't complete\n";
-}
-
-sub grade_join_no {
-    my (@output) = @_;
-    verify_common (@output);
-    grep (/Testing no join/, @output) or die "Test didn't start\n";
-    grep (/No join test done/, @output) or die "Test didn't complete\n";
-}
-
-sub grade_join_multiple {
-    my (@output) = @_;
-
-    verify_common (@output);
-    my (@t);
-    $t[4] = $t[5] = $t[6] = -1;
-    local ($_);
-    foreach (@output) {
-	my ($idx) = /^Thread (\d+)/ or next;
-	my ($iter) = /iteration (\d+)$/;
-	$iter = 5 if /done!$/;
-	die "Malformed output\n" if !defined $iter;
-	if ($idx == 6) {
-	    die "Thread 6 started before either other thread finished\n"
-		if $t[4] < 5 && $t[5] < 5;
-	    die "Thread 6 started before thread 4 finished\n"
-		if $t[4] < 5;
-	    die "Thread 6 started before thread 5 finished\n"
-		if $t[5] < 5;
-	}
-	die "Thread $idx out of order output\n" if $t[$idx] != $iter - 1;
-	$t[$idx] = $iter;
-    }
-
-    my ($err) = "";
-    for my $idx (4, 5, 6) {
-	if ($t[$idx] == -1) {
-	    $err .= "Thread $idx did not run at all\n";
-	} elsif ($t[$idx] != 5) {
-	    $err .= "Thread $idx only completed $t[$idx] iterations\n";
-	}
-    }
-    die $err if $err ne '';
 }
 
 sub grade_priority_fifo {

@@ -274,17 +274,6 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
-/* Waits for the thread with the specified TID to terminate.  If
-   TID has already terminated or TID does not refer to an
-   immediate child of the current thread, returns immediately.
-
-   This function will be implemented in problem 1-2.  For now, it
-   does nothing. */
-void
-thread_join (tid_t child_tid UNUSED) 
-{
-}
-
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 

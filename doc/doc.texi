@@ -84,9 +84,7 @@ required, you should explain why you feel so.  For each test that you
 write, explain how we can use them, and show some sample output from a
 run.
 
-Specifically, here are some pointers for writing @file{TESTCASE} files
-which will make them more succinct and us more likely to understand the
-tests you write:
+Here are some pointers for writing @file{TESTCASE} files:
 
 @itemize @bullet
 @item
@@ -95,15 +93,10 @@ Show us that you tested each part of your assignment.
 @item
 Clearly state in your @file{TESTCASE} file what each test is supposed
 to test.  You should be testing not only the common case, but testing
-corner cases.  Specify what criteria or issue is being tested.  For
-example, in testing @func{thread_join} you would have specified that
-you test @func{thread_join} when it is called multiple times on the
-same child thread.
+corner cases.  Specify what criteria or issue is being tested.
 
 @item
-Make your tests as succinct as possible.  Most students in the past
-have done a great job with the testing of @func{thread_join},
-creating very succinct short tests.  We like that.
+Make your tests as succinct as possible.
 
 @item
 Your test cases should be placed in a subdirectory called
@@ -133,7 +126,7 @@ Your @file{TESTCASE} file is also where you can show us the
 improvements that your code makes to the performance of the system.
 You should be able to show us ``before'' and ``after'' performance
 data, and explain how the data shows the improvement.  For example,
-for Problem 1-4, you should show us in the @file{TESTCASE} printouts
+for Problem 1-3, you should show us in the @file{TESTCASE} printouts
 from a workload for the non-Solaris scheduler and the Solaris
 scheduler and explain why the Solaris scheduler is better.
 

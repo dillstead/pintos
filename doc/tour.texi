@@ -261,7 +261,7 @@ other registers that must be saved are saved on the stack.
 A thread priority, ranging from the lowest possible priority
 @code{PRI_MIN} (0) to the highest possible priority @code{PRI_MAX}
 (59).  Pintos as provided ignores thread priorities, but you will
-implement priority scheduling in problem 1-3 (@pxref{Problem 1-3
+implement priority scheduling in problem 1-2 (@pxref{Problem 1-2
 Priority Scheduling}).
 
 @item struct list_elem elem;

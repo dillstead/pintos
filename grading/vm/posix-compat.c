@@ -11,7 +11,7 @@
 #undef halt
 #undef exit
 #undef exec
-#undef join
+#undef wait
 #undef create
 #undef remove
 #undef open
@@ -68,7 +68,7 @@ pintos_exec (const char *cmd_line)
 }
 
 int
-pintos_join (pid_t child) 
+pintos_wait (pid_t child) 
 {
   int status = 0;
   waitpid (child, &status, 0);

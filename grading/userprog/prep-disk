@@ -46,10 +46,10 @@ put_file ("sample.txt")
 put_file ("child-simple")
     if grep ($_ eq $test,
 	     qw (exec-once exec-multiple
-		 join-simple join-twice));
+		 wait-simple wait-twice));
 put_file ("child-arg") if $test eq 'exec-arg';
 put_file ("child-close") if $test eq 'multi-child-fd';
-put_file ("child-bad") if $test eq 'join-killed';
+put_file ("child-bad") if $test eq 'wait-killed';
 
 sub put_file {
     my ($fn) = @_;

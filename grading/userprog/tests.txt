@@ -68,18 +68,25 @@ System calls: write
 Score: /9
 
 System calls: exec
-  -2 exec-once: call exec/join once
+  -2 exec-once: call exec/wait once
   -2 exec-arg: check command-line passing on exec
-  -2 exec-multiple: call exec/join multiple times
+  -2 exec-multiple: call exec/wait multiple times
   -2 exec-missing: exec of nonexistent file must return -1
   -1 exec-bad-ptr: pass invalid pointer to exec system call
 Score: /9
 
-System calls: join
-  -2 join-simple: join must return proper value
-  -2 join-twice: join a subprocess two times
-  -2 join-killed: join must return -1 if subprocess killed by kernel
-  -1 join-bad-pid: join must return if passed bad pid
+System calls: wait
+  -2 wait-once: A creates B, A waits for B
+  -2 wait-twice: A creates B, A waits for B, A waits for B again
+  -2 wait-quick: A creates B, A waits for B, with different details
+  -2 wait-multiple: A creates B and C, A waits for B, A waits for C
+  -2 wait-nested: A creates B, B creates C, ..., B waits for C, A waits for B
+  -2 wait-dummy: A creates B, A waits for B, A waits for B
+  -2 wait-invalid: Waiting for an invalid pid must return immediately
+  -2 wait-other: Waiting for a child of another process must return immediately
+  -2 wait-no: A creates B and never waits for it (must not crash or hang)
+Score: /14
+
 Score: /7
 
 Multiprogramming

@@ -44,6 +44,15 @@ System call design:
   -5 System call error exit leaks memory/fails to release global lock
   -5 Uses a pointer as a file descriptor or pid without justifying
 
+Wait system call:
+  -3 Busy waiting
+  -3 A static list of all parent-child pairs is extremely wasteful
+  -3 Obviously wasteful with memory (not deleting processes)
+  -2 Finished parent deletes children which may still be running
+  -1 Enable/disable interrupts
+  -2 Joinable child lets its struct thread be deleted before parent dies
+  -1 Race condition between wait and thread exit
+
 Style [[/25]]
 -------------
   -5 Extraneous output caused warnings

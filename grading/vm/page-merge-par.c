@@ -75,9 +75,9 @@ sort_chunks (void)
       char fn[128];
       int fd;
 
-      if (join (children[i]) != 123) 
+      if (wait (children[i]) != 123) 
         {
-          printf ("(page-merge-par) join(exec()) returned bad value\n");
+          printf ("(page-merge-par) wait(exec()) returned bad value\n");
           exit (1);
         }
 

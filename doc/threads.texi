@@ -24,9 +24,8 @@ read @ref{Multilevel Feedback Scheduling}.
 * Debugging versus Testing::    
 * Tips::                        
 * Problem 1-1 Alarm Clock::     
-* Problem 1-2 Join::            
-* Problem 1-3 Priority Scheduling::  
-* Problem 1-4 Advanced Scheduler::  
+* Problem 1-2 Priority Scheduling::  
+* Problem 1-3 Advanced Scheduler::  
 * Threads FAQ::                 
 @end menu
 
@@ -362,27 +361,15 @@ debugging code before turning in your project.
 
 @item
 All parts of this assignment are required if you intend to earn full
-credit on this project.  However, some will be more important in
-future projects:
-
-@itemize @minus
-@item
-Problem 1-1 (Alarm Clock) could be handy for later projects, but it is
-not strictly required.
+credit on this project.  Problem 1-1 (Alarm Clock) could be handy for
+later projects, but it is not strictly required.  Problems 1-2
+(Priority Scheduling) and 1-3 (Advanced Scheduler) won't be needed for
+later projects.
 
 @item
-Problem 1-2 (Join) will be needed for future projects.  We don't give
-out solutions, so to avoid extra work later you should make sure that
-your implementation of @func{thread_join} works correctly.
-
-@item
-Problems 1-3 and 1-4 won't be needed for later projects.
-@end itemize
-
-@item
-Problem 1-4 (MLFQS) builds on the features you implement in Problem
-1-3.  You should have Problem 1-3 fully working before you begin to
-tackle Problem 1-4.
+Problem 1-3 (MLFQS) builds on the features you implement in Problem
+1-2.  You should have Problem 1-2 fully working before you begin to
+tackle Problem 1-3.
 
 @item
 In the past, many groups divided the assignment into pieces, then each
@@ -447,63 +434,8 @@ If your delays seem too short or too long, reread the explanation of the
 @option{-r} option to @command{pintos} (@pxref{Debugging versus
 Testing}).
 
-@node Problem 1-2 Join
-@section Problem 1-2: Join
-
-Implement @code{thread_join(tid_t)} in @file{threads/thread.c}.  There
-is already a prototype for it in @file{threads/thread.h}, which you
-should not change.  This function causes the currently running thread
-to block until the thread whose thread id is passed as an argument
-exits.  If @var{A} is the running thread and @var{B} is the argument,
-then we say that ``@var{A} joins @var{B}.''
-
-Incidentally, we don't use @code{struct thread *} as
-@func{thread_join}'s parameter type because a thread pointer is not
-unique over time.  That is, when a thread dies, its memory may be,
-whether immediately or much later, reused for another thread.  If
-thread @var{A} over time had two children @var{B} and @var{C} that
-were stored at the same address, then @code{thread_join(@var{B})} and
-@code{thread_join(@var{C})} would be ambiguous.  Introducing a thread
-id or @dfn{tid}, represented by type @code{tid_t}, that is
-intentionally unique over time solves the problem.  The provided code
-uses an @code{int} for @code{tid_t}, but you may decide you prefer to
-use some other type.
-
-The model for @func{thread_join} is the @command{wait} system call
-in Unix-like systems.  (Try reading the manpages.)  That system call
-can only be used by a parent process to wait for a child's death.  You
-should implement @func{thread_join} to have the same restriction.
-That is, a thread may only join its immediate children.
-
-A thread need not ever be joined.  Your solution should properly free
-all of a thread's resources, including its @struct{thread},
-whether it is ever joined or not, and regardless of whether the child
-exits before or after its parent.  That is, a thread should be freed
-exactly once in all cases.
-
-Joining a given thread is idempotent.  That is, joining a thread T
-multiple times is equivalent to joining it once, because T has already
-exited at the time of the later joins.  Thus, joins on T after the
-first should return immediately.
-
-Calling @func{thread_join} on an thread that is not the caller's
-child should cause the caller to return immediately.  For this purpose,
-children are not inherited, that is, if @var{A} has child @var{B} and
-@var{B} has child @var{C}, then @var{A} always returns immediately
-should it try to join @var{C}, even if @var{B} is dead.
-
-Consider all the ways a join can occur: nested joins (@var{A} joins
-@var{B}, then @var{B} joins @var{C}), multiple joins (@var{A} joins
-@var{B}, then @var{A} joins @var{C}), and so on.  Does your join work
-if @func{thread_join} is called on a thread that has not yet been
-scheduled for the first time?  You should handle all of these cases.
-Write test code that demonstrates the cases your join works for.
-
-Be careful to program this function correctly.  You will need its
-functionality for project 2.
-
-@node Problem 1-3 Priority Scheduling
-@section Problem 1-3: Priority Scheduling
+@node Problem 1-2 Priority Scheduling
+@section Problem 1-2: Priority Scheduling
 
 Implement priority scheduling in Pintos.  Priority scheduling is a key
 building block for real-time systems.  Implement functions
@@ -531,8 +463,7 @@ to immediately yield the CPU.
 
 One issue with priority scheduling is ``priority inversion'': if a
 high priority thread needs to wait for a low priority thread (for
-instance, for a lock held by a low priority thread, or in
-@func{thread_join} for a thread to complete), and a middle priority
+instance, for a lock held by a low priority thread), and a middle priority
 thread is on the ready list, then the high priority thread will never
 get the CPU because the low priority thread will not get any CPU time.
 A partial fix for this problem is to have the waiting thread
@@ -551,12 +482,12 @@ that @var{L} holds, then both @var{M} and @var{L} should be boosted to
 
 You only need to implement priority donation when a thread is waiting
 for a lock held by a lower-priority thread.  You do not need to
-implement this fix for semaphores, condition variables, or joins,
+implement this fix for semaphores or condition variables
 although you are welcome to do so.  However, you do need to implement
 priority scheduling in all cases.
 
-@node Problem 1-4 Advanced Scheduler
-@section Problem 1-4: Advanced Scheduler
+@node Problem 1-3 Advanced Scheduler
+@section Problem 1-3: Advanced Scheduler
 
 Implement Solaris's multilevel feedback queue scheduler (MLFQS) to
 reduce the average response time for running jobs on your system.
@@ -660,9 +591,8 @@ the function isn't actually used by other @file{.c} files, make it
 
 @menu
 * Problem 1-1 Alarm Clock FAQ::  
-* Problem 1-2 Join FAQ::        
-* Problem 1-3 Priority Scheduling FAQ::  
-* Problem 1-4 Advanced Scheduler FAQ::  
+* Problem 1-2 Priority Scheduling FAQ::  
+* Problem 1-3 Advanced Scheduler FAQ::  
 @end menu
 
 @node Problem 1-1 Alarm Clock FAQ
@@ -729,7 +659,7 @@ Make the timer tick more slowly by decreasing @code{TIMER_FREQ} in
 @end itemize
 
 The former two changes are only desirable for testing problem 1-1 and
-possibly 1-3.  You should revert them before working on other parts
+possibly 1-2.  You should revert them before working on other parts
 of the project or turn in the project.  We will test problem 1-1 with
 @code{TIME_SLICE} set to 100 and @code{TIMER_FREQ} set to 19, but we
 will leave them at their defaults for all the other problems.
@@ -740,21 +670,8 @@ will leave them at their defaults for all the other problems.
 No.  The MLFQS will adjust priorities, changing thread ordering.
 @end enumerate
 
-@node Problem 1-2 Join FAQ
-@subsection Problem 1-2: Join FAQ
-
-@enumerate 1
-@item
-@b{Am I correct to assume that once a thread is deleted, it is no
-longer accessible by the parent (i.e.@: the parent can't call
-@code{thread_join(child)})?}
-
-A parent joining a child that has completed should be handled
-gracefully and should act as a no-op.
-@end enumerate
-
-@node Problem 1-3 Priority Scheduling FAQ
-@subsection Problem 1-3: Priority Scheduling FAQ
+@node Problem 1-2 Priority Scheduling FAQ
+@subsection Problem 1-2: Priority Scheduling FAQ
 
 @enumerate 1
 @item
@@ -827,7 +744,7 @@ Yes.  Same scenario as above except L gets blocked waiting on a new
 lock when H restores its priority.
 
 @item
-@b{Why is @file{p1-3.c}'s FIFO test skipping some threads?  I know my
+@b{Why is @file{p1-2.c}'s FIFO test skipping some threads?  I know my
 scheduler is round-robin'ing them like it's supposed to.   Our output
 starts out okay, but toward the end it starts getting out of order.}
 
@@ -868,7 +785,7 @@ its priority has been increased by a donation?}
 The higher (donated) priority.
 
 @item
-@b{Should @file{p1-3.c} be expected to work with the MLFQS turned on?}
+@b{Should @file{p1-2.c} be expected to work with the MLFQS turned on?}
 
 No.  The MLFQS will adjust priorities, changing thread ordering.
 
@@ -882,8 +799,8 @@ just before the first @func{printf} in @func{main}.  Then modify
 @func{printf} itself to return immediately if the flag isn't set.
 @end enumerate
 
-@node Problem 1-4 Advanced Scheduler FAQ
-@subsection Problem 1-4: Advanced Scheduler FAQ
+@node Problem 1-3 Advanced Scheduler FAQ
+@subsection Problem 1-3: Advanced Scheduler FAQ
 
 @enumerate 1
 @item

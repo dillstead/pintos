@@ -14,8 +14,8 @@ assignment.  However, you will also be interacting with almost every
 other part of the code for this assignment. We will describe the
 relevant parts below. If you are confident in your HW1 code, you can
 build on top of it.  However, if you wish you can start with a fresh
-copy of the code and re-implement @func{thread_join}, which is the
-only part of project #1 required for this assignment.
+copy of the code.  No code from project 1 is required for this
+assignment.
 
 Up to now, all of the code you have written for Pintos has been part
 of the operating system kernel.  This means, for example, that all the
@@ -405,7 +405,7 @@ etc.
 @item SYS_exit
 @itemx void exit (int @var{status})
 Terminates the current user program, returning @var{status} to the
-kernel.  If the process's parent @func{join}s it, this is the status
+kernel.  If the process's parent @func{wait}s for it, this is the status
 that will be returned.  Conventionally, a @var{status} of 0 indicates
 a successful exit.  Other values may be used to indicate user-defined
 conditions (usually errors).
@@ -417,14 +417,36 @@ given arguments, and returns the new process's program id (pid).  Must
 return pid -1, which otherwise should not be a valid program id, if
 there is an error loading this program.
 
-@item SYS_join
-@itemx int join (pid_t @var{pid})
-Joins the process @var{pid}, using the join rules from the last
-assignment, and returns the process's exit status.  If the process was
-terminated by the kernel (i.e.@: killed due to an exception), the exit
-status should be -1.  If the process was not a child of the calling
-process, the return value is undefined (but kernel operation must not
-be disrupted).
+@item SYS_wait
+@itemx int wait (pid_t @var{pid})
+Waits for process @var{pid} to die and returns its exit status.  If it
+was terminated by the kernel (i.e.@: killed due to an exception),
+returns -1.  If @var{pid} is invalid or if it was not a child of the
+calling thread, or if @code{wait} has already been successfully
+called for the given @var{pid}, returns -1 immediately, without
+waiting.
+
+You must ensure that Pintos does not terminate until the initial
+process exits.  The supplied Pintos code tries to do this by calling
+@func{process_wait} (in @file{userprog/process.c}) from @func{main}
+(in @file{threads/init.c}).  We suggest that you implement
+@func{process_wait} according to the comment at the top of the
+function and then implement the @code{wait} system call in terms of
+@func{process_wait}.
+
+All of a process's resources, including its @struct{thread}, must be
+freed whether its parent ever waits for it or not, and regardless of
+whether the child exits before or after its parent.
+
+Children are not inherited, that is, if @var{A} has child @var{B} and
+@var{B} has child @var{C}, then @var{A} always returns immediately
+should it try to wait for @var{C}, even if @var{B} is dead.
+
+Consider all the ways a wait can occur: nested waits (@var{A} waits
+for @var{B}, then @var{B} waits for @var{C}), multiple waits (@var{A}
+waits for @var{B}, then @var{A} waits for @var{C}), and so on.  Does
+your @func{wait} work if it is called on a process that has not yet
+been scheduled for the first time?
 
 @item SYS_create
 @itemx bool create (const char *@var{file}, unsigned @var{initial_size})
@@ -549,9 +571,7 @@ value), returning an undefined value, or terminating the process.
 @item
 @b{Do we need a working project 1 to implement project 2?}
 
-You may find the code for @func{thread_join} to be useful in
-implementing the join syscall, but besides that, you can use
-the original code provided for project 1.
+No.
 
 @item
 @b{@samp{pintos put} always panics.}
@@ -643,7 +663,7 @@ process running in it (if created with @func{process_execute}) or not
 in the kernel.
 
 A @code{pid_t} identifies a user process.  It is used by user
-processes and the kernel in the @code{exec} and @code{join} system
+processes and the kernel in the @code{exec} and @code{wait} system
 calls.
 
 You can choose whatever suitable types you like for @code{tid_t} and

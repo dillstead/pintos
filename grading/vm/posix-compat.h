@@ -20,9 +20,9 @@ void pintos_exit (int status) NO_RETURN;
 #define exec pintos_exec
 pid_t pintos_exec (const char *file);
 
-#undef join
-#define join pintos_join
-int pintos_join (pid_t);
+#undef wait
+#define wait pintos_wait
+int pintos_wait (pid_t);
 
 #undef create
 #define create pintos_create

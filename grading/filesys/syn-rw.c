@@ -30,5 +30,5 @@ test_main (void)
            (int) CHUNK_SIZE, ofs, filename);
   quiet = false;
 
-  join_children (children, CHILD_CNT);
+  wait_children (children, CHILD_CNT);
 }

@@ -5,7 +5,7 @@
 #define SYS_halt 0              /* Halts the operating system. */
 #define SYS_exit 1              /* Terminates this process. */
 #define SYS_exec 2              /* Start another process. */
-#define SYS_join 3              /* Waits for a child process to die. */
+#define SYS_wait 3              /* Waits for a child process to die. */
 #define SYS_create 4            /* Creates a file. */
 #define SYS_remove 5            /* Deletes a file. */
 #define SYS_open 6              /* Opens a file. */

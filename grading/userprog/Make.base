@@ -15,9 +15,9 @@ null: null.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 null.dsk: null	
 
-exec-once.dsk exec-multiple.dsk join-simple.dsk join-twice.dsk: child-simple
+exec-once.dsk exec-multiple.dsk wait-simple.dsk wait-twice.dsk: child-simple
 exec-arg.dsk: child-arg
-join-killed.dsk: child-bad
+wait-killed.dsk: child-bad
 multi-child-fd.dsk: child-close
 
 %.dsk: %

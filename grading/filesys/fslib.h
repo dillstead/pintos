@@ -48,7 +48,7 @@ void compare_bytes (const void *read_data, const void *expected_data,
                     size_t size, size_t ofs, const char *filename);
 
 void exec_children (const char *child_name, pid_t pids[], size_t child_cnt);
-void join_children (pid_t pids[], size_t child_cnt);
+void wait_children (pid_t pids[], size_t child_cnt);
 
 void test_main (void);
 

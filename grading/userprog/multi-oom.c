@@ -20,9 +20,9 @@ main (int argc UNUSED, char *argv[])
   child_pid = exec (child_cmd);
   if (child_pid != -1) 
     {
-      int code = join (child_pid);
+      int code = wait (child_pid);
       if (code != n + 1)
-        printf ("(multi-oom) fail: join(exec(\"%s\")) returned %d\n",
+        printf ("(multi-oom) fail: wait(exec(\"%s\")) returned %d\n",
                 child_cmd, code);
     }
   else if (n < 15)

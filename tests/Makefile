@@ -1,4 +1,4 @@
-TESTS = threads p1-1 p1-2 p1-3 list stdlib userprog p2 vm filesys
+TESTS = threads p1-1 p1-2 list stdlib userprog p2 vm filesys
 
 PATH := $(shell pwd)/../src/utils:$(PATH)
 
@@ -67,13 +67,6 @@ p1-2: PROJECT = threads
 p1-2::
 	$(mk-sandbox)
 	$(apply-patch) ../solutions/p1-2.patch
-	$(run-tests) -d join.*
-	$(clean)
-
-p1-3: PROJECT = threads
-p1-3::
-	$(mk-sandbox)
-	$(apply-patch) ../solutions/p1-3.patch
 	$(run-tests) -d priority.*
 	$(clean)
 
@@ -90,7 +83,7 @@ userprog: PROJECT = userprog
 userprog::
 	$(prep-grading)
 	$(mk-sandbox)
-	$(apply-patch) ../solutions/p1-2.patch
+	$(apply-patch) ../solutions/p2-null.patch
 	$(run-tests) null
 	$(clean)
 

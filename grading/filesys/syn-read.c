@@ -24,5 +24,5 @@ test_main (void)
   close (fd);
 
   exec_children ("child-syn-read", children, CHILD_CNT);
-  join_children (children, CHILD_CNT);
+  wait_children (children, CHILD_CNT);
 }

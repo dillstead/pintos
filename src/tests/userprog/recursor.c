@@ -11,7 +11,7 @@ main (int argc, char *argv[])
 
   if (argc != 4) 
     {
-      printf ("usage: recursor <string> <depth> <joinp>\n");
+      printf ("usage: recursor <string> <depth> <waitp>\n");
       exit (1);
     }
 
@@ -25,7 +25,7 @@ main (int argc, char *argv[])
                 "recursor %s %d %s", argv[1], atoi (argv[2]) - 1, argv[3]);
       pid = exec (buffer);
       if (atoi (argv[3]))
-        retval = join (pid);
+        retval = wait (pid);
     }
   
   /* Done. */

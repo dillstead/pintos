@@ -188,15 +188,15 @@ exec_children (const char *child_name, pid_t pids[], size_t child_cnt)
 }
 
 void
-join_children (pid_t pids[], size_t child_cnt) 
+wait_children (pid_t pids[], size_t child_cnt) 
 {
   size_t i;
   
   for (i = 0; i < child_cnt; i++) 
     {
-      int status = join (pids[i]);
+      int status = wait (pids[i]);
       CHECK (status == (int) i,
-             "join child %zu of %zu returned %d (expected %zu)",
+             "wait for child %zu of %zu returned %d (expected %zu)",
              i + 1, child_cnt, status, i);
     }
 }

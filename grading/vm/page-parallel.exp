@@ -2,7 +2,7 @@
 (page-parallel) start child 0
 (page-parallel) start child 1
 (page-parallel) start child 2
-(page-parallel) join child 0
-(page-parallel) join child 1
-(page-parallel) join child 2
+(page-parallel) wait for child 0
+(page-parallel) wait for child 1
+(page-parallel) wait for child 2
 (page-parallel) end

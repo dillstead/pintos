@@ -27,10 +27,10 @@ main (void)
       printf ("(mmap-exit) exec() failed\n");
       return 1;
     }
-  code = join (child);
+  code = wait (child);
   if (code != 234) 
     {
-      printf ("(mmap-exit) join() returned bad exit code: %d\n", code);
+      printf ("(mmap-exit) wait() returned bad exit code: %d\n", code);
       return 1;
     }
   printf ("(mmap-exit) child finished\n");

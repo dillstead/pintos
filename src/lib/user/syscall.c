@@ -82,9 +82,9 @@ exec (const char *file)
 }
 
 int
-join (pid_t pid)
+wait (pid_t pid)
 {
-  return syscall1 (SYS_join, pid);
+  return syscall1 (SYS_wait, pid);
 }
 
 bool

@@ -28,8 +28,8 @@ main (void)
   for (i = 0; i < CHILD_CNT; i++) 
     {
       int code;
-      printf ("(page-parallel) join child %d\n", i);
-      code = join (children[i]);
+      printf ("(page-parallel) wait for child %d\n", i);
+      code = wait (children[i]);
       if (code != 0x42)
         printf ("(page-parallel) child %d returned bad exit code\n", i);
     }

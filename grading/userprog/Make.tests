@@ -45,10 +45,10 @@ exec-arg
 exec-multiple
 exec-missing
 exec-bad-ptr
-join-simple
-join-twice
-join-killed
-join-bad-pid
+wait-simple
+wait-twice
+wait-killed
+wait-bad-pid
 multi-recurse
 multi-oom
 multi-child-fd

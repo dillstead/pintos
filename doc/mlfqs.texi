@@ -4,7 +4,7 @@
 This section gives a brief overview of the behavior of the Solaris 2.6
 Time-Sharing (TS) scheduler, an example of a Multilevel Feedback Queue
 scheduler.  The information in this handout, in conjunction with that
-given in lecture, should be used to answer Problem 1-4.  The end of
+given in lecture, should be used to answer Problem 1-3.  The end of
 this document specifies in more detail which aspects of the Solaris
 scheduler that you should implement.
 

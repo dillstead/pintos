@@ -20,7 +20,7 @@ main (void)
 
   snprintf (child_cmd, sizeof child_cmd, "child-close %d", handle);
   
-  printf ("(multi-child-fd) join(exec()) = %d\n", join (exec (child_cmd)));
+  printf ("(multi-child-fd) wait(exec()) = %d\n", wait (exec (child_cmd)));
 
   byte_cnt = read (handle, actual, sizeof actual - 1);
   if (byte_cnt != sizeof actual - 1)

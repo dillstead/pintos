@@ -64,9 +64,9 @@ sort_chunks (void)
           printf ("(page-merge-seq) exec() failed\n");
           exit (1);
         }
-      if (join (child) != 123) 
+      if (wait (child) != 123) 
         {
-          printf ("(page-merge-seq) join(exec()) returned bad value\n");
+          printf ("(page-merge-seq) wait(exec()) returned bad value\n");
           exit (1);
         }
 

@@ -26,7 +26,7 @@ main (void)
         {
           pid_t pid = exec (command);
           if (pid != PID_ERROR)
-            join (pid);
+            wait (pid);
           else
             printf ("exec failed\n");
         }

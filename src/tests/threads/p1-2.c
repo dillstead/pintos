@@ -1,105 +1,113 @@
-/* Problem 1-2: Join tests.
+/* Problem 1-2: Priority Scheduling tests.
 
    Based on a test originally submitted for Stanford's CS 140 in
-   winter 1998 by Rob Baesman <rbaesman@cs.stanford.edu>, Ben
-   Taskar <btaskar@cs.stanford.edu>, and Toli Kuznets
-   <tolik@cs.stanford.edu>.  Later modified by shiangc, yph, and
-   arens. */
+   winter 1999 by by Matt Franklin
+   <startled@leland.stanford.edu>, Greg Hutchins
+   <gmh@leland.stanford.edu>, Yu Ping Hu <yph@cs.stanford.edu>.
+   Modified by arens. */
+
+#ifdef MLFQS
+#error This test not applicable with MLFQS enabled.
+#endif
+
 #include "threads/test.h"
 #include <stdio.h>
-#include "threads/interrupt.h"
+#include "threads/synch.h"
 #include "threads/thread.h"
 
-static void simple_test (void);
-static void quick_test (void);
-static void multiple_test (void);
+static void test_preempt (void);
+static void test_fifo (void);
+static void test_donate_return (void);
 
 void
 test (void) 
 {
-  simple_test ();
-  quick_test ();
-  multiple_test ();
-}
+  /* Make sure our priority is the default. */
+  ASSERT (thread_get_priority () == PRI_DEFAULT);
 
+  test_preempt ();
+  test_fifo ();
+  test_donate_return ();
+}
+
 static thread_func simple_thread_func;
-static thread_func quick_thread_func;
+static thread_func acquire_thread_func;
 
 static void
-simple_test (void) 
+test_preempt (void) 
 {
-  tid_t tid0;
-  
   printf ("\n"
-          "Testing simple join.\n"
-          "Thread 0 should finish before thread 1 starts.\n");
-  tid0 = thread_create ("0", PRI_DEFAULT, simple_thread_func, "0");
-  thread_yield ();
-  thread_join (tid0);
-  simple_thread_func ("1");
-  printf ("Simple join test done.\n");
+          "Testing priority preemption.\n");
+  thread_create ("high-priority", PRI_DEFAULT + 1, simple_thread_func, NULL);
+  printf ("The high-priority thread should have already completed.\n"
+          "Priority preemption test done.\n");
 }
 
 static void
-quick_test (void) 
+test_fifo (void) 
 {
-  tid_t tid2;
+  int i;
   
   printf ("\n"
-          "Testing quick join.\n"
-          "Thread 2 should finish before thread 3 starts.\n");
+          "Testing FIFO preemption.\n"
+          "5 threads will iterate 10 times in the same order each time.\n"
+          "If the order varies then there is a bug.\n");
 
-  tid2 = thread_create ("2", PRI_DEFAULT, quick_thread_func, "2");
-  thread_yield ();
-  thread_join (tid2);
-  simple_thread_func ("3");
-  printf ("Quick join test done.\n");
+  thread_set_priority (PRI_DEFAULT + 2);
+  for (i = 0; i < 10; i++) 
+    {
+      char name[16];
+      snprintf (name, sizeof name, "%d", i);
+      thread_create (name, PRI_DEFAULT + 1, simple_thread_func, NULL);
+    }
+  thread_set_priority (PRI_DEFAULT);
+
+  printf ("FIFO preemption test done.\n");
 }
 
 static void
-multiple_test (void) 
+test_donate_return (void) 
 {
-  tid_t tid4, tid5;
-  
-  printf ("\n"
-          "Testing multiple join.\n"
-          "Threads 4 and 5 should finish before thread 6 starts.\n");
+  struct lock lock;
 
-  tid4 = thread_create ("4", PRI_DEFAULT, simple_thread_func, "4");
-  tid5 = thread_create ("5", PRI_DEFAULT, simple_thread_func, "5");
-  thread_yield ();
-  thread_join (tid4);
-  thread_join (tid5);
-  simple_thread_func ("6");
-  printf ("Multiple join test done.\n");
+  printf ("\n"
+          "Testing priority donation.\n"
+          "If the statements printed below are all true, you pass.\n");
+
+  lock_init (&lock, "donor");
+  lock_acquire (&lock);
+  thread_create ("acquire1", PRI_DEFAULT + 1, acquire_thread_func, &lock);
+  printf ("This thread should have priority %d.  Actual priority: %d.\n",
+          PRI_DEFAULT + 1, thread_get_priority ());
+  thread_create ("acquire2", PRI_DEFAULT + 2, acquire_thread_func, &lock);
+  printf ("This thread should have priority %d.  Actual priority: %d.\n",
+          PRI_DEFAULT + 2, thread_get_priority ());
+  lock_release (&lock);
+  printf ("acquire2 and acquire1 must already have finished, in that order.\n"
+          "This should be the last line before finishing this test.\n"
+          "Priority donation test done.\n");
 }
 
-void 
-simple_thread_func (void *name_) 
+static void 
+simple_thread_func (void *aux UNUSED) 
 {
-  const char *name = name_;
   int i;
   
   for (i = 0; i < 5; i++) 
     {
-      printf ("Thread %s iteration %d\n", name, i);
+      printf ("Thread %s iteration %d\n", thread_name (), i);
       thread_yield ();
     }
-  printf ("Thread %s done!\n", name);
+  printf ("Thread %s done!\n", thread_name ());
 }
 
-void 
-quick_thread_func (void *name_) 
+static void
+acquire_thread_func (void *lock_) 
 {
-  const char *name = name_;
-  int i;
+  struct lock *lock = lock_;
 
-  intr_disable ();
-
-  for (i = 0; i < 5; i++) 
-    {
-      printf ("Thread %s iteration %d\n", name, i);
-      thread_yield ();
-    }
-  printf ("Thread %s done!\n", name);
+  lock_acquire (lock);
+  printf ("%s: got the lock\n", thread_name ());
+  lock_release (lock);
+  printf ("%s: done\n", thread_name ());
 }

@@ -120,11 +120,8 @@ main (void)
   /* Run a user program. */
   if (initial_program != NULL)
     {
-      tid_t tid;
       printf ("\nExecuting '%s':\n", initial_program);
-      tid = process_execute (initial_program);
-      if (tid != TID_ERROR)
-        thread_join (tid);
+      process_wait (process_execute (initial_program));
     }
 #else
   /* Run the compiled-in test function. */
