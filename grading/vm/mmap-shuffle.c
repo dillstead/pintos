@@ -83,7 +83,7 @@ main (void)
   for (i = 0; i < 10; i++)
     {
       shuffle ();
-      printf ("(mmap-shuffle) shuffle %d: cksum=%lu\n",
+      printf ("(mmap-shuffle) shuffle %zu: cksum=%lu\n",
               i, cksum (buf, SIZE));
     }
   

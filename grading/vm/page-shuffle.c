@@ -58,7 +58,7 @@ main (void)
   for (i = 0; i < 10; i++)
     {
       shuffle ();
-      printf ("(page-shuffle) shuffle %d: cksum=%lu\n",
+      printf ("(page-shuffle) shuffle %zu: cksum=%lu\n",
               i, cksum (buf, sizeof buf));
     }
   

@@ -46,7 +46,7 @@ sort (void)
       printf ("(page-merge-par) sort chunk %zu\n", i);
 
       /* Write this chunk to a file. */
-      snprintf (fn, sizeof fn, "buf%d", i);
+      snprintf (fn, sizeof fn, "buf%zu", i);
       create (fn, CHUNK_SIZE);
       fd = open (fn);
       if (fd < 0) 
@@ -79,7 +79,7 @@ sort (void)
         }
 
       /* Read chunk back from file. */
-      snprintf (fn, sizeof fn, "buf%d", i);
+      snprintf (fn, sizeof fn, "buf%zu", i);
       fd = open (fn);
       if (fd < 0) 
         {
