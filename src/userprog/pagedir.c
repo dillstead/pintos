@@ -40,7 +40,6 @@ lookup_page (uint32_t *pd, void *upage, bool create)
   uint32_t *pde;
 
   ASSERT (pd != NULL);
-  ASSERT (pg_ofs (upage) == 0);
   ASSERT (upage < PHYS_BASE);
 
   /* Check for a page table for UPAGE.
@@ -84,9 +83,9 @@ pagedir_set_page (uint32_t *pd, void *upage, void *kpage,
 }
 
 void *
-pagedir_get_page (uint32_t *pd, void *upage) 
+pagedir_get_page (uint32_t *pd, const void *upage) 
 {
-  uint32_t *pte = lookup_page (pd, upage, false);
+  uint32_t *pte = lookup_page (pd, (void *) upage, false);
   return pte != NULL && *pte != 0 ? pte_get_page (*pte) : NULL;
 }
 
