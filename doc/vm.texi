@@ -269,9 +269,14 @@ The user program's current stack pointer is in the @struct{intr_frame}'s
 @code{esp} member.
 
 @item
-Only buggy user programs write to memory within the stack but below the
-stack pointer.  This is because more advanced OSes may interrupt a
-process at any time to deliver a ``signal'' and this uses the stack.
+Only buggy 80@var{x}86 user programs write to memory within the
+stack but below the stack pointer.  This is because more advanced OSes
+may interrupt a process at any time to deliver a ``signal'' and this
+uses the stack.@footnote{This rule is common but not universal.  One
+modern exception is the
+@uref{http://www.x86-64.org/documentation/abi.pdf, @var{x}86-64 System
+V ABI}, which designates 128 bytes below the stack pointer as a ``red
+zone'' that may not be modified by signal or interrupt handlers.}
 
 @item
 The 80@var{x}86 @code{push} instruction may cause a page fault 4 bytes
@@ -475,77 +480,42 @@ You will need to implement the following system calls:
 
 @table @code
 @item SYS_mmap
-@itemx bool mmap (int @var{fd}, void *@var{addr}, unsigned @var{length})
+@itemx mapid_t mmap (int @var{fd}, void *@var{addr})
 
-Maps the file open as @var{fd} into the process's address space
-starting at @var{addr} for @var{length} bytes.  Returns true if
-successful, false on failure.  Failure cases include the following:
+Maps the file open as @var{fd} into the process's virtual address
+space.  The entire file is mapped into consecutive virtual pages
+starting at @var{addr}.
 
-@itemize @bullet
-@item
-@var{addr} is not page-aligned.
-
-@item
-@var{length} is not positive.
-
-@item
-The range of pages mapped overlaps any existing set of mapped pages,
-including the stack or pages mapped at executable load time.
-@end itemize
-
-@var{length} is treated as if it were rounded up to the nearest
-multiple of the page size, that is, as if the first statement in the
-system call's implementation were
-@example
-length = ROUND_UP (length, PGSIZE);
-@end example
-(The @code{ROUND_UP} macro is defined in @file{<round.h>}.)
-The remainder of this description assumes that this has been done.
-
-If @var{length} is less than @var{fd}'s length, you should only map
-the first @var{length} bytes of the file.  If @var{length} is greater
-than @var{fd}'s length, when the file's length is also rounded up to a
-page multiple, the call should fail.  Ideally it would extend the
-file, but our file system does not yet support growing files.
-
-If @var{length} is greater than @var{fd}'s (unrounded) length, then some
+If the file's length is not a multiple of @code{PGSIZE}, then some
 bytes in the final mapped page ``stick out'' beyond the end of the
-file.  Set these bytes to zero when the page is faulted in from
-disk, and discard them when the page is written back to disk.
+file.  Set these bytes to zero when the page is faulted in from disk,
+and discard them when the page is written back to disk.
 
-Your VM system should use the @code{mmap}'d file itself as
-backing store for the mapped segment.  That is, to evict a page mapped by
-@code{mmap} must be evicted, write it to the file it was mapped from.
-(In fact, you may choose to implement executable mappings as a special
-case of file mappings.)
+If successful, this function returns a ``mapping ID'' that must
+uniquely identify the mapping within the given process.  On failure,
+it must return -1, which otherwise should not be a valid mapping id.
+
+A call to @code{mmap} may fail if the file open as @var{fd} has a
+length of zero bytes.  It must fail if @var{addr} is not page-aligned
+or if the range of pages mapped overlaps any existing set of mapped
+pages, including the stack or pages mapped at executable load time.
+
+Your VM system should use the @code{mmap}'d file itself as backing
+store for the mapping.  That is, to evict a page mapped by
+@code{mmap}, write it to the file it was mapped from.  (In fact, you
+may choose to implement executable mappings as a special case of file
+mappings.)
 
 @item SYS_munmap
-@itemx bool munmap (void *addr, unsigned length)
+@itemx bool munmap (mapid_t @var{mapping})
 
-Unmaps @var{length} bytes starting at @var{addr}.  Returns true on
-success, false on failure.  Failure cases include the following:
-
-@itemize @bullet
-@item
-@var{addr} is not page-aligned.
-
-@item
-@var{length} is not positive.
-
-@item
-One or more pages within the range to be unmapped were not mapped
-using the @code{mmap} system call.
-@end itemize
-
-As with @code{mmap}, @var{length} is treated as if it were rounded up
-to the nearest multiple of the page size.
-
-It is valid to unmap only some of the pages that were mapped in a
-previous system call.
+Unmaps the mapping designated by @var{mapping}, which must be a
+mapping ID returned by a previous call to @code{mmap} by the same
+process that has not yet been unmapped.
 @end table
 
 All mappings are implicitly unmapped when a process exits, whether via
-@code{exit} or by any other means.  When a file is unmapped, whether
+@code{exit} or by any other means.  When a mapping is unmapped, whether
 implicitly or explicitly, all outstanding changes are written to the
 file, and the pages are removed from the process's list of used
 virtual pages.
@@ -710,8 +680,7 @@ various user memory sizes.
 @b{How do we interact with memory-mapped files?}
 
 Let's say you want to map a file called @file{foo} into your address
-space at address @t{0x10000000}. You open the file, determine its
-length, and then use @code{mmap}:
+space at address @t{0x10000000}. You open the file then use @code{mmap}:
 
 @example
 #include <stdio.h>
@@ -721,8 +690,8 @@ int main (void)
 @{
     void *addr = (void *) 0x10000000;
     int fd = open ("foo");
-    int length = filesize (fd);
-    if (mmap (fd, addr, length))
+    mapid_t map = mmap (fd, addr);
+    if (map != -1)
         printf ("success!\n");
 @}
 @end example
@@ -750,14 +719,14 @@ When you're done using the memory-mapped file, you simply unmap
 it:
 
 @example
-munmap (addr, length);
+munmap (map);
 @end example
 
 @item
-@b{What if two processes memory-map the same file?}
+@b{What if two processes map the same file into memory?}
 
 There is no requirement in Pintos that the two processes see
-consistent data.  Unix handles this by making the processes share the
+consistent data.  Unix handles this by making the two mappings share the
 same physical page, but the @code{mmap} system call also has an
 argument allowing the client to specify whether the page is shared or
 private (i.e.@: copy-on-write).
@@ -765,18 +734,18 @@ private (i.e.@: copy-on-write).
 @item
 @b{What happens if a user removes a @code{mmap}'d file?}
 
-You should follow the Unix convention and the mapping should still be
-valid.  @xref{Removing an Open File}, for more information.
+The mapping should remain valid, following the Unix convention.
+@xref{Removing an Open File}, for more information.
 
 @item
 @b{What if a process writes to a page that is memory-mapped, but the
 location written to in the memory-mapped page is past the end
 of the memory-mapped file?}
 
-Can't happen.  @code{mmap} checks that the mapped region is within the
-file's length and Pintos provides no way to shorten a file.  (Until
-project 4, there's no way to extend a file either.)  You can remove a
-file, but the mapping remains valid (see the previous question).
+Can't happen.  @code{mmap} maps an entire file and Pintos provides no
+way to shorten a file.  (Until project 4, there's no way to extend a
+file either.)  You can remove a file, but the mapping remains valid
+(see the previous question).
 
 @item
 @b{Do we have to handle memory mapping @code{stdin} or @code{stdout}?}
@@ -787,17 +756,9 @@ neither of these properties, @code{mmap} should return false when the
 user attempts to memory map a file descriptor for the console device.
 
 @item
-@b{What happens when a process exits with mapped files?}
-
-When a process finishes, each of its mapped files is implicitly
-unmapped.  When a process @code{mmap}s a file and then writes into the
-area for the file it is making the assumption the changes will be
-written to the file.
-
-@item
 @b{If a user closes a mapped file, should it be automatically
 unmapped?}
 
-No, once created the mapping is valid until @code{munmap} is called
+No.  Once created the mapping is valid until @code{munmap} is called
 or the process exits.
 @end enumerate
