@@ -12,11 +12,12 @@
    structure that can potentially be in a hash must embed a
    hash_elem member.  All of the hash functions operate on these
    `hash_elem's.  The hash_entry macro allows conversion from a
-   hash_elem back to a structure object that contains it.
+   hash_elem back to a structure object that contains it.  This
+   is the same technique used in the linked list implementation.
+   Refer to lib/kernel/list.h for a detailed explanation.
 
-   
-
-*/
+   The FAQ for the VM project contains a detailed example of how
+   to use the hash table. */
 
 #include <stdbool.h>
 #include <stddef.h>
