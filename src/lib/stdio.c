@@ -144,7 +144,7 @@ static const struct integer_base base_X = {16, "0123456789ABCDEF", "0X", 4};
 static const char *parse_conversion (const char *format,
                                      struct printf_conversion *,
                                      va_list *);
-static void format_integer (uintmax_t value, bool negative,
+static void format_integer (uintmax_t value, bool is_signed, bool negative, 
                             const struct integer_base *,
                             const struct printf_conversion *,
                             void (*output) (char, void *), void *aux);
@@ -220,7 +220,7 @@ __vprintf (const char *format, va_list args,
               }
 
             format_integer (value < 0 ? -value : value,
-                            value < 0, &base_d, &c, output, aux);
+                            true, value < 0, &base_d, &c, output, aux);
           }
           break;
           
@@ -271,8 +271,8 @@ __vprintf (const char *format, va_list args,
               case 'X': b = &base_X; break;
               default: NOT_REACHED ();
               }
-            
-            format_integer (value, false, b, &c, output, aux);
+
+            format_integer (value, false, false, b, &c, output, aux);
           }
           break;
 
@@ -305,7 +305,8 @@ __vprintf (const char *format, va_list args,
             void *p = va_arg (args, void *);
 
             c.flags = POUND;
-            format_integer ((uintptr_t) p, false, &base_x, &c, output, aux);
+            format_integer ((uintptr_t) p, false, false,
+                            &base_x, &c, output, aux);
           }
           break;
       
@@ -456,12 +457,14 @@ parse_conversion (const char *format, struct printf_conversion *c,
 
 /* Performs an integer conversion, writing output to OUTPUT with
    auxiliary data AUX.  The integer converted has absolute value
-   VALUE.  If NEGATIVE is true the value is negative, otherwise
-   positive.  The output will use the given DIGITS, with
-   strlen(DIGITS) indicating the output base.  Details of the
-   conversion are in C. */
+   VALUE.  If IS_SIGNED is true, does a signed conversion with
+   NEGATIVE indicating a negative value; otherwise does an
+   unsigned conversion and ignores IS_SIGNED.  The output will
+   use the given DIGITS, with strlen(DIGITS) indicating the
+   output base.  Details of the conversion are in C. */
 static void
-format_integer (uintmax_t value, bool negative, const struct integer_base *b,
+format_integer (uintmax_t value, bool is_signed, bool negative, 
+                const struct integer_base *b,
                 const struct printf_conversion *c,
                 void (*output) (char, void *), void *aux)
 {
@@ -494,13 +497,16 @@ format_integer (uintmax_t value, bool negative, const struct integer_base *b,
     *cp++ = '0';
 
   /* Append sign. */
-  if (c->flags & PLUS)
-    *cp++ = negative ? '-' : '+';
-  else if (c->flags & SPACE)
-    *cp++ = negative ? '-' : ' ';
-  else if (negative)
-    *cp++ = '-';
-
+  if (is_signed) 
+    {
+      if (c->flags & PLUS)
+        *cp++ = negative ? '-' : '+';
+      else if (c->flags & SPACE)
+        *cp++ = negative ? '-' : ' ';
+      else if (negative)
+        *cp++ = '-';
+    }
+  
   /* Calculate number of pad characters to fill field width. */
   signifier = c->flags & POUND ? b->signifier : "";
   pad_cnt = c->width - (cp - buf) - strlen (signifier);
