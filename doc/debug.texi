@@ -198,7 +198,7 @@ tree used for this example, line 405 of @file{filesys/file.c} is the
 assertion
 
 @example
-ASSERT (file_ofs >= )0;
+ASSERT (file_ofs >= 0);
 @end example
 
 @noindent
