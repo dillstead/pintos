@@ -462,9 +462,8 @@ When a thread is added to the ready list that has a higher priority
 than the currently running thread, the current thread should
 immediately yield the processor to the new thread.  Similarly, when
 threads are waiting for a lock, semaphore or condition variable, the
-highest priority waiting thread should be woken up first.  A thread's
-priority may be set at any time, including while the thread is waiting
-on a lock, semaphore, or condition variable.
+highest priority waiting thread should be woken up first.  A thread
+may set its priority at any time.
 
 One issue with priority scheduling is ``priority inversion'': if a
 high priority thread needs to wait for a low priority thread (for
