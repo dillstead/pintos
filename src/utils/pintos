@@ -73,7 +73,7 @@ die "no command specified; use --help for help\n"
     if @ARGV < 1;
 my ($cmd) = shift @ARGV;
 if ($cmd eq 'run') {
-    run_vm (@ARGV);
+    run_vm ('EXEC', @ARGV);
 } elsif ($cmd eq 'make-disk') {
     usage () if @ARGV != 2;
     my ($file, $mb) = @ARGV;
@@ -101,7 +101,7 @@ if ($cmd eq 'run') {
     # Do copy.
     my (@cmd) = ("-ci", $guestfn, $size, "-q");
     unshift (@cmd, "-f") if $format;
-    run_vm (@cmd);
+    run_vm ('EXEC', @cmd);
 } elsif ($cmd eq 'get') {
     usage () if @ARGV != 1 && @ARGV != 2;
     my ($guestfn, $hostfn) = @ARGV;
@@ -118,7 +118,7 @@ if ($cmd eq 'run') {
 	if $scratch_size < $fs_size + 16384;
 
     # Do copy.
-    run_vm ("-co", $guestfn, "-q");
+    run_vm ('FORK', "-co", $guestfn, "-q");
 
     # Read out scratch disk.
     print "copying $guestfn from $disks[2] to $hostfn...\n";
@@ -185,6 +185,9 @@ sub create_disk {
 }
 
 sub run_vm {
+    my ($fork) = shift;
+    $fork eq 'FORK' || $fork eq 'EXEC' or die;
+
     our (@disks);
 
     die "$disks[0]: can't find OS disk\n" if ! -e $disks[0];
@@ -235,7 +238,7 @@ sub run_vm {
 	my (@cmd) = ($bin, '-q');
 	push (@cmd, '-j', $jitter) if defined $jitter;
 	print join (' ', @cmd), "\n";
-	exec (@cmd);
+	$fork eq 'EXEC' ? exec (@cmd) : system (@cmd);
     } elsif ($sim eq 'qemu') {
 	print "warning: qemu doesn't support --terminal\n"
 	    if $vga eq 'terminal';
