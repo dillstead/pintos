@@ -12,7 +12,7 @@ enum palloc_flags
   };
 
 /* Maximum number of pages to put in user pool. */
-extern size_t user_page_limit;
+extern size_t max_user_pages;
 
 void palloc_init (void);
 void *palloc_get_page (enum palloc_flags);

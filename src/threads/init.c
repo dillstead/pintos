@@ -78,8 +78,8 @@ main (void)
   argv_init ();
 
   /* Initialize memory system. */
-  paging_init ();
   palloc_init ();
+  paging_init ();
   malloc_init ();
 
   /* Segmentation. */
@@ -168,8 +168,8 @@ paging_init (void)
   uint32_t *pd, *pt;
   size_t page;
 
-  pd = base_page_dir = ptov (LOADER_PD_BASE);
-  pt = ptov (LOADER_PT_BASE);
+  pd = base_page_dir = palloc_get_page (PAL_ASSERT | PAL_ZERO);
+  pt = NULL;
   for (page = 0; page < ram_pages; page++) 
     {
       uintptr_t paddr = page * PGSIZE;
@@ -179,22 +179,16 @@ paging_init (void)
 
       if (pd[pde_idx] == 0)
         {
-          pt += PGSIZE / sizeof *pt;
-          memset (pt, 0, PGSIZE);
+          pt = palloc_get_page (PAL_ASSERT | PAL_ZERO);
           pd[pde_idx] = pde_create (pt);
         }
 
       pt[pte_idx] = pte_create_kernel (vaddr, true);
     }
 
-  /* start.S mapped the beginning of physical memory to virtual
-     address 0.  We don't want that mapping anymore, so erase
-     it. */
-  pd[0] = 0;
-
   /* Store the physical address of the page directory into CR3
-     aka PDBR (page directory base register).  This flushes the
-     TLB to make sure .  See [IA32-v2a] "MOV--Move
+     aka PDBR (page directory base register).  This activates our
+     new page tables immediately.  See [IA32-v2a] "MOV--Move
      to/from Control Registers" and [IA32-v3] 3.7.5. */
   asm volatile ("mov %%cr3, %0" :: "r" (vtop (base_page_dir)));
 }
@@ -237,7 +231,7 @@ argv_init (void)
     else if (!strcmp (argv[i], "-ex")) 
       initial_program = argv[++i];
     else if (!strcmp (argv[i], "-ul"))
-      user_page_limit = atoi (argv[++i]);
+      max_user_pages = atoi (argv[++i]);
 #endif
 #ifdef FILESYS
     else if (!strcmp (argv[i], "-f"))
