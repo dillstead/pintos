@@ -9,6 +9,8 @@
 * Project 4--File Systems::     
 * Multilevel Feedback Scheduling::  
 * Coding Standards::            
+* Project Documentation::       
+* Debugging Tools::             
 @end menu
 
 @include intro.texi
@@ -16,7 +18,7 @@
 @include userprog.texi
 @include vm.texi
 @include filesys.texi
-@c @include devel.texi
 @include mlfqs.texi
 @include standards.texi
 @include doc.texi
+@include debug.texi

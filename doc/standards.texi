@@ -1,4 +1,4 @@
-@node Coding Standards, , Multilevel Feedback Scheduling, Top
+@node Coding Standards, Project Documentation, Multilevel Feedback Scheduling, Top
 @appendix Coding Standards
 
 All of you should have taken a class like CS 107, so we expect you to
@@ -21,6 +21,8 @@ our coding standards will affect our grading.
 @menu
 * Coding Style::                
 * Conditional Compilation::     
+* C99::                         
+* Unsafe String Functions::     
 @end menu
 
 @node Coding Style

@@ -1,0 +1,179 @@
+@node Debugging Tools, , Project Documentation, Top
+@appendix Debugging Tools
+
+Many tools lie at your disposal for debugging Pintos.  This appendix
+introduces you to a few of them.
+
+@menu
+* printf::                      
+* ASSERT::                      
+* DEBUG::                       
+* Backtraces::                  
+* i386-elf-gdb::                
+* Modifying Bochs::             
+@end menu
+
+@node printf
+@section @code{printf()}
+
+Don't underestimate the value of @code{printf()}.  The way
+@code{printf()} is implemented in Pintos, you can call it from
+practically anywhere in the kernel, whether it's in a kernel thread or
+an interrupt handler, almost regardless of what locks are held.
+
+@code{printf()} isn't useful just because it can print data members.
+It can also help figure out when and where something goes wrong, even
+when the kernel crashes or panics without a useful error message.  The
+strategy is to sprinkle calls to @code{print()} with different strings
+(e.g.@: @code{"1\n"}, @code{"2\n"}, @dots{}) throughout the pieces of
+code you suspect are failing.  If you don't even see @code{1} printed,
+then something bad happened before that point, if you see @code{1}
+but not @code{2}, then something bad happened between those two
+points, and so on.  Based on what you learn, you can then insert more
+@code{printf()} calls in the new, smaller region of code you suspect.
+Eventually you can narrow the problem down to a single statement.
+
+@node ASSERT
+@section @code{ASSERT}
+
+Assertions are useful because they can catch problems early, before
+they'd otherwise be notices.  Pintos provides a macro for assertions
+named @code{ASSERT}, defined in @code{<debug.h>}, that you can use for
+this purpose.  Ideally, each function should begin with a set of
+assertions that check its arguments for validity.  (Initializers for
+functions' local variables are evaluated before assertions are
+checked, so be careful not to assume that an argument is valid in an
+initializer.)  You can also sprinkle assertions throughout the body of
+functions in places where you suspect things are likely to go wrong.
+
+When an assertion proves untrue, the kernel panics.  The panic message
+should help you to find the problem.  See the description of
+backtraces below for more information.
+
+@node DEBUG
+@section @code{DEBUG}
+
+The @code{DEBUG} macro, also defined in @code{<debug.h>}, is a sort of
+conditional @code{printf()}.  It takes as its arguments the name of a
+``message class'' and a @code{printf()}-like format string and
+arguments.  The message class is used to filter the messages that are
+actually displayed.  You select the messages to display on the Pintos
+command line using the @option{-d} option.  This allows you to easily
+turn different types of messages on and off while you debug, without
+the need to recompile.
+
+For example, suppose you want to output thread debugging messages.  To
+use a class named @code{thread}, you could invoke @code{DEBUG} like
+this:
+@example
+DEBUG(thread, "thread id: %d\n", id);
+@end example
+@noindent
+and then to start Pintos with @code{thread} messages enable you'd use
+a command line like this:
+@example
+pintos run -d thread
+@end example
+
+@node Backtraces
+@section Backtraces
+
+When the kernel panics, it prints a ``backtrace,'' that is, a summary
+of how your program got where it is, as a list of addresses inside the
+functions that were running at the time of the panic.  You can also
+insert a call to @code{debug_backtrace()}, prototyped in
+@file{<debug.h>}, at any point in your code.
+
+The addresses in a backtrace are listed as raw hexadecimal numbers,
+which are meaningless in themselves.  You can translate them into
+function names and source file line numbers using a tool called
+@command{i386-elf-addr2line}.@footnote{If you're using an 80@var{x}86
+system for development, it's probably just called
+@command{addr2line}.}
+
+The output format of @command{i386-elf-addr2line} is not ideal, so
+we've supplied a wrapper for it simply called @command{backtrace}.
+Give it the name of your @file{kernel.o} as the first argument and the
+hexadecimal numbers composing the backtrace (including the @samp{0x}
+prefixes) as the remaining arguments.  It outputs the function name
+and source file line numbers that correspond to each address.
+
+If the translated form of a backtrace is garbled, or doesn't make
+sense (e.g.@: function A is listed above function B, but B doesn't
+call A), then it's a good sign that you're corrupting a kernel
+thread's stack, because the backtrace is extracted from the stack.
+Alternatively, it could be that the @file{kernel.o} you passed to
+@command{backtrace} does not correspond to the kernel that produced
+the backtrace.
+
+@node i386-elf-gdb
+@section @command{i386-elf-gdb}
+
+You can run the Pintos kernel under the supervision of the
+@command{i386-elf-gdb} debugger.@footnote{If you're using an
+80@var{x}86 system for development, it's probably just called
+@command{addr2line}.}  There are two steps in the process.  First,
+start Pintos with the @option{--gdb} option, e.g.@: @command{pintos
+--gdb run}.  Second, in a second terminal, invoke @command{gdb} on
+@file{kernel.o}:
+@example
+i386-elf-gdb kernel.o
+@end example
+@noindent and issue the following @command{gdb} command:
+@example
+target remote localhost:1234
+@end example
+
+At this point, @command{gdb} is connected to Bochs over a local
+network connection.  You can now issue any normal @command{gdb}
+commands.  If you issue the @samp{c} command, the Bochs BIOS will take
+control, load Pintos, and then Pintos will run in the usual way.  You
+can pause the process at any point with @key{Ctrl+C}.  If you want
+@command{gdb} to stop when Pintos starts running, set a breakpoint on
+@code{main()} with the command @code{break main} before @samp{c}.
+
+You can read the @command{gdb} manual by typing @code{info gdb} at a
+terminal command prompt, or you can view it in Emacs with the command
+@kbd{C-h i}.  Here's a few commonly useful @command{gdb} commands:
+
+@table @code
+@item c
+Continue execution until the next breakpoint or until @key{Ctrl+C} is
+typed.
+
+@item break @var{function}
+@itemx break @var{filename}:@var{linenum}
+@itemx break *@var{address}
+Sets a breakpoint at the given function, line number, or address.
+(Use a @samp{0x} prefix to specify an address in hex.)
+
+@item p @var{expression}
+Evaluates the given C expression and prints its value.
+If the expression contains a function call, the function will actually
+be executed, so be careful.
+
+@item l *@var{address}
+Lists a few lines of code around the given address.
+(Use a @samp{0x} prefix to specify an address in hex.)
+
+@item bt
+Prints a stack backtrace similar to that output by the
+@command{backtrace} program described above.
+
+@item p/a @var{address}
+Prints the name of the function or variable that occupies the given
+address.
+(Use a @samp{0x} prefix to specify an address in hex.)
+@end table
+
+If you notice unexplainable behavior while using @command{gdb}, there
+are three possibilities.  The first is that there is a bug in your
+modified Pintos.  The second is that there is a bug in Bochs's
+interface to @command{gdb} or in @command{gdb} itself.  The third is
+that there is a bug in the original Pintos code.  The first and second
+are quite likely, and you should seriously consider both.  We hope
+that the third is less likely, but it is also possible.
+
+@node Modifying Bochs
+@section Modifying Bochs
+

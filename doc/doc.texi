@@ -1,0 +1,128 @@
+@node Project Documentation, Debugging Tools, Coding Standards, Top
+@appendix Project Documentation
+
+When you submit your projects, you will be expected to also turn in
+three files documenting them: @file{README}, @file{DESIGNDOC} and
+@file{TESTCASE}.  These guidelines explain what we want to see in
+those files.
+
+Your submission should have exactly one of each file, in the
+appropriate directory (e.g.@: for Assignment 1, place the files in the
+@file{threads} directory).  These files must be written in plain text
+format (not Microsoft Word, not PDF).  We recommend a text width of 65
+characters per line, with a hard limit of 80.
+
+@menu
+* README::                      
+* DESIGNDOC 	::              
+* TESTCASE 	::              
+@end menu
+
+@node README
+@section @file{README}
+
+This is the easiest of the bunch.  It's the document we'll read while
+trying to get your assignment to run.  First, place all of your names
+and Leland IDs (usernames) at the top.  Next, you should also explain
+any quirks with your program, such as known show-stopper bugs, weird
+dependencies, and so on.
+
+If you added extra credit features to your project, explain them
+concisely in the @file{README}.  Otherwise, we're likely to miss them.
+
+@node DESIGNDOC 	
+@section @file{DESIGNDOC}
+
+This file is our primary tool for assessing your design.  Therefore,
+you should be certain to explain your design in some decent amount of
+detail.  As a broad rule of thumb, we should be able to explain what
+basic data structures and algorithms you used to solve the problem
+after reading the @file{DESIGNDOC}, but without looking at the code.
+
+The easiest way to present your @file{DESIGNDOC} is to break it down
+by parts of the project (e.g.@: for project 1, you can break the
+@file{DESIGNDOC} into four parts).  For each part, you should describe
+the functionality that needs to be added, the data structures and
+algorithms used to solve that problem from a high level, and the
+motivations for each decision/change you make to the code.  Your
+@file{DESIGNDOC} needs to explain and justify your design.  That is,
+we should be able to understand what you did, and why you chose to do
+it that way.  The ``why'' should be in concrete terms of greater speed,
+better space efficiency, cleaner code, or some other real measure of
+goodness.
+
+Things you @emph{don't} need: an explanation of the pre-existing
+Pintos code, an explanation of the project spec, justification for the
+project (e.g.@: we don't need you to explain to us why filesystems are
+important to an operating system), a play-by-play of every change you
+made to the system, any other pontificating.  (You may laugh at some
+of the things listed above, but we've gotten all of them in the past.)
+The @file{DESIGNDOC} needs to discuss design decisions and trade-offs
+and the rationales behind them.  Any other things can be left out, to
+save your time and ours.
+
+Finally, please keep your @file{DESIGNDOC} as short as you can,
+without sacrificing key design decisions.  You should be brief, yet
+complete.  We don't want to read novels.
+
+@node TESTCASE 	
+@section @file{TESTCASE}
+
+The @file{TESTCASE} file should contain all the information about how
+you tested your programs.  At minimum, this file should contain the
+output from all the tests that we've provided, with any explanations
+needed to reproduce the output (arguments to the program, turning
+features on the program on or off, and so on).
+
+Additionally, you should detail all tests you write yourself.  You are
+expected to write tests for features which our tests don't cover, and
+to write some additional stress tests, since our tests will not
+necessarily be too strenuous.  If you feel that such tests are not
+required, you should explain why you feel so.  For each test that you
+write, explain how we can use them, and show some sample output from a
+run.
+
+Specifically, here are some pointers for writing @file{TESTCASE} files
+which will make them more succinct and us more likely to understand the
+tests you write:
+
+@itemize @bullet
+@item
+Show us that you tested each part of your assignment.
+
+@item
+Clearly state in your @file{TESTCASE} file what each test is supposed
+to test.  You should be testing not only the common case, but testing
+corner cases.  Specify what criteria or issue is being tested.  For
+example, in testing @code{thread_join()} you would have specified that
+you test @code{thread_join()} when it is called multiple times on the
+same child thread.
+
+@item
+Make your tests as succinct as possible.  Most students in the past
+have done a great job with the testing of @code{thread_join()},
+creating very succinct short tests.  We like that.
+
+@item
+Your test cases should be placed in a subdirectory called
+@file{testcases} within the project directory.  So for project 1, they
+should be in @file{pintos/src/threads/testcases}.
+
+@item
+Think about what may actually crash your code.
+@end itemize
+
+Your @file{TESTCASE} file is also where you can show us the
+improvements that your code makes to the performance of the system.
+You should be able to show us ``before'' and ``after'' performance
+data, and explain how the data shows the improvement.  For example,
+for Problem 1-4, you should show us in the @file{TESTCASE} printouts
+from a workload for the non-Solaris scheduler and the Solaris
+scheduler and explain why the Solaris scheduler is better.
+
+Finally, we cannot stress enough the importance of being brief and
+complete.
+
+Keep in mind that the quality of your testing is worth 10% of your
+project grade.  The bulk of this will be determined from the
+@file{TESTCASE} file.

@@ -224,12 +224,11 @@ The @command{pintos} program offers multiple options for running
 Pintos.  Use @code{pintos help} to see a list of the options.  You can
 select a simulator other than Bochs, although the Leland systems only
 have Bochs installed.  You can start the simulator running a debugger
-(@pxref{Debugging Pintos}).  You can set the amount of memory to give
-the VM.  Finally, you can set up how you want VM output to be
-displayed: use @option{-nv} to turn off the VGA display, @option{-t}
-to use your terminal window as the VGA display instead of opening a
-new window, or @option{-ns} to suppress the serial output to
-@code{stdout}.
+(@pxref{i386-elf-gdb}).  You can set the amount of memory to give the
+VM.  Finally, you can set up how you want VM output to be displayed:
+use @option{-nv} to turn off the VGA display, @option{-t} to use your
+terminal window as the VGA display instead of opening a new window, or
+@option{-ns} to suppress the serial output to @code{stdout}.
 
 The @command{pintos} program offers commands other than @samp{run} and
 @samp{help}, but we won't have any need for them until project 2.

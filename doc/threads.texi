@@ -20,7 +20,6 @@ side.  Compilation should be done in the @file{threads} directory.
 * Problem 1-3 Priority Scheduling::  
 * Problem 1-4 Advanced Scheduler::  
 * Threads FAQ::                 
-* Multilevel Feedback Scheduling::
 @end menu
 
 @node Understanding Threads
@@ -30,13 +29,16 @@ The first step is to read and understand the initial thread system.
 Pintos, by default, implements thread creation and thread completion,
 a simple scheduler to switch between threads, and synchronization
 primitives (semaphores, locks, and condition variables). 
-@c FIXME: base system doesn't do anything. Debugger sucks.
-However, there's a lot of magic going on in some of this code, so you
-should compile and run the base system to see a simple test of the
-code.  You should read through the source code by hand to see what's
-going on.  If you like, you can add calls to @code{printf()} almost
+
+However, there's a lot of magic going on in some of this code, so if
+you haven't already compiled and run the base system, as described in
+the introduction (@pxref{Introduction}), you should do so now.  You
+can read through parts of the source code by hand to see what's going
+on.  If you like, you can add calls to @code{printf()} almost
 anywhere, then recompile and run to see what happens and in what
-order.
+order.  You can also run the kernel in a debugger and set breakpoints
+at interesting spots, single-step through code and examine data, and
+so on.  @xref{i386-elf-gdb}, for more information.
 
 When a thread is created, you are creating a new context to be
 scheduled. You provide a function to be run in this context as an
@@ -59,16 +61,19 @@ been provided for you in @file{threads/switch.S} (this is 80@var{x}86
 assembly; don't worry about understanding it).  It involves saving the
 state of the currently running thread and restoring the state of the
 thread we're switching to.
-@c FIXME 
-Slowly trace through a context switch to see what happens.  Be sure to
-keep track of each thread's address and state, and what procedures are
-on the call stack for each thread. You will notice that when one
-thread calls @code{switch_threads()}, another thread starts running,
-and the first thing the new thread does is to return from
-@code{switch_threads()}. We realize this comment will seem cryptic to
+
+Using the @command{gdb} debugger, slowly trace through a context
+switch to see what happens (@pxref{i386-elf-gdb}).  You can set a
+breakpoint on the @code{schedule()} function to start out, and then
+single-step from there.  Be sure to keep track of each thread's
+address and state, and what procedures are on the call stack for each
+thread.  You will notice that when one thread calls
+@code{switch_threads()}, another thread starts running, and the first
+thing the new thread does is to return from
+@code{switch_threads()}.  We realize this comment will seem cryptic to
 you at this point, but you will understand threads once you understand
 why the @code{switch_threads()} that gets called is different from the
-@code{switch_threads()} that returns.
+@code{switch_threads()} that returns.  @c FIXME
 
 @strong{Warning}: In Pintos, each thread is assigned a small,
 fixed-size execution stack just under @w{4 kB} in size.  The kernel
@@ -279,7 +284,7 @@ You may assume a static priority for this problem. It is not necessary
 to ``re-donate'' a thread's priority if it changes (although you are
 free to do so).
 
-@node Threads FAQ, Multilevel Feedback Scheduling, Problem 1-4 Advanced Scheduler, Project 1--Threads
+@node Threads FAQ
 @section FAQ
 
 @enumerate 1
