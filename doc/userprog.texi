@@ -254,9 +254,18 @@ another reason.  The name printed should be the full name passed to
 @func{process_execute}, except that it is acceptable to truncate it to
 15 characters to allow for the limited space in @struct{thread}.
 
+@itemize @minus
+@item
 Do not print a message when a kernel thread that is not a process
-terminates.  Do not print messages about process termination for the
-@code{halt} system call.
+terminates.
+
+@item
+Do not print messages about process termination for the @code{halt}
+system call.
+
+@item
+No message need be printed when a process that fails to load.
+@end itemize
 
 @item
 Aside from this, the kernel should print out no other messages that
@@ -349,7 +358,7 @@ conditions (usually errors).
 @itemx pid_t exec (const char *@var{cmd_line})
 Runs the executable whose name is given in @var{cmd_line}, passing any
 given arguments, and returns the new process's program id (pid).  If
-there is an error loading this program, returns pid -1, which
+there is an error loading this program, may return pid -1, which
 otherwise should not be a valid id number.
 
 @item SYS_join
