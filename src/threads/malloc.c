@@ -1,6 +1,7 @@
 #include "threads/malloc.h"
 #include <debug.h>
 #include <list.h>
+#include <round.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,10 +28,11 @@
    blocks, we remove all of the arena's blocks from the free list
    and give the arena back to the page allocator.
 
-   Major limitation: the largest block that can be allocated is
-   PGSIZE / 2, or 2 kB.  Use palloc_get() to allocate pages (4 kB
-   blocks).  You're on your own if you need more memory than
-   that. */
+   We can't handle blocks bigger than 2 kB using this scheme,
+   because they're too big to fit in a single page with a
+   descriptor.  We handle those by allocating contiguous pages
+   with the page allocator and sticking the allocation size at
+   the beginning of the allocated block's arena header. */
 
 /* Descriptor. */
 struct desc
@@ -48,8 +50,8 @@ struct desc
 struct arena 
   {
     unsigned magic;             /* Always set to ARENA_MAGIC. */
-    struct desc *desc;          /* Owning descriptor. */
-    size_t free_cnt;            /* Number of free blocks. */
+    struct desc *desc;          /* Owning descriptor, null for big block. */
+    size_t free_cnt;            /* Free blocks; pages in big block. */
   };
 
 /* Free block. */
@@ -71,7 +73,7 @@ malloc_init (void)
 {
   size_t block_size;
 
-  for (block_size = 16; block_size < PGSIZE; block_size *= 2)
+  for (block_size = 16; block_size < PGSIZE / 2; block_size *= 2)
     {
       struct desc *d = &descs[desc_cnt++];
       ASSERT (desc_cnt <= sizeof descs / sizeof *descs);
@@ -102,8 +104,19 @@ malloc (size_t size)
       break;
   if (d == descs + desc_cnt) 
     {
-      printf ("malloc: %zu byte allocation too big\n", size);
-      return NULL; 
+      /* SIZE is too big for any descriptor.
+         Allocate enough pages to hold SIZE plus an arena. */
+      size_t page_cnt = DIV_ROUND_UP (size + sizeof *a, PGSIZE);
+      a = palloc_get_multiple (0, page_cnt);
+      if (a == NULL)
+        return NULL;
+
+      /* Initialize the arena to indicate a big block of PAGE_CNT
+         pages, and return it. */
+      a->magic = ARENA_MAGIC;
+      a->desc = NULL;
+      a->free_cnt = page_cnt;
+      return a + 1;
     }
 
   lock_acquire (&d->lock);
@@ -114,7 +127,7 @@ malloc (size_t size)
       size_t i;
 
       /* Allocate a page. */
-      a = palloc_get (0);
+      a = palloc_get_page (0);
       if (a == NULL) 
         {
           lock_release (&d->lock);
@@ -177,12 +190,18 @@ free (void *p)
   a = block_to_arena (b);
   d = a->desc;
 
+  if (d == NULL) 
+    {
+      /* It's a big block.  Free its pages. */
+      palloc_free_multiple (a, a->free_cnt);
+      return;
+    }
+
 #ifndef NDEBUG
   memset (b, 0xcd, d->block_size);
 #endif
   
   lock_acquire (&d->lock);
-
 
   /* Add block to free list. */
   list_push_front (&d->free_list, &b->free_elem);
@@ -198,7 +217,7 @@ free (void *p)
           struct block *b = arena_to_block (a, i);
           list_remove (&b->free_elem);
         }
-      palloc_free (a);
+      palloc_free_page (a);
     }
 
   lock_release (&d->lock);

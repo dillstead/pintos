@@ -55,7 +55,7 @@ copy_in (const char *filename, off_t size)
     PANIC ("%s: open failed", filename);
 
   /* Do copy. */
-  buffer = palloc_get (PAL_ASSERT);
+  buffer = palloc_get_page (PAL_ASSERT);
   sector = 0;
   while (size > 0)
     {
@@ -66,7 +66,7 @@ copy_in (const char *filename, off_t size)
                filename, (unsigned long long) size);
       size -= chunk_size;
     }
-  palloc_free (buffer);
+  palloc_free_page (buffer);
 
   file_close (dst);
 }
@@ -84,7 +84,7 @@ copy_out (const char *filename)
   off_t size;
   disk_sector_t sector;
 
-  buffer = palloc_get (PAL_ASSERT | PAL_ZERO);
+  buffer = palloc_get_page (PAL_ASSERT | PAL_ZERO);
 
   /* Open source file. */
   src = filesys_open (filename);
@@ -115,7 +115,7 @@ copy_out (const char *filename)
       disk_write (dst, sector++, buffer);
       size -= chunk_size;
     }
-  palloc_free (buffer);
+  palloc_free_page (buffer);
 
   file_close (src);
 }
@@ -160,7 +160,7 @@ fsutil_print (const char *filename)
   file = filesys_open (filename);
   if (file == NULL)
     PANIC ("%s: open failed", filename);
-  buffer = palloc_get (PAL_ASSERT);
+  buffer = palloc_get_page (PAL_ASSERT);
   for (;;) 
     {
       off_t n = file_read (file, buffer, PGSIZE);
@@ -169,6 +169,6 @@ fsutil_print (const char *filename)
 
       hex_dump (0, buffer, n, true);
     }
-  palloc_free (buffer);
+  palloc_free_page (buffer);
   file_close (file);
 }

@@ -80,7 +80,7 @@ tss_init (void)
   /* Our TSS is never used in a call gate or task gate, so only a
      few fields of it are ever referenced, and those are the only
      ones we initialize. */
-  tss = palloc_get (PAL_ASSERT | PAL_ZERO);
+  tss = palloc_get_page (PAL_ASSERT | PAL_ZERO);
   tss->esp0 = ptov(0x20000);
   tss->ss0 = SEL_KDSEG;
   tss->bitmap = 0xdfff;

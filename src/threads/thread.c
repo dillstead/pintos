@@ -112,7 +112,7 @@ thread_create (const char *name, int priority,
   ASSERT (function != NULL);
 
   /* Allocate thread. */
-  t = palloc_get (PAL_ZERO);
+  t = palloc_get_page (PAL_ZERO);
   if (t == NULL)
     return TID_ERROR;
 
@@ -370,7 +370,7 @@ schedule_tail (struct thread *prev)
     {
       ASSERT (prev != cur);
       if (prev != initial_thread)
-        palloc_free (prev);
+        palloc_free_page (prev);
     }
 }
 

@@ -1,7 +1,7 @@
 #ifndef THREADS_PALLOC_H
 #define THREADS_PALLOC_H
 
-#include <stdint.h>
+#include <stddef.h>
 
 enum palloc_flags
   {
@@ -11,7 +11,9 @@ enum palloc_flags
   };
 
 void palloc_init (void);
-void *palloc_get (enum palloc_flags);
-void palloc_free (void *);
+void *palloc_get_page (enum palloc_flags);
+void *palloc_get_multiple (enum palloc_flags, size_t page_cnt);
+void palloc_free_page (void *);
+void palloc_free_multiple (void *, size_t page_cnt);
 
 #endif /* threads/palloc.h */

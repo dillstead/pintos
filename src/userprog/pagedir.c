@@ -13,7 +13,7 @@
 uint32_t *
 pagedir_create (void) 
 {
-  uint32_t *pd = palloc_get (0);
+  uint32_t *pd = palloc_get_page (0);
   memcpy (pd, base_page_dir, PGSIZE);
   return pd;
 }
@@ -37,10 +37,10 @@ pagedir_destroy (uint32_t *pd)
         
         for (pte = pt; pte < pt + PGSIZE / sizeof *pte; pte++)
           if (*pte & PG_P) 
-            palloc_free (pte_get_page (*pte));
-        palloc_free (pt);
+            palloc_free_page (pte_get_page (*pte));
+        palloc_free_page (pt);
       }
-  palloc_free (pd);
+  palloc_free_page (pd);
 }
 
 /* Returns the mapping of user virtual address UADDR in page
@@ -68,7 +68,7 @@ lookup_page (uint32_t *pd, void *uaddr, bool create)
     {
       if (create)
         {
-          pt = palloc_get (PAL_ZERO);
+          pt = palloc_get_page (PAL_ZERO);
           if (pt == NULL) 
             return NULL; 
       

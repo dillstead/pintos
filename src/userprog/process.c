@@ -31,7 +31,7 @@ process_execute (const char *filename)
 
   /* Make a copy of FILENAME.
      Otherwise there's a race between the caller and load(). */
-  fn_copy = palloc_get (0);
+  fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, filename, PGSIZE);
@@ -39,7 +39,7 @@ process_execute (const char *filename)
   /* Create a new thread to execute FILENAME. */
   tid = thread_create (filename, PRI_DEFAULT, execute_thread, fn_copy);
   if (tid == TID_ERROR)
-    palloc_free (fn_copy); 
+    palloc_free_page (fn_copy); 
   return tid;
 }
 
@@ -62,7 +62,7 @@ execute_thread (void *filename_)
   success = load (filename, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
-  palloc_free (filename);
+  palloc_free_page (filename);
   if (!success) 
     thread_exit ();
 
@@ -347,14 +347,14 @@ load_segment (struct file *file, const struct Elf32_Phdr *phdr)
          file into the page and zero the rest. */
       size_t read_bytes = filesz_left >= PGSIZE ? PGSIZE : filesz_left;
       size_t zero_bytes = PGSIZE - read_bytes;
-      uint8_t *kpage = palloc_get (PAL_USER);
+      uint8_t *kpage = palloc_get_page (PAL_USER);
       if (kpage == NULL)
         return false;
 
       /* Do the reading and zeroing. */
       if (file_read (file, kpage, read_bytes) != (int) read_bytes) 
         {
-          palloc_free (kpage);
+          palloc_free_page (kpage);
           return false; 
         }
       memset (kpage + read_bytes, 0, zero_bytes);
@@ -363,7 +363,7 @@ load_segment (struct file *file, const struct Elf32_Phdr *phdr)
       /* Add the page to the process's address space. */
       if (!install_page (upage, kpage)) 
         {
-          palloc_free (kpage);
+          palloc_free_page (kpage);
           return false; 
         }
     }
@@ -379,14 +379,14 @@ setup_stack (void **esp)
   uint8_t *kpage;
   bool success = false;
 
-  kpage = palloc_get (PAL_USER | PAL_ZERO);
+  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
       if (success)
         *esp = PHYS_BASE;
       else
-        palloc_free (kpage);
+        palloc_free_page (kpage);
     }
   else
     printf ("failed to allocate process stack\n");
