@@ -58,7 +58,7 @@ all: diskimage.bin
 intr-stubs.S: $(TOP_SRCDIR)/threads/intr-stubs.pl
 	$< > $@
 
-kernel.lds: $(TOP_SRCDIR)/threads/kernel.lds.in
+kernel.lds: $(TOP_SRCDIR)/threads/kernel.lds.in $(TOP_SRCDIR)/threads/loader.h
 	$(CPP) -x assembler-with-cpp -P $< -o $@
 
 kernel.o: $(OBJECTS) kernel.lds
@@ -68,7 +68,7 @@ kernel.bin: kernel.o
 	objcopy -O binary -R .note -R .comment -S $< $@.tmp
 	$(TOP_SRCDIR)/pad 4096 < $@.tmp > $@
 
-loader.bin: loader.S kernel.bin
+loader.bin: loader.S loader.h kernel.bin
 	gcc -c $< -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
 	ld -N -e start -Ttext 0x7c00 --oformat binary -o $@ loader.o
 
