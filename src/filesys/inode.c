@@ -5,6 +5,7 @@
 #include <round.h>
 #include <stdio.h>
 #include "filesys/filesys.h"
+#include "devices/partition.h"
 #include "threads/malloc.h"
 
 /* On-disk inode.
@@ -77,9 +78,9 @@ inode_create (struct bitmap *free_map, disk_sector_t sector, off_t length)
   idx->start = start;
 
   /* Commit to disk. */
-  disk_write (filesys_disk, sector, idx);
+  partition_write (filesys_partition, sector, idx);
   for (i = 0; i < bytes_to_sectors (length); i++)
-    disk_write (filesys_disk, idx->start + i, zero_sector);
+    partition_write (filesys_partition, idx->start + i, zero_sector);
 
   free (idx);
   return true;
@@ -122,7 +123,7 @@ inode_open (disk_sector_t sector)
 
   /* Read from disk. */
   ASSERT (sizeof idx->data == DISK_SECTOR_SIZE);
-  disk_read (filesys_disk, sector, &idx->data);
+  partition_read (filesys_partition, sector, &idx->data);
 
   return idx;
 }
@@ -154,7 +155,7 @@ inode_close (struct inode *idx)
 static void
 deallocate_inode (const struct inode *idx)
 {
-  struct bitmap *free_map = bitmap_create (disk_size (filesys_disk));
+  struct bitmap *free_map = bitmap_create (partition_size (filesys_partition));
   if (free_map != NULL) 
     {
       bitmap_read (free_map, free_map_file);

@@ -29,6 +29,7 @@
 #endif
 #ifdef FILESYS
 #include "devices/disk.h"
+#include "devices/partition.h"
 #include "filesys/filesys.h"
 #include "filesys/fsutil.h"
 #endif
@@ -40,7 +41,7 @@ size_t ram_pages;
 uint32_t *base_page_dir;
 
 #ifdef FILESYS
-/* -f: Format the filesystem? */
+/* -f: Format the file system? */
 static bool format_filesys;
 #endif
 
@@ -108,8 +109,9 @@ main (void)
   timer_calibrate ();
 
 #ifdef FILESYS
-  /* Initialize filesystem. */
+  /* Initialize file system. */
   disk_init ();
+  partition_init ();
   filesys_init (format_filesys);
   fsutil_run ();
 #endif
@@ -267,15 +269,15 @@ argv_init (void)
           " -ul USER_MAX        Limit user memory to USER_MAX pages.\n"
 #endif
 #ifdef FILESYS
-          " -f                  Format the filesystem disk (hdb or hd0:1).\n"
+          " -f                  Format the file system disk (hdb or hd0:1).\n"
           " -ci FILENAME SIZE   Copy SIZE bytes from the scratch disk (hdc\n"
-          "                     or hd1:0) into the filesystem as FILENAME\n"
+          "                     or hd1:0) into the file system as FILENAME\n"
           " -co FILENAME        Copy FILENAME to the scratch disk, with\n"
           "                     size at start of sector 0 and data afterward\n"
           " -p FILENAME         Print the contents of FILENAME\n"
           " -r FILENAME         Delete FILENAME\n"
-          " -ls                 List the files in the filesystem\n"
-          " -D                  Dump complete filesystem contents\n"
+          " -ls                 List the files in the file system\n"
+          " -D                  Dump complete file system contents\n"
 #endif
           " -q                  Power off after doing requested actions.\n"
           " -u                  Print this help message and power off.\n"

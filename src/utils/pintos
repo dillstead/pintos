@@ -5,15 +5,18 @@ use POSIX;
 
 our ($mem) = 4;
 our ($serial_out) = 1;
-our (@disks) = ("os.dsk", "fs.dsk", "scratch.dsk", "swap.dsk");
+our ($disk) = "pintos.dsk";
+our (@part_files) = ("boot.part", "filesys.part", "scratch.part", "swap.part");
 our ($sim);
 our ($debug);
 our ($vga);
 our ($jitter, $realtime);
 
+our (%role2type) = (0 => 0x20, 1 => 0x21, 2 => 0x22, 3 => 0x23);
+
 use Getopt::Long qw(:config require_order bundling);
 unshift (@ARGV, split (' ', $ENV{PINTOSOPTS}))
-    if defined $ENV{PINTOSOPTS};
+  if defined $ENV{PINTOSOPTS};
 GetOptions ("sim=s" => sub { set_sim (@_) },
 	    "bochs" => sub { set_sim ("bochs") },
 	    "qemu" => sub { set_sim ("qemu") },
@@ -23,24 +26,27 @@ GetOptions ("sim=s" => sub { set_sim (@_) },
 	    "no-debug" => sub { set_debug ("no-debug") },
 	    "monitor" => sub { set_debug ("monitor") },
 	    "gdb" => sub { set_debug ("gdb") },
-	    
-	    "run|get|put|make-disk" => \&cmd_option,
-	    
+
+	    "run|get|put|assemble|disassemble" => \&cmd_option,
+
 	    "m|memory=i" => \$mem,
 	    "j|jitter=i" => sub { set_jitter (@_) },
 	    "r|realtime" => sub { set_realtime () },
-	    
+
 	    "v|no-vga" => sub { set_vga ('none'); },
 	    "s|no-serial" => sub { $serial_out = 0; },
 	    "t|terminal" => sub { set_vga ('terminal'); },
-	    
+
 	    "h|help" => sub { usage (0); },
 
-	    "0|os-disk|disk-0|hda=s" => \$disks[0],
-	    "1|fs-disk|disk-1|hdb=s" => \$disks[1],
-	    "2|scratch-disk|disk-2|hdc=s" => \$disks[2],
-	    "3|swap-disk|disk-3|hdd=s" => \$disks[3])
-    or exit 1;
+	    "disk=s" => \$disk,
+
+	    "boot-partition=s" => \$part_files[0],
+	    "fs-partition|filesys-partition=s" => \$part_files[1],
+	    "scratch-partition=s" => \$part_files[2],
+	    "swap-partition=s" => \$part_files[3]
+	   )
+  or exit 1;
 
 $sim = "bochs" if !defined $sim;
 $debug = "no-debug" if !defined $debug;
@@ -49,14 +55,14 @@ $vga = "window" if !defined $vga;
 sub set_sim {
     my ($new_sim) = @_;
     die "--$new_sim conflicts with --$sim\n"
-	if defined ($sim) && $sim ne $new_sim;
+      if defined ($sim) && $sim ne $new_sim;
     $sim = $new_sim;
 }
 
 sub set_debug {
     my ($new_debug) = @_;
     die "--$new_debug conflicts with --$debug\n"
-	if defined ($debug) && $debug ne $new_debug;
+      if defined ($debug) && $debug ne $new_debug;
     $debug = $new_debug;
 }
 
@@ -72,7 +78,7 @@ sub set_jitter {
     my ($new_jitter) = @_;
     die "--realtime conflicts with --jitter\n" if defined $realtime;
     die "different --jitter already defined\n"
-	if defined $jitter && $jitter != $new_jitter;
+      if defined $jitter && $jitter != $new_jitter;
     $jitter = $new_jitter;
 }
 
@@ -87,17 +93,10 @@ sub cmd_option {
 }
 
 die "no command specified; use --help for help\n"
-    if @ARGV < 1;
+  if @ARGV < 1;
 my ($cmd) = shift @ARGV;
 if ($cmd eq 'run') {
     run_vm (@ARGV);
-} elsif ($cmd eq 'make-disk') {
-    usage () if @ARGV != 2;
-    my ($file, $mb) = @ARGV;
-    usage () if $mb !~ /^\d+(\.\d+)?|\.\d+$/;
-    die "$file: already exists\n" if -e $file;
-
-    create_disk ($file, int ($mb * 1008));
 } elsif ($cmd eq 'put') {
     # Take a -f option to combine formatting with putting.
     my ($format) = 0;
@@ -110,16 +109,32 @@ if ($cmd eq 'run') {
     my ($hostfn, $guestfn) = @ARGV;
     $guestfn = $hostfn if !defined $guestfn;
 
+    # Disassemble.
+    @part_files = ("part0.tmp", "part1.tmp", "part2.tmp", "part3.tmp");
+    disassemble ($part_files[0], $part_files[1], undef, $part_files[3]);
+    die "missing file system partition\n" if ! -e $part_files[1];
+
     # Create scratch disk from file.
-    die "$hostfn: $!\n" if ! -e $hostfn;
-    my ($size) = -s _;
-    if ($size) { 
-	copy_pad ($hostfn, "scratch.dsk", 512);
-    } else {
-	open (SCRATCH, ">scratch.dsk") or die "scratch.dsk: create: $!\n";
-	syswrite (SCRATCH, "\0" x 512);
-	close (SCRATCH);
+    open (FILE, "<$hostfn") or die "$hostfn: open: $!\n";
+    my ($scratchfn) = $part_files[1];
+    open (SCRATCH, ">$scratchfn") or die "$scratchfn: create: $!\n";
+    my ($size) = 0;
+    for (;;) {
+	my ($buf);
+	my ($amt) = sysread (FILE, $buf, 65536);
+	die "$hostfn: read: $!\n" if $amt < 0;
+	last if $amt == 0;
+	syswrite (FILE, $buf, $amt) == $amt or die "$scratchfn: write: $!\n";
+	$size += $amt;
     }
+    my ($zeros) = 512 - $size % 512;
+    syswrite (FILE, "\0" x $zeros) == $zeros or die "$scratchfn: write: $!\n";
+    close (SCRATCH);
+    close (FILE);
+
+    # Reassemble.
+    assemble ();
+    unlink (@part_files);
 
     # Do copy.
     my (@cmd) = ("-ci", $guestfn, $size, "-q");
@@ -131,31 +146,45 @@ if ($cmd eq 'run') {
     $hostfn = $guestfn if !defined $hostfn;
     die "$hostfn: already exists\n" if -e $hostfn;
 
-    # Create scratch disk big enough for any file in the filesystem
+    # Disassemble.
+    @part_files = ("part0.tmp", "part1.tmp", undef, "part3.tmp");
+    disassemble (@part_files);
+
+    # Create scratch disk big enough for any file in the file system
     # (modulo sparse files).
-    die "$disks[1]: $!\n" if ! -e $disks[1];
+    die "missing file system partition\n" if ! -e $part_files[1];
     my ($fs_size) = -s _;
-    my ($scratch_size) = -s $disks[2];
-    $scratch_size = 0 if !defined $scratch_size;
-    create_disk ($disks[2], $fs_size / 1024 + 16)
-	if $scratch_size < $fs_size + 16384;
+    my ($approx_mb) = (16 * 63 * 512) * 2;
+    $part_files[2] = sprintf ("%d",
+			      int (($fs_size + $approx_mb - 1) / $approx_mb));
+    assemble (@part_files);
 
     # Do copy.
     run_vm ("-co", $guestfn, "-q");
 
+    # FIXME: we could just read the parttbl, then copy directly.
+    # Disassemble.
+    my ($scratchfn) = "part2.tmp";
+    disassemble (undef, undef, $scratchfn, undef);
+
     # Read out scratch disk.
-    print "copying $guestfn from $disks[2] to $hostfn...\n";
-    open (SRC, "<$disks[2]") or die "$disks[2]: open: $!\n";
+    print "copying $guestfn from $scratchfn to $hostfn...\n";
+    open (SRC, "<$scratchfn") or die "$scratchfn: open: $!\n";
     open (DST, ">$hostfn") or die "$hostfn: create: $!\n";
     my ($input);
-    read (SRC, $input, 512) == 512 or die "$disks[2]: read error\n";
+    read (SRC, $input, 512) == 512 or die "$scratchfn: read error\n";
     my ($size) = unpack ("V", $input);
-    $size != 0xffffffff or die "$guestfn: too big for $disks[2]?";
+    $size != 0xffffffff or die "$guestfn: too big for $scratchfn?";
     my ($src);
-    read (SRC, $src, $size) == $size or die "$disks[2]: read error\n";
+    read (SRC, $src, $size) == $size or die "$scratchfn: read error\n";
     print DST $src or die "$hostfn: write error\n";
     close (DST);
     close (SRC);
+} elsif ($cmd eq 'assemble') {
+    die "$part_files[0] not found ($!), but a boot partition is required\n"
+      if ! -e $part_files[0];
+    do { $_ = undef if ! -e $_ } foreach @part_files[1...3];
+    assemble ();
 } elsif ($cmd eq 'help') {
     usage (0);
 } else {
@@ -170,9 +199,10 @@ sub usage {
     print "Usage: pintos [OPTION...] COMMAND [ARG...]\n";
     print "where COMMAND is one of the following:\n";
     print "  run [CMDLINE...]        run a VM in the simulator\n";
-    print "  make-disk FILE.DSK SIZE create FILE.DSK as empty SIZE MB disk\n";
     print "  put HOSTFN [GUESTFN]    copy HOSTFN into VM (as GUESTFN)\n";
     print "  get GUESTFN [HOSTFN]    copy GUESTFN out of VM (to HOSTFN)\n";
+    print "  assemble                assemble a VM disk from partitions\n";
+    print "  disassemble             disassemble a VM disk into partitions\n";
     print "  help                    print this help message and exit\n";
     print "Simulator options:\n";
     print "  --bochs          (default) Use Bochs as simulator\n";
@@ -187,14 +217,16 @@ sub usage {
     print "  -s, --no-serial  No serial output\n";
     print "  -t, --terminal   Display VGA in terminal (Bochs only)\n";
     print "VM options:\n";
+    print "  -d, --disk=DISK  File holding VM's disk (default: pintos.dsk)\n";
     print "  -j SEED          Randomize timer interrupts (Bochs only)\n";
     print "  -r, --realtime   Use realistic, but not reproducible, timings\n";
     print "  -m, --mem=MB     Run VM with MB megabytes of physical memory\n";
-    print "Disk options:\n";
-    print "  --os-disk=DISK    Set OS disk file (default: os.dsk)\n";
-    print "  --fs-disk=DISK    Set FS disk file (default: fs.dsk)\n";
-    print "  --scratch-disk=DISK   Set scratch disk (default: scratch.dsk)\n";
-    print "  --swap-disk=DISK  Set swap disk file (default: swap.dsk)\n";
+    print "Assemble/disassemble partitions (default names in parentheses):\n";
+    print "(SOURCE is a file or a size in MB, for a blank partition.)\n";
+    print "  --boot=FILE      Boot partition (boot.part)\n";
+    print "  --filesys=SOURCE File system partition (filesys.part)\n";
+    print "  --scratch=SOURCE Scratch partition (scratch.part)\n";
+    print "  --swap=SOURCE    Swap partition (swap.part)\n";
     exit $exitcode;
 }
 
@@ -211,24 +243,21 @@ sub create_disk {
 sub run_vm {
     my (@args) = @_;
 
-    our (@disks);
+    our ($disk);
+    die "$disk: can't find OS disk\n" if ! -e $disk;
 
-    die "$disks[0]: can't find OS disk\n" if ! -e $disks[0];
-    for my $i (1...3) {
-	undef $disks[$i] if ! -e $disks[$i];
-    }
-
-    if (my ($project) = `pwd` =~ /\b(threads|userprog|vm|filesys)\b/) {
-	if ((grep ($project eq $_, qw (userprog vm filesys)))
-	    && !defined ($disks[1])) {
-	    print STDERR "warning: it looks like you're running the $project ";
-	    print STDERR "project, but no file system disk is present\n";
-	}
-	if ($project eq 'vm' && !defined $disks[3]) {
-	    print STDERR "warning: it looks like you're running the $project ";
-	    print STDERR "project, but no swap disk is present\n";
-	}
-    }
+    # FIXME
+    #     if (my ($project) = `pwd` =~ /\b(threads|userprog|vm|filesys)\b/) {
+    # 	if ((grep ($project eq $_, qw (userprog vm filesys)))
+    # 	    && !defined ($disks[1])) {
+    # 	    print STDERR "warning: it looks like you're running the $project ";
+    # 	    print STDERR "project, but no file system disk is present\n";
+    # 	}
+    # 	if ($project eq 'vm' && !defined $disks[3]) {
+    # 	    print STDERR "warning: it looks like you're running the $project ";
+    # 	    print STDERR "project, but no swap disk is present\n";
+    # 	}
+    #     }
 
     write_cmd_line ($disks[0], @args);
 
@@ -247,12 +276,12 @@ sub run_vm {
 
 	open (BOCHSRC, ">bochsrc.txt") or die "bochsrc.txt: create: $!\n";
 	print BOCHSRC "romimage: file=$bochsshare/BIOS-bochs-latest, "
-	    . "address=0xf0000\n";
+	  . "address=0xf0000\n";
 	print BOCHSRC "vgaromimage: $bochsshare/VGABIOS-lgpl-latest\n";
 	print BOCHSRC bochs_disk_line ("ata0-master", $disks[0]);
 	print BOCHSRC bochs_disk_line ("ata0-slave", $disks[1]);
 	print BOCHSRC "ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15\n"
-	    if defined ($disks[2]) || defined ($disks[3]);
+	  if defined ($disks[2]) || defined ($disks[3]);
 	print BOCHSRC bochs_disk_line ("ata1-master", $disks[2]);
 	print BOCHSRC bochs_disk_line ("ata1-slave", $disks[3]);
 	print BOCHSRC "boot: c\n";
@@ -266,9 +295,9 @@ sub run_vm {
 	print BOCHSRC "log: bochsout.txt\n";
 	if ($vga ne 'terminal') {
 	    print BOCHSRC "com1: enabled=1, dev=/dev/stdout\n"
-		if $serial_out;
+	      if $serial_out;
 	    print BOCHSRC "display_library: nogui\n"
-		if $vga eq 'none';
+	      if $vga eq 'none';
 	} else {
 	    print BOCHSRC "display_library: term\n";
 	}
@@ -289,9 +318,9 @@ sub run_vm {
 	}
     } elsif ($sim eq 'qemu') {
 	print "warning: qemu doesn't support --terminal\n"
-	    if $vga eq 'terminal';
+	  if $vga eq 'terminal';
 	print "warning: qemu doesn't support jitter\n"
-	    if defined $jitter;
+	  if defined $jitter;
 	my (@cmd) = ('qemu');
 	push (@cmd, '-hda', $disks[0]) if defined $disks[0];
 	push (@cmd, '-hdb', $disks[1]) if defined $disks[1];
@@ -305,13 +334,13 @@ sub run_vm {
 	run_command (@cmd);
     } elsif ($sim eq 'gsx') {
 	print "warning: VMware GSX Server doesn't support --$debug\n"
-	    if $debug ne 'no-debug';
+	  if $debug ne 'no-debug';
 	print "warning: VMware GSX Server doesn't support --no-vga\n"
-	    if $vga eq 'none';
+	  if $vga eq 'none';
 	print "warning: VMware GSX Server doesn't support --terminal\n"
-	    if $vga eq 'terminal';
+	  if $vga eq 'terminal';
 	print "warning: VMware GSX Server doesn't support jitter\n"
-	    if defined $jitter;
+	  if defined $jitter;
 
 	open (VMX, ">pintos.vmx") or die "pintos.vmx: create: $!\n";
 	chmod 0777 & ~umask, "pintos.vmx";
@@ -422,9 +451,9 @@ sub bochs_disk_line {
     my ($device, $file) = @_;
     return "" if !defined $file;
     my (%geom) = disk_geometry ($file);
-    return "$device: type=disk, path=$file, mode=flat, "
-	. "cylinders=$geom{C}, heads=$geom{H}, spt=$geom{S}, "
-	. "translation=none\n";
+    return ("$device: type=disk, path=$file, mode=flat, "
+	    . "cylinders=$geom{C}, heads=$geom{H}, spt=$geom{S}, "
+	    . "translation=none\n");
 }
 
 sub disk_geometry {
@@ -439,4 +468,190 @@ sub disk_geometry {
 	    C => $cylinders,
 	    H => 16,
 	    S => 63);
+}
+
+sub assemble {
+    my ($files) = @_;
+
+    my (@parts);
+
+    my (@part_names) = ("boot", "file system", "scratch", "swap");
+    my ($next_start) = 1;
+    for my $i (0..3) {
+	my (%part);
+
+	my ($name) = $part_names[$i];
+	my ($file) = $files[$i];
+	my ($size);
+	if (-e $file) {
+	    $size = -s _;
+	} else {
+	    if (($mb) = $file =~ /^\d+(\.\d+)?|\.\d+$/) {
+		$size = $mb * 63 * 16 * 512;
+		undef $file;
+	    } else {
+		die ("$file: stat: $!\n");
+	    }
+	}
+
+	die "$name: not a multiple of 512 bytes in size\n"
+	  if $size % 512;
+	my ($sector_cnt) = $size / 512;
+	my ($start) = $next_start;
+	$next_start += $sector_cnt;
+
+	push (@parts,
+	      {ROLE => $i,
+	       FILE => $file,
+	       START = $start,
+	       SECTORS => $sector_cnt});
+    }
+    die "Sorry, disk size (", ($sector_cnt * 512) / 1024 / 1024, " MB) "
+      . "exceeds limit (approx. 503 MB)\n"
+	if $sector_cnt > 1023 * 63 * 16;
+
+    my ($part_tbl) = "\0" x 446;
+    for my $p (@parts) {
+	my ($bootable) = $p->{ROLE} == 0 ? 0x80 : 0x00;
+	my (@start_chs) = linear_to_chs ($p->{START});
+	my ($type) = $role2type{$p->{ROLE}};
+	my (@end_chs) = linear_to_chs ($p->{START} + $p->{SECTORS} - 1);
+
+	my ($part_tbl_entry) = pack ("C CCC C CCC V V",
+				     $bootable,
+				     pack_chs (@start_chs),
+				     $type,
+				     pack_chs (@end_chs),
+				     $p->{START}, $p->{SECTORS});
+	length ($part_tbl_entry) == 16 or die;
+	$part_tbl .= $part_tbl_entry;
+    }
+    $part_tbl .= "\0" x 16 while length ($part_tbl) < 510;
+    $part_tbl .= pack ("v", 0xaa55);
+    length ($part_tbl) == 512 or die;
+
+    our ($disk);
+    open (DISK, ">$disk") or die "$disk: create: $!\n";
+    syswrite (DISK, $part_tbl) == 512 or die "$disk: write: $!\n";
+
+    for my $p (@parts) {
+	$from_file = defined ($p->{FILE});
+	open (PART, "<$p->{FILE}") or die "$p->{FILE}: open: $!\n"
+	  if $from_file;
+
+	my ($buf);
+	for (my ($ofs) = 0; $ofs < $p->{SECTORS}; $ofs += length ($buf)) {
+	    my ($bytes_left) = ($p->{SECTORS} - $ofs) * 512;
+	    my ($read_bytes) = $bytes_left > 16384 ? 16384 : $bytes_left;
+
+	    if ($from_file) {
+		my ($ret) = sysread (PART, $buf, $read_bytes);
+		die "$p->{FILE}: read: $!\n" if $ret < 0;
+		die "$p->{FILE}: unexpected end of file\n"
+		  if $ret != $read_bytes;
+	    } else {
+		$buf = "\0" x $read_bytes;
+	    }
+
+	    syswrite (DISK, $buf) == length ($buf)
+	      or die "$p->{FILE}: write: $!\n"
+	}
+
+	close (PART) if $from_file;
+    }
+
+    close (DISK) or die "$disk: close: $!\n";
+}
+
+sub linear_to_chs {
+    my ($linear) = @_;
+
+    # We maintain these as constants.
+    my ($heads) = 16;
+    my ($sectors) = 63;
+    my ($sectors_per_cylinder) = $heads * sectors;
+
+    # Calculate C, H, S.
+    my ($c) = int ($linear / $sectors_per_cylinder);
+    my ($cylinder_ofs) = $linear % $sectors_per_cylinder;
+    my ($h) = int ($cylinder_ofs / $sectors);
+    my ($s) = $cylinder_ofs % $sectors;
+
+    die if $c > 1023 || $h > 15 || $s > 63;
+
+    return ($c, $h, $s);
+}
+
+sub pack_chs {
+    my ($c, $h, $s) = @_;
+    die if $c > 1023 || $h > 15 || $s > 63;
+
+    my ($pc, $ph, $ps) = ($h, $s | (($c & 0x300) >> 2), $c & 0xff);
+    die if $pc > 255 || $ph > 255 || ps > 255;
+
+    return ($pc, $ph, $ps);
+}
+
+sub read_part_tbl {
+    my ($part_tbl);
+    open (DISK, "<$disk") or die "$disk: open: $!\n";
+    sysread (DISK, $part_tbl, 512) == 512 or die "$disk: read: $!\n";
+    close (DISK);
+
+    my ($loader, @partitions, $signature);
+    ($loader, @partitions[0..3], $signature)
+      = unpack ("a446 (a16)4 v", $part_tbl);
+
+    die "$disk: invalid partition table signature\n" if $signature != 0xaa55;
+
+    my (@parts);
+    for my $partition (@partitions) {
+	my ($bootable, @start_chs_packed, $type, @end_chs_packed,
+	    $start, $sector_cnt);
+	($bootable, $start_chs_packed[0...2], $type, @end_chs_packed[0...2],
+	 $start, $sector_cnt)
+	  = unpack ("C CCC C CCC V V", $partition) or die;
+
+	my ($role) = (reverse (%role2type{$type})){$type};
+	next if !defined ($role);
+
+	push (@parts,
+	      {ROLE => $1,
+	       START => $start,
+	       SECTORS => $sector_cnt});
+    }
+
+    return @parts;
+}
+
+sub disassemble {
+    my ($files) = @_;
+
+    open (DISK, "<$disk") or die "$disk: open: $!\n";
+    for my $p (read_part_tbl ()) {
+	use Fcntl 'SEEK_CUR';
+
+	my ($file) = $files[$p->{ROLE}];
+	next if !defined $file;
+
+	open (PART, ">$file") or die "$file: create: $!\n";
+	sysseek (DISK, $p->{START} * 512, SEEK_CUR) or die "$disk: seek: $!\n";
+
+	my ($buf);
+	for (my ($ofs) = 0; $ofs < $p->{SECTORS}; $ofs += length ($buf)) {
+	    my ($bytes_left) = ($p->{SECTORS} - $ofs) * 512;
+	    my ($read_bytes) = $bytes_left > 16384 ? 16384 : $bytes_left;
+
+	    my ($ret) = sysread (DISK, $buf, $read_bytes);
+	    die "$p->{FILE}: read: $!\n" if $ret < 0;
+	    die "$p->{FILE}: unexpected end of file\n"
+	      if $ret != $read_bytes;
+
+	    syswrite (PART, $buf) == length ($buf)
+	      or die "$p->{FILE}: write: $!\n";
+	}
+
+	close (PART) or die "$file: close: $!\n";
+    }
+    close (DISK);
 }

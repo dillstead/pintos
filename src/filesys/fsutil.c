@@ -6,6 +6,7 @@
 #include <string.h>
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "devices/partition.h"
 #include "threads/mmu.h"
 #include "threads/palloc.h"
 
@@ -22,29 +23,29 @@ char *fsutil_print_file;
 /* Name of a file to delete. */
 char *fsutil_remove_file;
 
-/* List all files in the filesystem to the system console? */
+/* List all files in the file system to the system console? */
 bool fsutil_list_files;
 
-/* Dump full contents of filesystem to the system console? */
+/* Dump full contents of file system to the system console? */
 bool fsutil_dump_filesys;
 
 /* Copies from the "scratch" disk, hdc or hd1:0,
-   to a file named FILENAME in the filesystem.
+   to a file named FILENAME in the file system.
    The file will be SIZE bytes in length. */
 static void
 copy_in (const char *filename, off_t size) 
 {
-  struct disk *src;
+  struct partition *src;
   struct file *dst;
   disk_sector_t sector;
   void *buffer;
 
-  /* Open source disk. */
-  src = disk_get (1, 0);
+  /* Open scratch partition. */
+  src = partition_get (PARTITION_SCRATCH);
   if (src == NULL)
-    PANIC ("couldn't open source disk (hdc or hd1:0)");
-  if (size > (off_t) disk_size (src) * DISK_SECTOR_SIZE)
-    PANIC ("source disk is too small for %lld-byte file",
+    PANIC ("couldn't open scratch partition");
+  if (size > (off_t) partition_size (src) * DISK_SECTOR_SIZE)
+    PANIC ("scratch partition is too small for %lld-byte file",
            (unsigned long long) size);
   
   /* Create destination file. */
@@ -60,7 +61,7 @@ copy_in (const char *filename, off_t size)
   while (size > 0)
     {
       int chunk_size = size > DISK_SECTOR_SIZE ? DISK_SECTOR_SIZE : size;
-      disk_read (src, sector++, buffer);
+      partition_read (src, sector++, buffer);
       if (file_write (dst, buffer, chunk_size) != chunk_size)
         PANIC ("%s: write failed with %lld bytes unwritten",
                filename, (unsigned long long) size);
@@ -80,7 +81,7 @@ copy_out (const char *filename)
 {
   void *buffer;
   struct file *src;
-  struct disk *dst;
+  struct partition *dst;
   off_t size;
   disk_sector_t sector;
 
@@ -92,17 +93,18 @@ copy_out (const char *filename)
     PANIC ("%s: open failed", filename);
   size = file_length (src);
 
-  /* Open target disk. */
-  dst = disk_get (1, 0);
+  /* Open target partition. */
+  dst = partition_get (PARTITION_SCRATCH);
   if (dst == NULL)
-    PANIC ("couldn't open target disk (hdc or hd1:0)");
-  if (size + DISK_SECTOR_SIZE > (off_t) disk_size (dst) * DISK_SECTOR_SIZE)
-    PANIC ("target disk is too small for %lld-byte file",
+    PANIC ("couldn't open scratch partition");
+  if (size + DISK_SECTOR_SIZE
+      > (off_t) partition_size (dst) * DISK_SECTOR_SIZE)
+    PANIC ("scratch partition is too small for %lld-byte file",
            (unsigned long long) size);
   
   /* Write size to sector 0. */
   *(uint32_t *) buffer = size;
-  disk_write (dst, 0, buffer);
+  partition_write (dst, 0, buffer);
   
   /* Do copy. */
   sector = 1;
@@ -112,7 +114,7 @@ copy_out (const char *filename)
       if (file_read (src, buffer, chunk_size) != chunk_size)
         PANIC ("%s: read failed with %lld bytes unread",
                filename, (unsigned long long) size);
-      disk_write (dst, sector++, buffer);
+      partition_write (dst, sector++, buffer);
       size -= chunk_size;
     }
   palloc_free_page (buffer);
@@ -120,7 +122,7 @@ copy_out (const char *filename)
   file_close (src);
 }
 
-/* Executes the filesystem operations described by the variables
+/* Executes the file system operations described by the variables
    declared in fsutil.h. */
 void
 fsutil_run (void) 

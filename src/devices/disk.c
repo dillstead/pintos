@@ -204,6 +204,15 @@ disk_size (struct disk *d)
   return d->capacity;
 }
 
+/* Returns a human-readable name for disk D. */
+const char *
+disk_name (struct disk *d) 
+{
+  ASSERT (d != NULL);
+
+  return d->name;
+}
+
 /* Reads sector SEC_NO from disk D into BUFFER, which must have
    room for DISK_SECTOR_SIZE bytes. */
 void
@@ -373,15 +382,7 @@ identify_ata_device (struct disk *d)
 
   /* Print identification message. */
   printf ("%s: detected %'"PRDSNu" sector (", d->name, d->capacity);
-  if (d->capacity > 1024 / DISK_SECTOR_SIZE * 1024 * 1024)
-    printf ("%"PRDSNu" GB",
-            d->capacity / (1024 / DISK_SECTOR_SIZE * 1024 * 1024));
-  else if (d->capacity > 1024 / DISK_SECTOR_SIZE * 1024)
-    printf ("%"PRDSNu" MB", d->capacity / (1024 / DISK_SECTOR_SIZE * 1024));
-  else if (d->capacity > 1024 / DISK_SECTOR_SIZE)
-    printf ("%"PRDSNu" kB", d->capacity / (1024 / DISK_SECTOR_SIZE));
-  else
-    printf ("%"PRDSNu" byte", d->capacity * DISK_SECTOR_SIZE);
+  print_human_readable_size ((uint64_t) d->capacity * DISK_SECTOR_SIZE);
   printf (") disk, model \"");
   print_ata_string ((char *) &id[27], 40);
   printf ("\", serial \"");

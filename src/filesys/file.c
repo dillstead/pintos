@@ -4,6 +4,7 @@
 #include "filesys/directory.h"
 #include "filesys/inode.h"
 #include "filesys/filesys.h"
+#include "devices/partition.h"
 #include "threads/malloc.h"
 
 /* An open file. */
@@ -91,7 +92,7 @@ file_read_at (struct file *file, void *buffer_, off_t size,
       /* Read sector into bounce buffer, then copy into caller's
          buffer. */
       sector_idx = inode_byte_to_sector (file->inode, file_ofs);
-      disk_read (filesys_disk, sector_idx, file->bounce);
+      partition_read (filesys_partition, sector_idx, file->bounce);
       memcpy (buffer + bytes_read, file->bounce + sector_ofs, chunk_size);
 
       /* Advance. */
@@ -153,11 +154,11 @@ file_write_at (struct file *file, const void *buffer_, off_t size,
          first.  Otherwise we start with a sector of all zeros. */
       sector_idx = inode_byte_to_sector (file->inode, file_ofs);
       if (sector_ofs > 0 || chunk_size < sector_left)
-        disk_read (filesys_disk, sector_idx, file->bounce);
+        partition_read (filesys_partition, sector_idx, file->bounce);
       else
         memset (file->bounce, 0, DISK_SECTOR_SIZE);
       memcpy (file->bounce + sector_ofs, buffer + bytes_written, chunk_size);
-      disk_write (filesys_disk, sector_idx, file->bounce);
+      partition_write (filesys_partition, sector_idx, file->bounce);
 
       /* Advance. */
       size -= chunk_size;

@@ -5,7 +5,7 @@
 #include "filesys/off_t.h"
 
 /* Disk used for filesystem. */
-extern struct disk *filesys_disk;
+extern struct partition *filesys_partition;
 
 /* The free map file, opened by filesys_init() and never
    closed. */

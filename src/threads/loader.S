@@ -64,271 +64,154 @@
 start:
 	.code16
 
-# Disable interrupts.
-# String instructions go upward.
-
-	cli
-	cld
-
-# Set up data segments.
+# Set up segment registers.
+# Stack grows downward starting from us.
 
 	sub ax, ax
-	mov es, ax
 	mov ds, ax
-
-# Set up stack segment.
-# Stack grows downward starting from us.
-# We don't ever use the stack so this is strictly speaking
-# unnecessary.
-
 	mov ss, ax
 	mov sp, 0x7c00
 	
-#### Enable A20.  Address line 20 is tied to low when the machine
-#### boots, which prevents addressing memory about 1 MB.  This code
-#### fixes it.
-	
-# Poll status register while busy.
+# Scan floppy disks.
 
-1:	in al, 0x64
-	test al, 0x2
-	jnz 1b
-
-# Send command for writing output port.
-
-	mov al, 0xd1
-	outb 0x64, al
-
-# Poll status register while busy.
-
-1:	in al, 0x64
-	test al, 0x2
-	jnz 1b
-
-# Enable A20 line.
-
-	mov al, 0xdf
-	out 0x60, al
-
-#### Get memory size, via interrupt 15h function 88h, which returns CF
-#### clear if successful, with AX = (kB of physical memory) - 1024.
-#### This only works for memory sizes <= 65 MB, which should be fine
-#### for our purposes.  We cap memory at 64 MB because that's all we
-#### prepare page tables for, below.
-	
-	mov ah, 0x88
-	int 0x15
-	jc panic
-	cli			# BIOS might have enabled interrupts
-	add eax, 1024		# Total kB memory
-	cmp eax, 0x10000	# Cap at 64 MB
-	jbe 1f
-	mov eax, 0x10000
-1:	shr eax, 2		# Total 4 kB pages
-	mov ram_pages, eax 
-	
-#### Create temporary page directory and page table and set page
-#### directory base register.
-
-# Create page directory at 64 kB and fill with zeroes.
-	mov ax, 0x1000
+	sub dl, dl
+	sub ebx, ebx
+	mov eax, 0x7e00
 	mov es, ax
-	sub eax, eax
-	sub edi, edi
-	mov ecx, 0x400
-	rep stosd
+1:	call scan_partitions
+	inc dl
+	jnc 1b
 
-# Add PDEs to point to PTEs for the first 64 MB of RAM.
-# Also add identical PDEs starting at LOADER_PHYS_BASE.
-# See [IA32-v3] section 3.7.6 for a description of the bits in eax.
+# Scan hard disks.
+	mov dl, 0x80
+1:	call scan_partitions
+	inc dl
+	jnc 1b
 
-# A bug in some versions of GAS prevents us from using the straightforward
-#	mov es:[di + LOADER_PHYS_BASE / 1024 / 1024], eax
-# so we calculate the displacement in bx instead.
+	call panic
+	.asciz "No boot partition"
 
-	mov eax, 0x11007
-	mov ecx, 0x11
-	sub di, di
-	mov ebx, LOADER_PHYS_BASE
-	shr ebx, 20
-1:	mov es:[di], eax
-	mov es:[bx + di], eax 
-	add di, 4
-	add eax, 0x1000
+scan_partitions:
+	# EBX = sector number of partition table
+	# DL = drive number
+	# ES:0000 -> buffer for partition table
+	# Returns CF set if drive exists, CF clear otherwise.
+	call read_sector
+	jnc no_such_drive
+2:	cmp word ptr [es:510], 0xaa55
+	jnz no_boot_partition
+	
+	mov si, 446
+1:	mov al, [es:si+4]
+	cmp al, 0x20
+	jz found_boot_partition
+	cmp al, 0x05
+	jz found_extended_partition
+	cmp al, 0x0f
+	jz found_extended_partition
+	cmp al, 0x85
+	jz found_extended_partition
+	cmp al, 0xc5
+	jz found_extended_partition
+next_parttbl_entry:	
+	add si, 16
+	cmp si, 510
+	jb 1b
+
+no_boot_partition:	
+	clc
+	ret
+no_such_drive:
+	stc
+	ret
+
+found_extended_partition:
+	# DL = drive number.
+	# ES:SI -> partition table entry for extended partition.
+	# Recursively examine it.
+	pusha
+	mov ebx, es:[si+8]
+	mov ax, es
+	add ax, 0x20
+	mov es, ax
+	call scan_partitions
+	popa
+	jmp next_parttbl_entry
+
+found_boot_partition:
+	mov ebx, [es:si+8]		# EBX = first sector
+	mov cx, [es:si+12]		# CX = number of sectors
+	mov ax, 0x1000			# ES:0000 -> load address
+	mov es, ax
+1:	call read_sector
+	add ax, 0x20
+	mov es, ax
 	loop 1b
 
-# Set up one-to-map linear to physical map for the first 64 MB of RAM.
-# See [IA32-v3] section 3.7.6 for a description of the bits in eax.
+	ljmp 0x1000, 0
 
-	mov ax, 0x1100
-	mov es, ax
-	mov eax, 0x7
-	mov cx, 0x4000
-	sub di, di
-1:	mov es:[di], eax 
-	add di, 4 
-	add eax, 0x1000
-	loop 1b
-
-# Set page directory base register.
-
-	mov eax, 0x10000
-	mov cr3, eax
-	
-#### Switch to protected mode.
-
-# Then we point the GDTR to our GDT.  Protected mode requires a GDT.
-# We need a data32 prefix to ensure that all 32 bits of the GDT
-# descriptor are loaded (default is to load only 24 bits).
-
-	data32 lgdt gdtdesc
-
-# Then we turn on the following bits in CR0:
-#    PE (Protect Enable): this turns on protected mode.
-#    PG (Paging): turns on paging.
-#    WP (Write Protect): if unset, ring 0 code ignores
-#       write-protect bits in page tables (!).
-#    EM (Emulation): forces floating-point instructions to trap.
-#       We don't support floating point. 
-	
-	mov eax, cr0
-	or eax, CR0_PE + CR0_PG + CR0_WP + CR0_EM
-	mov cr0, eax
-	
-# We're now in protected mode in a 16-bit segment.  The CPU still has
-# the real-mode code segment cached in cs's segment descriptor.  We
-# need to reload cs, and the easiest way is to use a far jump.
-# Because we're not in a 32-bit segment the data32 prefix is needed to
-# jump to a 32-bit offset.
-
-	data32 ljmp SEL_KCSEG, 1f + LOADER_PHYS_BASE
-
-# We're now in protected mode in a 32-bit segment.
-
-	.code32
-
-# Reload all the other segment registers and the stack pointer to
-# point into our new GDT.
-
-1:	mov ax, SEL_KDSEG
-	mov ds, ax		
-	mov es, ax		
-	mov fs, ax		
-	mov gs, ax		
-	mov ss, ax
-	mov esp, LOADER_PHYS_BASE + 0x30000
-
-#### Load kernel starting at physical address LOADER_KERN_BASE by
-#### frobbing the IDE controller directly.
-
-	mov ebx, 1
-	mov edi, LOADER_KERN_BASE + LOADER_PHYS_BASE
+	# ebx: sector number
+	# dl: drive number
+	# es:0000: destination buffer
+	# returns error flag in CF
 read_sector:
+	pusha
+	or dl, dl			# Floppy drives: DL < 0
+	js read_floppy_sector
 
-# Poll status register while controller busy.
+read_harddrv_sector:
+	sub eax, eax
+	push eax			# LBA sector number [32:63]
+	push ebx			# LBA sector number [0:31]
+	mov ax, es
+	shl eax, 4
+	push eax			# Buffer linear address
+	push 1				# Transfer one sector
+	push 16				# Packet size
+	mov ah, 0x42			# Extended read
+	mov si, sp			# DS:SI -> packet
+	int 0x13			# Error code in CF
+success:	
+	popa
+	ret				# Error code in CF
 
-	mov edx, 0x1f7
-1:	in al, dx
-	test al, 0x80
-	jnz 1b
+read_floppy_sector:
+	#define HEADS 2
+	#define SECTORS 36
 
-# Read a single sector.
+	# In: BX = LBA sector number, DL = drive.
+	# Out: BL = drive, DX = cylinder, AL = head, AH = sector.
+	sub ax, ax
+	xchg dx, bx			# DX = LBA sector number, BL = drive
+	mov cx, HEADS * SECTORS
+	div cx				# AX = cyl, DX = hd + (sec-1) * SECTORS
+	xchg ax, dx			# DX = cyl, AX = hd + (sec-1) * SECTORS
+	mov cl, SECTORS
+	div cl				# AL = head, AH = sector - 1
+	inc ah
 
-	mov edx, 0x1f2
-	mov al, 1 
-	out dx, al
+	# Read sector.
+	mov ch, dl			# CH = cylinder
+	mov cl, ah			# CL = sector
+	mov dh, al			# DH = head
+	mov dl, bl			# DL = drive
+	mov ax, 0x0201			# AH = function, AL = sectors to read
+	sub bx, bx			# ES:BX -> buffer
+	pusha
+	int 0x13
+	popa
+	jnc success
 
-# Sector number to write in low 28 bits.
-# LBA mode, device 0 in top 4 bits.
-
-	mov eax, ebx
-	and eax, 0x0fffffff
-	or eax, 0xe0000000
-
-# Dump eax to ports 0x1f3...0x1f6.
-
-	mov ecx, 4
-1:	inc dx
-	out dx, al
-	shr eax, 8
-	loop 1b
-
-# READ command to command register.
-
-	inc dx
-	mov al, 0x20
-	out dx, al
-
-# Poll status register while controller busy.
-
-1:	in al, dx
-	test al, 0x80
-	jnz 1b
-
-# Poll status register until data ready.
-
-1:	in al, dx
-	test al, 0x08
-	jz 1b
-
-# Transfer sector.
-
-	mov ecx, 256
-	mov edx, 0x1f0
-	rep insw
-
-# Next sector.
-
-	inc ebx
-	cmp ebx, KERNEL_LOAD_PAGES*8 + 1
-	jnz read_sector
-
-#### Jump to kernel entry point.
-
-	mov eax, LOADER_PHYS_BASE + LOADER_KERN_BASE
-	call eax
-	jmp panic
-
-#### GDT
-
-gdt:
-	.quad 0x0000000000000000	# null seg
-	.quad 0x00cf9a000000ffff	# code seg
-	.quad 0x00cf92000000ffff        # data seg
+	# Reset floppy drive motor, try again.
+	sub ah, ah
+	int 0x13
+	popa
+	jmp read_sector
 	
-gdtdesc:
-	.word	0x17			# sizeof (gdt) - 1
-	.long	gdt + LOADER_PHYS_BASE	# address gdt
-
-#### Fatal error.
-#### Print panicmsg (with help from the BIOS) and spin.
-
-panic:  .code16			# We only panic in real mode.
-	mov si, offset panicmsg
-	mov ah, 0xe
-	sub bh, bh
-1:	lodsb
-	test al, al
-2:	jz 2b			# Spin.
-	int 0x10
-	jmp 1b
-
-panicmsg:
-	.ascii "Panic!"
-	.byte 0
-
-#### Memory size in 4 kB pages.
-	.org LOADER_RAM_PAGES - LOADER_BASE
-ram_pages:
-	.long 0
-
-#### Command-line arguments inserted by another utility.
-#### The loader doesn't use these, but we note their
-#### location here for easy reference.
-	.org LOADER_CMD_LINE - LOADER_BASE
-cmd_line:
-	.fill 0x80, 1, 0
+#### The partition table goes here.
+	.org 446
+part_tbl:	
 
 #### Boot-sector signature for BIOS inspection.
-	.org LOADER_BIOS_SIG - LOADER_BASE
+	.org 510
 	.word 0xaa55

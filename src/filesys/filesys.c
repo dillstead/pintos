@@ -35,6 +35,7 @@
 #include "filesys/inode.h"
 #include "filesys/directory.h"
 #include "devices/disk.h"
+#include "devices/partition.h"
 
 /* Filesystem.
 
@@ -42,9 +43,9 @@
    assignments (projects 2 and 3), please treat all the code in
    the filesys directory as a black box.  No changes should be
    needed.  For those projects, a single lock external to the
-   filesystem code suffices.
+   file system code suffices.
 
-   The filesystem consists of a set of files.  Each file has a
+   The file system consists of a set of files.  Each file has a
    header called an `index node' or `inode', represented by
    struct inode, that is stored by itself in a single sector (see
    inode.h).  The header contains the file's length in bytes and
@@ -65,7 +66,7 @@
    directory.h), each of which, if it is in use, associates a
    filename with the sector of the file's inode.
 
-   The filesystem implemented here has the following limitations:
+   The file system implemented here has the following limitations:
 
      - No synchronization.  Concurrent accesses will interfere
        with one another, so external synchronization is needed.
@@ -100,8 +101,8 @@
 /* Root directory. */
 #define NUM_DIR_ENTRIES 10      /* Maximum number of directory entries. */
 
-/* The disk that contains the filesystem. */
-struct disk *filesys_disk;
+/* The partition that contains the file system. */
+struct partition *filesys_partition;
 
 /* The free map and root directory files.
    These files are opened by filesys_init() and never closed. */
@@ -109,16 +110,16 @@ struct file *free_map_file, *root_dir_file;
 
 static void do_format (void);
 
-/* Initializes the filesystem module.
-   If FORMAT is true, reformats the filesystem. */
+/* Initializes the file system module.
+   If FORMAT is true, reformats the file system. */
 void
 filesys_init (bool format) 
 {
   inode_init ();
 
-  filesys_disk = disk_get (0, 1);
-  if (filesys_disk == NULL)
-    PANIC ("hd0:1 (hdb) not present, filesystem initialization failed");
+  filesys_partition = partition_get (PARTITION_FILESYS);
+  if (filesys_partition == NULL)
+    PANIC ("missing file system partition");
 
   if (format) 
     do_format ();
@@ -131,7 +132,7 @@ filesys_init (bool format)
     PANIC ("can't open root dir file");
 }
 
-/* Shuts down the filesystem module, writing any unwritten data
+/* Shuts down the file system module, writing any unwritten data
    to disk.
    Currently there's nothing to do.  You'll need to add code here
    when you implement write-behind caching. */
@@ -161,7 +162,7 @@ filesys_create (const char *name, off_t initial_size)
     goto done;
 
   /* Allocate a block for the inode. */
-  free_map = bitmap_create (disk_size (filesys_disk));
+  free_map = bitmap_create (partition_size (filesys_partition));
   if (free_map == NULL)
     goto done;
   bitmap_read (free_map, free_map_file);
@@ -259,7 +260,7 @@ filesys_remove (const char *name)
   return success;
 }
 
-/* Prints a list of files in the filesystem to the system
+/* Prints a list of files in the file system to the system
    console.
    Returns true if successful, false on failure,
    which occurs only if an internal memory allocation fails. */
@@ -276,7 +277,7 @@ filesys_list (void)
   return true;
 }
 
-/* Dumps the filesystem state to the system console,
+/* Dumps the file system state to the system console,
    including the free map, the list of files, and file contents.
    Returns true if successful, false on failure,
    which occurs only if an internal memory allocation fails. */
@@ -287,7 +288,7 @@ filesys_dump (void)
   struct dir *dir;  
 
   printf ("Free map:\n");
-  free_map = bitmap_create (disk_size (filesys_disk));
+  free_map = bitmap_create (partition_size (filesys_partition));
   if (free_map == NULL)
     return false;
   bitmap_read (free_map, free_map_file);
@@ -308,8 +309,8 @@ filesys_dump (void)
 static void must_succeed_function (int, bool) NO_INLINE;
 #define MUST_SUCCEED(EXPR) must_succeed_function (__LINE__, EXPR)
 
-/* Performs basic sanity checks on the filesystem.
-   The filesystem should not contain a file named `foo' when
+/* Performs basic sanity checks on the file system.
+   The file system should not contain a file named `foo' when
    called. */
 void
 filesys_self_test (void)
@@ -355,26 +356,26 @@ filesys_self_test (void)
   printf ("filesys: self test ok\n");
 }
 
-/* Formats the filesystem. */
+/* Formats the file system. */
 static void
 do_format (void)
 {
   struct bitmap *free_map;
   struct dir *dir;
 
-  printf ("Formatting filesystem...");
+  printf ("Formatting file system...");
 
   /* Create the initial bitmap and reserve sectors for the
      free map and root directory inodes. */
-  free_map = bitmap_create (disk_size (filesys_disk));
+  free_map = bitmap_create (partition_size (filesys_partition));
   if (free_map == NULL)
-    PANIC ("bitmap creation failed--disk is too large");
+    PANIC ("bitmap creation failed--file system partition is too large");
   bitmap_mark (free_map, FREE_MAP_SECTOR);
   bitmap_mark (free_map, ROOT_DIR_SECTOR);
 
   /* Allocate free map and root dir files. */
   if (!inode_create (free_map, FREE_MAP_SECTOR, bitmap_file_size (free_map)))
-    PANIC ("free map creation failed--disk is too large");
+    PANIC ("free map creation failed--file system partition is too large");
   if (!inode_create (free_map, ROOT_DIR_SECTOR, dir_size (NUM_DIR_ENTRIES)))
     PANIC ("root directory creation failed");
 
