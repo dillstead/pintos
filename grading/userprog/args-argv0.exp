@@ -1,0 +1,2 @@
+(args-argv0) argv[0] = 'args-argv0'
+args-argv0: exit(0)

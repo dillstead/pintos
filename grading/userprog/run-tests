@@ -37,9 +37,18 @@ sub usage {
 }
 
 # Default set of tests.
-@TESTS = qw (create-normal create-empty create-null 
-	     create-long)
+@TESTS = qw (create-normal create-empty create-null create-bad-ptr 
+	     create-long create-exists create-bound
+	     args-argc args-argv0 args-argvn args-single args-multiple
+	     args-dbl-space)
     unless @TESTS > 0;
+
+our (%args);
+for my $key ('args-argc', 'args-argv0', 'args-argvn', 'args-multiple') {
+    $args{$key} = "some arguments for you!";
+}
+$args{'args-single'} = "onearg";
+$args{'args-dbl-space'} = "two  args";
 
 # Handle final grade mode.
 if ($grade) {
@@ -238,10 +247,11 @@ sub really_run_test {
 
     # Run.
     my ($timeout) = 10;
+    my ($testargs) = defined ($args{$test}) ? " $args{$test}" : "";
     xsystem ("pintos "
 	     . "--os-disk=pintos/src/userprog/build/os.dsk "
 	     . "--fs-disk=output/$test/fs.dsk "
-	     . "-v run -q -ex \"$test\"",
+	     . "-v run -q -ex \"$test$testargs\"",
 	     LOG => "$test/run",
 	     TIMEOUT => $timeout)
 	or return "Bochs error";
@@ -271,13 +281,6 @@ sub grade_test {
     return "ok";
 }
 
-sub grade_create_empty {
-    my (@output) = @_;
-    verify_common (@_);
-    compare_output (["(create-empty) begin"], @output);
-    
-}
-
 sub grade_alarm_multiple {
     verify_alarm (7, @_);
 }
@@ -552,40 +555,40 @@ sub verify_common {
 	if !grep (/Powering off/, @output);
 }
 
-sub eq_lines {
-    my ($actual, $expected) = @_;
-    return $actual eq $expected;
+# Get @output without header or trailer.
+sub get_core_output {
+    my (@output) = @_;
+
+    our ($test);
+    my ($first);
+    for ($first = 0; $first <= $#output; $first++) {
+	$first++, last if $output[$first] =~ /^Executing '$test.*':$/;
+    }
+
+    my ($last);
+    for ($last = $#output; $last >= 0; $last--) {
+	$last--, last if $output[$last] =~ /^Timer: \d+ ticks$/;
+    }
+
+    if ($last < $first) {
+	my ($no_first) = $first > $#output;
+	my ($no_last) = $last < $#output;
+	die "Couldn't locate output.\n";
+    }
+
+    return @output[$first ... $last];
 }
 
 sub compare_output {
     my ($exp, @actual) = @_;
-    @actual = map ("$_\n", @actual);
-
-    # Trim header and trailer from @actual.
-    our ($test);
-    my ($first);
-    for ($first = 0; $first <= $#actual; $first++) {
-	$first++, last if $actual[$first] =~ /^Executing '$test':$/;
-    }
-
-    my ($last);
-    for ($last = $#actual; $last >= 0; $last--) {
-	$last--, last if $actual[$last] =~ /^Timer: \d+ ticks$/;
-    }
-
-    if ($last < $first) {
-	my ($no_first) = $first > $#actual;
-	my ($no_last) = $last < $#actual;
-	die "Couldn't locate output.\n";
-    }
-
-    @actual = @actual[$first ... $last];
+    @actual = get_core_output (map ("$_\n", @actual));
 
     # Fix up lines that look like exit codes.
     for my $i (0...$#actual) {
 	if (my ($process, $code)
 	    = $actual[$i] =~ /^([-a-zA-Z0-9 ]+):.*[ \(](-?\d+)\b\)?$/) {
 	    $process = substr ($process, 0, 15);
+	    $process =~ s/\s.*//;
 	    $actual[$i] = "$process: exit($code)\n";
 	}
     }
@@ -594,15 +597,16 @@ sub compare_output {
     $details .= "$test actual output:\n";
     $details .= join ('', map ("  $_", @actual));
 
+    my (@exp) = map ("$_\n", snarf ($exp));
+
     my ($fuzzy_match) = 0;
-    for (my ($i) = 0; ; $i++) {
-	my ($fn) = $exp;
-	$fn .= $i if $i;
-	if (! -e $fn) {
-	    die "$exp: stat: $!\n" if !$i;
-	    last;
+    while (@exp != 0) {
+	my (@expected);
+	while (@exp != 0) {
+	    my ($s) = shift (@exp);
+	    last if $s eq "--OR--\n";
+	    push (@expected, $s);
 	}
-	my (@expected) = map ("$_\n", snarf ($fn));
 
 	$details .= "\n$test acceptable output:\n";
 	$details .= join ('', map ("  $_", @expected));
@@ -611,7 +615,7 @@ sub compare_output {
 	if ($#actual == $#expected) {
 	    my ($eq) = 1;
 	    for (my ($i) = 0; $i <= $#expected; $i++) {
-		$eq = 0 if !eq_lines ($actual[$i], $expected[$i]);
+		$eq = 0 if $actual[$i] ne $expected[$i];
 	    }
 	    return if $eq;
 	}

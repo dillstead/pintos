@@ -1,3 +1,6 @@
 (create-empty) begin
 (create-empty) end
 create-empty: exit(0)
+--OR--
+(create-empty) begin
+create-empty: exit(-1)

@@ -1,2 +1,0 @@
-(create-null) begin
-create-null: exit(-1)

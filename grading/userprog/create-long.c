@@ -9,9 +9,9 @@ main (void)
   memset (name, 'x', sizeof name);
   name[sizeof name - 1] = '\0';
   
-  printf ("create(\"%s\"):\n", name);
-  printf ("%d\n", create (name, 0));
-  printf ("survived\n");
+  printf ("(create-long) begin\n");
+  printf ("(create-long) create: %d\n", create (name, 0));
+  printf ("(create-long) end\n");
 
   return 0;
 }

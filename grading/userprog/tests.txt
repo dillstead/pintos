@@ -4,14 +4,16 @@ CORRECTNESS [[total]]
 Argument passing
   -3 args-argc: argc is not set correctly
   -3 args-argv0: executable name not passed as argv[0]
+  -3 args-argvn: argv[argc] is not a null pointer
+  -3 args-single: passing single argument fails
   -3 args-multiple: passing multiple arguments fails
-  -3 args-dblspace: using multiple spaces between arguments fails
-Score: /12
+  -3 args-dbl-space: using multiple spaces between arguments fails
+Score: /18
 
 System calls
-  -3 syscall-bad-sp: system call with a bad stack pointer must not crash OS
-  -3 syscall-bad-arg: syscall with argument off top of stack must not crash OS
-  -3 syscall-boundary: syscall with args across page boundary must work
+  -3 sc-bad-sp: system call with a bad stack pointer must not crash OS
+  -3 sc-bad-arg: syscall with argument off top of stack must not crash OS
+  -3 sc-boundary: syscall with args across page boundary must work
 Score: /9
 
 System calls: halt, exec 
@@ -26,7 +28,7 @@ System calls: create
   -1 create-bad-ptr: pass invalid pointer to create system call
   -1 create-long: pass long file name to create system call
   -1 create-exists: pass name of an existing file to create system call
-  -1 create-boundary: pass name of file crossing page boundary
+  -1 create-bound: pass name of file crossing page boundary
 Score: /7
 
 System calls: open

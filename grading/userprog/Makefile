@@ -1,6 +1,8 @@
 SRCDIR = ../../src
 
-SINGLETONS = create-normal create-empty create-null create-invalid create-long 
+SINGLETONS = \
+	$(addprefix create-, normal empty null bad-ptr long exists bound) \
+	$(addprefix args-, argc argv0 argvn single multiple dbl-space)
 
 define SINGLETON_PROG
 PROGS += $(1)
@@ -25,3 +27,5 @@ clean::
 	rm -f $(DISKS)
 
 include $(SRCDIR)/Makefile.userprog
+
+CFLAGS += -Werror
