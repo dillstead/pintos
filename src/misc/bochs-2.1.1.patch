@@ -19,7 +19,7 @@ project documentation, in which timer interrupts are delivered at
 random intervals.
 
 To apply all the patches, cd into the Bochs directory, then type
-	patch -p1 < ~/pintos/src/misc/bochs-2.1.1.patch
+	patch -p1 < $PINTOSROOT/src/misc/bochs-2.1.1.patch
 You will have to supply the proper path to the patch, of course.  You
 can provide the --dry-run option to patch if you want to test whether
 the patch would apply cleanly before actually patching.
@@ -32,6 +32,28 @@ the `pintos' utility:
 	./configure --with-x --with-x11 --with-term --with-nogui
 If you want the gdb stub, add --enable-gdb-stub
 If you want the internal debugger, add --enable-debugger
+
+Here are the commands used to build and install all the versions of
+Bochs we make available on the elaines:
+
+cd /tmp && tar xzf ~/bochs-2.1.1.tar.gz && cd bochs-2.1.1
+patch -p1 < $PINTOSROOT/src/misc/bochs-2.1.1.patch
+CFGOPTS="--with-x --with-x11 --with-term --with-nogui --prefix=/usr/class/cs140/i386"
+(mkdir plain &&
+ cd plain && 
+ ../configure $CFGOPTS && 
+ make && 
+ make install)
+(mkdir with-gdb &&
+ cd with-gdb &&
+ ../configure --enable-gdb-stub $CFGOPTS &&
+ make &&
+ cp bochs /usr/class/cs140/i386/bin/bochs-gdb)
+(mkdir with-dbg &&
+ cd with-dbg &&
+ ../configure --enable-debugger $CFGOPTS &&
+ make &&
+ cp bochs /usr/class/cs140/i386/bin/bochs-dbg)
 
 diff -urp orig/bochs-2.1.1/Makefile.in bochs-2.1.1/Makefile.in
 --- orig/bochs-2.1.1/Makefile.in	2004-02-11 14:28:02.000000000 -0800
