@@ -164,6 +164,9 @@ free (void *p)
   struct arena *a = block_to_arena (b);
   struct desc *d = a->desc;
 
+  if (p == NULL)
+    return;
+
   lock_acquire (&d->lock);
 
   /* Add block to free list. */
