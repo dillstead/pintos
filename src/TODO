@@ -1,14 +1,6 @@
-* Add stats.
-
 * Write, test VM.
 
-* Handling of read-only pages?
-
-* Test list, hash ADTs.
-  - Finish comments for hash.[ch].
-
-* References/bibliography.
-  - Userprog refers to [SysV-i386].
+* Finish comments for hash.[ch].
 
 * Write "tour".
 
