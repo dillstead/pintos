@@ -10,7 +10,9 @@
   - PE linker scripts?  Doesn't seem to support ELF ones.
   - .S files need _ prefixes on symbols.
 
-* Add Solaris support to serial.cc.
+* Implement `jitter'.
+
+* Compile and install gdb, dbg versions.
 
 * Cross-compile notes:
 
