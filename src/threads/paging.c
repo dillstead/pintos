@@ -220,5 +220,7 @@ pagedir_next (uint32_t *pd, void **upage)
 void
 pagedir_activate (uint32_t *pd) 
 {
+  if (pd == NULL)
+    pd = base_page_dir;
   asm volatile ("movl %0,%%cr3" :: "r" (vtop (pd)));
 }
