@@ -22,12 +22,15 @@ filehdr_allocate (struct bitmap *b, off_t length)
   ASSERT (b != NULL);
   ASSERT (length >= 0);
 
+  sector_cnt = (length / DISK_SECTOR_SIZE) + (length % DISK_SECTOR_SIZE > 0);
+  if (sector_cnt > DIRECT_CNT)
+    return false;
+
   h = calloc (1, sizeof *h);
   if (h == NULL)
     return NULL;
 
   h->length = length;
-  sector_cnt = (length / DISK_SECTOR_SIZE) + (length % DISK_SECTOR_SIZE > 0);
   while (h->sector_cnt < sector_cnt)
     {
       size_t sector = bitmap_find_and_set (b);
