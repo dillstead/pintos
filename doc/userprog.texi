@@ -654,7 +654,7 @@ calling convention.  Some of the basics should be familiar from CS
 have seen even more of it.  I've omitted some of the complexity, since
 this isn't a class in how function calls work, so don't expect this to
 be exactly correct in full, gory detail.  If you do want all the
-details, you can refer to @cite{[SysV-i386]}.
+details, you can refer to @bibref{SysV-i386}.
 
 Whenever a function call happens, you need to put the arguments on the
 call stack for that function, before the code for that function

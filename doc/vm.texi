@@ -112,20 +112,20 @@ can effectively ignore this CPU feature.}
 
 @enumerate 1
 @item
-The top 10 bits of the virtual address (bits 22:31) are used to index
+The top 10 bits of the virtual address (bits 22:32) are used to index
 into the page directory.  If the PDE is marked ``present,'' the
 physical address of a page table is read from the PDE thus obtained.
 If the PDE is marked ``not present'' then a page fault occurs.
 
 @item
-The next 10 bits of the virtual address (bits 12:21) are used to index
+The next 10 bits of the virtual address (bits 12:22) are used to index
 into the page table.  If the PTE is marked ``present,'' the physical
 address of a data page is read from the PTE thus obtained.  If the PTE
 is marked ``not present'' then a page fault occurs.
 
 
 @item
-The bottom 12 bits of the virtual address (bits 0:11) are added to the
+The bottom 12 bits of the virtual address (bits 0:12) are added to the
 data page's physical base address, producing the final physical
 address.
 @end enumerate

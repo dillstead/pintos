@@ -79,7 +79,7 @@ why the @code{switch_threads()} that gets called is different from the
 @strong{Warning}: In Pintos, each thread is assigned a small,
 fixed-size execution stack just under @w{4 kB} in size.  The kernel
 does try to detect stack overflow, but it cannot always succeed.  You
-ma cause bizarre problems, such as mysterious kernel panics, if you
+may cause bizarre problems, such as mysterious kernel panics, if you
 declare large data structures as non-static local variables,
 e.g. @samp{int buf[1000];}.  Alternatives to stack allocation include
 the page allocator in @file{threads/palloc.c} and the block allocator
@@ -282,10 +282,7 @@ program twice and have it do exactly the same thing.  On second and
 later runs, you can make new observations without having to discard or
 verify your old observations.  This property is called
 ``reproducibility.''  The simulator we use, Bochs, can be set up for
-reproducibility.  If you use the Bochs configuration files we provide,
-which specify @samp{ips: @var{n}} where @var{n} is a number of
-simulated instructions per second, your simulations can be
-reproducible.
+reproducibility, and that's the way that @command{pintos} invokes it.
 
 Of course, a simulation can only be reproducible from one run to the
 next if its input is the same each time.  For simulating an entire
@@ -586,7 +583,7 @@ the function isn't actually used by other @file{.c} files, make it
 
 @menu
 * Problem 1-1 Alarm Clock FAQ::  
-* Problem 1-2 Join FAQ::       
+* Problem 1-2 Join FAQ::        
 * Problem 1-3 Priority Scheduling FAQ::  
 * Problem 1-4 Advanced Scheduler FAQ::  
 @end menu

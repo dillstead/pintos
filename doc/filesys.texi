@@ -1,4 +1,4 @@
-@node Project 4--File Systems, Multilevel Feedback Scheduling, Project 3--Virtual Memory, Top
+@node Project 4--File Systems, References, Project 3--Virtual Memory, Top
 @chapter Project 4: File Systems
 
 In the previous two assignments, you made extensive use of a

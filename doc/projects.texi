@@ -4,6 +4,30 @@
 @settitle Pintos Projects
 @c %**end of header
 
+@c @bibref{} macro
+@iftex
+@macro bibref{cite}
+[\cite\]
+@end macro
+@end iftex
+@ifinfo
+@ifnotplaintext
+@macro bibref{cite}
+@ref{\cite\}
+@end macro
+@end ifnotplaintext
+@ifplaintext
+@macro bibref{cite}
+[\cite\]
+@end macro
+@end ifplaintext
+@end ifinfo
+@ifhtml
+@macro bibref{cite}
+[@ref{\cite\}]
+@end macro
+@end ifhtml
+
 @titlepage
 @title Pintos Projects
 @end titlepage
@@ -21,6 +45,7 @@
 * Project 2--User Programs::    
 * Project 3--Virtual Memory::   
 * Project 4--File Systems::     
+* References::
 * Multilevel Feedback Scheduling::  
 * Coding Standards::            
 * Project Documentation::       
@@ -32,6 +57,7 @@
 @include userprog.texi
 @include vm.texi
 @include filesys.texi
+@include references.texi
 @include mlfqs.texi
 @include standards.texi
 @include doc.texi

@@ -1,4 +1,4 @@
-@node Multilevel Feedback Scheduling, Coding Standards, Project 4--File Systems, Top
+@node Multilevel Feedback Scheduling, Coding Standards, References, Top
 @appendix Multilevel Feedback Scheduling
 
 This section gives a brief overview of the behavior of the Solaris 2.6
