@@ -71,7 +71,7 @@ malloc (size_t size)
       break;
   if (d == descs + desc_cnt) 
     {
-      printk ("can't malloc %zu byte object\n", size);
+      printk ("malloc: %zu byte allocation too big\n", size);
       return NULL; 
     }
   
