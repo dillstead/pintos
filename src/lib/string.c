@@ -339,7 +339,7 @@ strlcpy (char *dst, const char *src, size_t size)
     {
       size_t dst_len = size - 1;
       if (src_len < dst_len)
-        src_len = dst_len;
+        dst_len = src_len;
       memcpy (dst, src, dst_len);
       dst[dst_len] = '\0';
     }
