@@ -119,7 +119,6 @@ file_write_at (struct file *file, const void *buffer_, off_t size,
       file_ofs += chunk_size;
       bytes_written += chunk_size;
     }
-  free (file->bounce);
 
   return bytes_written;
 }
