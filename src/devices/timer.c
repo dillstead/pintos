@@ -55,31 +55,39 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
-/* Suspends execution for approximately MS milliseconds. */
+/* Suspends executions for approximately TICKS timer ticks. */
 void
-timer_msleep (int64_t ms) 
+timer_sleep (int64_t ticks) 
 {
-  int64_t ticks = (int64_t) DIV_ROUND_UP (ms * TIMER_FREQ, 1000);
   int64_t start = timer_ticks ();
 
   while (timer_elapsed (start) < ticks) 
     continue;
 }
 
-/* Suspends execution for approximately US microseconds.
-   Note: this is ridiculously inaccurate. */
-void
-timer_usleep (int64_t us) 
+/* Returns MS milliseconds in timer ticks, rounding up. */
+int64_t
+timer_ms2ticks (int64_t ms) 
 {
-  timer_msleep (us / 1000 + 1);
+  /*       MS / 1000 s          
+     ------------------------ = MS * TIMER_FREQ / 1000 ticks. 
+     (1 / TIMER_FREQ) ticks/s
+  */
+  return DIV_ROUND_UP (ms * TIMER_FREQ, 1000);
 }
 
-/* Suspends execution for approximately NS nanoseconds.
-   Note: this is ridiculously inaccurate. */
-void
-timer_nsleep (int64_t ns) 
+/* Returns US microseconds in timer ticks, rounding up. */
+int64_t
+timer_us2ticks (int64_t us) 
 {
-  timer_msleep (ns / 1000000 + 1);
+  return DIV_ROUND_UP (us * TIMER_FREQ, 1000000);
+}
+
+/* Returns NS nanoseconds in timer ticks, rounding up. */
+int64_t
+timer_ns2ticks (int64_t ns) 
+{
+  return DIV_ROUND_UP (ns * TIMER_FREQ, 1000000000);
 }
 
 /* Timer interrupt handler. */

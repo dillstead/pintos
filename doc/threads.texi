@@ -7,9 +7,9 @@ better understanding of synchronization problems. Additionally, you
 will use at least part of this increased functionality in future
 assignments.
 
-You will be working in the @file{threads} and @file{devices}
-directories for this assignment.  Compilation should be done in the
-@file{threads} directory.
+You will be working in primarily in the @file{threads} directory for
+this assignment, with some work in the @file{devices} directory on the
+side.  Compilation should be done in the @file{threads} directory.
 
 @menu
 * Understanding Threads::       
@@ -157,9 +157,9 @@ Problem 4.
 @section Problem 1-2: Alarm Clock
 
 Improve the implementation of the timer device defined in
-@file{devices/timer.c} by reimplementing @code{timer_msleep(0}.
-Threads call @code{timer_msleep(@var{x})} to suspend execution until
-time has advanced by at least @w{@var{x} milliseconds}.  This is
+@file{devices/timer.c} by reimplementing @code{timer_sleep()}.
+Threads call @code{timer_sleep(@var{x})} to suspend execution until
+time has advanced by at least @w{@var{x} timer ticks}.  This is
 useful for threads that operate in real-time, for example, for
 blinking the cursor once per second.  There is no requirement that
 threads start running immediately after waking up; just put them on
@@ -173,9 +173,8 @@ advanced far enough.  This is undesirable because it wastes time that
 could potentially be used more profitably by another thread.  Your
 solution should not busy wait.
 
-The argument to @code{timer_msleep()} is expressed in milliseconds.
-You must convert it into timer ticks, rounding up.  The code provided
-does this acceptably; there is no need to change it.
+The argument to @code{timer_sleep()} is expressed in timer ticks, not
+in milliseconds or some other unit.
 
 @node Problem 1-2 Join, Problem 1-3 Priority Scheduling, Problem 1-1 Alarm Clock, Project 1--Threads
 @section Problem 1-2: Join
@@ -357,17 +356,17 @@ attempt to sleep, you won't be able to call those in
 
 Having said that, you need to make sure that global data does not get
 updated by multiple threads simultaneously executing
-@code{timer_msleep()}.  Here are some pieces of information to think
+@code{timer_sleep()}.  Here are some pieces of information to think
 about:
 
 @enumerate a
 @item
 Interrupts are turned off while @code{timer_interrupt()} runs.  This
 means that @code{timer_interrupt()} will not be interrupted by a
-thread running in @code{timer_msleep()}.
+thread running in @code{timer_sleep()}.
 
 @item
-A thread in @code{timer_msleep()}, however, can be interrupted by a
+A thread in @code{timer_sleep()}, however, can be interrupted by a
 call to @code{timer_interrupt()}, except when that thread has turned
 off interrupts.
 

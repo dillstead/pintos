@@ -218,7 +218,7 @@ demonstrate the performance improvement.
 Note that write-behind makes your filesystem more fragile in the face
 of crashes.  Therefore, you should implement some manner to
 periodically write all cached blocks to disk.  If you have
-@code{timer_msleep()} from the first project working, this is an
+@code{timer_sleep()} from the first project working, this is an
 excellent application for it.
 
 Likewise, read-ahead is only really useful when done asynchronously.
