@@ -11,7 +11,7 @@ $(BUILD_SUBDIRS):
 build:
 	$(MKDIR) $@
 build/Makefile: ../Makefile.build
-	$(LN) $< $@
+	$(LN) -f $< $@
 
 clean:
 	rm -rf build
