@@ -1,4 +1,4 @@
-#include "userprog/addrspace.h"
+#include "userprog/process.h"
 #include <debug.h>
 #include <inttypes.h>
 #include <round.h>
@@ -22,9 +22,9 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled before
-   addrspace_execute() returns.*/
+   process_execute() returns.*/
 tid_t
-addrspace_execute (const char *filename) 
+process_execute (const char *filename) 
 {
   char *fn_copy;
   tid_t tid;
@@ -67,7 +67,7 @@ execute_thread (void *filename_)
     thread_exit ();
 
   /* Switch page tables. */
-  addrspace_activate ();
+  process_activate ();
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -80,6 +80,34 @@ execute_thread (void *filename_)
        : /* no outputs */
        : "g" (&if_));
   NOT_REACHED ();
+}
+
+/* Destroys the user address space in T and frees all of its
+   resources. */
+void
+process_destroy (struct thread *t)
+{
+  ASSERT (t != thread_current ());
+
+  if (t->pagedir != NULL) 
+    {
+      pagedir_destroy (t->pagedir);
+      t->pagedir = NULL; 
+    }
+}
+
+/* Sets up the CPU for running user code in the current
+   thread. */
+void
+process_activate (void)
+{
+  struct thread *t = thread_current ();
+
+  /* Activate T's page tables. */
+  pagedir_activate (t->pagedir);
+
+  /* Set T's kernel stack for use in processing interrupts. */
+  tss_set_esp0 ((uint8_t *) t + PGSIZE);
 }
 
 /* We load ELF binaries.  The following definitions are taken
@@ -246,36 +274,8 @@ load (const char *filename, void (**eip) (void), void **esp)
   file_close (file);
   return success;
 }
-
-/* Destroys the user address space in T and frees all of its
-   resources. */
-void
-addrspace_destroy (struct thread *t)
-{
-  ASSERT (t != thread_current ());
-
-  if (t->pagedir != NULL) 
-    {
-      pagedir_destroy (t->pagedir);
-      t->pagedir = NULL; 
-    }
-}
-
-/* Sets up the CPU for running user code in the current
-   thread. */
-void
-addrspace_activate (void)
-{
-  struct thread *t = thread_current ();
-
-  /* Activate T's page tables. */
-  pagedir_activate (t->pagedir);
-
-  /* Set T's kernel stack for use in processing interrupts. */
-  tss_set_esp0 ((uint8_t *) t + PGSIZE);
-}
 
-/* addrspace_load() helpers. */
+/* load() helpers. */
 
 static bool install_page (void *upage, void *kpage);
 

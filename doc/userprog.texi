@@ -56,15 +56,9 @@ doing is to simply go over each part you'll be working with.  In
 where the bulk of your work will be:
 
 @table @file
-@item addrspace.c
-@itemx addrspace.h
-An address space keeps track of all the data necessary to execute a
-user program.  Address space data is stored in @code{struct thread},
-but manipulated only by @file{addrspace.c}.  Address spaces need to
-keep track of things like paging information for the process (so that
-it knows which memory the process is using).  Address spaces also
-handle loading the program into memory and starting up the process's
-execution.
+@item process.c
+@itemx process.h
+Loads ELF binaries and starts processes.
 
 @item pagedir.c
 @itemx pagedir.h
@@ -172,16 +166,16 @@ we require you to support.)  The only other limitation is that Pintos
 can't run programs using floating point operations, since it doesn't
 include the necessary kernel functionality to save and restore the
 processor's floating-point unit when switching threads.  You can look
-in @file{test} directory for some examples.
+in @file{tests/userprog} directory for some examples.
 
 Pintos loads ELF executables, where ELF is an executable format used
 by Linux, Solaris, and many other Unix and Unix-like systems.
 Therefore, you can use any compiler and linker that produce
 80@var{x}86 ELF executables to produce programs for Pintos.  We
-recommend using the tools we provide in the @file{tests} directory.  By
-default, the @file{Makefile} in this directory will compile the test
-programs we provide.  You can edit the @file{Makefile} to compile your
-own test programs as well.
+recommend using the tools we provide in the @file{tests/userprog}
+directory.  By default, the @file{Makefile} in this directory will
+compile the test programs we provide.  You can edit the
+@file{Makefile} to compile your own test programs as well.
 
 One thing you should realize immediately is that, until you use the
 above operation to copy a test program to the emulated disk, Pintos
@@ -222,9 +216,9 @@ access kernel virtual memory will cause a page fault, handled by
 @code{page_fault()} in @file{userprog/exception.c}, and the process
 will be terminated.  Kernel threads can access both kernel virtual
 memory and, if a user process is running, the user virtual memory of
-the running process.  However, an attempt to access memory at a user
-virtual address that doesn't have a page mapped into it will also
-cause a page fault.
+the running process.  However, even in the kernel, an attempt to
+access memory at a user virtual address that doesn't have a page
+mapped into it will cause a page fault.
 
 @node Global Requirements
 @section Global Requirements
@@ -246,13 +240,13 @@ first process.
 @node Problem 2-1 Argument Passing
 @section Problem 2-1: Argument Passing
 
-Currently, @code{thread_execute()} does not support passing arguments
+Currently, @code{process_execute()} does not support passing arguments
 to new processes.  UNIX and other operating systems do allow passing
 command line arguments to a program, which accesses them via the argc,
 argv arguments to main.  You must implement this functionality by
-extending @code{thread_execute()} so that instead of simply taking a
+extending @code{process_execute()} so that instead of simply taking a
 program file name, it can take a program name with arguments as a
-single string.  That is, @code{thread_execute("grep foo *.c")} should
+single string.  That is, @code{process_execute("grep foo *.c")} should
 be a legal call.  @xref{80x86 Calling Convention}, for information on
 exactly how this works.
 
@@ -374,7 +368,7 @@ is not safe to call into the filesystem code provided in the
 recommend adding a single lock that controls access to the filesystem
 code.  You should acquire this lock before calling any functions in
 the @file{filesys} directory, and release it afterward.  Don't forget
-that @file{addrspace_load()} also accesses files.  @strong{For now, we
+that @file{process_execute()} also accesses files.  @strong{For now, we
 recommend against modifying code in the @file{filesys} directory.}
 
 We have provided you a function for each system call in
@@ -433,7 +427,7 @@ You need to modify @file{tests/Makefile}.
 @b{What's the difference between @code{tid_t} and @code{pid_t}?}
 
 A @code{tid_t} identifies a kernel thread, which may have a user
-process running in it (if created with @code{thread_execute()}) or not
+process running in it (if created with @code{process_execute()}) or not
 (if created with @code{thread_create()}).  It is a data type used only
 in the kernel.
 
@@ -464,6 +458,10 @@ dereference user pointers directly and handle page faults by
 terminating the process.  In either case, you'll need to reject kernel
 pointers as a special case.
 
+If you choose to translate user addresses into kernel addresses,
+you'll want to look at @file{threads/mmu.h}, which has all kinds of
+useful functions for manipulating virtual addresses.
+
 @item
 @b{I'm also confused about reading from and writing to the stack. Can
 you help?}
@@ -485,6 +483,12 @@ the location.
 @item
 Each character is 1 byte.
 @end itemize
+
+@item
+@b{Why doesn't keyboard input work with @option{-nv}?}
+
+Serial input isn't implemented.  Don't use @option{-nv} if you want to
+use the shell or otherwise type at the keyboard.
 @end enumerate
 
 @item Argument Passing FAQs

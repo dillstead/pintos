@@ -21,7 +21,7 @@
 #include "threads/test.h"
 #include "threads/thread.h"
 #ifdef USERPROG
-#include "userprog/addrspace.h"
+#include "userprog/process.h"
 #include "userprog/exception.h"
 #include "userprog/gdt.h"
 #include "userprog/syscall.h"
@@ -113,7 +113,7 @@ main (void)
   if (initial_program != NULL)
     {
       printf ("\nExecuting '%s':\n", initial_program);
-      addrspace_execute (initial_program); 
+      process_execute (initial_program); 
     }
 #else
   test ();

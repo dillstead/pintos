@@ -16,7 +16,7 @@ directory contains only the @file{Makefile}s.  The only change from
 write will either be newly generated files (e.g.@: if you choose to
 implement your paging code in their own source files), or will be
 modifications to pre-existing code (e.g.@: you will change the
-behavior of @file{addrspace.c} significantly).
+behavior of @file{process.c} significantly).
 
 You will be building this assignment on the last one.  It will benefit
 you to get your project 2 in good working order before this assignment
@@ -140,6 +140,28 @@ address.
        0|____________|  \__\0|____________|  \____\|____________|
                            /                      /
 @end example
+
+Header @file{threads/mmu.h} has useful functions for various
+operations on virtual addresses.  You should look over the header
+yourself, but its most important functions include these:
+
+@table @code
+@item pd_no(@var{va})
+Returns the page directory index in virtual address @var{va}.
+
+@item pt_no(@var{va})
+Returns the page table index in virtual address @var{va}.
+
+@item pg_ofs(@var{va})
+Returns the page offset in virtual address @var{va}.
+
+@item pg_round_down(@var{va})
+Returns @var{va} rounded down to the nearest page boundary, that is,
+@var{va} but with its page offset set to 0.
+
+@item pg_round_up(@var{va})
+Returns @var{va} rounded up to the nearest page boundary.
+@end table
 
 @node Disk as Backing Store
 @section Disk as Backing Store
@@ -265,7 +287,7 @@ Follow the PDE to the page table.  Point the PTE for the faulting
 virtual address to the physical page found in step 2.
 @end enumerate
 
-You'll need to modify the ELF loader in @file{userprog/addrspace.c} to
+You'll need to modify the ELF loader in @file{userprog/process.c} to
 do page table management according to your new design.  As supplied,
 it reads all the process's pages from disk and initializes the page
 tables for them at the same time.  For testing purposes, you'll
@@ -328,7 +350,7 @@ file itself as backing store for read-only segments, since these
 segments won't change.
 
 There are a few special cases.  Look at the loop in
-@code{load_segment()} in @file{userprog/addrspace.c}.  Each time
+@code{load_segment()} in @file{userprog/process.c}.  Each time
 around the loop, @code{read_bytes} represents the number of bytes to
 read from the executable file and @code{zero_bytes} represents the number
 of bytes to initialize to zero following the bytes read.  The two

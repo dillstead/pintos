@@ -12,7 +12,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #ifdef USERPROG
-#include "userprog/addrspace.h"
+#include "userprog/process.h"
 #include "userprog/gdt.h"
 #endif
 
@@ -357,7 +357,7 @@ destroy_thread (struct thread *t)
   ASSERT (t != thread_current ());
 
 #ifdef USERPROG
-  addrspace_destroy (t);
+  process_destroy (t);
 #endif
   if (t != initial_thread)
     palloc_free (t);
@@ -387,7 +387,7 @@ schedule_tail (struct thread *prev)
 
 #ifdef USERPROG
   /* Activate the new address space. */
-  addrspace_activate ();
+  process_activate ();
 #endif
 
   /* If the thread we switched from is dying, destroy it.
