@@ -1,4 +1,4 @@
-SUBDIRS = src grading doc
+SUBDIRS = src grading doc tests
 
 all::
 	@echo "This makefile has only 'clean' targets."
@@ -8,3 +8,6 @@ clean::
 
 distclean:: clean
 	find . -name '*~' -exec rm '{}' \;
+
+check::
+	make -C tests $@
