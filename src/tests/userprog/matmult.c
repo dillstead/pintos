@@ -13,18 +13,16 @@
 /* You should define this to be large enough that the arrays
    don't fit in physical memory.
 
-   Dim    Memory
-   ---  --------
-    20     93 kB
-    30    316 kB
-    40    750 kB
-    50  1,464 kB
-    60  2,531 kB
-    70  4,019 kB
-    80  6,000 kB
-    90  8,542 kB
-   100 11,718 kB */
-#define Dim 20
+    Dim       Memory
+ ------     --------
+     16         3 kB
+     64        48 kB
+    256       768 kB
+  1,024    12,288 kB
+  4,096   196,608 kB
+ 16,384 3,145,728 kB */
+
+#define Dim 1024
 
 int A[Dim][Dim];
 int B[Dim][Dim];
