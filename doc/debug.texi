@@ -204,3 +204,21 @@ Bochs.  Instructions for doing this are firmly out of the scope of
 this document.  However, if you want to debug page faults as suggested
 above, a good place to start adding @code{printf()}s is
 @code{BX_CPU_C::dtranslate_linear()} in @file{cpu/paging.cc}.
+
+@node Debugging Tips
+@section Tips
+
+The page allocator in @file{threads/palloc.c} clears all the bytes in
+pages to @t{0xcc} when they are freed.  Thus, if you see an attempt to
+dereference a pointer like @t{0xcccccccc}, or some other reference to
+@t{0xcc}, there's a good chance you're trying to reuse a page that's
+already been freed.  Also, byte @t{0xcc} is the CPU opcode for
+``invoke interrupt 3,'' so if you see an error like @code{Interrupt
+0x03 (#BP Breakpoint Exception)}, Pintos tried to execute code in a
+freed page.
+
+Similarly, the block allocator in @file{threads/malloc.c} clears all
+the bytes in freed blocks to @t{0xcd}.  The two bytes @t{0xcdcd} are
+a CPU opcode for ``invoke interrupt @t{0xcd},'' so @code{Interrupt
+0xcd (unknown)} is a good sign that you tried to execute code in a
+block freed with @code{free()}.
