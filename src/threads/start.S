@@ -2,7 +2,7 @@
 # is the very beginning of its binary image.  All we need to do is
 # jump to the real entry point.
 
-	.globl start
+.globl start
 start:	call main
 
 	# If main returns, spin.

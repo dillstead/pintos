@@ -1,6 +1,6 @@
 #include "switch.h"
 
-        .globl switch_threads 
+.globl switch_threads 
 switch_threads:
 	# Save caller's register state.
 	# Note that the SVR4 ABI allows us to destroy %eax, %ecx, %edx.
@@ -11,7 +11,7 @@ switch_threads:
 	pushl %edi
 
 	# Get offsetof (struct thread, stack).
-	.globl thread_stack_ofs
+.globl thread_stack_ofs
 	mov thread_stack_ofs, %edx
 
 	# Save current stack pointer to old thread's stack, if any.
@@ -32,14 +32,14 @@ switch_threads:
 	popl %ebx
         ret
 
-	.globl switch_entry
+.globl switch_entry
 switch_entry:
 	# Discard thread_switch() arguments.
 	addl $8, %esp
 
 	# Call schedule_tail(prev).
 	pushl %eax
-	.globl schedule_tail
+.globl schedule_tail
 	call schedule_tail
 	addl $4, %esp
 

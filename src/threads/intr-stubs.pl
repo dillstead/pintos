@@ -4,7 +4,7 @@ print <<'EOF';
 #include "mmu.h"
 
 	.data
-	.globl intr_stubs
+.globl intr_stubs
 intr_stubs:
 EOF
 
@@ -20,7 +20,7 @@ EOF
 
 for $i (0...255) {
     $x = sprintf ("%02x", $i);
-    print "\t.globl intr${x}_stub\n";
+    print ".globl intr${x}_stub\n";
     print "intr${x}_stub:\n";
     print "\tpushl \$0\n"
 	if ($i != 8 && $i != 10 && $i != 11
@@ -45,13 +45,12 @@ intr_entry:
 
 	# Call handler.
 	pushl %esp
-	.globl intr_handler
+.globl intr_handler
 	call intr_handler
 	addl $4, %esp
 
-	.globl intr_exit
+.globl intr_exit
 intr_exit:
-
 	# Restore caller's registers.
 	popal
 	popl %es
