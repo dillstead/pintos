@@ -19,6 +19,7 @@ char *strchr (const char *, int);
 size_t strlcpy (char *, const char *, size_t);
 size_t strlen (const char *);
 int strcmp (const char *, const char *);
+char *strtok_r (char *, const char *, char **);
 
 void vprintk (const char *, va_list);
 void printk (const char *, ...) PRINTF_FORMAT (1, 2);
