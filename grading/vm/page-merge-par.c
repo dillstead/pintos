@@ -35,7 +35,7 @@ init (void)
 
 /* Sort each chunk of buf1 using a subprocess. */
 static void
-sort (void)
+sort_chunks (void)
 {
   pid_t children[CHUNK_CNT];
   size_t i;
@@ -162,7 +162,7 @@ main (void)
 {
   printf ("(page-merge-par) begin\n");
   init ();
-  sort ();
+  sort_chunks ();
   merge ();
   verify ();
   printf ("(page-merge-par) end\n");
