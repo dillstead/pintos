@@ -141,16 +141,16 @@ close (int fd)
   syscall1 (SYS_close, fd);
 }
 
-bool
-mmap (int fd, void *addr, unsigned length)
+mapid_t
+mmap (int fd, void *addr)
 {
-  return syscall3 (SYS_mmap, fd, addr, length);
+  return syscall2 (SYS_mmap, fd, addr);
 }
 
 bool
-munmap (void *addr, unsigned length)
+munmap (mapid_t mapid)
 {
-  return syscall2 (SYS_munmap, addr, length);
+  return syscall1 (SYS_munmap, mapid);
 }
 
 bool
