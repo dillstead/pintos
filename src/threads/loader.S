@@ -314,7 +314,7 @@ panic:  .code16			# We only panic in real mode.
 	jmp 1b
 
 panicmsg:
-	.ascii "Loader panic!\r\n"
+	.ascii "Panic!"
 	.byte 0
 
 #### Memory size in 4 kB pages.
