@@ -1,13 +1,13 @@
 Testing multiple priority donation.
 If the statements printed below are all true, you pass.
- 1. Main thread should have priority 30.  Actual priority: 30.
- 2. Main thread should have priority 31.  Actual priority: 31.
- 3. Thread b acquired lock b.
- 4. Thread b finished.
- 5. Thread b should have just finished.
- 6. Main thread should have priority 30.  Actual priority: 30.
- 7. Thread a acquired lock a.
- 8. Thread a finished.
- 9. Thread a should have just finished.
-10. Main thread should have priority 29.  Actual priority: 29.
+Main thread should have priority 30.  Actual priority: 30.
+Main thread should have priority 31.  Actual priority: 31.
+Thread b acquired lock b.
+Thread b finished.
+Thread b should have just finished.
+Main thread should have priority 30.  Actual priority: 30.
+Thread a acquired lock a.
+Thread a finished.
+Thread a should have just finished.
+Main thread should have priority 29.  Actual priority: 29.
 Multiple priority priority donation test finished.

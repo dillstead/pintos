@@ -1,11 +1,11 @@
 Testing priority donation.
 If the statements printed below are all true, you pass.
-1. This thread should have priority 30.  Actual priority: 30.
-2. This thread should have priority 31.  Actual priority: 31.
-3. acquire2: got the lock
-4. acquire2: done
-5. acquire1: got the lock
-6. acquire1: done
-7. acquire2, acquire1 must already have finished, in that order.
-8. This should be the last line before finishing this test.
+This thread should have priority 30.  Actual priority: 30.
+This thread should have priority 31.  Actual priority: 31.
+acquire2: got the lock
+acquire2: done
+acquire1: got the lock
+acquire1: done
+acquire2, acquire1 must already have finished, in that order.
+This should be the last line before finishing this test.
 Priority donation test done.

@@ -12,6 +12,7 @@
 
 #include "threads/test.h"
 #include <stdio.h>
+#include "devices/timer.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
@@ -31,42 +32,65 @@ static thread_func simple_thread_func;
 
 struct simple_thread_data 
   {
+    int id;                     /* Sleeper ID. */
+    int iterations;             /* Iterations so far. */
     struct lock *lock;          /* Lock on output. */
-    char **out;                 /* Output pointer. */
+    int **op;                   /* Output buffer position. */
   };
+
+#define THREAD_CNT 10
+#define ITER_CNT 5
 
 static void
 test_fifo (void) 
 {
-  struct simple_thread_data data;
+  struct simple_thread_data data[THREAD_CNT];
   struct lock lock;
-  char *output, *cp;
+  int *output, *op;
   int i;
   
   printf ("\n"
           "Testing FIFO preemption.\n"
-          "10 threads will iterate 5 times in the same order each time.\n"
-          "If the order varies then there is a bug.\n");
+          "%d threads will iterate %d times in the same order each time.\n"
+          "If the order varies then there is a bug.\n",
+          THREAD_CNT, ITER_CNT);
 
-  output = cp = malloc (5 * 10 * 128);
+  output = op = malloc (sizeof *output * THREAD_CNT * ITER_CNT * 2);
   ASSERT (output != NULL);
   lock_init (&lock, "output");
 
-  data.lock = &lock;
-  data.out = &cp;
-
   thread_set_priority (PRI_DEFAULT + 2);
-  for (i = 0; i < 10; i++) 
+  for (i = 0; i < THREAD_CNT; i++) 
     {
       char name[16];
+      struct simple_thread_data *d = data + i;
       snprintf (name, sizeof name, "%d", i);
-      thread_create (name, PRI_DEFAULT + 1, simple_thread_func, &data);
+      d->id = i;
+      d->iterations = 0;
+      d->lock = &lock;
+      d->op = &op;
+      thread_create (name, PRI_DEFAULT + 1, simple_thread_func, d);
     }
+
+  /* This should ensure that the iterations start at the
+     beginning of a timer tick. */
+  timer_sleep (10);
   thread_set_priority (PRI_DEFAULT);
 
   lock_acquire (&lock);
-  *cp = '\0';
-  printf ("%sFIFO preemption test done.\n", output);
+  for (; output < op; output++) 
+    {
+      struct simple_thread_data *d;
+
+      ASSERT (*output >= 0 && *output < THREAD_CNT);
+      d = data + *output;
+      if (d->iterations != ITER_CNT)
+        printf ("Thread %d iteration %d\n", d->id, d->iterations);
+      else
+        printf ("Thread %d done!\n", d->id);
+      d->iterations++;
+    }
+  printf ("FIFO preemption test done.\n");
   lock_release (&lock);
 }
 
@@ -76,17 +100,11 @@ simple_thread_func (void *data_)
   struct simple_thread_data *data = data_;
   int i;
   
-  for (i = 0; i < 5; i++) 
+  for (i = 0; i <= ITER_CNT; i++) 
     {
       lock_acquire (data->lock);
-      *data->out += snprintf (*data->out, 128, "Thread %s iteration %d\n",
-                              thread_name (), i);
+      *(*data->op)++ = data->id;
       lock_release (data->lock);
       thread_yield ();
     }
-
-  lock_acquire (data->lock);
-  *data->out += snprintf (*data->out, 128,
-                          "Thread %s done!\n", thread_name ());
-  lock_release (data->lock);
 }

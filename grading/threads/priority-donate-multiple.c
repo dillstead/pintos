@@ -45,21 +45,21 @@ test_donate_multiple (void)
   lock_acquire (&b);
 
   thread_create ("a", PRI_DEFAULT + 1, a_thread_func, &a);
-  printf (" 1. Main thread should have priority %d.  Actual priority: %d.\n",
+  printf ("Main thread should have priority %d.  Actual priority: %d.\n",
           PRI_DEFAULT + 1, thread_get_priority ());
 
   thread_create ("b", PRI_DEFAULT + 2, b_thread_func, &b);
-  printf (" 2. Main thread should have priority %d.  Actual priority: %d.\n",
+  printf ("Main thread should have priority %d.  Actual priority: %d.\n",
           PRI_DEFAULT + 2, thread_get_priority ());
 
   lock_release (&b);
-  printf (" 5. Thread b should have just finished.\n");
-  printf (" 6. Main thread should have priority %d.  Actual priority: %d.\n",
+  printf ("Thread b should have just finished.\n");
+  printf ("Main thread should have priority %d.  Actual priority: %d.\n",
           PRI_DEFAULT + 1, thread_get_priority ());
 
   lock_release (&a);
-  printf (" 9. Thread a should have just finished.\n");
-  printf ("10. Main thread should have priority %d.  Actual priority: %d.\n",
+  printf ("Thread a should have just finished.\n");
+  printf ("Main thread should have priority %d.  Actual priority: %d.\n",
           PRI_DEFAULT, thread_get_priority ());
   printf ("Multiple priority priority donation test finished.\n");
 }
@@ -70,9 +70,9 @@ a_thread_func (void *lock_)
   struct lock *lock = lock_;
 
   lock_acquire (lock);
-  printf (" 7. Thread a acquired lock a.\n");
+  printf ("Thread a acquired lock a.\n");
   lock_release (lock);
-  printf (" 8. Thread a finished.\n");
+  printf ("Thread a finished.\n");
 }
 
 static void
@@ -81,7 +81,7 @@ b_thread_func (void *lock_)
   struct lock *lock = lock_;
 
   lock_acquire (lock);
-  printf (" 3. Thread b acquired lock b.\n");
+  printf ("Thread b acquired lock b.\n");
   lock_release (lock);
-  printf (" 4. Thread b finished.\n");
+  printf ("Thread b finished.\n");
 }

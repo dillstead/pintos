@@ -33,8 +33,8 @@ struct sleep_thread_data
     tid_t tid;                  /* Thread ID. */
     int id;                     /* Sleeper ID. */
 
-    struct lock *lock;          /* Lock on access to `out'. */
-    int **out;                  /* Output buffer. */
+    struct lock *lock;          /* Lock on access to `op'. */
+    int **op;                   /* Output buffer position. */
   };
 
 static void sleeper (void *);
@@ -77,7 +77,7 @@ test_sleep (int iterations)
       t->id = i;
 
       t->lock = &lock;
-      t->out = &op;
+      t->op = &op;
     }
   
   /* Wait for all the threads to finish. */
@@ -109,7 +109,7 @@ test_sleep (int iterations)
                 t->id, product, new_prod);
     }
   
-  printf ("...done\n", output);
+  printf ("...done\n");
 }
 
 static void
@@ -120,20 +120,13 @@ sleeper (void *t_)
 
   for (i = 1; i <= t->iterations; i++) 
     {
-      int old_product;
-      int new_product = i * t->duration;
-
-      timer_sleep ((t->start + new_product) - timer_ticks ());
+      timer_sleep ((t->start + i * t->duration) - timer_ticks ());
 
       lock_acquire (t->lock);
-      *t->op++ = t->id;
+      *(*t->op)++ = t->id;
       lock_release (t->lock);
     }
   
-  lock_acquire (t->lock);
-  *t->op++ = t->id;
-  lock_release (t->lock);
-
   /* Signal completion. */
   sema_up (&t->done);
 }

@@ -89,7 +89,11 @@ if ($grade) {
     print OUT "$p_got points out of $p_pos total\n\n";
 
     print OUT map ("$_\n", @tests), "\n";
-    print OUT map ("$_\n", @review);
+    print OUT map ("$_\n", @review), "\n";
+
+    print OUT "DETAILS\n";
+    print OUT "-------\n\n";
+    print OUT map ("$_\n", snarf ("details.out"));
 
     exit 0;
 }
@@ -236,6 +240,17 @@ sub really_run_test {
 	open (CONSTANTS, ">pintos/src/constants.h");
 	print CONSTANTS $defines;
 	close (CONSTANTS);
+    }
+
+    # Changes devices/timer.c if necessary.
+    my ($new_time_slice) = $test eq 'priority-fifo' ? 100 : 1;
+    my (@timer) = snarf ("pintos/src/devices/timer.c");
+    if (!grep (/^\#define TIME_SLICE $new_time_slice$/, @timer)) {
+	@timer = grep (!/^\#define TIME_SLICE/, @timer);
+	unshift (@timer, "#define TIME_SLICE $new_time_slice");
+	open (TIMER, ">pintos/src/devices/timer.c");
+	print TIMER map ("$_\n", @timer);
+	close (TIMER);
     }
 
     # Copy in the new test.c and delete enough files to ensure a full rebuild.
@@ -592,43 +607,25 @@ sub compare_output {
     }
 
     # They differ.  Output a diff.
-    my ($diff) = "";
+    my (@diff) = "";
     my ($d) = Algorithm::Diff->new (\@expected, \@actual);
-    $d->Base (1);
     while ($d->Next ()) {
 	my ($ef, $el, $af, $al) = $d->Get (qw (min1 max1 min2 max2));
 	if ($d->Same ()) {
-	    if ($af != $al) {
-		$diff .= "Actual lines $af...$al match expected lines "
-		    . "$ef...$el.\n";
-	    } else {
-		$diff .= "Actual line $af matches expected line $ef.\n";
-	    }
+	    push (@diff, map ("  $_", $d->Items (1)));
 	} else {
-	    my (@i1) = $d->Items (1);
-	    my (@i2) = $d->Items (2);
-	    if (!@i1) {
-		$diff .= "Extra or misplaced line(s) $af...$al "
-		    . "in actual output:\n";
-		$diff .= number_lines ($af, \@i2);
-	    } elsif (!$d->Items (2)) {
-		$diff .= "Expected line(s) $ef...$el missing or misplaced:\n";
-		$diff .= number_lines ($ef, \@i1);
-	    } else {
-		$diff .= "The following expected line(s) $ef...$el:\n";
-		$diff .= number_lines ($ef, \@i1);
-		$diff .= "became actual line(s) $af...$al:\n";
-		$diff .= number_lines ($af, \@i2);
-	    }
+	    push (@diff, map ("- $_", $d->Items (1))) if $d->Items (1);
+	    push (@diff, map ("+ $_", $d->Items (2))) if $d->Items (2);
 	}
     }
 
     my ($details) = "";
-    $details .= "$test actual output (line numbers added):\n";
-    $details .= number_lines (1, \@actual);
-    $details .= "\n$test expected output (line numbers added):\n";
-    $details .= number_lines (1, \@expected);
-    $details .= "\n$diff\n";
+    $details .= "$test actual output:\n";
+    $details .= join ('', map ("  $_", @actual));
+    $details .= "\n$test expected output:\n";
+    $details .= join ('', map ("  $_", @expected));
+    $details .= "\nOutput differences in `diff -u' format:\n";
+    $details .= join ('', @diff) . "\n";
     $details{$test} = $details;
     die "Output differs from expected.  Details at end of file.\n";
 }

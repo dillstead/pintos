@@ -54,18 +54,18 @@ test_donate_nest (void)
   locks.b = &b;
   thread_create ("medium", PRI_DEFAULT + 1, medium_thread_func, &locks);
   thread_yield ();
-  printf (" 1. Low thread should have priority %d.  Actual priority: %d.\n",
+  printf ("Low thread should have priority %d.  Actual priority: %d.\n",
           PRI_DEFAULT + 1, thread_get_priority ());
 
   thread_create ("high", PRI_DEFAULT + 2, high_thread_func, &b);
   thread_yield ();
-  printf (" 2. Low thread should have priority %d.  Actual priority: %d.\n",
+  printf ("Low thread should have priority %d.  Actual priority: %d.\n",
           PRI_DEFAULT + 2, thread_get_priority ());
 
   lock_release (&a);
   thread_yield ();
-  printf (" 9. Medium thread should just have finished.\n");
-  printf ("10. Low thread should have priority %d.  Actual priority: %d.\n",
+  printf ("Medium thread should just have finished.\n");
+  printf ("Low thread should have priority %d.  Actual priority: %d.\n",
           PRI_DEFAULT, thread_get_priority ());
   printf ("Nested priority priority donation test finished.\n");
 }
@@ -78,9 +78,9 @@ medium_thread_func (void *locks_)
   lock_acquire (locks->b);
   lock_acquire (locks->a);
 
-  printf (" 3. Medium thread should have priority %d.  Actual priority: %d.\n",
+  printf ("Medium thread should have priority %d.  Actual priority: %d.\n",
           PRI_DEFAULT + 2, thread_get_priority ());
-  printf (" 4. Medium thread got the lock.\n");
+  printf ("Medium thread got the lock.\n");
 
   lock_release (locks->a);
   thread_yield ();
@@ -88,8 +88,8 @@ medium_thread_func (void *locks_)
   lock_release (locks->b);
   thread_yield ();
 
-  printf (" 7. High thread should have just finished.\n");
-  printf (" 8. Middle thread finished.\n");
+  printf ("High thread should have just finished.\n");
+  printf ("Middle thread finished.\n");
 }
 
 static void
@@ -98,7 +98,7 @@ high_thread_func (void *lock_)
   struct lock *lock = lock_;
 
   lock_acquire (lock);
-  printf (" 5. High thread got the lock.\n");
+  printf ("High thread got the lock.\n");
   lock_release (lock);
-  printf (" 6. High thread finished.\n");
+  printf ("High thread finished.\n");
 }
