@@ -13,38 +13,11 @@
 #ifndef __ASSEMBLER__
 #include <stdint.h>
 
-struct tss
-  {
-    uint16_t back_link, :16;
-    uint32_t esp0;
-    uint16_t ss0, :16;
-    uint32_t esp1;
-    uint16_t ss1, :16;
-    uint32_t esp2;
-    uint16_t ss2, :16;
-    uint32_t cr3;
-    uint32_t eip;
-    uint32_t eflags;
-    uint32_t eax, ecx, edx, ebx;
-    uint32_t esp, ebp, esi, edi;
-    uint16_t es, :16;
-    uint16_t cs, :16;
-    uint16_t ss, :16;
-    uint16_t ds, :16;
-    uint16_t fs, :16;
-    uint16_t gs, :16;
-    uint16_t ldt, :16;
-    uint16_t trace, bitmap;
-  };
-
-
 static inline uint64_t
 make_dtr_operand (uint16_t limit, void *base)
 {
   return limit | ((uint64_t) (uint32_t) base << 16);
 }
-
-extern struct tss *tss;
 
 void gdt_init (void);
 #endif

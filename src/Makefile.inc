@@ -18,6 +18,7 @@ ASFLAGS = -Wa,--gstabs+ $(INCLUDES) $(DEFINES)
 THREADS_SRC  = start.S		# Must be linked first.
 THREADS_SRC += init.c		# Main program.
 THREADS_SRC += gdt.c		# GDT initialization.
+THREADS_SRC += tss.c		# TSS management.
 THREADS_SRC += thread.c		# Thread management core.
 THREADS_SRC += switch.S		# Thread switch routine.
 THREADS_SRC += interrupt.c	# Interrupt core.

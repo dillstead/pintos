@@ -17,6 +17,7 @@
 #include "serial.h"
 #include "thread.h"
 #include "timer.h"
+#include "tss.h"
 #include "vga.h"
 #ifdef FILESYS
 #include "filesys.h"
@@ -74,6 +75,7 @@ main (void)
   /* Initialize memory system. */
   palloc_init ();
   paging_init ();
+  tss_init ();
   gdt_init ();
   malloc_init ();
 

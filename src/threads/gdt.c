@@ -2,6 +2,7 @@
 #include "debug.h"
 #include "mmu.h"
 #include "palloc.h"
+#include "tss.h"
 
 /* System segment or code/data segment? */
 enum seg_class
@@ -87,8 +88,6 @@ make_tss_desc (void *laddr)
 
 static uint64_t gdt[SEL_CNT];
 
-struct tss *tss;
-
 /* Sets up a proper GDT.  The bootstrap loader's GDT didn't
    include user-mode selectors or a TSS. */
 void
@@ -96,21 +95,13 @@ gdt_init (void)
 {
   uint64_t gdtr_operand;
 
-  /* Our TSS is never used in a call gate or task gate, so only a
-     few fields of it are ever referenced, and those are the only
-     ones we initialize. */
-  tss = palloc_get (PAL_ASSERT | PAL_ZERO);
-  tss->esp0 = (uint32_t) ptov(0x20000);
-  tss->ss0 = SEL_KDSEG;
-  tss->bitmap = 0xdfff;
-
   /* Initialize GDT. */
   gdt[SEL_NULL / sizeof *gdt] = 0;
   gdt[SEL_KCSEG / sizeof *gdt] = make_code_desc (0);
   gdt[SEL_KDSEG / sizeof *gdt] = make_data_desc (0);
   gdt[SEL_UCSEG / sizeof *gdt] = make_code_desc (3);
   gdt[SEL_UDSEG / sizeof *gdt] = make_data_desc (3);
-  gdt[SEL_TSS / sizeof *gdt] = make_tss_desc (tss);
+  gdt[SEL_TSS / sizeof *gdt] = make_tss_desc (tss_get ());
 
   /* Load GDTR, TR. */
   gdtr_operand = make_dtr_operand (sizeof gdt - 1, gdt);

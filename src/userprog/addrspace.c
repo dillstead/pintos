@@ -3,13 +3,13 @@
 #include "debug.h"
 #include "file.h"
 #include "filesys.h"
-#include "gdt.h"
 #include "init.h"
 #include "lib.h"
 #include "mmu.h"
 #include "paging.h"
 #include "palloc.h"
 #include "thread.h"
+#include "tss.h"
 
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification more-or-less verbatim. */
@@ -275,5 +275,5 @@ addrspace_activate (struct thread *t)
   
   if (t->pagedir != NULL)
     pagedir_activate (t->pagedir);
-  tss->esp0 = (uint32_t) t + PGSIZE;
+  tss_set_esp0 ((uint8_t *) t + PGSIZE);
 }
