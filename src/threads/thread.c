@@ -12,6 +12,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #ifdef USERPROG
+#include "userprog/addrspace.h"
 #include "userprog/gdt.h"
 #endif
 
@@ -139,57 +140,6 @@ thread_create (const char *name, int priority,
 
   return tid;
 }
-
-#ifdef USERPROG
-/* Starts a new thread running a user program loaded from
-   FILENAME, and adds it to the ready queue.  If thread_start()
-   has been called, then new thread may be scheduled before
-   thread_execute() returns.*/
-tid_t
-thread_execute (const char *filename) 
-{
-  struct thread *t;
-  struct intr_frame *if_;
-  struct switch_entry_frame *ef;
-  struct switch_threads_frame *sf;
-  tid_t tid;
-
-  ASSERT (filename != NULL);
-
-  t = new_thread (filename, PRI_DEFAULT);
-  if (t == NULL)
-    return TID_ERROR;
-  tid = t->tid;
-  
-  /* Interrupt frame. */
-  if_ = alloc_frame (t, sizeof *if_);
-  if_->es = SEL_UDSEG;
-  if_->ds = SEL_UDSEG;
-  if_->cs = SEL_UCSEG;
-  if_->eflags = FLAG_IF | FLAG_MBS;
-  if_->ss = SEL_UDSEG;
-
-  /* Stack frame for switch_entry(). */
-  ef = alloc_frame (t, sizeof *ef);
-  ef->eip = intr_exit;
-
-  /* Stack frame for switch_threads(). */
-  sf = alloc_frame (t, sizeof *sf);
-  sf->eip = switch_entry;
-
-  /* Load. */
-  if (!addrspace_load (t, filename, &if_->eip, &if_->esp))
-    {
-      destroy_thread (t);
-      return TID_ERROR;
-    }
-
-  /* Add to run queue. */
-  thread_unblock (t);
-
-  return tid;
-}
-#endif
 
 /* Transitions a blocked thread T from its current state to the
    ready-to-run state.  This is an error if T is not blocked.
@@ -437,7 +387,7 @@ schedule_tail (struct thread *prev)
 
 #ifdef USERPROG
   /* Activate the new address space. */
-  addrspace_activate (cur);
+  addrspace_activate ();
 #endif
 
   /* If the thread we switched from is dying, destroy it.

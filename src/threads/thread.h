@@ -5,10 +5,6 @@
 #include <list.h>
 #include <stdint.h>
 
-#ifdef USERPROG
-#include "userprog/addrspace.h"
-#endif
-
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -110,9 +106,6 @@ void thread_start (void);
 
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
-#ifdef USERPROG
-tid_t thread_execute (const char *filename);
-#endif
 
 void thread_unblock (struct thread *);
 

@@ -4,16 +4,84 @@
 #include <round.h>
 #include <stdio.h>
 #include <string.h>
+#include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "threads/flags.h"
 #include "threads/init.h"
+#include "threads/interrupt.h"
 #include "threads/mmu.h"
 #include "threads/palloc.h"
 #include "threads/thread.h"
 
+static thread_func execute_thread NO_RETURN;
+static bool load (const char *cmdline, void (**eip) (void), void **esp);
+
+/* Starts a new thread running a user program loaded from
+   FILENAME.  The new thread may be scheduled before
+   addrspace_execute() returns.*/
+tid_t
+addrspace_execute (const char *filename) 
+{
+  char *fn_copy;
+  tid_t tid;
+
+  /* Make a copy of FILENAME.
+     Otherwise there's a race between the caller and load(). */
+  fn_copy = palloc_get (0);
+  if (fn_copy == NULL)
+    return TID_ERROR;
+  strlcpy (fn_copy, filename, PGSIZE);
+
+  /* Create a new thread to execute FILENAME. */
+  tid = thread_create (filename, PRI_DEFAULT, execute_thread, fn_copy);
+  if (tid == TID_ERROR)
+    palloc_free (fn_copy); 
+  return tid;
+}
+
+/* A thread function that loads a user process and starts it
+   running. */
+static void
+execute_thread (void *filename_)
+{
+  char *filename = filename_;
+  struct intr_frame if_;
+  bool success;
+
+  /* Initialize interrupt frame and load executable. */
+  memset (&if_, 0, sizeof if_);
+  if_.es = SEL_UDSEG;
+  if_.ds = SEL_UDSEG;
+  if_.cs = SEL_UCSEG;
+  if_.eflags = FLAG_IF | FLAG_MBS;
+  if_.ss = SEL_UDSEG;
+  success = load (filename, &if_.eip, &if_.esp);
+
+  /* If load failed, quit. */
+  palloc_free (filename);
+  if (!success) 
+    thread_exit ();
+
+  /* Switch page tables. */
+  addrspace_activate ();
+
+  /* Start the user process by simulating a return from an
+     interrupt, implemented by intr_exit (in
+     threads/intr-stubs.pl).  Because intr_exit takes all of its
+     arguments on the stack in the form of a `struct intr_frame',
+     we just point the stack pointer (%esp) to our stack frame
+     and jump to it. */
+  asm ("mov %0, %%esp\n"
+       "jmp intr_exit\n"
+       : /* no outputs */
+       : "g" (&if_));
+  NOT_REACHED ();
+}
+
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification, [ELF1], more-or-less verbatim.  */
 
@@ -77,27 +145,26 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool load_segment (struct thread *, struct file *,
-                          const struct Elf32_Phdr *);
-static bool setup_stack (struct thread *, void **esp);
+static bool load_segment (struct file *, const struct Elf32_Phdr *);
+static bool setup_stack (void **esp);
 
 /* Aborts loading an executable, with an error message. */
 #define LOAD_ERROR(MSG)                                         \
         do {                                                    \
-                printf ("addrspace_load: %s: ", filename);      \
+                printf ("load: %s: ", filename);      \
                 printf MSG;                                     \
                 printf ("\n");                                  \
                 goto done;                                     \
         } while (0)
 
-/* Loads an ELF executable from FILENAME into T,
+/* Loads an ELF executable from FILENAME into the current thread.
    Stores the executable's entry point into *EIP
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-addrspace_load (struct thread *t, const char *filename,
-                void (**eip) (void), void **esp) 
+load (const char *filename, void (**eip) (void), void **esp) 
 {
+  struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
   off_t file_ofs;
@@ -159,14 +226,14 @@ addrspace_load (struct thread *t, const char *filename,
           printf ("unknown ELF segment type %08x\n", phdr.p_type);
           break;
         case PT_LOAD:
-          if (!load_segment (t, file, &phdr))
+          if (!load_segment (file, &phdr))
             goto done;
           break;
         }
     }
 
   /* Set up stack. */
-  if (!setup_stack (t, esp))
+  if (!setup_stack (esp))
     goto done;
 
   /* Start address. */
@@ -175,11 +242,8 @@ addrspace_load (struct thread *t, const char *filename,
   success = true;
 
  done:
-  /* We arrive here whether the load is successful or not.
-     We can distinguish based on `success'. */
+  /* We arrive here whether the load is successful or not. */
   file_close (file);
-  if (!success) 
-    addrspace_destroy (t);
   return success;
 }
 
@@ -188,6 +252,8 @@ addrspace_load (struct thread *t, const char *filename,
 void
 addrspace_destroy (struct thread *t)
 {
+  ASSERT (t != thread_current ());
+
   if (t->pagedir != NULL) 
     {
       pagedir_destroy (t->pagedir);
@@ -195,11 +261,12 @@ addrspace_destroy (struct thread *t)
     }
 }
 
-/* Sets up the CPU for running user code in thread T, if any. */
+/* Sets up the CPU for running user code in the current
+   thread. */
 void
-addrspace_activate (struct thread *t)
+addrspace_activate (void)
 {
-  ASSERT (t != NULL);
+  struct thread *t = thread_current ();
 
   /* Activate T's page tables. */
   pagedir_activate (t->pagedir);
@@ -210,14 +277,12 @@ addrspace_activate (struct thread *t)
 
 /* addrspace_load() helpers. */
 
-static bool install_page (struct thread *, void *upage, void *kpage);
+static bool install_page (void *upage, void *kpage);
 
-/* Loads the segment described by PHDR from FILE into thread T's
-   user address space.  Return true if successful, false
-   otherwise. */
+/* Loads the segment described by PHDR from FILE into user
+   address space.  Return true if successful, false otherwise. */
 static bool
-load_segment (struct thread *t, struct file *file,
-              const struct Elf32_Phdr *phdr) 
+load_segment (struct file *file, const struct Elf32_Phdr *phdr) 
 {
   void *start, *end;  /* Page-rounded segment start and end. */
   uint8_t *upage;     /* Iterator from start to end. */
@@ -230,7 +295,6 @@ load_segment (struct thread *t, struct file *file,
      from swap. */
   //bool read_only = (phdr->p_flags & PF_W) == 0;
 
-  ASSERT (t != NULL);
   ASSERT (file != NULL);
   ASSERT (phdr != NULL);
   ASSERT (phdr->p_type == PT_LOAD);
@@ -289,7 +353,7 @@ load_segment (struct thread *t, struct file *file,
       filesz_left -= read_bytes;
 
       /* Add the page to the process's address space. */
-      if (!install_page (t, upage, kpage)) 
+      if (!install_page (upage, kpage)) 
         {
           palloc_free (kpage);
           return false; 
@@ -299,10 +363,10 @@ load_segment (struct thread *t, struct file *file,
   return true;
 }
 
-/* Create a minimal stack for T by mapping a zeroed page at the
-   top of user virtual memory. */
+/* Create a minimal stack by mapping a zeroed page at the top of
+   user virtual memory. */
 static bool
-setup_stack (struct thread *t, void **esp) 
+setup_stack (void **esp) 
 {
   uint8_t *kpage;
   bool success = false;
@@ -310,7 +374,7 @@ setup_stack (struct thread *t, void **esp)
   kpage = palloc_get (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
-      success = install_page (t, ((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
+      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage);
       if (success)
         *esp = PHYS_BASE;
       else
@@ -323,11 +387,13 @@ setup_stack (struct thread *t, void **esp)
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
-   virtual address KPAGE to T's page tables.  Fails if UPAGE is
+   virtual address KPAGE to the page table.  Fails if UPAGE is
    already mapped or if memory allocation fails. */
 static bool
-install_page (struct thread *t, void *upage, void *kpage)
+install_page (void *upage, void *kpage)
 {
+  struct thread *t = thread_current ();
+
   /* Verify that there's not already a page at that virtual
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
