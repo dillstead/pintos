@@ -76,14 +76,14 @@ child_arg_SRC = child-arg.c
 child_bad_SRC = child-bad.c
 child_close_SRC = child-close.c
 
+DISKS = $(patsubst %,%.dsk,$(TESTS)) null.dsk
+
+disks: $(DISKS)
+
 null.o: null.S
 null: null.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 null.dsk: null	
-
-DISKS = $(patsubst %,%.dsk,$(TESTS)) null.dsk
-
-disks: $(DISKS)
 
 exec-once.dsk exec-multiple.dsk join-simple.dsk join-twice.dsk: child-simple
 exec-arg.dsk: child-arg
