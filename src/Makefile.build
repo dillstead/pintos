@@ -46,7 +46,7 @@ lib_SRC += lib/string.c		# String functions.
 lib_kernel_SRC += lib/kernel/list.c	# Doubly-linked lists.
 lib_kernel_SRC += lib/kernel/bitmap.c	# Bitmaps.
 lib_kernel_SRC += lib/kernel/hash.c	# Hash tables.
-lib_kernel_SRC += lib/kernel/printf.c	# Kernel printf().
+lib_kernel_SRC += lib/kernel/console.c	# printf(), putchar().
 
 # Filesystem code.
 filesys_SRC  = filesys/filesys.c	# Filesystem core.
