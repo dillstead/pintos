@@ -12,11 +12,28 @@
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 static struct list run_queue;
+static struct thread *idle_thread;
+
+static void
+idle (void *aux UNUSED) 
+{
+  for (;;) 
+    {
+      /* Wait for an interrupt. */
+      asm ("hlt");
+
+      /* Let someone else run. */
+      intr_disable ();
+      thread_sleep ();
+      intr_enable ();
+    }
+}
 
 void
 thread_init (void) 
 {
   list_init (&run_queue);
+  idle_thread = thread_create ("idle", idle, NULL);
 }
 
 struct thread_root_frame 
@@ -166,14 +183,6 @@ find_next_to_run (void)
     return list_entry (list_pop_front (&run_queue), struct thread, rq_elem);
 }
 
-static void
-idle (void) 
-{
-  static int idle = 0;
-  if (idle++ == 0)
-    printk ("idle\n");
-}
-
 void
 thread_destroy (struct thread *t) 
 {
@@ -210,8 +219,9 @@ thread_schedule (void)
   cur = thread_current ();
   ASSERT (cur->status != THREAD_RUNNING);
 
-  while ((next = find_next_to_run ()) == NULL)
-    idle ();
+  next = find_next_to_run ();
+  if (next == NULL)
+    next = idle_thread;
 
   next->status = THREAD_RUNNING;
   if (cur != next)
