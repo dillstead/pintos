@@ -22,9 +22,6 @@
 #include "disk.h"
 #endif
 
-/* Size of kernel static code and data, in 4 kB pages. */
-size_t kernel_pages;
-
 /* Amount of physical memory, in 4 kB pages. */
 size_t ram_pages;
 
@@ -46,41 +43,31 @@ main_thread (void *aux UNUSED)
 int
 main (void)
 {
-  struct thread *t;
-
-  /* Initialize components needed by printk() very early. */
+  /* Initialize prerequisites for calling printk(). */
   ram_init ();
   vga_init ();
   serial_init ();
-  printk ("Booting cnachos86...\n");
 
-  /* Calculate how much RAM the kernel uses, and find out from
-     the bootloader how much RAM this machine has. */
-  printk ("ram: detected %'d kB main memory.\n", ram_pages * 4);
+  /* Greet user. */
+  printk ("Booting cnachos86 with %'d kB RAM...\n", ram_pages * 4);
 
-  /* Memory from the end of the kernel through the end of memory
-     is free.  Give it to the page allocator. */
-  palloc_init (ptov (LOADER_KERN_BASE + kernel_pages * PGSIZE),
-               ptov (ram_pages * PGSIZE));
+  /* Initialize memory system. */
+  palloc_init ();
   paging_init ();
   gdt_init ();
-
   malloc_init ();
-  random_init ();
 
+  random_init ();
   argv_init ();
 
+  /* Initialize interrupt handlers. */
   intr_init ();
   timer_init ();
   kbd_init ();
 
+  /* Do everything else in a system thread. */
   thread_init ();
-
-  t = thread_create ("main", main_thread, NULL);
-  thread_start (t);
-
-  printk ("Done!\n");
-  return 0;
+  thread_start (thread_create ("main", main_thread, NULL));
 }
 
 static uint64_t
@@ -162,28 +149,39 @@ gdt_init (void)
 static void
 ram_init (void) 
 {
-  /* Start and end of kernel image,
-     and start and end of BSS segment.
-     These are created by kernel.lds. */
-  extern char _start, _end;
-  extern char _start_bss, _end_bss;
-
   /* The "BSS" is a segment that should be initialized to zeros.
      It isn't actually stored on disk or zeroed by the kernel
-     loader, so we have to zero it ourselves. */
+     loader, so we have to zero it ourselves.
+
+     The start and end of the BSS segment is recorded by the
+     linker as _start_bss and _end_bss.  See kernel.lds. */
+  extern char _start_bss, _end_bss;
   memset (&_start_bss, 0, &_end_bss - &_start_bss);
 
-  /* Calculate how much RAM the kernel uses,
-     and find out from the bootloader how much RAM this machine
-     has. */
-  kernel_pages = (&_end - &_start + 4095) / 4096;
-  ram_pages = *(uint32_t *) ptov (LOADER_BASE + LOADER_RAM_PAGES);
+  /* Get RAM size from loader. */
+  ram_pages = *(uint32_t *) ptov (LOADER_RAM_PAGES);
 }
+
+/* This should be sufficient because the command line buffer is
+   only 128 bytes and arguments are space-delimited. */
+#define ARGC_MAX 64
 
-void
+int argc;
+char *argv[ARGC_MAX + 1];
+
+static void
 argv_init (void) 
 {
-  char *cmd_line = ptov (LOADER_BASE + LOADER_CMD_LINE);
+  char *cmd_line = ptov (LOADER_CMD_LINE);
+  char *arg, *pos;
+
+  for (arg = strtok_r (cmd_line, " \t\r\n\v", &pos); arg != NULL;
+       arg = strtok_r (NULL, " \t\r\n\v", &pos))
+    {
+      ASSERT (argc < ARGC_MAX);
+      argv[argc++] = arg;
+    }
+  argv[argc] = NULL;
 }
 
 void

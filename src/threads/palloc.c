@@ -2,6 +2,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "debug.h"
+#include "init.h"
+#include "loader.h"
 #include "lib.h"
 #include "mmu.h"
 
@@ -15,10 +17,20 @@ static struct page *free_pages;
 static uint8_t *uninit_start, *uninit_end;
 
 void
-palloc_init (uint8_t *start, uint8_t *end) 
+palloc_init (void) 
 {
-  uninit_start = start;
-  uninit_end = end;
+  /* Kernel static code and data, in 4 kB pages.
+     
+     We can figure this out because the linker records the start
+     and end of the kernel as _start and _end.  See
+     kernel.lds. */
+  extern char _start, _end;
+  size_t kernel_pages;  
+  kernel_pages = (&_end - &_start + 4095) / 4096;
+
+  /* Then we know how much is available to allocate. */
+  uninit_start = ptov (LOADER_KERN_BASE + kernel_pages * PGSIZE);
+  uninit_end = ptov (ram_pages * PGSIZE);
 }
 
 void *
