@@ -1,7 +1,7 @@
 #ifndef __LIB_STRING_H
 #define __LIB_STRING_H
 
-#include "stddef.h"
+#include <stddef.h>
 
 /* Standard. */
 void *memcpy (void *, const void *, size_t);
