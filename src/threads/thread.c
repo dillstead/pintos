@@ -197,7 +197,9 @@ void schedule_tail (struct thread *prev);
 void
 schedule_tail (struct thread *prev) 
 {
+#ifdef USERPROG
   struct thread *cur = thread_current ();
+#endif
 
   ASSERT (intr_get_level () == IF_OFF);
 

@@ -206,17 +206,17 @@ panicmsg:
 	.byte 0
 
 ##### Memory size in 4 kB pages.
-	.org LOADER_RAM_PAGES
+	.org LOADER_RAM_PAGES - LOADER_BASE
 ram_pages:
 	.long 0
 
 ##### Command-line arguments inserted by another utility.
 ##### The loader doesn't use these, but we note their
 ##### location here for easy reference.
-	.org LOADER_CMD_LINE
+	.org LOADER_CMD_LINE - LOADER_BASE
 cmd_line:
 	.fill 0x80, 1, 0
 
 ##### Boot-sector signature for BIOS inspection.
-	.org LOADER_BIOS_SIG
+	.org LOADER_BIOS_SIG - LOADER_BASE
 	.word 0xaa55

@@ -3,7 +3,7 @@
 
 /* Constants fixed by the PC BIOS. */
 #define LOADER_BASE 0x7c00      /* Physical address of loader's base. */
-#define LOADER_SIZE 0x200       /* Loader size in bytes (one disk sector). */
+#define LOADER_END  0x7e00      /* Physical address of end of loader. */
 
 /* Physical address of kernel base. */
 #define LOADER_KERN_BASE 0x100000       /* 1 MB. */
@@ -18,7 +18,7 @@
 #define LOADER_PHYS_BASE 0xc0000000     /* 3 GB. */
 
 /* Offsets within the loader. */
-#define LOADER_BIOS_SIG (LOADER_SIZE - 2)        /* aa55 BIOS signature. */
+#define LOADER_BIOS_SIG (LOADER_END - 2)         /* 0xaa55 BIOS signature. */
 #define LOADER_CMD_LINE (LOADER_BIOS_SIG - 0x80) /* Kernel command line. */
 #define LOADER_RAM_PAGES (LOADER_CMD_LINE - 4)   /* # of pages of RAM. */
 

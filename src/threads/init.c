@@ -36,12 +36,11 @@ void power_off (void);
 static void
 main_thread (void *aux UNUSED) 
 {
-  disk_init ();
-
 #ifdef FILESYS
+  disk_init ();
   filesys_init (true);
-#endif
   filesys_self_test ();
+#endif
 }
 
 int
@@ -174,15 +173,17 @@ ram_init (void)
      loader, so we have to zero it ourselves. */
   memset (&_start_bss, 0, &_end_bss - &_start_bss);
 
-  /* Calculate how much RAM the kernel uses, and find out from
-     the bootloader how much RAM this machine has. */
+  /* Calculate how much RAM the kernel uses,
+     and find out from the bootloader how much RAM this machine
+     has. */
   kernel_pages = (&_end - &_start + 4095) / 4096;
-  ram_pages = *(uint32_t *) (LOADER_BASE + LOADER_RAM_PAGES);
+  ram_pages = *(uint32_t *) ptov (LOADER_BASE + LOADER_RAM_PAGES);
 }
 
 void
 argv_init (void) 
 {
+  char *cmd_line = ptov (LOADER_BASE + LOADER_CMD_LINE);
 }
 
 void
