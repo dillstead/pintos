@@ -1,0 +1,19 @@
+#! /usr/bin/perl
+$a2l = search_path ("i386-elf-addr2line") || search_path ("addr2line");
+$bin = shift @ARGV;
+open (A2L, "$a2l -fe $bin " . join (' ', @ARGV) . "|");
+while ($function = <A2L>) {
+    $line = <A2L>;
+    chomp $function;
+    chomp $line;
+    print "$function ($line)\n";
+}
+   
+sub search_path {
+    my ($target) = @_;
+    for $dir (split (':', $ENV{PATH})) {
+	my ($file = "$dir/$target";
+	return $file if -e $file;
+    }
+    return 0;
+}
