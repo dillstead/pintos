@@ -11,15 +11,27 @@ our ($vga);
 our ($jitter);
 
 use Getopt::Long qw(:config require_order bundling);
-GetOptions ("bochs|qemu|gsx" => \&set_sim,
-	    "no-debug|monitor|gdb" => \&set_debug,
+GetOptions ("sim=s" => sub { set_sim (@_) },
+	    "bochs" => sub { set_sim ("bochs") },
+	    "qemu" => sub { set_sim ("qemu") },
+	    "gsx" => sub { set_sim ("gsx") },
+
+	    "debug=s" => sub { set_debug (@_) },
+	    "no-debug" => sub { set_debug ("no-debug") },
+	    "monitor" => sub { set_debug ("monitor") },
+	    "gdb" => sub { set_debug ("gdb") },
+	    
 	    "run|get|put|make-disk" => \&cmd_option,
+	    
 	    "m|memory=i" => \$mem,
 	    "j|jitter=i" => \$jitter,
+	    
 	    "v|no-vga" => sub { set_vga ('none'); },
 	    "s|no-serial" => sub { $serial_out = 0; },
 	    "t|terminal" => sub { set_vga ('terminal'); },
+	    
 	    "h|help" => sub { usage (0); },
+
 	    "0|os-disk|disk-0|hda=s" => \$disks[0],
 	    "1|fs-disk|disk-1|hdb=s" => \$disks[1],
 	    "2|scratch-disk|disk-2|hdc=s" => \$disks[2],
@@ -31,15 +43,17 @@ $debug = "no-debug" if !defined $debug;
 $vga = "window" if !defined $vga;
 
 sub set_sim {
-    my ($option) = @_;
-    die "--$option conflicts with --$sim\n" if defined $sim;
-    our ($sim) = $option;
+    my ($new_sim) = @_;
+    die "--$new_sim conflicts with --$sim\n"
+	if defined ($sim) && $sim ne $new_sim;
+    $sim = $new_sim;
 }
 
 sub set_debug {
-    my ($option) = @_;
-    die "--$option conflicts with --$debug\n" if defined $debug;
-    our ($debug) = $option;
+    my ($new_debug) = @_;
+    die "--$new_debug conflicts with --$debug\n"
+	if defined ($debug) && $debug ne $new_debug;
+    $debug = $new_debug;
 }
 
 sub set_vga {
@@ -47,12 +61,10 @@ sub set_vga {
     if (defined ($vga) && $vga ne $new_vga) {
 	print "warning: conflicting vga display options\n";
     }
-    our ($vga) = $new_vga;
+    $vga = $new_vga;
 }
 
 sub cmd_option {
-    our ($cmd) = @_;
-
     # Force an end to option processing, as with --.
     die ("!FINISH");
 }
@@ -70,6 +82,13 @@ if ($cmd eq 'run') {
 
     create_disk ($file, int ($mb * 1008));
 } elsif ($cmd eq 'put') {
+    # Take a -f option to combine formatting with putting.
+    my ($format) = 0;
+    if (@ARGV > 0 && $ARGV[0] eq '-f') {
+	shift @ARGV;
+	$format = 1;
+    }
+
     usage () if @ARGV != 1 && @ARGV != 2;
     my ($hostfn, $guestfn) = @ARGV;
     $guestfn = $hostfn if !defined $guestfn;
@@ -80,7 +99,9 @@ if ($cmd eq 'run') {
     copy_pad ($hostfn, "scratch.dsk", 512);
 
     # Do copy.
-    run_vm ("-ci", $guestfn, $size, "-q");
+    my (@cmd) = ("-ci", $guestfn, $size, "-q");
+    unshift (@cmd, "-f") if $format;
+    run_vm (@cmd);
 } elsif ($cmd eq 'get') {
     usage () if @ARGV != 1 && @ARGV != 2;
     my ($guestfn, $hostfn) = @ARGV;

@@ -1,0 +1,2 @@
+(sc-boundary) begin
+sc-boundary: exit(42)

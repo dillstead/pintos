@@ -1,0 +1,6 @@
+(read-stdout) begin
+(read-stdout) end
+read-stdout: exit(0)
+--OR--
+(read-stdout) begin
+read-stdout: exit(-1)

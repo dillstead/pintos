@@ -37,11 +37,18 @@ sub usage {
 }
 
 # Default set of tests.
-@TESTS = qw (create-normal create-empty create-null create-bad-ptr 
+@TESTS = qw (args-argc args-argv0 args-argvn args-single args-multiple
+	     args-dbl-space
+	     sc-bad-sp sc-bad-arg sc-boundary
+	     halt exit
+	     create-normal create-empty create-null create-bad-ptr 
 	     create-long create-exists create-bound
-	     args-argc args-argv0 args-argvn args-single args-multiple
-	     args-dbl-space)
-    unless @TESTS > 0;
+	     open-normal open-missing open-boundary open-empty open-null
+	     open-bad-ptr open-twice
+	     close-normal close-twice close-stdin close-stdout close-bad-fd
+	     read-normal read-bad-ptr read-boundary read-zero read-stdout
+	     read-bad-fd
+	     ) unless @TESTS > 0;
 
 our (%args);
 for my $key ('args-argc', 'args-argv0', 'args-argvn', 'args-multiple') {
@@ -623,7 +630,7 @@ sub compare_output {
 	# They differ.  Output a diff.
 	my (@diff) = "";
 	my ($d) = Algorithm::Diff->new (\@expected, \@actual);
-	my ($all_additions) = 1;
+	my ($not_fuzzy_match) = 0;
 	while ($d->Next ()) {
 	    my ($ef, $el, $af, $al) = $d->Get (qw (min1 max1 min2 max2));
 	    if ($d->Same ()) {
@@ -631,11 +638,13 @@ sub compare_output {
 	    } else {
 		push (@diff, map ("- $_", $d->Items (1))) if $d->Items (1);
 		push (@diff, map ("+ $_", $d->Items (2))) if $d->Items (2);
-		$all_additions = 0 if $d->Items (1);
+		if ($d->Items (1)
+		    || grep (/\($test\)|exit\(-?\d+\)/, $d->Items (2))) {
+		    $not_fuzzy_match = 1;
+		}
 	    }
 	}
-
-	$fuzzy_match = 1 if $all_additions;
+	$fuzzy_match = 1 if !$not_fuzzy_match;
 
 	$details .= "Differences in `diff -u' format:\n";
 	$details .= join ('', @diff);

@@ -37,8 +37,9 @@ System calls: open
   -2 open-boundary: pass name of file crossing page boundary
   -1 open-empty: pass empty string to open system call
   -1 open-null: pass null pointer to open system call
+  -1 open-bad-ptr: pass invalid pointer to open system call
   -1 open-twice: open the same file twice
-Score: /9
+Score: /10
 
 System calls: close
   -2 close-normal: close an open file in the most normal way

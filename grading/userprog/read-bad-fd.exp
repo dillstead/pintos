@@ -1,0 +1,6 @@
+(read-bad-fd) begin
+(read-bad-fd) end
+read-bad-fd: exit(0)
+--OR--
+(read-bad-fd) begin
+read-bad-fd: exit(-1)

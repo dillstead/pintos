@@ -1,0 +1,3 @@
+(open-normal) begin
+(open-normal) end
+open-normal: exit(0)

@@ -1,0 +1,3 @@
+(close-stdin) begin
+(close-stdin) end
+close-stdin: exit(0)

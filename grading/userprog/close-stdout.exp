@@ -1,0 +1,3 @@
+(close-stdout) begin
+(close-stdout) end
+close-stdout: exit(0)
