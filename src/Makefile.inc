@@ -56,10 +56,12 @@ kernel.o: $(OBJECTS)
 		`$(CC) -print-libgcc-file-name`
 
 kernel.bin: kernel.o
-	objcopy -O binary -R .note -R .comment -S $< $@
+	objcopy -O binary -R .note -R .comment -S $< $@.data
+	perl -e 'print "\0" x (4096 - (-s "$@.data") % 4096)' > $@.pad
+	cat $@.data $@.pad > $@.tmp && mv $@.tmp $@
 
 loader.bin: loader.S kernel.bin
-	gcc -c $< -DKERNEL_LOAD_PAGES=`perl -e 'print int (((-s "kernel.bin") + 4095) / 4096);'`
+	gcc -c $< -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
 	ld -N -e start -Ttext 0x7c00 --oformat binary -o $@ loader.o
 
 diskimage.bin: loader.bin kernel.bin
