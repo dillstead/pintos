@@ -36,7 +36,7 @@ hash_clear (struct hash *h)
 {
   size_t i;
       
-  for (i = 0; i < h->bucket_cnt; h++) 
+  for (i = 0; i < h->bucket_cnt; i++) 
     list_init (&h->buckets[i]);
   h->elem_cnt = 0;
 }
@@ -60,6 +60,9 @@ hash_insert (struct hash *h, hash_elem *new)
 
   if (old == NULL) 
     insert_elem (h, bucket, new);
+
+  rehash (h);
+
   return old; 
 }
 
@@ -73,8 +76,10 @@ hash_replace (struct hash *h, hash_elem *new)
 
   if (old != NULL)
     remove_elem (h, old);
-  
   insert_elem (h, bucket, new);
+
+  rehash (h);
+
   return old;
 }
 
@@ -93,8 +98,11 @@ hash_elem *
 hash_delete (struct hash *h, hash_elem *e)
 {
   struct list_elem *found = find_elem (h, find_bucket (h, e), e);
-  if (found != NULL)
-    remove_elem (h, found);
+  if (found != NULL) 
+    {
+      remove_elem (h, found);
+      rehash (h); 
+    }
   return found;
 }
 
@@ -105,9 +113,9 @@ hash_delete (struct hash *h, hash_elem *e)
       struct hash_iterator i;
 
       hash_first (&i, h);
-      while (hash_next (&i, h))
+      while (hash_next (&i))
         {
-          struct foo *f = list_entry (hash_cur (&i), struct foo, elem);
+          struct foo *f = hash_entry (hash_cur (&i), struct foo, elem);
           ...do something with f...
         }
 
@@ -232,9 +240,9 @@ find_elem (struct hash *h, struct list *bucket, hash_elem *e)
 {
   struct list_elem *i;
 
-  for (i = list_begin (bucket); i != list_end (bucket); i = list_next (i))
+  for (i = list_begin (bucket); i != list_end (bucket); i = list_next (i)) 
     if (!h->less (i, e, h->aux) && !h->less (e, i, h->aux))
-      return i;
+      return i; 
   return NULL;
 }
 
@@ -316,32 +324,27 @@ rehash (struct hash *h)
         {
           struct list *new_bucket = find_bucket (h, elem);
           next = list_next (elem);
+          list_remove (elem);
           list_push_front (new_bucket, elem);
         }
     }
+
+  free (old_buckets);
 }
 
-/* Inserts E into BUCKET (in hash table H).
-   Rehashes if this increases elems/bucket above
-   MAX_ELEMS_PER_BUCKET. */
+/* Inserts E into BUCKET (in hash table H). */
 static void
 insert_elem (struct hash *h, struct list *bucket, hash_elem *e) 
 {
   h->elem_cnt++;
-  if (h->elem_cnt > h->bucket_cnt * MAX_ELEMS_PER_BUCKET)
-    rehash (h);
   list_push_front (bucket, e);
 }
 
-/* Removes E from hash table H.
-   Rehashes if this decreases elems/bucket below
-   MIN_ELEMS_PER_BUCKET. */
+/* Removes E from hash table H. */
 static void
 remove_elem (struct hash *h, hash_elem *e) 
 {
   h->elem_cnt--;
-  if (h->elem_cnt < h->bucket_cnt * MIN_ELEMS_PER_BUCKET)
-    rehash (h);
   list_remove (e);
 }
 
