@@ -112,8 +112,13 @@ main (void)
   /* Run a user program. */
   if (initial_program != NULL)
     {
+      tid_t tid;
       printf ("\nExecuting '%s':\n", initial_program);
-      process_execute (initial_program); 
+      tid = process_execute (initial_program);
+#ifdef THREAD_JOIN_IMPLEMENTED
+      if (tid != TID_ERROR)
+        thread_join (tid);
+#endif
     }
 #else
   test ();
