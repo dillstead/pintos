@@ -164,7 +164,7 @@ void
 bitmap_reset (struct bitmap *b, size_t bit_idx) 
 {
   size_t idx = elem_idx (bit_idx);
-  elem_type mask = bit_mask (idx);
+  elem_type mask = bit_mask (bit_idx);
 
   /* This is equivalent to `b->bits[idx] &= ~mask' except that it
      is guaranteed to be atomic on a uniprocessor machine.  See
@@ -179,7 +179,7 @@ void
 bitmap_flip (struct bitmap *b, size_t bit_idx) 
 {
   size_t idx = elem_idx (bit_idx);
-  elem_type mask = bit_mask (idx);
+  elem_type mask = bit_mask (bit_idx);
 
   /* This is equivalent to `b->bits[idx] ^= mask' except that it
      is guaranteed to be atomic on a uniprocessor machine.  See
