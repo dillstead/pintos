@@ -2,10 +2,14 @@
 #include "../debug.h"
 #include "threads/malloc.h"
 
-static struct list *find_bucket (struct hash *, hash_elem *);
-static struct list_elem *find_elem (struct hash *, struct list *, hash_elem *);
-static void insert_elem (struct hash *, struct list *, hash_elem *);
-static void remove_elem (struct hash *, hash_elem *);
+#define list_elem_to_hash_elem(LIST_ELEM)                       \
+        list_entry(LIST_ELEM, struct hash_elem, list_elem)
+
+static struct list *find_bucket (struct hash *, struct hash_elem *);
+static struct hash_elem *find_elem (struct hash *, struct list *,
+                                    struct hash_elem *);
+static void insert_elem (struct hash *, struct list *, struct hash_elem *);
+static void remove_elem (struct hash *, struct hash_elem *);
 static void rehash (struct hash *);
 
 /* Initializes hash table H to compute hash values using HASH and
@@ -52,11 +56,11 @@ hash_destroy (struct hash *h)
    no equal element is already in the table.
    If an equal element is already in the table, returns it
    without inserting NEW. */   
-hash_elem *
-hash_insert (struct hash *h, hash_elem *new)
+struct hash_elem *
+hash_insert (struct hash *h, struct hash_elem *new)
 {
   struct list *bucket = find_bucket (h, new);
-  struct list_elem *old = find_elem (h, bucket, new);
+  struct hash_elem *old = find_elem (h, bucket, new);
 
   if (old == NULL) 
     insert_elem (h, bucket, new);
@@ -68,11 +72,11 @@ hash_insert (struct hash *h, hash_elem *new)
 
 /* Inserts NEW into hash table H, replacing any equal element
    already in the table, which is returned. */
-hash_elem *
-hash_replace (struct hash *h, hash_elem *new) 
+struct hash_elem *
+hash_replace (struct hash *h, struct hash_elem *new) 
 {
   struct list *bucket = find_bucket (h, new);
-  struct list_elem *old = find_elem (h, bucket, new);
+  struct hash_elem *old = find_elem (h, bucket, new);
 
   if (old != NULL)
     remove_elem (h, old);
@@ -85,8 +89,8 @@ hash_replace (struct hash *h, hash_elem *new)
 
 /* Finds and returns an element equal to E in hash table H, or a
    null pointer if no equal element exists in the table. */
-hash_elem *
-hash_find (struct hash *h, hash_elem *e) 
+struct hash_elem *
+hash_find (struct hash *h, struct hash_elem *e) 
 {
   return find_elem (h, find_bucket (h, e), e);
 }
@@ -94,10 +98,10 @@ hash_find (struct hash *h, hash_elem *e)
 /* Finds, removes, and returns an element equal to E in hash
    table H.  Returns a null pointer if no equal element existed
    in the table. */
-hash_elem *
-hash_delete (struct hash *h, hash_elem *e)
+struct hash_elem *
+hash_delete (struct hash *h, struct hash_elem *e)
 {
-  struct list_elem *found = find_elem (h, find_bucket (h, e), e);
+  struct hash_elem *found = find_elem (h, find_bucket (h, e), e);
   if (found != NULL) 
     {
       remove_elem (h, found);
@@ -130,7 +134,7 @@ hash_first (struct hash_iterator *i, struct hash *h)
 
   i->hash = h;
   i->bucket = i->hash->buckets;
-  i->elem = list_head (i->bucket);
+  i->elem = list_elem_to_hash_elem (list_head (i->bucket));
 }
 
 /* Advances I to the next element in the hash table and returns
@@ -139,20 +143,20 @@ hash_first (struct hash_iterator *i, struct hash *h)
 
    NOTE: Modifying a hash table during iteration invalidates all
    iterators. */
-hash_elem *
+struct hash_elem *
 hash_next (struct hash_iterator *i)
 {
   ASSERT (i != NULL);
 
-  i->elem = list_next (i->elem);
-  while (i->elem == list_end (i->bucket)) 
+  i->elem = list_elem_to_hash_elem (list_next (&i->elem->list_elem));
+  while (i->elem == list_elem_to_hash_elem (list_end (i->bucket)))
     {
       if (++i->bucket >= i->hash->buckets + i->hash->bucket_cnt)
         {
           i->elem = NULL;
           break;
         }
-      i->elem = list_begin (i->bucket);
+      i->elem = list_elem_to_hash_elem (list_begin (i->bucket));
     }
   
   return i->elem;
@@ -161,7 +165,7 @@ hash_next (struct hash_iterator *i)
 /* Returns the current element in the hash table iteration, or a
    null pointer at the end of the table.  Undefined behavior
    after calling hash_first() but before hash_next(). */
-hash_elem *
+struct hash_elem *
 hash_cur (struct hash_iterator *i) 
 {
   return i->elem;
@@ -227,7 +231,7 @@ hash_int (int i)
 
 /* Returns the bucket in H that E belongs in. */
 static struct list *
-find_bucket (struct hash *h, hash_elem *e) 
+find_bucket (struct hash *h, struct hash_elem *e) 
 {
   size_t bucket_idx = h->hash (e, h->aux) & (h->bucket_cnt - 1);
   return &h->buckets[bucket_idx];
@@ -235,14 +239,17 @@ find_bucket (struct hash *h, hash_elem *e)
 
 /* Searches BUCKET in H for a hash element equal to E.  Returns
    it if found or a null pointer otherwise. */
-static struct list_elem *
-find_elem (struct hash *h, struct list *bucket, hash_elem *e) 
+static struct hash_elem *
+find_elem (struct hash *h, struct list *bucket, struct hash_elem *e) 
 {
   struct list_elem *i;
 
   for (i = list_begin (bucket); i != list_end (bucket); i = list_next (i)) 
-    if (!h->less (i, e, h->aux) && !h->less (e, i, h->aux))
-      return i; 
+    {
+      struct hash_elem *hi = list_elem_to_hash_elem (i);
+      if (!h->less (hi, e, h->aux) && !h->less (e, hi, h->aux))
+        return hi; 
+    }
   return NULL;
 }
 
@@ -322,7 +329,8 @@ rehash (struct hash *h)
       for (elem = list_begin (old_bucket);
            elem != list_end (old_bucket); elem = next) 
         {
-          struct list *new_bucket = find_bucket (h, elem);
+          struct list *new_bucket
+            = find_bucket (h, list_elem_to_hash_elem (elem));
           next = list_next (elem);
           list_remove (elem);
           list_push_front (new_bucket, elem);
@@ -334,17 +342,17 @@ rehash (struct hash *h)
 
 /* Inserts E into BUCKET (in hash table H). */
 static void
-insert_elem (struct hash *h, struct list *bucket, hash_elem *e) 
+insert_elem (struct hash *h, struct list *bucket, struct hash_elem *e) 
 {
   h->elem_cnt++;
-  list_push_front (bucket, e);
+  list_push_front (bucket, &e->list_elem);
 }
 
 /* Removes E from hash table H. */
 static void
-remove_elem (struct hash *h, hash_elem *e) 
+remove_elem (struct hash *h, struct hash_elem *e) 
 {
   h->elem_cnt--;
-  list_remove (e);
+  list_remove (&e->list_elem);
 }
 

@@ -21,12 +21,13 @@
 /* A linked list element. */
 struct value 
   {
-    list_elem elem;             /* List element. */
+    struct list_elem elem;      /* List element. */
     int value;                  /* Item value. */
   };
 
 static void shuffle (struct value[], size_t);
-static bool value_less (const list_elem *, const list_elem *, void *);
+static bool value_less (const struct list_elem *, const struct list_elem *,
+                        void *);
 static void verify_list_fwd (struct list *, int size);
 static void verify_list_bkwd (struct list *, int size);
 
@@ -46,7 +47,7 @@ test (void)
         {
           static struct value values[MAX_SIZE * 4];
           struct list list;
-          list_elem *e;
+          struct list_elem *e;
           int i, ofs;
 
           /* Put values 0...SIZE in random order in VALUES. */
@@ -125,7 +126,8 @@ shuffle (struct value *array, size_t cnt)
 /* Returns true if value A is less than value B, false
    otherwise. */
 static bool
-value_less (const list_elem *a_, const list_elem *b_, void *aux UNUSED) 
+value_less (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED) 
 {
   const struct value *a = list_entry (a_, struct value, elem);
   const struct value *b = list_entry (b_, struct value, elem);
@@ -138,7 +140,7 @@ value_less (const list_elem *a_, const list_elem *b_, void *aux UNUSED)
 static void
 verify_list_fwd (struct list *list, int size) 
 {
-  list_elem *e;
+  struct list_elem *e;
   int i;
   
   for (i = 0, e = list_begin (list);
@@ -157,7 +159,7 @@ verify_list_fwd (struct list *list, int size)
 static void
 verify_list_bkwd (struct list *list, int size) 
 {
-  list_elem *e;
+  struct list_elem *e;
   int i;
 
   for (i = 0, e = list_rbegin (list);

@@ -5,18 +5,18 @@
 
    This implementation of a doubly linked list does not require
    use of dynamically allocated memory.  Instead, each structure
-   that is a potential list element must embed a list_elem
-   member.  All of the list functions operate on these
-   `list_elem's.  The list_entry macro allows conversion from a
-   list_elem back to a structure object that contains it.
+   that is a potential list element must embed a struct list_elem
+   member.  All of the list functions operate on these `struct
+   list_elem's.  The list_entry macro allows conversion from a
+   struct list_elem back to a structure object that contains it.
 
    For example, suppose there is a needed for a list of `struct
-   foo'.  `struct foo' should contain a `list_elem' member, like
-   so:
+   foo'.  `struct foo' should contain a `struct list_elem'
+   member, like so:
 
       struct foo
         {
-          list_elem elem;
+          struct list_elem elem;
           int bar;
           ...other members...
         };
@@ -29,10 +29,10 @@
       list_init (&foo_list);
 
    Iteration is a typical situation where it is necessary to
-   convert from a list_elem back to its enclosing structure.
-   Here's an example using foo_list:
+   convert from a struct list_elem back to its enclosing
+   structure.  Here's an example using foo_list:
 
-      list_elem *e;
+      struct list_elem *e;
 
       for (e = list_begin (&foo_list); e != list_end (&foo_list);
            e = list_next (e))
@@ -87,18 +87,17 @@
 #include <stdint.h>
 
 /* List element. */
-typedef struct list_elem 
+struct list_elem 
   {
     struct list_elem *prev;     /* Previous list element. */
     struct list_elem *next;     /* Next list element. */
-  }
-list_elem;
+  };
 
 /* List. */
 struct list 
   {
-    list_elem head;             /* List head. */
-    list_elem tail;             /* List tail. */
+    struct list_elem head;      /* List head. */
+    struct list_elem tail;      /* List tail. */
   };
 
 /* Converts pointer to list element LIST_ELEM into a pointer to
@@ -112,32 +111,32 @@ struct list
 void list_init (struct list *);
 
 /* List traversal. */
-list_elem *list_begin (struct list *);
-list_elem *list_next (list_elem *);
-list_elem *list_end (struct list *);
+struct list_elem *list_begin (struct list *);
+struct list_elem *list_next (struct list_elem *);
+struct list_elem *list_end (struct list *);
 
-list_elem *list_rbegin (struct list *);
-list_elem *list_prev (list_elem *);
-list_elem *list_rend (struct list *);
+struct list_elem *list_rbegin (struct list *);
+struct list_elem *list_prev (struct list_elem *);
+struct list_elem *list_rend (struct list *);
 
-list_elem *list_head (struct list *);
-list_elem *list_tail (struct list *);
+struct list_elem *list_head (struct list *);
+struct list_elem *list_tail (struct list *);
 
 /* List insertion. */
-void list_insert (list_elem *, list_elem *);
-void list_splice (list_elem *before,
-                  list_elem *first, list_elem *last);
-void list_push_front (struct list *, list_elem *);
-void list_push_back (struct list *, list_elem *);
+void list_insert (struct list_elem *, struct list_elem *);
+void list_splice (struct list_elem *before,
+                  struct list_elem *first, struct list_elem *last);
+void list_push_front (struct list *, struct list_elem *);
+void list_push_back (struct list *, struct list_elem *);
 
 /* List removal. */
-list_elem *list_remove (list_elem *);
-list_elem *list_pop_front (struct list *);
-list_elem *list_pop_back (struct list *);
+struct list_elem *list_remove (struct list_elem *);
+struct list_elem *list_pop_front (struct list *);
+struct list_elem *list_pop_back (struct list *);
 
 /* List elements. */
-list_elem *list_front (struct list *);
-list_elem *list_back (struct list *);
+struct list_elem *list_front (struct list *);
+struct list_elem *list_back (struct list *);
 
 /* List properties. */
 size_t list_size (struct list *);
@@ -149,7 +148,8 @@ void list_reverse (struct list *);
 /* Compares the value of two list elements A and B, given
    auxiliary data AUX.  Returns true if A is less than B, or
    false if A is greater than or equal to B. */
-typedef bool list_less_func (const list_elem *a, const list_elem *b,
+typedef bool list_less_func (const struct list_elem *a,
+                             const struct list_elem *b,
                              void *aux);
 
 /* Operations on lists with ordered elements. */
@@ -157,13 +157,13 @@ void list_merge (struct list *, struct list *,
                  list_less_func *, void *aux);
 void list_sort (struct list *,
                 list_less_func *, void *aux);
-void list_insert_ordered (struct list *, list_elem *,
+void list_insert_ordered (struct list *, struct list_elem *,
                           list_less_func *, void *aux);
 void list_unique (struct list *, struct list *duplicates,
                   list_less_func *, void *aux);
 
 /* Max and min. */
-list_elem *list_max (struct list *, list_less_func *, void *aux);
-list_elem *list_min (struct list *, list_less_func *, void *aux);
+struct list_elem *list_max (struct list *, list_less_func *, void *aux);
+struct list_elem *list_min (struct list *, list_less_func *, void *aux);
 
 #endif /* lib/kernel/list.h */

@@ -27,7 +27,7 @@ bytes_to_sectors (off_t size)
 /* In-memory inode. */
 struct inode 
   {
-    list_elem elem;                     /* Element in inode list. */
+    struct list_elem elem;              /* Element in inode list. */
     disk_sector_t sector;               /* Sector number of disk location. */
     int open_cnt;                       /* Number of openers. */
     bool removed;                       /* True if deleted, false otherwise. */
@@ -91,7 +91,7 @@ inode_create (struct bitmap *free_map, disk_sector_t sector, off_t length)
 struct inode *
 inode_open (disk_sector_t sector) 
 {
-  list_elem *e;
+  struct list_elem *e;
   struct inode *idx;
 
   /* Check whether this inode is already open.

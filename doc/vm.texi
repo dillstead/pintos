@@ -533,12 +533,12 @@ Yes.
 @anchor{Hash Table}
 @b{How do I use the hash table provided in @file{lib/kernel/hash.c}?}
 
-First, you need to embed a @code{hash_elem} object as a member of the
-object that the hash table will contain.  Each @code{hash_elem} allows
+First, you need to embed a @struct{hash_elem} as a member of the
+object that the hash table will contain.  Each @struct{hash_elem} allows
 the object to a member of at most one hash table at a given time.  All
 the hash table functions that deal with hash table items actually use
-the address of a @code{hash_elem}.  You can convert a pointer to a
-@code{hash_elem} member into a pointer to the structure in which
+the address of a @struct{hash_elem}.  You can convert a pointer to a
+@struct{hash_elem} member into a pointer to the structure in which
 member is embedded using the @code{hash_entry} macro.
 
 Second, you need to decide on a key type.  The key should be something
@@ -553,11 +553,11 @@ to be compatible with the prototypes for @code{hash_hash_func} and
 @code{hash_less_func} in @file{lib/kernel/hash.h}.
 
 Here's a quick example.  Suppose you want to put @struct{thread}s
-in a hash table.  First, add a @code{hash_elem} to the thread
+in a hash table.  First, add a @struct{hash_elem} to the thread
 structure by adding a line to its definition:
 
 @example
-hash_elem h_elem;               /* Hash table element. */
+struct hash_elem h_elem;                /* Hash table element. */
 @end example
 
 We'll choose the @code{tid} member in @struct{thread} as the key,
@@ -566,7 +566,7 @@ and write a hash function and a comparison function:
 @example
 /* Returns a hash for E. */
 unsigned
-thread_hash (const hash_elem *e, void *aux UNUSED)
+thread_hash (const struct hash_elem *e, void *aux UNUSED)
 @{
   struct thread *t = hash_entry (e, struct thread, h_elem);
   return hash_int (t->tid);
@@ -574,7 +574,7 @@ thread_hash (const hash_elem *e, void *aux UNUSED)
 
 /* Returns true if A's tid is less than B's tid. */
 bool
-thread_less (const hash_elem *a_, const hash_elem *b_, 
+thread_less (const struct hash_elem *a_, const struct hash_elem *b_, 
              void *aux UNUSED)
 @{
   struct thread *a = hash_entry (a_, struct thread, h_elem);

@@ -57,7 +57,7 @@ struct arena
 /* Free block. */
 struct block 
   {
-    list_elem free_elem;        /* Free list element. */
+    struct list_elem free_elem; /* Free list element. */
   };
 
 /* Our set of descriptors. */

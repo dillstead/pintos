@@ -90,7 +90,7 @@ struct thread
     int priority;                       /* Priority. */
 
     /* Shared between thread.c and synch.c. */
-    list_elem elem;                     /* List element. */
+    struct list_elem elem;              /* List element. */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

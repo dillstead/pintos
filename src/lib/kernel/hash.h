@@ -10,11 +10,12 @@
 
    The chain lists do not use dynamic allocation.  Instead, each
    structure that can potentially be in a hash must embed a
-   hash_elem member.  All of the hash functions operate on these
-   `hash_elem's.  The hash_entry macro allows conversion from a
-   hash_elem back to a structure object that contains it.  This
-   is the same technique used in the linked list implementation.
-   Refer to lib/kernel/list.h for a detailed explanation.
+   struct hash_elem member.  All of the hash functions operate on
+   these `struct hash_elem's.  The hash_entry macro allows
+   conversion from a struct hash_elem back to a structure object
+   that contains it.  This is the same technique used in the
+   linked list implementation.  Refer to lib/kernel/list.h for a
+   detailed explanation.
 
    The FAQ for the VM project contains a detailed example of how
    to use the hash table. */
@@ -25,7 +26,10 @@
 #include "list.h"
 
 /* Hash element. */
-typedef list_elem hash_elem;
+struct hash_elem 
+  {
+    struct list_elem list_elem;
+  };
 
 /* Converts pointer to hash element HASH_ELEM into a pointer to
    the structure that HASH_ELEM is embedded inside.  Supply the
@@ -37,12 +41,13 @@ typedef list_elem hash_elem;
 
 /* Computes and returns the hash value for hash element E, given
    auxiliary data AUX. */
-typedef unsigned hash_hash_func (const hash_elem *e, void *aux);
+typedef unsigned hash_hash_func (const struct hash_elem *e, void *aux);
 
 /* Compares the value of two hash elements A and B, given
    auxiliary data AUX.  Returns true if A is less than B, or
    false if A is greater than or equal to B. */
-typedef bool hash_less_func (const hash_elem *a, const hash_elem *b,
+typedef bool hash_less_func (const struct hash_elem *a,
+                             const struct hash_elem *b,
                              void *aux);
 
 /* Hash table. */
@@ -61,7 +66,7 @@ struct hash_iterator
   {
     struct hash *hash;          /* The hash table. */
     struct list *bucket;        /* Current bucket. */
-    hash_elem *elem;            /* Current hash element in current bucket. */
+    struct hash_elem *elem;     /* Current hash element in current bucket. */
   };
 
 /* Basic life cycle. */
@@ -70,15 +75,15 @@ void hash_clear (struct hash *);
 void hash_destroy (struct hash *);
 
 /* Search, insertion, deletion. */
-hash_elem *hash_insert (struct hash *, hash_elem *);
-hash_elem *hash_replace (struct hash *, hash_elem *);
-hash_elem *hash_find (struct hash *, hash_elem *);
-hash_elem *hash_delete (struct hash *, hash_elem *);
+struct hash_elem *hash_insert (struct hash *, struct hash_elem *);
+struct hash_elem *hash_replace (struct hash *, struct hash_elem *);
+struct hash_elem *hash_find (struct hash *, struct hash_elem *);
+struct hash_elem *hash_delete (struct hash *, struct hash_elem *);
 
 /* Iteration. */
 void hash_first (struct hash_iterator *, struct hash *);
-hash_elem *hash_next (struct hash_iterator *);
-hash_elem *hash_cur (struct hash_iterator *);
+struct hash_elem *hash_next (struct hash_iterator *);
+struct hash_elem *hash_cur (struct hash_iterator *);
 
 /* Information. */
 size_t hash_size (struct hash *);

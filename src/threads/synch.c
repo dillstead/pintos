@@ -231,7 +231,7 @@ lock_name (const struct lock *lock)
 /* One semaphore in a list. */
 struct semaphore_elem 
   {
-    list_elem elem;                     /* List element. */
+    struct list_elem elem;              /* List element. */
     struct semaphore semaphore;         /* This semaphore. */
   };
 

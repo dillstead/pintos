@@ -264,7 +264,7 @@ A thread priority, ranging from the lowest possible priority
 implement priority scheduling in problem 1-3 (@pxref{Problem 1-3
 Priority Scheduling}).
 
-@item list_elem elem;
+@item struct list_elem elem;
 A ``list element'' used to put the thread into doubly linked lists,
 either the list of threads ready to run or a list of threads waiting
 on a semaphore.  Take a look at @file{lib/kernel/list.h} for
