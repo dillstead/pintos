@@ -4,7 +4,15 @@ include ../Makefile.vars
 
 SHELL = /bin/sh
 
-CC = gcc
+# Utilities.  
+# On a system where i386-elf is native (e.g. on an x86 GNU/Linux
+# machine) you want to set BINUTIL_PREFIX to expand to null, as shown
+# in the line that's commented out.
+BINUTIL_PREFIX = i386-elf-
+#BINUTIL_PREFIX =
+CC = $(BINUTIL_PREFIX)gcc
+LD = $(BINUTIL_PREFIX)ld
+OBJCOPY = $(BINUTIL_PREFIX)objcopy
 
 VPATH = ../..
 
@@ -75,10 +83,10 @@ threads/kernel.lds.s: CPPFLAGS += -P -C
 threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
 
 kernel.o: threads/kernel.lds.s $(OBJECTS) 
-	ld -T $< -o $@ $(OBJECTS) `$(CC) -print-libgcc-file-name`
+	$(LD) -T $< -o $@ $(OBJECTS) `$(CC) -print-libgcc-file-name`
 
 kernel.bin: kernel.o
-	objcopy -O binary -R .note -R .comment -S $< $@.tmp
+	$(OBJCOPY) -O binary -R .note -R .comment -S $< $@.tmp
 	../../pad 4096 < $@.tmp > $@
 	rm $@.tmp
 
@@ -86,7 +94,7 @@ threads/loader.o: threads/loader.S kernel.bin
 	$(CC) -c $< -o $@ $(ASFLAGS) -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
 
 loader.bin: threads/loader.o
-	ld -N -e start -Ttext 0x7c00 --oformat binary -o $@ $<
+	$(LD) -N -e start -Ttext 0x7c00 --oformat binary -o $@ $<
 
 os.dsk: loader.bin kernel.bin
 	cat $^ > $@
