@@ -5,6 +5,14 @@
 #include "filesys.h"
 #include "lib.h"
 
+/* Allocates sectors from bitmap B for the content of a file
+   whose size is LENGTH bytes, and returns a new `struct filehdr'
+   properly initialized for the file.
+   It is the caller's responsible to allocate a sector for the
+   file header itself, and to write the file header and bitmap
+   to disk.
+   If memory or disk allocation fails, returns a null pointer,
+   leaving bitmap B is unchanged. */
 struct filehdr *
 filehdr_allocate (struct bitmap *b, off_t length) 
 {
@@ -26,6 +34,7 @@ filehdr_allocate (struct bitmap *b, off_t length)
       if (sector == BITMAP_ERROR)
         {
           filehdr_deallocate (h, b);
+          free (h);
           return NULL;
         }
       h->sectors[h->sector_cnt++] = sector;
@@ -34,6 +43,8 @@ filehdr_allocate (struct bitmap *b, off_t length)
   return h;
 }
 
+/* Marks the sectors for H's content as free in bitmap B.
+   Neither H's own disk sector nor its memory are freed. */
 void
 filehdr_deallocate (struct filehdr *h, struct bitmap *b) 
 {
@@ -46,6 +57,9 @@ filehdr_deallocate (struct filehdr *h, struct bitmap *b)
     bitmap_reset (b, h->sectors[i]);
 }
 
+/* Reads a file header from FILEHDR_SECTOR
+   and returns a new `struct filehdr' that contains it.
+   Returns a null pointer fi memory allocation fails. */
 struct filehdr *
 filehdr_read (disk_sector_t filehdr_sector) 
 {
@@ -59,6 +73,7 @@ filehdr_read (disk_sector_t filehdr_sector)
   return h;
 }
 
+/* Writes H to disk in sector FILEHDR_SECTOR. */
 void
 filehdr_write (const struct filehdr *h, disk_sector_t filehdr_sector) 
 {
@@ -67,12 +82,18 @@ filehdr_write (const struct filehdr *h, disk_sector_t filehdr_sector)
   disk_write (filesys_disk, filehdr_sector, h);
 }
 
+/* Frees the memory (but not the on-disk sector) associated with
+   H. */
 void
 filehdr_destroy (struct filehdr *h) 
 {
   free (h);
 }
 
+/* Returns the disk sector that contains byte offset POS within
+   the file with header H.
+   Returns -1 if H does not contain data for a byte at offset
+   POS. */
 disk_sector_t
 filehdr_byte_to_sector (const struct filehdr *h, off_t pos) 
 {
@@ -84,6 +105,7 @@ filehdr_byte_to_sector (const struct filehdr *h, off_t pos)
   return idx < h->sector_cnt ? h->sectors[idx] : (disk_sector_t) -1;
 }
 
+/* Returns the length, in bytes, of the file with header H, */
 off_t
 filehdr_length (const struct filehdr *h)
 {
@@ -91,4 +113,22 @@ filehdr_length (const struct filehdr *h)
   return h->length;
 }
 
-void filehdr_print (const struct filehdr *);
+/* Prints a representation of H to the system console. */
+void
+filehdr_print (const struct filehdr *h) 
+{
+  size_t i;
+  
+  printk ("File header: %jd bytes, %zd sectors (",
+          (intmax_t) h->length, h->sector_cnt);
+
+  /* This loop could be unsafe for large h->sector_cnt, can you
+     see why? */
+  for (i = 0; i < h->sector_cnt; i++) 
+    {
+      if (i != 0)
+        printk (", ");
+      printk ("%jd", (intmax_t) h->sectors[i]); 
+    }
+  printk (")\n");
+}

@@ -5,7 +5,8 @@
 #include <stdint.h>
 #include "off_t.h"
 
-struct disk *filesys_disk;
+/* Disk used for filesystem. */
+extern struct disk *filesys_disk;
 
 struct file;
 void filesys_init (bool format);

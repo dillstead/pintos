@@ -7,12 +7,25 @@
 #include "mmu.h"
 #include "palloc.h"
 
+/* Filename and file size to use for copy operations,
+   as "filename:size". */
 char *fsutil_copy_arg;
+
+/* Name of a file print to print to console. */
 char *fsutil_print_file;
+
+/* Name of a file to delete. */
 char *fsutil_remove_file;
+
+/* List all files in the filesystem to the system console? */
 bool fsutil_list_files;
+
+/* Dump full contents of filesystem to the system console? */
 bool fsutil_dump_filesys;
 
+/* Copies from the "scratch" disk, hdc or hd1:0,
+   to a file named FILENAME in the filesystem.
+   The file will be SIZE bytes in length. */
 static void
 copy (const char *filename, off_t size) 
 {
@@ -26,7 +39,7 @@ copy (const char *filename, off_t size)
   if (src == NULL)
     PANIC ("couldn't open source disk (hdc or hd1:0)");
   if (size > (off_t) disk_size (src) * DISK_SECTOR_SIZE)
-    PANIC ("source disk is too small for %Ld-byte file",
+    PANIC ("source disk is too small for %lld-byte file",
            (unsigned long long) size);
   
   /* Create destination file. */
@@ -43,7 +56,7 @@ copy (const char *filename, off_t size)
       int chunk_size = size > DISK_SECTOR_SIZE ? DISK_SECTOR_SIZE : size;
       disk_read (src, sector++, buffer);
       if (file_write (&dst, buffer, chunk_size) != chunk_size)
-        PANIC ("%s: write failed with %Ld bytes unwritten",
+        PANIC ("%s: write failed with %lld bytes unwritten",
                filename, (unsigned long long) size);
       size -= chunk_size;
     }
@@ -52,6 +65,8 @@ copy (const char *filename, off_t size)
   file_close (&dst);
 }
 
+/* Executes the filesystem operations described by the variables
+   declared in fsutil.h. */
 void
 fsutil_run (void) 
 {
@@ -85,6 +100,8 @@ fsutil_run (void)
     filesys_dump ();
 }
 
+/* Prints the contents of file FILENAME to the system console as
+   hex and ASCII. */
 void
 fsutil_print (const char *filename) 
 {

@@ -6,14 +6,17 @@
 #include "disk.h"
 #include "off_t.h"
 
+/* Number of direct sector pointers in a file header. */
 #define DIRECT_CNT ((DISK_SECTOR_SIZE - sizeof (off_t) * 2)     \
                     / sizeof (disk_sector_t))
 
+/* File header.
+   This is both an in-memory and on-disk structure. */
 struct filehdr 
   {
-    off_t length;
-    size_t sector_cnt;
-    disk_sector_t sectors[DIRECT_CNT];
+    off_t length;                       /* File size in bytes. */
+    size_t sector_cnt;                  /* File size in sectors. */
+    disk_sector_t sectors[DIRECT_CNT];  /* Sectors allocated for file. */
   };
 
 struct bitmap;

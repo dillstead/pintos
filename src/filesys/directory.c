@@ -4,38 +4,57 @@
 #include "lib.h"
 #include "malloc.h"
 
+/* Initializes D as a directory that holds ENTRY_CNT entries. */
 bool
 dir_init (struct dir *d, size_t entry_cnt) 
 {
+  ASSERT (d != NULL);
   d->entry_cnt = entry_cnt;
   d->entries = calloc (1, sizeof *d->entries * entry_cnt);
   return d->entries != NULL;
 }
 
+/* Destroys D and frees associated resources. */
 void
 dir_destroy (struct dir *d) 
 {
-  free (d->entries);
+  if (d != NULL) 
+    free (d->entries);
 }
 
+/* Returns the size of D in bytes. */
 static off_t
 dir_size (struct dir *d) 
 {
+  ASSERT (d != NULL);
   return d->entry_cnt * sizeof *d->entries;
 }
 
+/* Reads D from FILE.
+   D must have already been initialized, to the correct number of
+   entries, with dir_init(). */
 void
 dir_read (struct dir *d, struct file *file) 
 {
+  ASSERT (d != NULL);
+  ASSERT (file != NULL);
+  ASSERT (file_length (file) >= dir_size (d));
+
   file_read_at (file, d->entries, dir_size (d), 0);
 }
 
+/* Writes D to FILE.
+   D must have already been initialized, to the correct number of
+   entries, with dir_init(). */
 void
 dir_write (struct dir *d, struct file *file) 
 {
   file_write_at (file, d->entries, dir_size (d), 0);
 }
 
+/* Searches D for a file named NAME.
+   If successful, returns the file's entry;
+   otherwise, returns a null pointer. */
 static struct dir_entry *
 lookup (const struct dir *d, const char *name) 
 {
@@ -44,7 +63,7 @@ lookup (const struct dir *d, const char *name)
   ASSERT (d != NULL);
   ASSERT (name != NULL);
 
-  if (strlen (name) > FILENAME_LEN_MAX)
+  if (strlen (name) > NAME_MAX)
     return NULL;
 
   for (i = 0; i < d->entry_cnt; i++) 
@@ -56,6 +75,10 @@ lookup (const struct dir *d, const char *name)
   return NULL;
 }
 
+/* Searches D for a file named NAME
+   and returns true if one exists, false otherwise.
+   If FILEHDR_SECTOR is nonnull, then on success *FILEHDR_SECTOR
+   is set to the sector that contains the file's header. */
 bool
 dir_lookup (const struct dir *d, const char *name,
             disk_sector_t *filehdr_sector) 
@@ -76,6 +99,12 @@ dir_lookup (const struct dir *d, const char *name,
     return false;
 }
 
+/* Adds a file named NAME to D, which must not already contain a
+   file by that name.  The file's header is in sector
+   FILEHDR_SECTOR.
+   Returns true if successful, false on failure.
+   Fails if NAME is invalid (i.e. too long) or if D has no free
+   directory entries. */
 bool
 dir_add (struct dir *d, const char *name, disk_sector_t filehdr_sector) 
 {
@@ -84,6 +113,9 @@ dir_add (struct dir *d, const char *name, disk_sector_t filehdr_sector)
   ASSERT (d != NULL);
   ASSERT (name != NULL);
   ASSERT (lookup (d, name) == NULL);
+
+  if (strlen (name) > NAME_MAX)
+    return false;
 
   for (i = 0; i < d->entry_cnt; i++)
     {
@@ -99,6 +131,9 @@ dir_add (struct dir *d, const char *name, disk_sector_t filehdr_sector)
   return false;
 }
 
+/* Removes any entry for NAME in D.
+   Returns true if successful, false on failure,
+   which occurs only if there is no file with the given NAME. */
 bool
 dir_remove (struct dir *d, const char *name) 
 {
@@ -117,6 +152,7 @@ dir_remove (struct dir *d, const char *name)
     return false;
 }
 
+/* Prints the names of the files in D to the system console. */
 void
 dir_list (const struct dir *d)
 {
@@ -127,6 +163,8 @@ dir_list (const struct dir *d)
       printk ("%s\n", e->name);
 }
 
+/* Dumps the contents of D, including its files' names and their
+   contents, to the system console. */
 void
 dir_dump (const struct dir *d) 
 {
