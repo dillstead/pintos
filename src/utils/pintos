@@ -23,17 +23,17 @@ GetOptions ("sim=s" => sub { set_sim (@_) },
 	    "no-debug" => sub { set_debug ("no-debug") },
 	    "monitor" => sub { set_debug ("monitor") },
 	    "gdb" => sub { set_debug ("gdb") },
-	    
+
 	    "run|get|put|make-disk" => \&cmd_option,
-	    
+
 	    "m|memory=i" => \$mem,
 	    "j|jitter=i" => sub { set_jitter (@_) },
 	    "r|realtime" => sub { set_realtime () },
-	    
+
 	    "v|no-vga" => sub { set_vga ('none'); },
 	    "s|no-serial" => sub { $serial_out = 0; },
 	    "t|terminal" => sub { set_vga ('terminal'); },
-	    
+
 	    "h|help" => sub { usage (0); },
 
 	    "0|os-disk|disk-0|hda=s" => \$disks[0],
@@ -113,7 +113,7 @@ if ($cmd eq 'run') {
     # Create scratch disk from file.
     die "$hostfn: $!\n" if ! -e $hostfn;
     my ($size) = -s _;
-    if ($size) { 
+    if ($size) {
 	copy_pad ($hostfn, "scratch.dsk", 512);
     } else {
 	open (SCRATCH, ">scratch.dsk") or die "scratch.dsk: create: $!\n";
@@ -214,8 +214,9 @@ sub run_vm {
     our (@disks);
 
     die "$disks[0]: can't find OS disk\n" if ! -e $disks[0];
+    die "$disks[0]: OS disk cannot have zero size\n" if ! -s $disks[0];
     for my $i (1...3) {
-	undef $disks[$i] if ! -e $disks[$i];
+	undef $disks[$i] if ! -s $disks[$i];
     }
 
     if (my ($project) = `pwd` =~ /\b(threads|userprog|vm|filesys)\b/) {
