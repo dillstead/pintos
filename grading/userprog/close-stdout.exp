@@ -1,3 +1,6 @@
 (close-stdout) begin
 (close-stdout) end
 close-stdout: exit(0)
+--OR--
+(close-stdout) begin
+close-stdout: exit(-1)
