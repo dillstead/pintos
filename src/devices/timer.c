@@ -1,6 +1,8 @@
 #include "devices/timer.h"
 #include <debug.h>
+#include <inttypes.h>
 #include <round.h>
+#include <stdio.h>
 #include "threads/interrupt.h"
 #include "threads/io.h"
 #include "threads/thread.h"
@@ -91,12 +93,20 @@ timer_ns2ticks (int64_t ns)
 {
   return DIV_ROUND_UP (ns * TIMER_FREQ, 1000000000);
 }
+
+/* Prints timer statistics. */
+void
+timer_print_stats (void) 
+{
+  printf ("Timer: %"PRId64" ticks.\n", ticks);
+}
 
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+  thread_tick ();
   if (ticks % TIME_SLICE == 0)
     intr_yield_on_return ();
 }

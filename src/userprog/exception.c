@@ -5,6 +5,9 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+/* Number of page faults processed. */
+static long long page_fault_cnt;
+
 static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);
 
@@ -52,6 +55,13 @@ exception_init (void)
      We need to disable interrupts for page faults because the
      fault address is stored in CR2 and needs to be preserved. */
   intr_register (14, 0, INTR_OFF, page_fault, "#PF Page-Fault Exception");
+}
+
+/* Prints exception statistics. */
+void
+exception_print_stats (void) 
+{
+  printf ("Exception: %lld page faults\n", page_fault_cnt);
 }
 
 /* Handler for an exception (probably) caused by a user process. */
@@ -128,6 +138,9 @@ page_fault (struct intr_frame *f)
   /* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
   intr_enable ();
+
+  /* Count page faults. */
+  page_fault_cnt++;
 
   /* Determine cause. */
   not_present = (f->error_code & PF_P) == 0;

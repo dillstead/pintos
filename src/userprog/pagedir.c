@@ -168,23 +168,14 @@ pagedir_test_accessed (uint32_t *pd, const void *upage)
   return pte != NULL && (*pte & PG_A) != 0;
 }
 
-/* Returns true if the PTE for user virtual page UPAGE in PD has
-   been accessed recently, and then resets the accessed bit for
-   that page.
-   Returns false and has no effect if PD contains no PDE for
-   UPAGE. */
-bool
-pagedir_test_accessed_and_clear (uint32_t *pd, const void *upage) 
+/* Resets the accessed bit in the PTE for user virtual page UPAGE
+   in PD. */
+void
+pagedir_clear_accessed (uint32_t *pd, const void *upage) 
 {
   uint32_t *pte = lookup_page (pd, (void *) upage, false);
   if (pte != NULL) 
-    {
-      bool accessed = (*pte & PG_A) != 0;
-      *pte &= ~(uint32_t) PG_A;
-      return accessed;
-    }
-  else
-    return false;
+    *pte &= ~(uint32_t) PG_A;
 }
 
 /* Loads page directory PD into the CPU's page directory base

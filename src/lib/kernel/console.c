@@ -42,11 +42,21 @@ static struct lock console_lock;
    counter. */
 static int console_lock_depth;
 
+/* Number of characters written to console. */
+static int64_t write_cnt;
+
 /* Initializes the console. */
 void
 console_init (void) 
 {
   lock_init (&console_lock, "console");
+}
+
+/* Prints console statistics. */
+void
+console_print_stats (void) 
+{
+  printf ("Console: %lld characters output\n", write_cnt);
 }
 
 /* Acquires the console lock. */
@@ -140,6 +150,7 @@ vprintf_helper (char c, void *char_cnt_)
 static void
 putchar_unlocked (uint8_t c) 
 {
+  write_cnt++;
   serial_putc (c);
   vga_putc (c);
 }

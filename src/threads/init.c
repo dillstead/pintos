@@ -55,6 +55,7 @@ static bool do_power_off;
 static void ram_init (void);
 static void paging_init (void);
 static void argv_init (void);
+static void print_stats (void);
 
 int main (void) NO_RETURN;
 
@@ -282,10 +283,28 @@ power_off (void)
   filesys_done ();
 #endif
 
+  print_stats ();
+
   printf ("Powering off...\n");
   serial_flush ();
 
   for (p = s; *p != '\0'; p++)
     outb (0x8900, *p);
   for (;;);
+}
+
+/* Print statistics about Pintos execution. */
+static void
+print_stats (void) 
+{
+  timer_print_stats ();
+  thread_print_stats ();
+#ifdef FILESYS
+  disk_print_stats ();
+#endif
+  console_print_stats ();
+  kbd_print_stats ();
+#ifdef USERPROG
+  exception_print_stats ();
+#endif
 }

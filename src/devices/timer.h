@@ -17,4 +17,6 @@ int64_t timer_ms2ticks (int64_t ms);
 int64_t timer_us2ticks (int64_t us);
 int64_t timer_ns2ticks (int64_t ns);
 
+void timer_print_stats (void);
+
 #endif /* devices/timer.h */

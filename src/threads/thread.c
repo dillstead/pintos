@@ -41,6 +41,11 @@ struct kernel_thread_frame
     void *aux;                  /* Auxiliary data for function. */
   };
 
+/* Statistics. */
+static long long idle_ticks;    /* # of timer ticks spent idle. */
+static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
+static long long user_ticks;    /* # of timer ticks in user programs. */
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -84,6 +89,30 @@ thread_start (void)
 {
   thread_create ("idle", PRI_DEFAULT, idle, NULL);
   intr_enable ();
+}
+
+/* Called by the timer interrupt handler at each timer tick to
+   update statistics. */
+void
+thread_tick (void) 
+{
+  struct thread *t = thread_current ();
+  if (t == idle_thread)
+    idle_ticks++;
+#ifdef USERPROG
+  else if (t->pagedir != NULL)
+    user_ticks++;
+#endif
+  else
+    kernel_ticks++;
+}
+
+/* Prints thread statistics. */
+void
+thread_print_stats (void) 
+{
+  printf ("Thread: %lld idle ticks, %lld kernel ticks, %lld user ticks\n",
+          idle_ticks, kernel_ticks, user_ticks);
 }
 
 /* Creates a new kernel thread named NAME with the given initial

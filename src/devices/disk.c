@@ -52,7 +52,10 @@ struct disk
     int dev_no;                 /* Device 0 or 1 for master or slave. */
 
     bool is_ata;                /* 1=This device is an ATA disk. */
-    disk_sector_t capacity;    /* Capacity in sectors (if is_ata is true). */
+    disk_sector_t capacity;     /* Capacity in sectors (if is_ata). */
+
+    long long read_cnt;         /* Number of sectors read. */
+    long long write_cnt;        /* Number of sectors written. */
   };
 
 /* An ATA channel (aka controller).
@@ -131,6 +134,8 @@ disk_init (void)
 
           d->is_ata = false;
           d->capacity = 0;
+
+          d->read_cnt = d->write_cnt = 0;
         }
 
       /* Register interrupt handler. */
@@ -147,6 +152,26 @@ disk_init (void)
       for (dev_no = 0; dev_no < 2; dev_no++)
         if (c->devices[dev_no].is_ata)
           identify_ata_device (&c->devices[dev_no]);
+    }
+}
+
+/* Prints disk statistics. */
+void
+disk_print_stats (void) 
+{
+  int chan_no;
+
+  for (chan_no = 0; chan_no < CHANNEL_CNT; chan_no++) 
+    {
+      int dev_no;
+
+      for (dev_no = 0; dev_no < 2; dev_no++) 
+        {
+          struct disk *d = disk_get (chan_no, dev_no);
+          if (d != NULL && d->is_ata) 
+            printf ("%s: %lld reads, %lld writes\n",
+                    d->name, d->read_cnt, d->write_cnt);
+        }
     }
 }
 
@@ -194,6 +219,7 @@ disk_read (struct disk *d, disk_sector_t sec_no, void *buffer)
   if (!wait_while_busy (d))
     PANIC ("%s: disk read failed, sector=%"PRDSNu, d->name, sec_no);
   input_sector (c, buffer);
+  d->read_cnt++;
   lock_release (&c->lock);
 }
 
@@ -216,6 +242,7 @@ disk_write (struct disk *d, disk_sector_t sec_no, const void *buffer)
     PANIC ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
   output_sector (c, buffer);
   sema_down (&c->completion_wait);
+  d->write_cnt++;
   lock_release (&c->lock);
 }
 
