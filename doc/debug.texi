@@ -374,17 +374,18 @@ above, a good place to start adding @func{printf}s is
 @node Debugging Tips
 @section Tips
 
-The page allocator in @file{threads/palloc.c} clears all the bytes in
-pages to @t{0xcc} when they are freed.  Thus, if you see an attempt to
+The page allocator in @file{threads/palloc.c} and the block allocator in
+@file{threads/malloc.c} both clear all the bytes in pages and blocks to
+@t{0xcc} when they are freed.  Thus, if you see an attempt to
 dereference a pointer like @t{0xcccccccc}, or some other reference to
 @t{0xcc}, there's a good chance you're trying to reuse a page that's
-already been freed.  Also, byte @t{0xcc} is the CPU opcode for
-``invoke interrupt 3,'' so if you see an error like @code{Interrupt
-0x03 (#BP Breakpoint Exception)}, Pintos tried to execute code in a
-freed page.
+already been freed.  Also, byte @t{0xcc} is the CPU opcode for ``invoke
+interrupt 3,'' so if you see an error like @code{Interrupt 0x03 (#BP
+Breakpoint Exception)}, Pintos tried to execute code in a freed page or
+block.
 
-Similarly, the block allocator in @file{threads/malloc.c} clears all
-the bytes in freed blocks to @t{0xcd}.  The two bytes @t{0xcdcd} are
-a CPU opcode for ``invoke interrupt @t{0xcd},'' so @code{Interrupt
-0xcd (unknown)} is a good sign that you tried to execute code in a
-block freed with @func{free}.
+An assertion failure on the expression @code{sec_no < d->capacity}
+indicates that Pintos tried to access a file through an inode that has
+been closed and freed.  Freeing an inode clears its starting sector
+number to @t{0xcccccccc}, which is not a valid sector number for disks
+smaller than about 1.6 TB.

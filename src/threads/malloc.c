@@ -198,7 +198,7 @@ free (void *p)
     }
 
 #ifndef NDEBUG
-  memset (b, 0xcd, d->block_size);
+  memset (b, 0xcc, d->block_size);
 #endif
   
   lock_acquire (&d->lock);
