@@ -22,7 +22,7 @@ static void test_donate_return (void);
 void
 test (void) 
 {
-  /* Make sure our prority is the default. */
+  /* Make sure our priority is the default. */
   ASSERT (thread_get_priority () == PRI_DEFAULT);
 
   test_preempt ();
