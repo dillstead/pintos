@@ -4,6 +4,9 @@
    documentation.  Your code should not require other macros to
    be defined here to function properly. */
 
+/* Do not use C++-style (//) comments in this file.
+   You will break the build. */
+
 /* Example definition. */
 /*#define MACRONAME 1 */
 
