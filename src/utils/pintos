@@ -1,21 +1,36 @@
 #! /usr/bin/perl
 
 $sim = "bochs";
+$debug = "";
+$mem = 4;
+$headless = 0;
 while (@ARGV) {
     my ($arg) = shift (@ARGV);
-    if ($arg eq '--bochs' || $arg eq '--bochs-dbg' || $arg eq '--bochs-gdb'
-	|| $arg eq '--qemu' || $arg eq '--vmware') {
-	$sim = substr ($arg, 2);
+    if ($arg =~ /--(bochs|qemu|vmware)$/) {
+	$sim = $1;
+    } elsif ($arg =~ /--(monitor|gdb)$/) {
+	$debug = $1;
     } elsif ($arg eq 'run') {
 	run_vm (@ARGV);
 	exit 0;
+    } elsif ($arg =~ /^mem(?:ory)?=(\d+)/) {
+	$mem = $1;
+    } elsif ($arg eq '--headless') {
+	$headless = 1;
     } elsif ($arg eq 'make-disk') {
+	my ($force) = @ARGV > 0 && $ARGV[0] eq '--force';
+	shift @ARGV if $force;
 	usage () if @ARGV != 2;
-	my ($file, $kb) = @ARGV;
-	usage () if $kb =~ /^\d+$/;
+	my ($file, $mb) = @ARGV;
+	usage () if $mb !~ /^\d+$/;
 	die "$file: already exists\n" if -e $file;
 
-	create_disk ($file, $kb);
+	if ($mb != .5 && $mb != 1 && $mb != 1.5 && $mb != 2) {
+	    print "$file: recommended sizes are .5, 1, 1.5, or 2 MB\n";
+	    die "use --force to override\n" if !$force;
+	}
+
+	create_disk ($file, $mb * 1008);
 	exit 0;
     } elsif ($arg eq 'put') {
 	usage () if @ARGV != 1 && @ARGV != 2;
@@ -46,16 +61,17 @@ while (@ARGV) {
 	    if $scratch_size < $fs_size + 16384;
 
 	# Do copy.
-	run_vm ("-co", $guestfn, $hostfn, "-q");
+	run_vm ("-co", $guestfn, "-q");
 
 	# Read out scratch disk.
+	print "copying $guestfn from scratch.dsk to $hostfn...\n";
 	open (SRC, "<scratch.dsk") or die "scratch.dsk: open: $!\n";
 	open (DST, ">$hostfn") or die "$hostfn: create: $!\n";
 	my ($input);
 	read (SRC, $input, 512) == 512 or die "scratch.dsk: read error\n";
 	my ($size) = unpack ("%V", $input);
 	$size != 0xffffffff or die "$guestfn: too big for scratch.dsk?";
-	read (SRC, $src, $size) == $src or die "scratch.dsk: read error\n";
+	read (SRC, $src, $size) == $size or die "scratch.dsk: read error\n";
 	print DST $src or die "$hostfn: write error\n";
 	close (DST);
 	close (SRC);
@@ -72,42 +88,29 @@ sub usage {
     print "Usage: pintos [OPTION...] COMMAND [ARG...]\n";
     print "where COMMAND is one of the following:\n";
     print "  run [CMDLINE...]        run a VM in the simulator\n";
-    print "  make-disk FILE.DSK KB   create FILE.DSK as empty KB-kB disk\n";
+    print "  make-disk FILE.DSK SIZE create FILE.DSK as empty SIZE MB disk\n";
     print "  put HOSTFN [GUESTFN]    copy HOSTFN into VM (as GUESTFN)\n";
     print "  get GUESTFN [HOSTFN]    copy GUESTFN out of VM (to HOSTFN)\n";
     print "  help                    print this help message and exit\n";
     print "Available options:\n";
     print "  --bochs       Use Bochs as simulator (default)\n";
-    print "  --bochs-dbg   Use Bochs with debugger as simulator\n";
-    print "  --bochs-gdb   Use Bochs with gdb as simulator\n";
     print "  --qemu        Use qemu as simulator\n";
     print "  --vmware      Use VMware Workstation as simulator\n";
+    print "  --monitor     Debug with simulator's monitor\n";
+    print "  --gdb	   Debug with gdb\n";
+    print "  --mem=MB	   Run VM with MB megabytes of physical memory\n";
+    print "  --headless    No VGA display.  Send VM output to stdout\n";
     exit $exitcode;
 }
 
 sub copy_pad {
     my ($src, $dst, $blocksize) = @_;
-    open (SRC, "<$src") or die "$src: open: $!\n";
-    open (DST, ">$dst") or die "$dst: create: $!\n";
-    my ($size) = 0;
-    my ($input);
-    while (read (SRC, $input, 4096)) {
-	$size += length ($input);
-	print DST $input;
-    }
-    my ($rem) = $size % $blocksize;
-    print DST "\0" x ($blocksize - $rem) if $rem != 0;
-    close (DST);
-    close (SRC);
+    run_command ("dd", "if=$src", "of=$dst", "bs=$blocksize", "conv=sync");
 }
 
 sub create_disk {
     my ($disk, $kb) = @_;
-    open (DISK, ">$disk") or die "$disk: create: $!\n";
-    for (my ($i) = 0; $i < $kb; $i++) {
-	print DISK "\0" x 1024;
-    }
-    close (DISK);
+    run_command ("dd", "if=/dev/zero", "of=$disk", "bs=1024", "count=$kb");
 }
 
 sub run_vm {
@@ -121,14 +124,45 @@ sub run_vm {
     die "$disks[0]: can't find OS disk\n" if ! -e $disks[0];
     write_cmd_line ($disks[0], @_);
 
-    if ($sim eq 'qemu') {
+    if ($sim eq 'bochs') {
+	if ($debug eq '') {
+	    $bin = 'bochs';
+	} elsif ($debug eq 'monitor') {
+	    $bin = 'bochs-dbg';
+	} elsif ($debug eq 'gdb') {
+	    $bin = 'bochs-gdb';
+	}
+	$bochsbin = search_path ($bin);
+	$bochsshare = "$bochsbin/../share/bochs";
+	$romimage = "$bochsshare/BIOS-bochs-latest";
+	$vgaromimage = "$bochsshare/VGABIOS-lgpl-latest";
+
+	open (BOCHSRC, ">bochsrc.txt") or die "bochsrc.txt: create: $!\n";
+	print BOCHSRC "romimage: file=$romimage, address=0xf0000\n";
+	print BOCHSRC "vgaromimage: $vgaromimage\n";
+	print BOCHSRC bochs_disk_line ("ata0-master", $disks[0]);
+	print BOCHSRC bochs_disk_line ("ata0-slave", $disks[1]);
+	print BOCHSRC bochs_disk_line ("ata1-master", $disks[2]);
+	print BOCHSRC bochs_disk_line ("ata1-slave", $disks[3]);
+	print BOCHSRC "boot: c\n";
+	print BOCHSRC "ips: 1000000\n";
+	print BOCHSRC "clock: sync=none, time0=0\n";
+	print BOCHSRC "megs: $mem\n";
+	print BOCHSRC "com1: dev=/dev/tty\n" if $headless;
+	close (BOCHSRC);
+	run_command ($bin, '-q');
+    } elsif ($sim eq 'qemu') {
 	my (@cmd) = ('qemu');
 	push (@cmd, '-hda', $disks[0]) if defined $disks[0];
 	push (@cmd, '-hdb', $disks[1]) if defined $disks[1];
 	push (@cmd, '-hdc', $disks[2]) if defined $disks[2];
 	push (@cmd, '-hdd', $disks[3]) if defined $disks[3];
-	system (@cmd);
-    }
+	push (@cmd, '-m', $mem);
+	push (@cmd, '-nographic') if $headless;
+	push (@cmd, '-S') if $debug eq 'monitor';
+	push (@cmd, '-s') if $debug eq 'gdb';
+	run_command (@cmd);
+    } 
 }
 
 sub write_cmd_line {
@@ -139,8 +173,34 @@ sub write_cmd_line {
     die "command line exceeds 128 bytes" if length ($args) > 128;
     $args .= "\0" x (128 - length ($args));
 
+    print "writing command line to $disk...\n";
     open (DISK, "+<$disk") or die "$disk: open: $!\n";
     seek (DISK, 0x17e, 0) or die "$disk: seek: $!\n";
     syswrite (DISK, $args) or die "$disk: write: $!\n";
     close (DISK) or die "$disk: close: $!\n";
+}
+
+sub run_command {
+    print join (' ', @_), "\n";
+    die "command failed\n" if system (@_);
+}
+
+sub search_path {
+    my ($target) = @_;
+    for $dir (split (':', $ENV{PATH})) {
+	return $dir if -e "$dir/$target";
+    }
+    die "$target not in PATH\n";
+}
+
+sub bochs_disk_line {
+    my ($device, $file) = @_;
+    return "" if !defined $file;
+    my ($size) = -s $file;
+    die "$file: stat: $!\n" if !defined $size;
+    die "$file: size not a multiple of 512 bytes\n" if $size % 512;
+    $cylinders = int ($size / (512 * 16 * 63));
+    $cylinders++ if $size % (512 * 16 * 63);
+    return "$device: type=disk, path=$file, mode=flat, cylinders=$cylinders, "
+	. "heads=16, spt=63, translation=none\n";
 }
