@@ -1,5 +1,5 @@
-#ifndef HEADER_INTR_STUBS_H
-#define HEADER_INTR_STUBS_H
+#ifndef THREADS_INTR-STUBS_H
+#define THREADS_INTR-STUBS_H
 
 /* Interrupt stubs.
 
@@ -17,4 +17,4 @@ extern intr_stub_func *intr_stubs[256];
 /* Interrupt return path. */
 void intr_exit (void);
 
-#endif /* intr-stubs.h */
+#endif /* threads/intr-stubs.h */

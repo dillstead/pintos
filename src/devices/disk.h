@@ -1,5 +1,5 @@
-#ifndef HEADER_DISK_H
-#define HEADER_DISK_H 1
+#ifndef DEVICES_DISK_H
+#define DEVICES_DISK_H
 
 #include <inttypes.h>
 #include <stdint.h>
@@ -21,4 +21,4 @@ disk_sector_t disk_size (struct disk *);
 void disk_read (struct disk *, disk_sector_t, void *);
 void disk_write (struct disk *, disk_sector_t, const void *);
 
-#endif /* disk.h */
+#endif /* devices/disk.h */

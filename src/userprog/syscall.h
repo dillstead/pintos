@@ -1,6 +1,6 @@
-#ifndef HEADER_SYSCALL_H
-#define HEADER_SYSCALL_H 1
+#ifndef USERPROG_SYSCALL_H
+#define USERPROG_SYSCALL_H
 
 void syscall_init (void);
 
-#endif /* syscall.h */
+#endif /* userprog/syscall.h */

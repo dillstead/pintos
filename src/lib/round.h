@@ -1,5 +1,5 @@
-#ifndef LIB_ROUND_H
-#define LIB_ROUND_H
+#ifndef __LIB_ROUND_H
+#define __LIB_ROUND_H
 
 /* Yields X rounded up to the nearest multiple of STEP.
    For X >= 0, STEP >= 1 only. */

@@ -1,5 +1,5 @@
-#ifndef HEADER_MALLOC_H
-#define HEADER_MALLOC_H
+#ifndef THREADS_MALLOC_H
+#define THREADS_MALLOC_H
 
 #include <debug.h>
 #include <stddef.h>
@@ -9,4 +9,4 @@ void *malloc (size_t) __attribute__ ((malloc));
 void *calloc (size_t, size_t) __attribute__ ((malloc));
 void free (void *);
 
-#endif /* malloc.h */
+#endif /* threads/malloc.h */

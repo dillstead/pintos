@@ -1,5 +1,5 @@
-#ifndef HEADER_SWITCH_H
-#define HEADER_SWITCH_H 1
+#ifndef THREADS_SWITCH_H
+#define THREADS_SWITCH_H
 
 #ifndef __ASSEMBLER__
 /* switch_thread()'s stack frame. */
@@ -35,4 +35,4 @@ void switch_thunk (void);
 #define SWITCH_CUR      20
 #define SWITCH_NEXT     24
 
-#endif /* switch.h */
+#endif /* threads/switch.h */

@@ -1,5 +1,5 @@
-#ifndef LIB_STDLIB_H
-#define LIB_STDLIB_H
+#ifndef __LIB_STDLIB_H
+#define __LIB_STDLIB_H
 
 #include "stddef.h"
 

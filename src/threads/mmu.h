@@ -1,5 +1,5 @@
-#ifndef HEADER_MMU_H
-#define HEADER_MMU_H 1
+#ifndef THREADS_MMU_H
+#define THREADS_MMU_H
 
 #ifndef __ASSEMBLER__
 #include <debug.h>
@@ -85,4 +85,4 @@ vtop (void *vaddr)
 #define FLAG_MBS  0x00000002    /* Must be set. */
 #define FLAG_IF   0x00000200    /* Interrupt Flag. */
 
-#endif /* mmu.h */
+#endif /* threads/mmu.h */

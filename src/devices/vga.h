@@ -1,7 +1,7 @@
-#ifndef HEADER_VGA_H
-#define HEADER_VGA_H 1
+#ifndef DEVICES_VGA_H
+#define DEVICES_VGA_H
 
 void vga_init (void);
 void vga_putc (int);
 
-#endif /* vga.h */
+#endif /* devices/vga.h */

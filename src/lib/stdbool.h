@@ -1,5 +1,5 @@
-#ifndef LIB_STDBOOL_H
-#define LIB_STDBOOL_H
+#ifndef __LIB_STDBOOL_H
+#define __LIB_STDBOOL_H
 
 #define bool	_Bool
 #define true	1

@@ -1,5 +1,5 @@
-#ifndef HEADER_FILESYS_H
-#define HEADER_FILESYS_H 1
+#ifndef FILESYS_FILESYS_H
+#define FILESYS_FILESYS_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -18,4 +18,4 @@ bool filesys_dump (void);
 
 void filesys_self_test (void);
 
-#endif /* filesys.h */
+#endif /* filesys/filesys.h */

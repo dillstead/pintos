@@ -1,5 +1,5 @@
-#ifndef HEADER_BITMAP_H
-#define HEADER_BITMAP_H 1
+#ifndef __LIB_KERNEL_BITMAP_H
+#define __LIB_KERNEL_BITMAP_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -60,4 +60,4 @@ void bitmap_write (const struct bitmap *, struct file *);
 
 void bitmap_dump (const struct bitmap *);
 
-#endif /* bitmap.h */
+#endif /* lib/kernel/bitmap.h */

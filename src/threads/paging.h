@@ -1,5 +1,5 @@
-#ifndef HEADER_PAGING_H
-#define HEADER_PAGING_H 1
+#ifndef THREADS_PAGING_H
+#define THREADS_PAGING_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -18,4 +18,4 @@ void *pagedir_next (uint32_t *pagedir, void **upage);
 
 void pagedir_activate (uint32_t *pagedir);
 
-#endif /* paging.h */
+#endif /* threads/paging.h */

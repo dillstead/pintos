@@ -1,5 +1,5 @@
-#ifndef LIB_STDIO_H
-#define LIB_STDIO_H
+#ifndef __LIB_STDIO_H
+#define __LIB_STDIO_H
 
 #include <debug.h>
 #include <stdbool.h>

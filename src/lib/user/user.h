@@ -1,5 +1,5 @@
-#ifndef LIB_USER_H
-#define LIB_USER_H 1
+#ifndef __LIB_USER_USER_H
+#define __LIB_USER_USER_H
 
 #ifdef KERNEL
 #error This header is user-only.
@@ -11,4 +11,4 @@
 void exit (int);
 void abort (void);
 
-#endif /* lib/user.h */
+#endif /* lib/user/user.h */

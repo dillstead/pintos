@@ -1,5 +1,5 @@
-#ifndef LIB_STDARG_H
-#define LIB_STDARG_H
+#ifndef __LIB_STDARG_H
+#define __LIB_STDARG_H
 
 /* GCC has <stdarg.h> functionality as built-ins,
    so all we need is to use it. */

@@ -1,5 +1,5 @@
-#ifndef HEADER_FILE_H
-#define HEADER_FILE_H 1
+#ifndef FILESYS_FILE_H
+#define FILESYS_FILE_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -24,4 +24,4 @@ off_t file_length (struct file *);
 void file_seek (struct file *, off_t);
 off_t file_tell (struct file *);
 
-#endif /* file.h */
+#endif /* filesys/file.h */

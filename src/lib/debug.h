@@ -1,5 +1,5 @@
-#ifndef HEADER_DEBUG_H
-#define HEADER_DEBUG_H 1
+#ifndef __LIB_DEBUG_H
+#define __LIB_DEBUG_H
 
 /* GCC lets us add "attributes" to functions, function
    parameters, etc. to indicate their properties.
@@ -45,4 +45,4 @@ void debug_backtrace (void);
 #else
 #define ASSERT(CONDITION) ((void) 0)
 #define NOT_REACHED() for (;;)
-#endif
+#endif /* lib/debug.h */

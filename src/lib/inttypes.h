@@ -1,5 +1,5 @@
-#ifndef LIB_INTTYPES_H
-#define LIB_INTTYPES_H
+#ifndef __LIB_INTTYPES_H
+#define __LIB_INTTYPES_H
 
 #define PRId8 "hhd"
 #define PRId16 "hd"

@@ -1,5 +1,5 @@
-#ifndef HEADER_OFF_T_H
-#define HEADER_OFF_T_H 1
+#ifndef FILESYS_OFF_T_H
+#define FILESYS_OFF_T_H
 
 #include <stdint.h>
 
@@ -8,4 +8,4 @@
    definition but not any others. */
 typedef int32_t off_t;
 
-#endif /* off_t.h */
+#endif /* filesys/off_t.h */

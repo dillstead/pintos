@@ -1,5 +1,5 @@
-#ifndef HEADER_HASH_H
-#define HEADER_HASH_H 1
+#ifndef __LIB_KERNEL_HASH_H
+#define __LIB_KERNEL_HASH_H
 
 /* Hash table.
 
@@ -88,4 +88,4 @@ unsigned hash_bytes (const void *, size_t);
 unsigned hash_string (const char *);
 unsigned hash_int (int);
 
-#endif /* hash.h */
+#endif /* lib/kernel/hash.h */

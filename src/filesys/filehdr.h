@@ -1,5 +1,5 @@
-#ifndef HEADER_FILEHDR_H
-#define HEADER_FILEHDR_H 1
+#ifndef FILESYS_FILEHDR_H
+#define FILESYS_FILEHDR_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -29,4 +29,4 @@ disk_sector_t filehdr_byte_to_sector (const struct filehdr *, off_t);
 off_t filehdr_length (const struct filehdr *);
 void filehdr_print (const struct filehdr *);
 
-#endif /* filehdr.h */
+#endif /* filesys/filehdr.h */

@@ -1,5 +1,5 @@
-#ifndef HEADER_LIST_H
-#define HEADER_LIST_H 1
+#ifndef __LIB_KERNEL_LIST_H
+#define __LIB_KERNEL_LIST_H
 
 /* Doubly linked list.
 
@@ -162,4 +162,4 @@ void list_insert_ordered (struct list *, list_elem *,
 void list_unique (struct list *, struct list *duplicates,
                   list_less_func *, void *aux);
 
-#endif /* list.h */
+#endif /* lib/kernel/list.h */

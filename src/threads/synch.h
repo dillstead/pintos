@@ -1,5 +1,5 @@
-#ifndef HEADER_SYNCH_H
-#define HEADER_SYNCH_H 1
+#ifndef THREADS_SYNCH_H
+#define THREADS_SYNCH_H
 
 #include <list.h>
 #include <stdbool.h>
@@ -45,4 +45,4 @@ void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 const char *cond_name (const struct condition *);
 
-#endif /* synch.h */
+#endif /* threads/synch.h */

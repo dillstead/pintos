@@ -1,5 +1,5 @@
-#ifndef HEADER_INTERRUPT_H
-#define HEADER_INTERRUPT_H 1
+#ifndef THREADS_INTERRUPT_H
+#define THREADS_INTERRUPT_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -59,4 +59,4 @@ void intr_yield_on_return (void);
 void intr_dump_frame (const struct intr_frame *);
 const char *intr_name (uint8_t vec);
 
-#endif /* interrupt.h */
+#endif /* threads/interrupt.h */

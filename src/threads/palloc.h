@@ -1,5 +1,5 @@
-#ifndef HEADER_PALLOC_H
-#define HEADER_PALLOC_H 1
+#ifndef THREADS_PALLOC_H
+#define THREADS_PALLOC_H
 
 #include <stdint.h>
 
@@ -13,4 +13,4 @@ void palloc_init (void);
 void *palloc_get (enum palloc_flags);
 void palloc_free (void *);
 
-#endif /* palloc.h */
+#endif /* threads/palloc.h */

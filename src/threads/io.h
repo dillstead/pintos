@@ -38,8 +38,8 @@
  * the copyright notices, if any, listed below.
  */
 
-#ifndef HEADER_IO_H
-#define HEADER_IO_H 1
+#ifndef THREADS_IO_H
+#define THREADS_IO_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -158,4 +158,4 @@ outsl (uint16_t port, const void *addr, size_t cnt)
                 : "cc");
 }
 
-#endif /* io.h */
+#endif /* threads/io.h */

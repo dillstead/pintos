@@ -1,5 +1,5 @@
-#ifndef LIB_SYSCALL_NR_H
-#define LIB_SYSCALL_NR_H 1
+#ifndef __LIB_SYSCALL-NR_H
+#define __LIB_SYSCALL-NR_H
 
 /* System call numbers. */
 #define SYS_halt 0              /* Halts the operating system. */

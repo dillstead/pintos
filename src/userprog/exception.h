@@ -1,6 +1,6 @@
-#ifndef HEADER_EXCEPTION_H
-#define HEADER_EXCEPTION_H 1
+#ifndef USERPROG_EXCEPTION_H
+#define USERPROG_EXCEPTION_H
 
 void exception_init (void);
 
-#endif /* exception.h */
+#endif /* userprog/exception.h */

@@ -1,5 +1,5 @@
-#ifndef HEADER_FSUTIL_H
-#define HEADER_FSUTIL_H 1
+#ifndef FILESYS_FSUTIL_H
+#define FILESYS_FSUTIL_H
 
 #include <stdbool.h>
 
@@ -12,4 +12,4 @@ extern bool fsutil_dump_filesys;
 void fsutil_run (void);
 void fsutil_print (const char *filename);
 
-#endif /* fsutil.h */
+#endif /* filesys/fsutil.h */

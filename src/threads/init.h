@@ -1,9 +1,9 @@
-#ifndef HEADER_INIT_H
-#define HEADER_INIT_H 1
+#ifndef THREADS_INIT_H
+#define THREADS_INIT_H
 
 #include <stddef.h>
 
 /* Physical memory size, in 4 kB pages. */
 size_t ram_pages;
 
-#endif /* init.h */
+#endif /* threads/init.h */

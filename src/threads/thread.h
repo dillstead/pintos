@@ -1,5 +1,5 @@
-#ifndef HEADER_THREAD_H
-#define HEADER_THREAD_H 1
+#ifndef THREADS_THREAD_H
+#define THREADS_THREAD_H
 
 #include <debug.h>
 #include <list.h>
@@ -108,4 +108,4 @@ void thread_exit (void) NO_RETURN;
 void thread_yield (void);
 void thread_block (void);
 
-#endif /* thread.h */
+#endif /* threads/thread.h */

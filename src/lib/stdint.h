@@ -1,5 +1,5 @@
-#ifndef LIB_STDINT_H
-#define LIB_STDINT_H
+#ifndef __LIB_STDINT_H
+#define __LIB_STDINT_H
 
 typedef signed char int8_t;
 #define INT8_MAX 127

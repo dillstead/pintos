@@ -1,5 +1,5 @@
-#ifndef HEADER_DIRECTORY_H
-#define HEADER_DIRECTORY_H 1
+#ifndef FILESYS_DIRECTORY_H
+#define FILESYS_DIRECTORY_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -36,4 +36,4 @@ bool dir_remove (struct dir *, const char *name);
 void dir_list (const struct dir *);
 void dir_dump (const struct dir *);
 
-#endif /* directory.h */
+#endif /* filesys/directory.h */

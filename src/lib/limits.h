@@ -1,5 +1,5 @@
-#ifndef LIB_LIMITS_H
-#define LIB_LIMITS_H
+#ifndef __LIB_LIMITS_H
+#define __LIB_LIMITS_H
 
 #define CHAR_BIT 8
 

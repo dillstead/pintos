@@ -1,6 +1,6 @@
-#ifndef HEADER_KBD_H
-#define HEADER_KBD_H 1
+#ifndef DEVICES_KBD_H
+#define DEVICES_KBD_H
 
 void kbd_init (void);
 
-#endif /* kbd.h */
+#endif /* devices/kbd.h */

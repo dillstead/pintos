@@ -1,5 +1,5 @@
-#ifndef LIB_USER_SYSCALL_STUB_H
-#define LIB_USER_SYSCALL_STUB_H 1
+#ifndef __LIB_USER_SYSCALL-STUB_H
+#define __LIB_USER_SYSCALL-STUB_H
 
 int syscall (int nr, ...);
 

@@ -1,5 +1,5 @@
-#ifndef HEADER_LOADER_H
-#define HEADER_LOADER_H
+#ifndef THREADS_LOADER_H
+#define THREADS_LOADER_H
 
 /* Constants fixed by the PC BIOS. */
 #define LOADER_BASE 0x7c00      /* Physical address of loader's base. */
@@ -30,4 +30,4 @@
 #define SEL_KCSEG       0x08    /* Kernel code selector. */
 #define SEL_KDSEG       0x10    /* Kernel data selector. */
 
-#endif /* loader.h */
+#endif /* threads/loader.h */

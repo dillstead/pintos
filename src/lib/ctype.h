@@ -1,5 +1,5 @@
-#ifndef LIB_CTYPE_H
-#define LIB_CTYPE_H 1
+#ifndef __LIB_CTYPE_H
+#define __LIB_CTYPE_H
 
 static inline int islower (int c) { return c >= 'a' && c <= 'z'; }
 static inline int isupper (int c) { return c >= 'A' && c <= 'Z'; }

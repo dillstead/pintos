@@ -1,5 +1,5 @@
-#ifndef HEADER_16550A_H
-#define HEADER_16550A_H 1
+#ifndef DEVICES_16550A_H
+#define DEVICES_16550A_H
 
 #include <debug.h>
 #include <stdbool.h>
@@ -120,4 +120,4 @@ make_lcr (int bits, enum parity_type parity, int stop, bool send_break,
 #define MSR_RI   0x40           /* Ring Indicator. */
 #define MSR_DCD  0x80           /* Data Carrier Detect. */
 
-#endif /* 16550a.h */
+#endif /* devices/16550a.h */
