@@ -69,8 +69,9 @@ last_mask (const struct bitmap *b)
   return last_bits ? ((elem_type) 1 << last_bits) - 1 : (elem_type) -1;
 }
 
-/* Initializes B to be a bitmap of BIT_CNT bits.
-   Returns true if successfalse, false if memory allocation
+/* Initializes B to be a bitmap of BIT_CNT bits
+   and sets all of its bits to false.
+   Returns true if success, false if memory allocation
    failed. */
 struct bitmap *
 bitmap_create (size_t bit_cnt) 
@@ -90,7 +91,9 @@ bitmap_create (size_t bit_cnt)
   return NULL;
 }
 
-/* Destroys bitmap B, freeing its storage. */
+/* Destroys bitmap B, freeing its storage.
+   Not for use on bitmaps created by
+   bitmap_create_preallocated(). */
 void
 bitmap_destroy (struct bitmap *b) 
 {
@@ -136,6 +139,21 @@ bitmap_set_all (struct bitmap *b, bool value)
     }
 }
 
+/* Sets the bits numbered START through END, exclusive, in B to
+   VALUE. */
+void
+bitmap_set_multiple (struct bitmap *b, size_t start, size_t end, bool value) 
+{
+  size_t idx;
+  
+  ASSERT (b != NULL);
+  ASSERT (start <= end);
+  ASSERT (end <= b->bit_cnt);
+
+  for (idx = start; idx < end; idx++)
+    bitmap_set (b, idx, value);
+}
+
 /* Sets the bit numbered IDX in B to true. */
 void
 bitmap_mark (struct bitmap *b, size_t idx) 
@@ -170,126 +188,93 @@ bitmap_test (const struct bitmap *b, size_t idx)
   return (b->bits[elem_idx (idx)] & bit_mask (idx)) != 0;
 }
 
-/* Returns the smallest index of a bit set to VALUE in B.
-   If no bits in B are set to VALUE, returns BITMAP_ERROR. */
-size_t
-bitmap_scan (const struct bitmap *b, bool value) 
+/* Returns true if any bit from START to END, exclusive, is set
+   to VALUE. */
+static bool
+contains (const struct bitmap *b, size_t start, size_t end, bool value) 
 {
-  elem_type ignore = value ? 0 : (elem_type) -1;
   size_t idx;
   
   ASSERT (b != NULL);
-  for (idx = 0; idx < elem_cnt (b); idx++)
-    {
-      elem_type e = b->bits[idx];
-      if (e != ignore)
-        {
-          idx *= ELEM_BITS;
+  ASSERT (start <= end);
+  ASSERT (end <= b->bit_cnt);
 
-          while ((e & 1) != value)
-            {
-              e >>= 1;
-              idx++;
-            }
-
-          return idx < b->bit_cnt ? idx : BITMAP_ERROR;
-        }
-    }
-  return BITMAP_ERROR;
-}
-
-/* Finds the smallest index of a bit set to false in B,
-   sets it to true, and returns the index.
-   If no bits in B are set to false, changes no bits and
-   returns BITMAP_ERROR. */
-size_t
-bitmap_find_and_set (struct bitmap *b) 
-{
-  size_t idx = bitmap_scan (b, false);
-  if (idx != BITMAP_ERROR) 
-    bitmap_mark (b, idx);
-  return idx;
-}
-
-/* Finds the smallest index of a bit set to true in B,
-   sets it to false, and returns the index.
-   If no bits in B are set to true, changes no bits and
-   returns BITMAP_ERROR. */
-size_t
-bitmap_find_and_clear (struct bitmap *b) 
-{
-  size_t idx = bitmap_scan (b, true);
-  if (idx != BITMAP_ERROR) 
-    bitmap_reset (b, idx);
-  return idx;
-}
-
-/* Returns the number of bits in B set to true. */
-size_t
-bitmap_set_cnt (const struct bitmap *b) 
-{
-  size_t cnt;
-  size_t i;
-
-  ASSERT (b != NULL);
-  cnt = 0;
-  for (i = 0; i < elem_cnt (b); i++)
-    {
-      elem_type e = b->bits[i];
-      while (e != 0) 
-        {
-          cnt++;
-          e &= e - 1;
-        }
-    }
-  return cnt;
-}
-
-/* Returns true if any bits in B are set to true,
-   and false otherwise.*/
-bool
-bitmap_any (const struct bitmap *b) 
-{
-  size_t i;
-
-  ASSERT (b != NULL);
-  for (i = 0; i < elem_cnt (b); i++)
-    if (b->bits[i])
+  for (idx = start; idx < end; idx++)
+    if (bitmap_test (b, idx) == value)
       return true;
   return false;
 }
 
-/* Returns the number of bits in B set to false. */
-bool
-bitmap_clear_cnt (const struct bitmap *b) 
+/* Finds and returns the starting index of the first group of CNT
+   consecutive bits in B at or after START that are all set to
+   VALUE.
+   If there is no such group, returns BITMAP_ERROR. */
+size_t
+bitmap_scan (const struct bitmap *b, size_t start, size_t cnt, bool value) 
 {
-  return b->bit_cnt - bitmap_set_cnt (b);
+  size_t idx, last;
+  
+  ASSERT (b != NULL);
+  ASSERT (start <= b->bit_cnt);
+
+  for (idx = start, last = b->bit_cnt - cnt; idx <= last; idx++)
+    if (!contains (b, idx, idx + cnt, !value))
+      return idx;
+  return BITMAP_ERROR;
 }
 
-/* Returns true if no bits in B are set to true,
-   and false otherwise.*/
-bool
-bitmap_none (const struct bitmap *b) 
+/* Finds the first group of CNT consecutive bits in B at or after
+   START that are all set to VALUE, flips them all to !VALUE,
+   and returns the index of the first bit in the group.
+   If there is no such group, returns BITMAP_ERROR. */
+size_t
+bitmap_scan_and_flip (struct bitmap *b, size_t start, size_t cnt, bool value)
 {
-  return !bitmap_any (b); 
+  size_t idx = bitmap_scan (b, start, cnt, value);
+  if (idx != BITMAP_ERROR) 
+    bitmap_set_multiple (b, idx, idx + cnt, !value);
+  return idx;
 }
 
-/* Returns true if every bit in B is set to true,
-   and false otherwise. */
-bool
-bitmap_all (const struct bitmap *b) 
+/* Returns the number of bits in B between START and END,
+   exclusive, that are set to VALUE. */
+size_t
+bitmap_count (const struct bitmap *b, size_t start, size_t end, bool value) 
 {
-  size_t i;
+  size_t idx, cnt;
 
   ASSERT (b != NULL);
+  ASSERT (start <= end);
+  ASSERT (end <= b->bit_cnt);
 
-  if (b->bit_cnt == 0)
-    return true;
-  
-  for (i = 0; i < elem_cnt (b) - 1; i++)
-    if (b->bits[i] != (elem_type) -1)
-      return false;
-  return b->bits[i] == last_mask (b);
+  cnt = 0;
+  for (idx = start; idx < end; idx++)
+    cnt += bitmap_test (b, idx) == value;
+  return cnt;
+}
+
+/* Returns true if any bits in B between START and END,
+   exclusive, are set to true, and false otherwise.*/
+bool
+bitmap_any (const struct bitmap *b, size_t start, size_t end) 
+{
+  return contains (b, start, end, true);
+}
+
+/* Returns true if no bits in B between START and END, exclusive,
+   are set to true, and false otherwise.*/
+bool
+bitmap_none (const struct bitmap *b, size_t start, size_t end) 
+{
+  return !contains (b, start, end, true);
+}
+
+/* Returns true if every bit in B between START and END,
+   exclusive, is set to true, and false otherwise. */
+bool
+bitmap_all (const struct bitmap *b, size_t start, size_t end) 
+{
+  return !contains (b, start, end, false);
 }
 
 #ifdef FILESYS
@@ -325,3 +310,30 @@ bitmap_dump (const struct bitmap *b)
 {
   hex_dump (0, b->bits, byte_cnt (b), false);
 }
+
+/* Returns the number of bytes required to accomodate a bitmap
+   with BIT_CNT bits. */
+size_t
+bitmap_needed_bytes (size_t bit_cnt) 
+{
+  struct bitmap b;
+  b.bit_cnt = bit_cnt;
+  return byte_cnt (&b) + sizeof b;
+}
+
+/* Creates and returns a bitmap with BIT_CNT bits in the
+   BLOCK_SIZE bytes of storage preallocated at BLOCK.
+   BLOCK_SIZE must be at least bitmap_needed_bytes(BIT_CNT). */
+struct bitmap *
+bitmap_create_preallocated (size_t bit_cnt, void *block, size_t block_size) 
+{
+  struct bitmap *b = block;
+  
+  ASSERT (block_size >= bitmap_needed_bytes (bit_cnt));
+
+  b->bit_cnt = bit_cnt;
+  b->bits = (elem_type *) (b + 1);
+  bitmap_set_all (b, false);
+  return b;
+}
+
