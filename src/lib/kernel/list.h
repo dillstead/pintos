@@ -143,16 +143,16 @@ list_elem *list_back (struct list *);
 size_t list_size (struct list *);
 bool list_empty (struct list *);
 
-/* Weirdness. */
+/* Miscellaneous. */
 void list_reverse (struct list *);
 
-/* Operations on lists with ordered elements. */
-
 /* Compares the value of two list elements A and B, given
    auxiliary data AUX.  Returns true if A is less than B, or
    false if A is greater than or equal to B. */
 typedef bool list_less_func (const list_elem *a, const list_elem *b,
                              void *aux);
+
+/* Operations on lists with ordered elements. */
 void list_merge (struct list *, struct list *,
                  list_less_func *, void *aux);
 void list_sort (struct list *,
@@ -161,5 +161,9 @@ void list_insert_ordered (struct list *, list_elem *,
                           list_less_func *, void *aux);
 void list_unique (struct list *, struct list *duplicates,
                   list_less_func *, void *aux);
+
+/* Max and min. */
+list_elem *list_max (struct list *, list_less_func *, void *aux);
+list_elem *list_min (struct list *, list_less_func *, void *aux);
 
 #endif /* lib/kernel/list.h */

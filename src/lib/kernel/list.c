@@ -339,39 +339,50 @@ list_merge (struct list *al, struct list *bl,
   list_splice (list_end (al), list_begin (bl), list_end (bl));
 }
 
-/* Sorts LIST according to LESS given auxiliary data AUX.
-   Runs in O(n lg n) in the number of elements in LIST. */
-void
-list_sort (struct list *list,
-           list_less_func *less, void *aux)
+/* Returns the middle element in LIST, that is, the N/2'th
+   element (rounding down) in a N-element list.
+   Given an empty list, returns the list tail. */
+static list_elem *
+middle_of_list (struct list *list) 
 {
-  struct list tmp;
   list_elem *middle, *last;
 
-  ASSERT (list != NULL);
-  ASSERT (less != NULL);
-
-  /* Empty and 1-element lists are already sorted. */
-  if (list_empty (list) || list_next (list_begin (list)) == list_end (list))
-    return;
-
-  /* Find middle of LIST.  (We're not interested in the end of
-     the list but it's incidentally needed.) */
   middle = last = list_begin (list);
   while (last != list_end (list) && list_next (last) != list_end (list))
     {
       middle = list_next (middle);
       last = list_next (list_next (last));
     }
+  return middle;
+}
 
-  /* Extract first half of LIST into a temporary list. */
-  list_init (&tmp);
-  list_splice (list_begin (&tmp), list_begin (list), middle);
+/* Sorts LIST according to LESS given auxiliary data AUX.
+   Runs in O(n lg n) time in the number of elements in LIST. */
+void
+list_sort (struct list *list,
+           list_less_func *less, void *aux)
+{
+  /* Find the middle of the list. */
+  list_elem *middle = middle_of_list (list);
+  if (middle != list_begin (list))
+    {
+      /* Extract first half of LIST into a temporary list. */
+      struct list tmp;
+      list_init (&tmp);
+      list_splice (list_begin (&tmp), list_begin (list), middle);
 
-  /* Sort each half-list and merge the result. */
-  list_sort (&tmp, less, aux);
-  list_sort (list, less, aux);
-  list_merge (list, &tmp, less, aux);
+      /* Sort each half-list and merge the result. */
+      list_sort (&tmp, less, aux);
+      list_sort (list, less, aux);
+      list_merge (list, &tmp, less, aux);
+    }
+  else 
+    {
+      /* The middle is at the beginning of the list.
+         This only happens in empty lists and 1-element lists.
+         Because such lists are already sorted, we have nothing
+         to do. */
+    }
 }
 
 /* Inserts ELEM in the proper position in LIST, which must be
@@ -418,4 +429,42 @@ list_unique (struct list *list, struct list *duplicates,
       }
     else
       elem = next;
+}
+
+/* Returns the element in LIST with the largest value according
+   to LESS given auxiliary data AUX.  If there is more than one
+   maximum, returns the one that appears earlier in the list.  If
+   the list is empty, returns its tail. */
+list_elem *
+list_max (struct list *list, list_less_func *less, void *aux)
+{
+  list_elem *max = list_begin (list);
+  if (max != list_end (list)) 
+    {
+      list_elem *e;
+      
+      for (e = list_next (max); e != list_end (list); e = list_next (e))
+        if (less (max, e, aux))
+          max = e; 
+    }
+  return max;
+}
+
+/* Returns the element in LIST with the smallest value according
+   to LESS given auxiliary data AUX.  If there is more than one
+   minimum, returns the one that appears earlier in the list.  If
+   the list is empty, returns its tail. */
+list_elem *
+list_min (struct list *list, list_less_func *less, void *aux)
+{
+  list_elem *min = list_begin (list);
+  if (min != list_end (list)) 
+    {
+      list_elem *e;
+      
+      for (e = list_next (min); e != list_end (list); e = list_next (e))
+        if (less (e, min, aux))
+          min = e; 
+    }
+  return min;
 }

@@ -59,6 +59,14 @@ test (void)
           for (i = 0; i < size; i++)
             list_push_back (&list, &values[i].elem);
 
+          /* Verify correct minimum and maximum elements. */
+          e = list_min (&list, value_less, NULL);
+          ASSERT (size ? list_entry (e, struct value, elem)->value == 0
+                  : e == list_begin (&list));
+          e = list_max (&list, value_less, NULL);
+          ASSERT (size ? list_entry (e, struct value, elem)->value == size - 1
+                  : e == list_begin (&list));
+
           /* Sort and verify list. */
           list_sort (&list, value_less, NULL);
           verify_list_fwd (&list, size);
