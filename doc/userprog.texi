@@ -474,8 +474,11 @@ turn invokes the system call interrupt and returns.
 
 When you're done with this part, and forevermore, Pintos should be
 bulletproof.  Nothing that a user program can do should ever cause the
-OS to crash, halt, assert fail, or otherwise stop running.  The sole
-exception is a call to the @code{halt} system call.
+OS to crash, halt, assert fail, or otherwise stop running.  It is
+important to emphasize this point: our tests will try to break your
+system calls in many, many ways.  You need to think of all the corner
+cases and handle them.  The sole way a user program should be able to
+cause the OS to halt is by invoking the @code{halt} system call.
 
 If a system call is passed an invalid argument, acceptable options
 include returning an error value (for those calls that return a
