@@ -1,0 +1,15 @@
+*.aux
+*.cp
+*.dvi
+*.fn
+*.info
+*.ky
+*.log
+*.pg
+*.toc
+*.tp
+*.vr
+mlfqs1.png
+mlfqs2.png
+projects.html
+projects_*.html
