@@ -161,7 +161,7 @@ calloc (size_t a, size_t b)
   void *p;
   size_t size;
 
-  /* Calculate block size. */
+  /* Calculate block size and make sure it fits in size_t. */
   size = a * b;
   if (size < a || size < b)
     return NULL;
