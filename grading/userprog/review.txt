@@ -27,8 +27,8 @@ Program arguments:
 
 User/kernel copying:
   -5 Too many copies of user/kernel copying code
-  -10 Doesn't check for page boundaries
-  -3 Imperfect checking for page boundaries
+  -20 Doesn't check for page boundaries
+  -10 Imperfect checking for page boundaries
   -5 Doesn't check whether pointers are at or above PHYS_BASE
   -2 Imperfect checking whether pointers are at or above PHYS_BASE
   +3 Copies large chunks while properly observing page boundaries
