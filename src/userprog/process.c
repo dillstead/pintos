@@ -240,7 +240,10 @@ load (const char *filename, void (**eip) (void), void **esp)
     {
       struct Elf32_Phdr phdr;
 
+      if (file_ofs < 0 || file_ofs > file_length (file))
+        LOAD_ERROR (("bad file offset %ld", (long) file_ofs));
       file_seek (file, file_ofs);
+
       if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
         LOAD_ERROR (("error reading program header"));
       file_ofs += sizeof phdr;
@@ -314,6 +317,13 @@ load_segment (struct file *file, const struct Elf32_Phdr *phdr)
       printf ("%#08"PE32Ox" and %#08"PE32Ax" not congruent modulo %#x\n",
               phdr->p_offset, phdr->p_vaddr, (unsigned) PGSIZE);
       return false; 
+    }
+
+  /* p_offset must point within file. */
+  if (phdr->p_offset < 0 || phdr->p_offset > file_length (file)) 
+    {
+      printf ("bad p_offset %"PE32Ox, phdr->p_offset);
+      return false;
     }
 
   /* [ELF1] 2-3 says that p_memsz must be at least as big as
