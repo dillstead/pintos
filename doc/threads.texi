@@ -646,6 +646,34 @@ integers? Do I need to check for that?}
 Don't worry about the possibility of timer values overflowing.  Timer
 values are expressed as signed 63-bit numbers, which at 100 ticks per
 second should be good for almost 2,924,712,087 years.
+
+@item
+@b{The test program mostly works but reports a few out-of-order
+wake ups.  I think it's a problem in the test program.  What gives?}
+
+This test is inherently full of race conditions.  On a real system it
+wouldn't work perfectly all the time either.  However, you can help it
+work more reliably:
+
+@itemize @bullet
+@item
+Make time slices longer by increasing @code{TIME_SLICE} in
+@file{timer.c} to a large value, such as 100.
+
+@item
+Make the timer tick more slowly by decreasing @code{TIMER_FREQ} in
+@file{timer.h} to its minimum value of 19.
+
+@item
+Increase the serial output speed to the maximum of 115200 bps by
+modifying the call to @func{set_serial} in @func{serial_init_poll} in
+@file{devices/serial.c}.
+@end itemize
+
+The former two changes are only desirable for testing problem 1-1.  You
+should revert them before working on other parts of the project or turn
+in the project.  The latter is harmless, so you can retain it or revert
+it at your option.
 @end enumerate
 
 @node Problem 1-2 Join FAQ
