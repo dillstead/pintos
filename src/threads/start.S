@@ -4,10 +4,13 @@
 #### so that this module appears at the very beginning of the kernel
 #### image, and then using that as the entry point.
 
-.globl start
 .section .start
-
+	
+.globl start
+.func start
+	# Call main.
 start:	call main
 
-	# If main returns, spin.
+	# main() should not return, but if it does, spin.
 1:	jmp 1b
+.endfunc

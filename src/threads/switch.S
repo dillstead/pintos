@@ -12,9 +12,10 @@
 #### restore the registers.  As part of switching stacks we record the
 #### current stack pointer in CUR's thread structure.
 
-	.intel_syntax noprefix
+.intel_syntax noprefix
 
-.globl switch_threads 
+.globl switch_threads
+.func switch_threads
 switch_threads:
 	# Save caller's register state.
 	#
@@ -49,8 +50,10 @@ switch_threads:
 	pop ebp
 	pop ebx
         ret
+.endfunc
 
 .globl switch_entry
+.func switch_entry
 switch_entry:
 	# Discard switch_threads() arguments.
 	add esp, 8
@@ -63,3 +66,4 @@ switch_entry:
 
 	# Start thread proper.
 	ret
+.endfunc
