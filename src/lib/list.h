@@ -89,16 +89,16 @@
 /* List element. */
 typedef struct list_elem 
   {
-    struct list_elem *prev; /* Previous node in list. */
-    struct list_elem *next; /* Next node in list. */
+    struct list_elem *prev;     /* Previous list element. */
+    struct list_elem *next;     /* Next list element. */
   }
 list_elem;
 
 /* List. */
 struct list 
   {
-    list_elem head; /* Start-of-list header node. */
-    list_elem tail; /* End-of-list header node. */
+    list_elem head;             /* List head. */
+    list_elem tail;             /* List tail. */
   };
 
 /* Converts pointer to list element LIST_ELEM into a pointer to
@@ -119,6 +119,9 @@ list_elem *list_end (struct list *);
 list_elem *list_rbegin (struct list *);
 list_elem *list_prev (list_elem *);
 list_elem *list_rend (struct list *);
+
+list_elem *list_head (struct list *);
+list_elem *list_tail (struct list *);
 
 /* List insertion. */
 void list_insert (list_elem *, list_elem *);

@@ -103,6 +103,16 @@ list_rbegin (struct list *list)
   return list->tail.prev;
 }
 
+/* Returns the element before ELEM in its list.  If ELEM is the
+   first element in its list, returns the list head.  Results are
+   undefined if ELEM is itself a list head. */
+list_elem *
+list_prev (list_elem *elem)
+{
+  ASSERT (is_interior (elem) || is_tail (elem));
+  return elem->prev;
+}
+
 /* Returns LIST's head.
 
    list_rend() is often used in iterating through a list in
@@ -123,14 +133,30 @@ list_rend (struct list *list)
   return &list->head;
 }
 
-/* Returns the element before ELEM in its list.  If ELEM is the
-   first element in its list, returns the list head.  Results are
-   undefined if ELEM is itself a list head. */
+/* Return's LIST's head.
+
+   list_head() can be used for an alternate style of iterating
+   through a list, e.g.:
+
+      e = list_head (&list);
+      while ((e = list_next (e)) != list_end (&list)) 
+        {
+          ...
+        }
+*/
 list_elem *
-list_prev (list_elem *elem)
+list_head (struct list *list) 
 {
-  ASSERT (is_interior (elem) || is_tail (elem));
-  return elem->prev;
+  ASSERT (list != NULL);
+  return &list->head;
+}
+
+/* Return's LIST's tail. */
+list_elem *
+list_tail (struct list *list) 
+{
+  ASSERT (list != NULL);
+  return &list->tail;
 }
 
 /* Inserts ELEM just before BEFORE, which may be either an
