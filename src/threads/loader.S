@@ -70,12 +70,13 @@ start:
 	cli
 	cld
 
-# Set up data segments and stack.
+# Set up data segments.
 
 	sub ax, ax
 	mov es, ax
 	mov ds, ax
 
+# Set up stack segment.
 # Stack grows downward starting from us.
 # We don't ever use the stack so this is strictly speaking
 # unnecessary.
@@ -109,7 +110,7 @@ start:
 	mov al, 0xdf
 	out 0x60, al
 
-#### Get memory size, via interrupt 15h function 88h.  Returns CF
+#### Get memory size, via interrupt 15h function 88h, which returns CF
 #### clear if successful, with AX = (kB of physical memory) - 1024.
 #### This only works for memory sizes <= 65 MB, which should be fine
 #### for our purposes.  We cap memory at 64 MB because that's all we
@@ -140,11 +141,17 @@ start:
 # Also add identical PDEs starting at LOADER_PHYS_BASE.
 # See [IA32-v3] section 3.7.6 for a description of the bits in eax.
 
+# A bug in some versions of GAS prevents us from using the straightforward
+#	mov es:[di + LOADER_PHYS_BASE / 1024 / 1024], eax
+# so we calculate the displacement in bx instead.
+
 	mov eax, 0x11007
 	mov ecx, 0x11
-	sub edi, edi
+	sub di, di
+	mov ebx, LOADER_PHYS_BASE
+	shr ebx, 20
 1:	mov es:[di], eax
-	mov es:LOADER_PHYS_BASE / 1024 / 1024[di], eax 
+	mov es:[bx + di], eax 
 	add di, 4
 	add eax, 0x1000
 	loop 1b
@@ -155,8 +162,8 @@ start:
 	mov ax, 0x1100
 	mov es, ax
 	mov eax, 0x7
-	mov ecx, 0x4000
-	sub edi, edi
+	mov cx, 0x4000
+	sub di, di
 1:	mov es:[di], eax 
 	add di, 4 
 	add eax, 0x1000
@@ -168,10 +175,6 @@ start:
 	mov cr3, eax
 	
 #### Switch to protected mode.
-
-# First we turn off interrupts because we don't set up an IDT.
-
-	cli
 
 # Then we point the GDTR to our GDT.  Protected mode requires a GDT.
 # We need a data32 prefix to ensure that all 32 bits of the GDT
