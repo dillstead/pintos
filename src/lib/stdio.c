@@ -293,14 +293,11 @@ __vprintf (const char *format, va_list args,
         case 'p':
           {
             /* Pointer conversion.
-               Format non-null pointers as %#x. */
+               Format pointers as %#x. */
             void *p = va_arg (args, void *);
 
             c.flags = POUND;
-            if (p != NULL) 
-              format_integer ((uintptr_t) p, false, &base_x, &c, output, aux);
-            else
-              format_string ("(nil)", 5, &c, output, aux); 
+            format_integer ((uintptr_t) p, false, &base_x, &c, output, aux);
           }
           break;
       
