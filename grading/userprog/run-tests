@@ -50,6 +50,7 @@ sub usage {
 	     read-bad-fd
 	     write-normal write-bad-ptr write-boundary write-zero write-stdin
 	     write-bad-fd
+	     exec-once exec-arg exec-multiple exec-missing exec-bad-ptr
 	     ) unless @TESTS > 0;
 
 our (%args);
@@ -296,7 +297,29 @@ sub grade_write_normal {
     compare_output ("$GRADES_DIR/write-normal.exp", @output);
     my ($test_txt) = "output/$test/test.txt";
     get_file ("test.txt", $test_txt) if ! -e $test_txt;
-    compare_output ("$GRADES_DIR/sample.txt", snarf ($test_txt));
+
+    my (@actual) = snarf ($test_txt);
+    my (@expected) = snarf ("$GRADES_DIR/sample.txt");
+
+    my ($eq);
+    if ($#actual == $#expected) {
+	$eq = 1;
+	for my $i (0...$#actual) {
+	    $eq = 0 if $actual[$i] ne $expected[$i];
+	}
+    } else {
+	$eq = 0;
+    }
+    if (!$eq) {
+	my ($details);
+	$details = "Expected file content:\n";
+	$details .= join ('', map ("  $_\n", @expected));
+	$details .= "Actual file content:\n";
+	$details .= join ('', map ("  $_\n", @actual));
+	$extra{$test} = $details;
+
+	die "File written didn't have expected content.\n";
+    }
 }
 
 sub get_file {

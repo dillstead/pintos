@@ -41,6 +41,8 @@ put_file ("sample.txt")
 		 close-normal close-twice
 		 read-normal read-bad-ptr read-boundary read-zero
 		 write-normal write-bad-ptr write-boundary write-zero));
+put_file ("child-simple") if $test eq 'exec-once' or $test eq 'exec-multiple';
+put_file ("child-arg") if $test eq 'exec-arg';
 
 sub put_file {
     my ($fn) = @_;

@@ -69,10 +69,11 @@ Score: /9
 
 System calls: exec
   -2 exec-once: call exec/join once
+  -2 exec-arg: check command-line passing on exec
   -2 exec-multiple: call exec/join multiple times
   -2 exec-missing: exec of nonexistent file must return -1
   -1 exec-bad-ptr: pass invalid pointer to exec system call
-Score: /7
+Score: /9
 
 System calls: join
   -2 join-simple: join must return proper value

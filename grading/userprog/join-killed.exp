@@ -1,0 +1,6 @@
+(join-killed) begin
+(child-bad) begin
+child-bad: exit(-1)
+(join-killed) join(exec()) = -1
+(join-killed) end
+join-killed: exit(0)

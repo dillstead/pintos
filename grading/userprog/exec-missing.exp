@@ -1,0 +1,4 @@
+(exec-missing) begin
+(exec-missing) exec("no-such-file"): -1
+(exec-missing) end
+exec-missing: exit(0)
