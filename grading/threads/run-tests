@@ -1,5 +1,15 @@
 #! /usr/bin/perl
 
+# Find the directory that contains the grading files.
+our ($GRADES_DIR);
+
+# Add our Perl library directory to the include path. 
+BEGIN {
+    ($GRADES_DIR = $0) =~ s#/[^/]+$##;
+    -d $GRADES_DIR or die "$GRADES_DIR: stat: $!\n";
+    unshift @INC, "$GRADES_DIR/../lib";
+}
+
 use warnings;
 use strict;
 use POSIX;
@@ -24,7 +34,7 @@ sub usage {
     my ($exitcode) = @_;
     print "run-tests, for grading Pintos thread projects.\n\n";
     print "Invoke from a directory containing a student tarball named by\n";
-    print "the submit script, e.g. username.Oct.12.04.20.04.09.tar.gz.\n";
+    print "the submit script, e.g. username.MMM.DD.YY.hh.mm.ss.tar.gz.\n";
     print "In normal usage, no options are needed.\n\n";
     print "Output is produced in tests.out and details.out.\n\n";
     print "Options:\n";
@@ -97,11 +107,6 @@ if ($grade) {
 
     exit 0;
 }
-
-# Find the directory that contains the grading files.
-our ($GRADES_DIR);
-($GRADES_DIR = $0) =~ s#/[^/]+$##;
--d $GRADES_DIR or die "$GRADES_DIR: stat: $!\n";
 
 if ($clean) {
     # Verify that we're roughly in the correct directory

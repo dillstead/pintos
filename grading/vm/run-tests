@@ -3,6 +3,7 @@
 # Find the directory that contains the grading files.
 our ($GRADES_DIR);
 
+# Add our Perl library directory to the include path. 
 BEGIN {
     ($GRADES_DIR = $0) =~ s#/[^/]+$##;
     -d $GRADES_DIR or die "$GRADES_DIR: stat: $!\n";
@@ -15,12 +16,12 @@ use POSIX;
 use Algorithm::Diff;
 use Getopt::Long;
 
-our ($VERBOSE) = 0;	# Verbosity of output
+our ($verbose) = 0;	# Verbosity of output
 our (@TESTS);		# Tests to run.
 my ($clean) = 0;
 my ($grade) = 0;
 
-GetOptions ("v|verbose+" => \$VERBOSE,
+GetOptions ("v|verbose+" => \$verbose,
 	    "h|help" => sub { usage (0) },
 	    "t|test=s" => \@TESTS,
 	    "c|clean" => \$clean,
@@ -620,7 +621,7 @@ sub write_details {
 
 sub xsystem {
     my ($command, %options) = @_;
-    print "$command\n" if $VERBOSE || $options{VERBOSE};
+    print "$command\n" if $verbose || $options{VERBOSE};
 
     my ($log) = $options{LOG};
 

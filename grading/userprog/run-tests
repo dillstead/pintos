@@ -1,5 +1,15 @@
 #! /usr/bin/perl
 
+# Find the directory that contains the grading files.
+our ($GRADES_DIR);
+
+# Add our Perl library directory to the include path. 
+BEGIN {
+    ($GRADES_DIR = $0) =~ s#/[^/]+$##;
+    -d $GRADES_DIR or die "$GRADES_DIR: stat: $!\n";
+    unshift @INC, "$GRADES_DIR/../lib";
+}
+
 use warnings;
 use strict;
 use POSIX;
@@ -115,11 +125,6 @@ if ($grade) {
 
     exit 0;
 }
-
-# Find the directory that contains the grading files.
-our ($GRADES_DIR);
-($GRADES_DIR = $0) =~ s#/[^/]+$##;
--d $GRADES_DIR or die "$GRADES_DIR: stat: $!\n";
 
 if ($clean) {
     # Verify that we're roughly in the correct directory
