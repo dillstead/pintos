@@ -28,9 +28,10 @@ VPATH = ../..
 # Compiler and assembler options.
 DEFINES += -DKERNEL
 WARNINGS = -Wall -W -Wstrict-prototypes -Wmissing-prototypes
-INCLUDES = -nostdinc -I../.. -I- -I../../lib -I../../lib/kernel
-CFLAGS = -g -O3 -MMD -msoft-float $(INCLUDES) $(WARNINGS) $(DEFINES)
-ASFLAGS = -Wa,--gstabs -MMD $(INCLUDES) $(DEFINES)
+CPPFLAGS = -nostdinc -I../.. -I- -I../../lib -I../../lib/kernel	\
+	   -include constants.h
+CFLAGS = -g -O3 -MMD -msoft-float 
+ASFLAGS = -Wa,--gstabs -MMD
 
 # Core kernel.
 threads_SRC  = threads/init.c		# Main program.
@@ -101,7 +102,7 @@ kernel.bin: kernel.o
 	$(RM) $@.tmp
 
 threads/loader.o: threads/loader.S kernel.bin
-	$(CC) -c $< -o $@ $(ASFLAGS) -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
+	$(CC) -c $< -o $@ $(ASFLAGS) $(CPPFLAGS) $(DEFINES) -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
 
 loader.bin: threads/loader.o
 	$(LD) -N -e start -Ttext 0x7c00 --oformat binary -o $@ $<
@@ -117,5 +118,11 @@ clean:
 
 Makefile: ../../Makefile.build
 	cp $< $@
+
+%.o: %.c
+	$(CC) -c $< -o $@ $(CFLAGS) $(CPPFLAGS) $(WARNINGS) $(DEFINES)
+
+%.o: %.S
+	$(CC) -c $< -o $@ $(ASFLAGS) $(CPPFLAGS) $(DEFINES)
 
 -include $(DEPENDS)
