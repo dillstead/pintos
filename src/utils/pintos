@@ -110,26 +110,26 @@ if ($cmd eq 'run') {
 
     # Create scratch disk big enough for any file in the filesystem
     # (modulo sparse files).
-    die "fs.dsk: $!\n" if ! -e "fs.dsk";
+    die "$disks[1]: $!\n" if ! -e $disks[1];
     my ($fs_size) = -s _;
-    my ($scratch_size) = -s "scratch.dsk";
+    my ($scratch_size) = -s $disks[2];
     $scratch_size = 0 if !defined $scratch_size;
-    create_disk ("scratch.dsk", $fs_size / 1024 + 16)
+    create_disk ($disks[2], $fs_size / 1024 + 16)
 	if $scratch_size < $fs_size + 16384;
 
     # Do copy.
     run_vm ("-co", $guestfn, "-q");
 
     # Read out scratch disk.
-    print "copying $guestfn from scratch.dsk to $hostfn...\n";
-    open (SRC, "<scratch.dsk") or die "scratch.dsk: open: $!\n";
+    print "copying $guestfn from $disks[2] to $hostfn...\n";
+    open (SRC, "<$disks[2]") or die "$disks[2]: open: $!\n";
     open (DST, ">$hostfn") or die "$hostfn: create: $!\n";
     my ($input);
-    read (SRC, $input, 512) == 512 or die "scratch.dsk: read error\n";
+    read (SRC, $input, 512) == 512 or die "$disks[2]: read error\n";
     my ($size) = unpack ("%V", $input);
-    $size != 0xffffffff or die "$guestfn: too big for scratch.dsk?";
+    $size != 0xffffffff or die "$guestfn: too big for $disks[2]?";
     my ($src);
-    read (SRC, $src, $size) == $size or die "scratch.dsk: read error\n";
+    read (SRC, $src, $size) == $size or die "$disks[2]: read error\n";
     print DST $src or die "$hostfn: write error\n";
     close (DST);
     close (SRC);
