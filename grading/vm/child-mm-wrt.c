@@ -30,7 +30,7 @@ main (void)
       return 1;
     }
 
-  if (!mmap (fd, ACTUAL, strlen (sample)))
+  if (mmap (fd, ACTUAL) == MAP_FAILED)
     {
       printf ("(child-mm-wrt) mmap() failed\n");
       return 1;

@@ -24,7 +24,7 @@ main (void)
           printf ("(mmap-twice) open() #%zu failed\n", i);
           return 1;
         }
-      if (!mmap (fd[i], actual[i], 8192))
+      if (mmap (fd[i], actual[i]) == MAP_FAILED)
         {
           printf ("(mmap-twice) mmap() #%zu failed\n", i);
           return 1; 

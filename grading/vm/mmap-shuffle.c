@@ -72,7 +72,7 @@ main (void)
       return 1;
     }
 
-  if (!mmap (fd, buf, SIZE))
+  if (mmap (fd, buf) == MAP_FAILED)
     {
       printf ("(mmap-shuffle) mmap() failed\n");
       return 1;

@@ -13,6 +13,7 @@ int
 main (void) 
 {
   int fd;
+  mapid_t map;
 
   printf ("(mmap-read) begin\n");
 
@@ -23,7 +24,8 @@ main (void)
       return 1;
     }
 
-  if (!mmap (fd, ACTUAL, strlen (sample)))
+  map = mmap (fd, ACTUAL);
+  if (map == MAP_FAILED)
     {
       printf ("(mmap-read) mmap() failed\n");
       return 1;
@@ -35,7 +37,7 @@ main (void)
       return 1;
     }
 
-  if (!munmap (ACTUAL, strlen (sample)))
+  if (!munmap (map))
     {
       printf ("(mmap-read) munmap() failed\n");
       return 1;

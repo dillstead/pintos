@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <round.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -100,10 +101,9 @@ pintos_open (const char *file)
 int
 pintos_filesize (int fd) 
 {
-  off_t old = lseek (fd, 0, SEEK_CUR);
-  off_t size = lseek (fd, 0, SEEK_END);
-  lseek (fd, old, SEEK_SET);
-  return size;
+  struct stat s;
+  fstat (fd, &s);
+  return s.st_size;
 }
 
 int
@@ -137,17 +137,24 @@ pintos_close (int fd)
   close (fd);
 }
 
-bool
-pintos_mmap (int fd, void *addr, unsigned length) 
+mapid_t
+pintos_mmap (int fd, void *addr) 
 {
-  return mmap (addr, length, PROT_READ | PROT_WRITE,
-               MAP_SHARED | MAP_FIXED, fd, 0) == addr;
+  size_t page_size = getpagesize ();
+  int length = pintos_filesize (fd);
+  uintptr_t ptr = (uintptr_t) mmap (addr, length, PROT_READ | PROT_WRITE,
+                                    MAP_SHARED | MAP_FIXED, fd, 0);
+  return ptr | DIV_ROUND_UP (size, page_size);
 }
 
 bool
 pintos_munmap (void *addr, unsigned length) 
 {
-  return munmap (addr, length) == 0;
+  size_t page_size = getpagesize ();
+  uintptr_t page_mask = page_size - 1;
+  void *base = (void *) ((uintptr_t) addr & ~page_mask);
+  size_t length = ((uintptr_t) addr & page_mask) * page_size;
+  return munmap (base, length);
 }
 
 bool

@@ -8,7 +8,7 @@ typedef int pid_t;
 #define PID_ERROR ((pid_t) -1)
 
 typedef int mapid_t;
-#define MAPID_ERROR ((mapid_t) -1)
+#define MAP_FAILED ((mapid_t) -1)
 
 void halt (void) NO_RETURN;
 void exit (int status) NO_RETURN;

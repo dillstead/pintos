@@ -13,6 +13,7 @@ int
 main (void) 
 {
   int fd;
+  mapid_t map;
   char buf[1024];
 
   printf ("(mmap-write) begin\n");
@@ -31,13 +32,14 @@ main (void)
       return 1;
     }
 
-  if (!mmap (fd, ACTUAL, strlen (sample)))
+  map = mmap (fd, ACTUAL);
+  if (map == MAP_FAILED)
     {
       printf ("(mmap-write) mmap() failed\n");
       return 1;
     }
   memcpy (ACTUAL, sample, strlen (sample));
-  munmap (ACTUAL, strlen (sample));
+  munmap (map);
 
   /* Read back via read(). */
   read (fd, buf, strlen (sample));

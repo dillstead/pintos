@@ -30,7 +30,7 @@ main (void)
           printf ("(mmap-overlap) open() failed\n");
           return 1;
         }
-      if (!mmap (fd[i], start, 8192))
+      if (mmap (fd[i], start) == MAP_FAILED)
         {
           if (i == 1) 
             return 0;

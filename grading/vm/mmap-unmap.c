@@ -13,6 +13,7 @@ int
 main (void) 
 {
   int fd;
+  mapid_t map;
 
   printf ("(mmap-unmap) begin\n");
 
@@ -23,13 +24,14 @@ main (void)
       return 1;
     }
 
-  if (!mmap (fd, ACTUAL, strlen (sample)))
+  map = mmap (fd, ACTUAL);
+  if (map == MAP_FAILED)
     {
       printf ("(mmap-unmap) mmap() failed\n");
       return 1;
     }
 
-  munmap (ACTUAL, strlen (sample));
+  munmap (map);
 
   printf ("(mmap-unmap) FAIL: unmapped memory is readable (%d)\n",
           *(int *) ACTUAL);
