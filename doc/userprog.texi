@@ -273,9 +273,10 @@ called by user programs are prototyped in @file{lib/user/syscall.h}:
 @table @code
 @item SYS_halt
 @itemx void halt (void)
-Stops Pintos and prints out performance statistics.  Note that this
-should be seldom used, since then you lose some information about
-possible deadlock situations, etc.
+Stops Pintos by calling @func{power_off} (declared in
+@file{threads/init.h}).  Note that this should be seldom used, since
+then you lose some information about possible deadlock situations,
+etc.
 
 @item SYS_exit
 @itemx void exit (int @var{status})
@@ -299,8 +300,9 @@ process, the return value is undefined (but kernel operation must not
 be disrupted).
 
 @item SYS_create
-@itemx bool create (const char *@var{file})
-Create a new file called @var{file}.  Returns -1 if failed, 0 if OK.
+@itemx bool create (const char *@var{file}, unsigned @var{initial_size})
+Create a new file called @var{file} initially @var{initial_size} bytes
+in size.  Returns -1 if failed, 0 if OK.
 
 @item SYS_remove
 @itemx bool remove (const char *@var{file})
