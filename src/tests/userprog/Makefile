@@ -42,8 +42,11 @@ all: $(PROGS)
 
 define TEMPLATE
 $(1)_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$($(1)_SRC)))
-$(1): $$($(1)_OBJ) $$(LIB)
+$(1): $$($(1)_OBJ) $$(LIB) | ./lib/user
 endef
+
+./lib/user:
+	$(MKDIR) -p lib/user
 
 $(foreach prog,$(PROGS),$(eval $(call TEMPLATE,$(prog))))
 
