@@ -5,6 +5,7 @@
 #include <string.h>
 #include "threads/io.h"
 #include "threads/mmu.h"
+#include "threads/interrupt.h"
 
 /* VGA text screen support.  See [FREEVGA] for more information. */
 
@@ -38,10 +39,14 @@ vga_init (void)
 }
 
 /* Writes C to the VGA text display, interpreting control
-   characters in the conventional ways. */
+   characters in the conventional ways.  */
 void
 vga_putc (int c)
 {
+  /* Disable interrupts to lock out interrupt handlers
+     that might write to the console. */
+  enum intr_level old_level = intr_disable ();
+
   switch (c) 
     {
     case '\n':
@@ -77,6 +82,8 @@ vga_putc (int c)
 
   /* Update cursor position. */
   move_cursor ();
+
+  intr_set_level (old_level);
 }
 
 /* Clears the screen and moves the cursor to the upper left. */
