@@ -12,15 +12,16 @@
 #include "threads/thread.h"
 #include "devices/timer.h"
 
-/* Number of iterations. */
-#define ITERATION_CNT 1
+#ifdef MLFQS
+#error This test not applicable with MLFQS enabled.
+#endif
 
 static void test_sleep (int iterations);
 
 void
 test (void) 
 {
-  test_sleep (ITERATION_CNT);
+  test_sleep (1);
 }
 
 struct sleep_thread_data 
