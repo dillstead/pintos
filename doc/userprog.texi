@@ -225,18 +225,30 @@ mapped into it will cause a page fault.
 @section Global Requirements
 
 For testing and grading purposes, we have some simple requirements for
-your output.  The kernel should print out the program's name and exit
-status whenever a process exits, e.g.@: @code{shell: exit(-1)}.  Aside
-from this, it should print out no other messages.  You may understand
-all those debug messages, but we won't, and it just clutters our
-ability to see the stuff we care about.
+your output:
 
+@itemize @bullet
+@item
+The kernel should print out the program's name and exit status
+whenever a process exits, e.g.@: @code{shell: exit(-1)}.  The name
+printed should be the full name passed to @func{process_execute},
+except that it is acceptable to truncate it to 15 characters to allow
+for the limited space in @struct{thread}.
+
+@item
+Aside from this, the kernel should print out no other messages that
+Pintos as provided doesn't already print.  You
+may understand all those debug messages, but we won't, and it just
+clutters our ability to see the stuff we care about.
+
+@item
 Additionally, while it may be useful to hard-code which process will
 run at startup while debugging, before you submit your code you must
 make sure that it takes the start-up process name and arguments from
 the @samp{-ex} argument.  For example, running @code{pintos run -ex
 "testprogram 1 2 3 4"} will spawn @samp{testprogram 1 2 3 4} as the
 first process.
+@end itemize
 
 @node Problem 2-1 Argument Passing
 @section Problem 2-1: Argument Passing
@@ -246,10 +258,34 @@ to new processes.  UNIX and other operating systems do allow passing
 command line arguments to a program, which accesses them via the argc,
 argv arguments to main.  You must implement this functionality by
 extending @func{process_execute} so that instead of simply taking a
-program file name, it can take a program name with arguments as a
-single string.  That is, @code{process_execute("grep foo *.c")} should
-be a legal call.  @xref{80x86 Calling Convention}, for information on
-exactly how this works.
+program file name as its argument, it divides it into words at spaces.
+The first word is the program name, the second word is the first
+argument, and so on.  That is, @code{process_execute("grep foo bar")}
+should run @program{grep} passing two arguments @code{foo} and
+@file{bar}.  A few details:
+
+@itemize
+@item
+Multiple spaces are considered the same as a single space, so that
+@code{process_execute("grep foo bar")} would be equivalent to our
+original example.
+
+@item
+You can impose a reasonable limit on the length of the command line
+arguments.  For example, you could limit the arguments to those that
+will fit in a single page (4 kB).
+
+@item
+You can parse the argument strings any way you like.  If you're lost,
+look at @func{strtok_r}, prototyped in @file{lib/string.h} and
+implemented with thorough comments in @file{lib/string.c}.  You can
+find more about it by looking at the man page (run @code{man strtok_r}
+at the prompt).
+
+@item
+@xref{80x86 Calling Convention}, for information on exactly how you
+need to set up the stack.
+@end itemize
 
 @strong{This functionality is extremely important.}  Almost all our
 test cases rely on being able to pass arguments, so if you don't get
@@ -281,8 +317,10 @@ etc.
 @item SYS_exit
 @itemx void exit (int @var{status})
 Terminates the current user program, returning @var{status} to the
-kernel.  A @var{status} of 0 indicates a successful exit.  Other
-values may be used to indicate user-defined error conditions.
+kernel.  If the process's parent @func{join}s it, this is the status
+that will be returned.  Conventionally, a @var{status} of 0 indicates
+a successful exit.  Other values may be used to indicate user-defined
+conditions (usually errors).
 
 @item SYS_exec
 @itemx pid_t exec (const char *@var{file})
@@ -312,26 +350,30 @@ Delete the file called @var{file}.  Returns -1 if failed, 0 if OK.
 @itemx int open (const char *@var{file})
 Open the file called @var{file}.  Returns a nonnegative integer handle
 called a ``file descriptor'' (fd), or -1 if the file could not be
-opened.  File descriptors numbered 0 and 1 are reserved for the
-console.  All open files associated with a process should be closed
+opened.  All open files associated with a process should be closed
 when the process exits or is terminated.
+
+File descriptors numbered 0 and 1 are reserved for the console: fd 0
+is standard input (@code{stdin}), fd 1 is standard output
+(@code{stdout}).  These special file descriptors are valid as system
+call arguments only as explicitly described below.
 
 @item SYS_filesize
 @itemx int filesize (int @var{fd})
-Returns the size, in bytes, of the file open as @var{fd}, or -1 if the
-file is invalid.
+Returns the size, in bytes, of the file open as @var{fd}.
 
 @item SYS_read
 @itemx int read (int @var{fd}, void *@var{buffer}, unsigned @var{size})
 Read @var{size} bytes from the file open as @var{fd} into
 @var{buffer}.  Returns the number of bytes actually read, or -1 if the
-file could not be read.
+file could not be read.  Fd 0 reads from the keyboard using
+@func{kbd_getc}.
 
 @item SYS_write
 @itemx int write (int @var{fd}, const void *@var{buffer}, unsigned @var{size})
 Write @var{size} bytes from @var{buffer} to the open file @var{fd}.
 Returns the number of bytes actually written, or -1 if the file could
-not be written.
+not be written.   Fd 1 writes to the console.
 
 @item SYS_seek
 @itemx void seek (int @var{fd}, unsigned @var{position})
@@ -385,6 +427,10 @@ bulletproof.  Nothing that a user program can do should ever cause the
 OS to crash, halt, assert fail, or otherwise stop running.  The sole
 exception is a call to the @code{halt} system call.
 
+If a system call is passed an invalid argument, acceptable options
+include returning an error value (for those calls that return a
+value), returning an undefined value, or terminating the process.
+
 @xref{System Calls}, for more information on how syscalls work.
 
 @node User Programs FAQ
@@ -399,12 +445,36 @@ implementing the join syscall, but besides that, you can use
 the original code provided for project 1.
 
 @item
+@b{@samp{pintos put} always panics.}
+
+Here are the most common causes:
+
+@itemize @bullet
+@item
+The disk hasn't yet been formatted (with @samp{pintos run -f}).
+
+@item
+The filename specified is too long.  The file system limits file names
+to 14 characters.  If you're using a command like @samp{pintos put
+../../tests/userprog/echo}, that overflows the limit.  Use
+@samp{pintos put ../../tests/userprog/echo echo} to put the file under
+the name @file{echo} instead.
+
+@item
+The file is too big.  The file system has a 63 kB limit.
+@end itemize
+
+@item
 @b{All my user programs die with page faults.}
 
 This will generally happen if you haven't implemented problem 2-1
 yet.  The reason is that the basic C library for user programs tries
 to read @var{argc} and @var{argv} off the stack.  Because the stack
 isn't properly set up yet, this causes a page fault.
+
+@item
+@b{I implemented 2-1 and now all my user programs die with
+@samp{system call!}.}
 
 @item
 @b{Is there a way I can disassemble user programs?}
@@ -423,8 +493,15 @@ the features that are expected of a real operating system's C library.
 The C library must be built specifically for the operating system (and
 architecture), since it must make system calls for I/O and memory
 allocation.  (Not all functions do, of course, but usually the library
-is compiled as a unit.)  If you wish to port libraries to Pintos, feel
-free.
+is compiled as a unit.)
+
+@item
+@b{Can I use lib@var{foo} in my Pintos programs?}
+
+The chances are good that lib@var{foo} uses parts of the C library
+that Pintos doesn't implement.  It will probably take at least some
+porting effort to make it work under Pintos.  Notably, the Pintos
+userland C library does not have a @func{malloc} implementation.
 
 @item
 @b{How do I compile new user programs?}
@@ -550,27 +627,6 @@ use the shell or otherwise type at the keyboard.
 
 @enumerate 1
 @item
-@b{What will be the format of command line arguments?}
-
-You should assume that command line arguments are delimited by white
-space.
-
-@item
-@b{What is the maximum length of the command line arguments?}
-
-You can impose some reasonable maximum as long as you're prepared to
-defend it in your @file{DESIGNDOC}.
-
-@item
-@b{How do I parse all these argument strings?}
-
-You're welcome to use any technique you please, as long as it works.
-If you're lost, look at @func{strtok_r}, prototyped in
-@file{lib/string.h} and implemented with thorough comments in
-@file{lib/string.c}.  You can find more about it by looking at the man
-page (run @code{man strtok_r} at the prompt).
-
-@item
 @b{Why is the top of the stack at @t{0xc0000000}?  Isn't that off the
 top of user virtual memory?  Shouldn't it be @t{0xbfffffff}?}
 
@@ -593,12 +649,6 @@ simply via recompilation.
 @subsection Problem 2-2: System Calls FAQ
 
 @enumerate 1
-@item
-@b{What should I do with the parameter passed to @func{exit}?}
-
-This value, the exit status of the process, must be returned to the
-thread's parent when @func{join} is called.
-
 @item
 @b{Can I just cast a pointer to a @struct{file} object to get a
 unique file descriptor?  Can I just cast a @code{struct thread *} to a
@@ -631,26 +681,11 @@ to exist until all file descriptors referring to the file are closed
 or the machine shuts down.
 
 @item
-@b{What happens if a system call is passed an invalid argument, such
-as Open being called with an invalid filename?}
-
-Pintos should not crash.  Acceptable options include returning an
-error value (for those calls that return a value), returning an
-undefined value, or terminating the process.
-
-@item
 @b{I've discovered that some of my user programs need more than one 4
 kB page of stack space.  What should I do?}
 
 You may modify the stack setup code to allocate more than one page of
 stack space for each process.
-
-@item
-@b{What do I need to print on thread completion?}
-
-You should print the complete thread name (as specified in the
-@code{SYS_exec} call) followed by the exit status code,
-e.g.@: @samp{example 1 2 3 4: 0}.
 @end enumerate
 
 @node 80x86 Calling Convention
@@ -726,10 +761,10 @@ array of strings, and @code{argc} is the number of strings in that
 array.  However, the hard part isn't these two things.  The hard part
 is getting all the individual strings in the right place.  As we go
 through the procedure, let us consider the following example command:
-@samp{/bin/ls -l *.h *.c}.
+@samp{/bin/ls -l foo bar}.
 
 The first thing to do is to break the command line into individual
-strings: @samp{/bin/ls}, @samp{-l}, @samp{*.h}, and @samp{*.c}.  These
+strings: @samp{/bin/ls}, @samp{-l}, @samp{foo}, and @samp{bar}.  These
 constitute the arguments of the command, including the program name
 itself (which belongs in @code{argv[0]}).
 
@@ -753,7 +788,7 @@ word-aligned, we instead leave the stack pointer at @t{0xffe8}.
 
 Once we align the stack pointer, we then push the elements of the
 argument vector, that is, a null pointer, then the addresses of the
-strings @samp{/bin/ls}, @samp{-l}, @samp{*.h}, and @samp{*.c}) onto
+strings @samp{/bin/ls}, @samp{-l}, @samp{foo}, and @samp{bar}) onto
 the stack.  This must be done in reverse order, such that
 @code{argv[0]} is at the lowest virtual address, again because the
 stack is growing downward.  (The null pointer pushed first is because
@@ -785,8 +820,8 @@ user program (assuming for this example that the stack bottom is
 @end html
 @multitable {@t{0xbfffffff}} {``return address''} {@t{/bin/ls\0}}
 @item Address @tab Name @tab Data
-@item @t{0xbffffffc} @tab @code{*argv[3]} @tab @samp{*.c\0}
-@item @t{0xbffffff8} @tab @code{*argv[2]} @tab @samp{*.h\0}
+@item @t{0xbffffffc} @tab @code{*argv[3]} @tab @samp{bar\0}
+@item @t{0xbffffff8} @tab @code{*argv[2]} @tab @samp{foo\0}
 @item @t{0xbffffff5} @tab @code{*argv[1]} @tab @samp{-l\0}
 @item @t{0xbfffffed} @tab @code{*argv[0]} @tab @samp{/bin/ls\0}
 @item @t{0xbfffffec} @tab word-align @tab @samp{\0}
@@ -819,7 +854,7 @@ Here's what it would show in the above example, given that
 bfffffc0                                      00 00 00 00 |            ....|
 bfffffd0  04 00 00 00 d8 ff ff bf-ed ff ff bf f5 ff ff bf |................|
 bfffffe0  f8 ff ff bf fc ff ff bf-00 00 00 00 00 2f 62 69 |............./bi|
-bffffff0  6e 2f 6c 73 00 2d 6c 00-2a 2e 68 00 2a 2e 63 00 |n/ls.-l.*.h.*.c.|
+bffffff0  6e 2f 6c 73 00 2d 6c 00-66 6f 6f 00 62 61 72 00 |n/ls.-l.foo.bar.|
 @end verbatim
 
 @node System Calls
