@@ -39,6 +39,7 @@ LIB_SRC += lib.c		# Standard C library.
 LIB_SRC += random.c		# Pseudo-random numbers.
 LIB_SRC += list.c		# Doubly-linked lists.
 LIB_SRC += bitmap.c		# Bitmaps.
+LIB_SRC += hash.c		# Hash tables.
 
 # Filesystem code.
 FILESYS_SRC  = filesys.c	# Filesystem core.
