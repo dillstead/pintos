@@ -208,7 +208,8 @@ referenced.  Another consideration is that if the replaced page has
 been modified, the page must be first saved to disk before the needed
 page can be brought in.  Many virtual memory systems avoid this extra
 overhead by writing modified pages to disk in advance, so that later
-page faults can be completed more quickly.
+page faults can be completed more quickly (but you do not have to
+implement this optimization).
 
 @node Memory Mapped Files
 @section Memory Mapped Files
@@ -249,16 +250,46 @@ system should allocate additional pages for the stack as necessary
 segment).
 
 It is impossible to predict how large the stack will grow at compile
-time, so we must allocate pages as necessary.  You should only
-allocate additional pages if they ``appear'' to be stack accesses.
-You must devise a heuristic that attempts to distinguish stack
-accesses from other accesses.  Document and explain the heuristic in
-your design documentation.
+time, so we must allocate pages as necessary.  You should only allocate
+additional pages if they ``appear'' to be stack accesses.  You must
+devise a heuristic that attempts to distinguish stack accesses from
+other accesses.@footnote{You might find it useful to know that the
+80@var{x}86 instruction @code{pusha} pushes all 8 registers (32 bytes)
+on the stack at once.}  Document and explain the heuristic in your
+design documentation.
 
 The first stack page need not be loaded lazily.  You can initialize it
 with the command line at load time, with no need to wait for it to be
 faulted in.  Even if you did wait, the very first instruction in the
 user program is likely to be one that faults in the page.
+
+Stack facts:
+
+@itemize
+@item
+The user program's current stack pointer is in the @struct{intr_frame}'s
+@code{esp} member.
+
+@item
+Only buggy user programs write to memory within the stack but below the
+stack pointer.  This is because more advanced OSes may interrupt a
+process at any time to deliver a ``signal'' and this uses the stack.
+
+@item
+The 80@var{x}86 @code{push} instruction may cause a page fault 4 bytes
+below the stack pointer, because it checks access permissions before it
+adjusts the stack pointer.  (Otherwise, the instruction would not be
+restartable in a straightforward fashion.)
+
+@item
+Similarly, the 80@var{x}86 @code{pusha} instruction, which pushes all 32
+bytes of the 8 general-purpose registers at once, may cause a page fault
+32 bytes below the stack pointer.
+
+@item
+Most OSes impose some sort of limit on the stack size.  Sometimes it is
+user-adjustable.
+@end itemize
 
 @node Problem 3-1 Page Table Management
 @section Problem 3-1: Page Table Management
