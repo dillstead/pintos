@@ -487,7 +487,10 @@ exited at the time of the later joins.  Thus, joins on T after the
 first should return immediately.
 
 Calling @func{thread_join} on an thread that is not the caller's
-child should cause the caller to return immediately.
+child should cause the caller to return immediately.  For this purpose,
+children are not inherited, that is, if @var{A} has child @var{B} and
+@var{B} has child @var{C}, then @var{A} always returns immediately
+should it try to join @var{C}, even if @var{B} is dead.
 
 Consider all the ways a join can occur: nested joins (@var{A} joins
 @var{B}, then @var{B} joins @var{C}), multiple joins (@var{A} joins
@@ -495,7 +498,6 @@ Consider all the ways a join can occur: nested joins (@var{A} joins
 if @func{thread_join} is called on a thread that has not yet been
 scheduled for the first time?  You should handle all of these cases.
 Write test code that demonstrates the cases your join works for.
-Don't overdo the output volume, please!
 
 Be careful to program this function correctly.  You will need its
 functionality for project 2.
