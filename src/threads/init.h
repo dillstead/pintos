@@ -8,4 +8,7 @@ struct tss *tss;
 extern size_t kernel_pages;
 extern size_t ram_pages;
 
+extern int argc;
+extern char *argv[];
+
 #endif /* init.h */
