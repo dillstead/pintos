@@ -10,7 +10,8 @@ test_main (void)
   check (chdir ("a"), "chdir \"a\"");
   msg ("remove \"/a\" (must not crash)");
   if (remove ("/a"))
-    check (!chdir ("/a"), "chdir \"/a\" (remove succeeded so this must fail)");
+    check (!chdir ("/a"),
+           "chdir \"/a\" (remove succeeded so this must return false)");
   else
     check (chdir ("/a"), "chdir \"/a\" (remove failed so this must succeed)");
 }

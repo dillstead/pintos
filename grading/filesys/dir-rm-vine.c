@@ -31,5 +31,5 @@ test_main (void)
       *strrchr (tmp, '/') = 0;
     }
 
-  check (open (filename) == 1, "open \"%s\" (must return -1)", filename);
+  check (open (filename) == -1, "open \"%s\" (must return -1)", filename);
 }

@@ -25,7 +25,7 @@ remove_tree (int at, int bt, int ct, int dt)
 
   msg ("removing /0/0/0/0 through /%d/%d/%d/%d...",
        at - 1, bt - 1, ct - 1, dt - 1);
-  quiet = false;
+  quiet = true;
   for (a = 0; a < at; a++) 
     {
       for (b = 0; b < bt; b++) 

@@ -1,3 +1,4 @@
+(grow-two-files) begin
 (grow-two-files) create "a"
 (grow-two-files) create "b"
 (grow-two-files) open "a"
@@ -9,3 +10,4 @@
 (grow-two-files) close "a"
 (grow-two-files) open "b" for verification
 (grow-two-files) close "b"
+(grow-two-files) end

@@ -18,6 +18,7 @@ int order[BLOCK_CNT];
 void
 test_main (void) 
 {
+  const char *filename = "bazzle";
   int fd;
   size_t i;
 
@@ -27,10 +28,10 @@ test_main (void)
   for (i = 0; i < BLOCK_CNT; i++)
     order[i] = i;
 
-  check (create ("bazzle", TEST_SIZE), "create \"bazzle\"");
-  check ((fd = open ("bazzle")) > 1, "open \"bazzle\"");
+  check (create (filename, TEST_SIZE), "create \"%s\"", filename);
+  check ((fd = open (filename)) > 1, "open \"%s\"", filename);
 
-  msg ("write \"bazzle\" in random order");
+  msg ("write \"%s\" in random order", filename);
   shuffle (order, BLOCK_CNT, sizeof *order);
   for (i = 0; i < BLOCK_CNT; i++) 
     {
@@ -40,7 +41,7 @@ test_main (void)
         fail ("write %d bytes at offset %zu failed", (int) BLOCK_SIZE, ofs);
     }
 
-  msg ("read \"bazzle\" in random order");
+  msg ("read \"%s\" in random order", filename);
   shuffle (order, BLOCK_CNT, sizeof *order);
   for (i = 0; i < BLOCK_CNT; i++) 
     {
@@ -49,17 +50,9 @@ test_main (void)
       seek (fd, ofs);
       if (read (fd, block, BLOCK_SIZE) <= 0)
         fail ("read %d bytes at offset %zu failed", (int) BLOCK_SIZE, ofs);
-      if (memcmp (block, buf + ofs, BLOCK_SIZE)) 
-        {
-          printf ("Expected data:\n");
-          hex_dump (ofs, buf + ofs, BLOCK_SIZE, false);
-          printf ("Actually read data:\n");
-          hex_dump (ofs, block, BLOCK_SIZE, false);
-          fail ("%d bytes at offset %zu differed from expected",
-                (int) BLOCK_SIZE, ofs);
-        }
+      compare_bytes (block, buf + ofs, BLOCK_SIZE, ofs, filename);
     }
 
-  fail ("close \"bazzle\"");
+  msg ("close \"%s\"", filename);
   close (fd);
 }

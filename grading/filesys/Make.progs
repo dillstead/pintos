@@ -5,8 +5,9 @@ grow-create grow-seq-sm grow-seq-lg grow-file-size grow-tell		\
 grow-sparse grow-too-big grow-root-sm grow-root-lg grow-dir-lg		\
 grow-two-files dir-mkdir dir-rmdir dir-mk-vine dir-rm-vine dir-mk-tree	\
 dir-rm-tree dir-lsdir dir-rm-cwd dir-rm-cwd-cd dir-rm-parent		\
-dir-rm-root dir-over-file dir-under-file dir-empty-name dir-open \
-syn-remove syn-read child-syn-read
+dir-rm-root dir-over-file dir-under-file dir-empty-name dir-open	\
+syn-remove syn-read child-syn-read syn-write child-syn-wrt syn-rw	\
+child-syn-rw
 
 sm_create_SRC = sm-create.c fslib.c fsmain.c
 sm_full_SRC = sm-full.c fslib.c fsmain.c
@@ -45,4 +46,7 @@ dir_open_SRC = dir-open.c fslib.c fsmain.c
 syn_remove_SRC = syn-remove.c fslib.c fsmain.c
 syn_read_SRC = syn-read.c fslib.c fsmain.c
 child_syn_read_SRC = child-syn-read.c fslib.c
-
+syn_write_SRC = syn-write.c fslib.c fsmain.c
+child_syn_wrt_SRC = child-syn-wrt.c fslib.c
+syn_rw_SRC = syn-rw.c fslib.c fsmain.c
+child_syn_rw_SRC = child-syn-rw.c fslib.c

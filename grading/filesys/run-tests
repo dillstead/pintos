@@ -58,7 +58,7 @@ sub usage {
 	     dir-rm-parent dir-rm-root dir-over-file dir-under-file
 	     dir-empty-name dir-open
 
-	     syn-remove syn-read
+	     syn-remove syn-read syn-write syn-rw
 	     ) unless @TESTS > 0;
 
 our (%args);
@@ -246,7 +246,7 @@ sub run_test {
 
 sub compile {
     print "Compiling...\n";
-    xsystem ("cd pintos/src/vm && make", LOG => "make")
+    xsystem ("cd pintos/src/filesys && make", LOG => "make")
 	or return "compile error";
 }
 
@@ -269,7 +269,7 @@ sub really_run_test {
     # Format disk, install test.
     my ($pintos_base_cmd) =
 	"pintos "
-	. "--os-disk=pintos/src/vm/build/os.dsk "
+	. "--os-disk=pintos/src/filesys/build/os.dsk "
 	. "--fs-disk=output/$test/fs.dsk "
 	. "--swap-disk=output/$test/swap.dsk "
 	. "-v";
@@ -280,6 +280,8 @@ sub really_run_test {
 
     my (@extra_files);
     push (@extra_files, "child-syn-read") if $test eq 'syn-read';
+    push (@extra_files, "child-syn-wrt") if $test eq 'syn-write';
+    push (@extra_files, "child-syn-rw") if $test eq 'syn-rw';
     for my $fn (@extra_files) {
 	return "format/put error" 
 	    if !xsystem ("$pintos_base_cmd put $GRADES_DIR/$fn $fn",
@@ -364,7 +366,7 @@ sub verify_common {
 	    } else {
 		$A2L = "i386-elf-addr2line";
 	    }
-	    open (A2L, "$A2L -fe pintos/src/vm/build/kernel.o @addrs|");
+	    open (A2L, "$A2L -fe pintos/src/filesys/build/kernel.o @addrs|");
 	    for (;;) {
 		my ($function, $line);
 		last unless defined ($function = <A2L>);
@@ -386,6 +388,11 @@ EOF
 
 	$extra{$test} = $details;
 	die "Kernel panic.  Details at end of file.\n"
+    }
+
+    my (@failure) = grep (/FAIL/, @output);
+    if (@failure != 0) {
+	die "Test failed: \"$failure[0]\"\n";
     }
 
     if (grep (/Pintos booting/, @output) > 1) {

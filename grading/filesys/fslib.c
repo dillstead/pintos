@@ -8,10 +8,19 @@
 bool quiet = false;
 
 static void
-vmsg (const char *format, va_list args) 
+vmsg (const char *format, va_list args, const char *suffix) 
 {
-  printf ("(%s) ", test_name);
-  vprintf (format, args);
+  /* We go to some trouble to stuff the entire message into a
+     single buffer and output it in a single system call, because
+     that'll (typically) ensure that it gets sent to the console
+     atomically.  Otherwise kernel messages like "foo: exit(0)"
+     can end up being interleaved if we're unlucky. */
+  static char buf[1024];
+
+  snprintf (buf, sizeof buf, "(%s) ", test_name);
+  vsnprintf (buf + strlen (buf), sizeof buf - strlen (buf), format, args);
+  strlcpy (buf + strlen (buf), suffix, sizeof buf - strlen (buf));
+  write (STDOUT_FILENO, buf, strlen (buf));
 }
 
 void
@@ -22,8 +31,7 @@ msg (const char *format, ...)
   if (quiet)
     return;
   va_start (args, format);
-  vmsg (format, args);
-  printf ("\n");
+  vmsg (format, args, "\n");
   va_end (args);
 }
 
@@ -33,34 +41,10 @@ fail (const char *format, ...)
   va_list args;
 
   va_start (args, format);
-  vmsg (format, args);
-  printf (": FAILED\n");
+  vmsg (format, args, ": FAILED\n");
   va_end (args);
 
   exit (1);
-}
-
-void
-check (bool success, const char *format, ...) 
-{
-  va_list args;
-
-  va_start (args, format);
-  if (success) 
-    {
-      if (!quiet) 
-        {
-          vmsg (format, args); 
-          printf ("\n"); 
-        }
-    }
-  else 
-    {
-      vmsg (format, args); 
-      printf (": FAILED\n");
-      exit (1);
-    }
-  va_end (args);
 }
 
 void 
@@ -145,22 +129,46 @@ check_file (const char *filename, const void *buf_, size_t size)
         fail ("read %zu bytes at offset %zu in \"%s\" failed",
               block_size, ofs, filename);
 
-      if (memcmp (buf + ofs, block, block_size))
-        {
-          if (block_size <= 512) 
-            {
-              printf ("Expected data:\n");
-              hex_dump (ofs, buf + ofs, block_size, false);
-              printf ("Actually read data:\n");
-              hex_dump (ofs, block, block_size, false); 
-            }
-          fail ("%zu bytes at offset %zu differed from expected",
-                block_size, ofs);
-        }
-
+      compare_bytes (block, buf + ofs, block_size, ofs, filename);
       ofs += block_size;
     }
 
   msg ("close \"%s\"", filename);
   close (fd);
+}
+
+void
+compare_bytes (const void *read_data_, const void *expected_data_, size_t size,
+               size_t ofs, const char *filename) 
+{
+  const uint8_t *read_data = read_data_;
+  const uint8_t *expected_data = expected_data_;
+  size_t i, j;
+  size_t show_cnt;
+
+  if (!memcmp (read_data, expected_data, size))
+    return;
+  
+  for (i = 0; i < size; i++)
+    if (read_data[i] != expected_data[i])
+      break;
+  for (j = i + 1; j < size; j++)
+    if (read_data[j] == expected_data[j])
+      break;
+
+  quiet = false;
+  msg ("%zu bytes read starting at offset %zu in \"%s\" differ "
+       "from expected.", j - i, ofs + i, filename);
+  show_cnt = j - i;
+  if (j - i > 64) 
+    {
+      show_cnt = 64;
+      msg ("Showing first differing %zu bytes.", show_cnt);
+    }
+  msg ("Data actually read:");
+  hex_dump (ofs + i, read_data + i, show_cnt, true);
+  msg ("Expected data:");
+  hex_dump (ofs + i, expected_data + i, show_cnt, true);
+  fail ("%zu bytes read starting at offset %zu in \"%s\" differ "
+        "from expected", j - i, ofs, filename);
 }

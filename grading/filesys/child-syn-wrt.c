@@ -1,20 +1,18 @@
 #include <random.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <syscall.h>
 #include "fslib.h"
-#include "syn-read.h"
+#include "syn-write.h"
 
-const char test_name[128] = "child-syn-read";
+const char test_name[] = "child-syn-wrt";
 
-static char buf[BUF_SIZE];
+char buf[BUF_SIZE];
 
 int
-main (int argc, const char *argv[]) 
+main (int argc, char *argv[])
 {
   int child_idx;
   int fd;
-  size_t i;
 
   quiet = true;
   
@@ -25,14 +23,11 @@ main (int argc, const char *argv[])
   random_bytes (buf, sizeof buf);
 
   check ((fd = open (filename)) > 1, "open \"%s\"", filename);
-  for (i = 0; i < sizeof buf; i++) 
-    {
-      char c;
-      check (read (fd, &c, 1) > 0, "read \"%s\"", filename);
-      compare_bytes (&c, buf + i, 1, i, filename);
-    }
+  seek (fd, CHUNK_SIZE * child_idx);
+  check (write (fd, buf + CHUNK_SIZE * child_idx, CHUNK_SIZE) > 0,
+         "write \"%s\"", filename);
+  msg ("close \"%s\"", filename);
   close (fd);
 
   return child_idx;
 }
-

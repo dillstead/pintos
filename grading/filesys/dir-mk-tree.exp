@@ -1,4 +1,5 @@
 (dir-mk-tree) begin
-(dir-mk-tree) creating /0/0/0/0 through /4/4/4/1...
-(dir-mk-tree) open "/0/1/2/1"
+(dir-mk-tree) creating /0/0/0/0 through /3/2/2/3...
+(dir-mk-tree) open "/0/2/0/3"
+(dir-mk-tree) close "/0/2/0/3"
 (dir-mk-tree) end

@@ -22,7 +22,7 @@ test_main (void)
   msg ("seek \"%s\" to 0", filename);
   seek (fd, 0);
   check (read (fd, buf2, sizeof buf2) > 0, "read \"%s\"", filename);
-  check (!memcmp (buf1, buf2, sizeof buf1), "compare data read and written");
+  compare_bytes (buf2, buf1, sizeof buf1, 0, filename);
   msg ("close \"%s\"", filename);
   close (fd);
 }
