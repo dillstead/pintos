@@ -76,7 +76,7 @@ process would install its own page table into the machine.  The page
 table contained all the virtual-to-physical translations for the
 process.  Whenever the processor needed to look up a translation, it
 consulted the page table.  As long as the process only accessed
-memory that it didn't own, all was well.  If the process accessed
+memory that it owned, all was well.  If the process accessed
 memory it didn't own, it ``page faulted'' and @func{page_fault}
 terminated the process.
 
