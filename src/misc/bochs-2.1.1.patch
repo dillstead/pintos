@@ -14,6 +14,12 @@ connect a serial port to stdout and it doesn't work under Solaris
 anyway.  This patch is useful everywhere with `pintos', but may not be
 wanted elsewhere.
 
+To apply all the patches, cd into the Bochs directory, then type
+	patch -p1 < ~/pintos/src/misc/bochs-2.1.1.patch
+You will have to supply the proper path to the patch, of course.  You
+can provide the --dry-run option to patch if you want to test whether
+the patch would apply cleanly before actually patching.
+
 Here's a ./configure invocation for Bochs that works optimally with
 the `pintos' utility:
 	./configure --with-x --with-x11 --with-term --with-nogui
