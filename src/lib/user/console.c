@@ -41,6 +41,18 @@ vprintf_helper (char c, void *aux_)
   aux->char_cnt++;
 }
 
+/* Writes string S to the console, followed by a new-line
+   character. */
+int
+puts (const char *s) 
+{
+  while (*s != '\0')
+    putchar (*s++);
+  putchar ('\n');
+
+  return 0;
+}
+
 /* Writes C to the console. */
 int
 putchar (int c) 

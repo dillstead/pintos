@@ -552,17 +552,6 @@ __printf (const char *format,
   __vprintf (format, args, output, aux);
   va_end (args);
 }
-
-/* Writes string S to the console, followed by a new-line
-   character. */
-int
-puts (const char *s) 
-{
-  while (*s != '\0')
-    putchar (*s++);
-  putchar ('\n');
-  return 0;
-}
 
 /* Dumps the SIZE bytes in BUFFER to the console as hex bytes
    arranged 16 per line.  If ASCII is true then the corresponding
