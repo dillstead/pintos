@@ -75,7 +75,7 @@ file_read_at (struct file *file, void *buffer_, off_t size,
   while (size > 0) 
     {
       /* Disk sector to read, starting byte offset within sector. */
-      off_t sector_idx = inode_byte_to_sector (file->inode, file_ofs);
+      disk_sector_t sector_idx;
       int sector_ofs = file_ofs % DISK_SECTOR_SIZE;
 
       /* Bytes left in file, bytes left in sector, lesser of the two. */
@@ -90,6 +90,7 @@ file_read_at (struct file *file, void *buffer_, off_t size,
 
       /* Read sector into bounce buffer, then copy into caller's
          buffer. */
+      sector_idx = inode_byte_to_sector (file->inode, file_ofs);
       disk_read (filesys_disk, sector_idx, file->bounce);
       memcpy (buffer + bytes_read, file->bounce + sector_ofs, chunk_size);
 
@@ -133,8 +134,8 @@ file_write_at (struct file *file, const void *buffer_, off_t size,
 
   while (size > 0) 
     {
-      /* Starting byte offset within sector to read. */
-      off_t sector_idx = inode_byte_to_sector (file->inode, file_ofs);
+      /* Sector to write, starting byte offset within sector. */
+      off_t sector_idx;
       int sector_ofs = file_ofs % DISK_SECTOR_SIZE;
 
       /* Bytes left in file, bytes left in sector, lesser of the two. */
@@ -150,6 +151,7 @@ file_write_at (struct file *file, const void *buffer_, off_t size,
       /* If the sector contains data before or after the chunk
          we're writing, then we need to read in the sector
          first.  Otherwise we start with a sector of all zeros. */
+      sector_idx = inode_byte_to_sector (file->inode, file_ofs);
       if (sector_ofs > 0 || chunk_size < sector_left)
         disk_read (filesys_disk, sector_idx, file->bounce);
       else

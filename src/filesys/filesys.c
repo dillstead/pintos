@@ -149,7 +149,6 @@ filesys_create (const char *name, off_t initial_size)
 {
   struct dir *dir = NULL;
   struct bitmap *free_map = NULL;
-  struct inode *inode = NULL;
   disk_sector_t inode_sector;
   bool success = false;
 
@@ -175,12 +174,10 @@ filesys_create (const char *name, off_t initial_size)
     goto done;
 
   /* Allocate space for the file. */
-  inode = inode_create (free_map, inode_sector, initial_size);
-  if (inode == NULL)
+  if (!inode_create (free_map, inode_sector, initial_size))
     goto done;
 
   /* Write everything back. */
-  inode_commit (inode);
   dir_write (dir, root_dir_file);
   bitmap_write (free_map, free_map_file);
 
@@ -188,7 +185,6 @@ filesys_create (const char *name, off_t initial_size)
 
   /* Clean up. */
  done:
-  inode_close (inode);
   bitmap_destroy (free_map);
   dir_destroy (dir);
 
@@ -348,14 +344,12 @@ filesys_self_test (void)
          Delete file while open to check proper semantics. */
       MUST_SUCCEED ((file = filesys_open ("foo")) != NULL);
       MUST_SUCCEED (filesys_remove ("foo"));
+      MUST_SUCCEED (filesys_open ("foo") == NULL);
       MUST_SUCCEED (file_read (file, s2, sizeof s) == sizeof s);
       MUST_SUCCEED (memcmp (s, s2, sizeof s) == 0);
       MUST_SUCCEED (file_tell (file) == sizeof s);
       MUST_SUCCEED (file_length (file) == sizeof s);
       file_close (file);
-
-      /* Make sure file is deleted. */
-      MUST_SUCCEED ((file = filesys_open ("foo")) == NULL);
     }
   
   printf ("filesys: self test ok\n");
@@ -366,7 +360,6 @@ static void
 do_format (void)
 {
   struct bitmap *free_map;
-  struct inode *map_inode, *dir_inode;
   struct dir *dir;
 
   printf ("Formatting filesystem...");
@@ -379,23 +372,11 @@ do_format (void)
   bitmap_mark (free_map, FREE_MAP_SECTOR);
   bitmap_mark (free_map, ROOT_DIR_SECTOR);
 
-  /* Allocate data sector(s) for the free map file
-     and write its inode to disk. */
-  map_inode = inode_create (free_map, FREE_MAP_SECTOR,
-                            bitmap_file_size (free_map));
-  if (map_inode == NULL)
+  /* Allocate free map and root dir files. */
+  if (!inode_create (free_map, FREE_MAP_SECTOR, bitmap_file_size (free_map)))
     PANIC ("free map creation failed--disk is too large");
-  inode_commit (map_inode);
-  inode_close (map_inode);
-
-  /* Allocate data sector(s) for the root directory file
-     and write its inodes to disk. */
-  dir_inode = inode_create (free_map, ROOT_DIR_SECTOR,
-                            dir_size (NUM_DIR_ENTRIES));
-  if (dir_inode == NULL)
+  if (!inode_create (free_map, ROOT_DIR_SECTOR, dir_size (NUM_DIR_ENTRIES)))
     PANIC ("root directory creation failed");
-  inode_commit (dir_inode);
-  inode_close (dir_inode);
 
   /* Write out the free map now that we have space reserved
      for it. */

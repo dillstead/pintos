@@ -13,7 +13,7 @@ size_t bitmap_size (const struct bitmap *);
 
 void bitmap_set (struct bitmap *, size_t idx, bool);
 void bitmap_set_all (struct bitmap *, bool);
-void bitmap_set_multiple (struct bitmap *, size_t start, size_t end, bool);
+void bitmap_set_multiple (struct bitmap *, size_t start, size_t cnt, bool);
 
 void bitmap_mark (struct bitmap *, size_t idx);
 void bitmap_reset (struct bitmap *, size_t idx);
@@ -26,10 +26,10 @@ size_t bitmap_scan (const struct bitmap *, size_t start, size_t cnt, bool);
 size_t bitmap_scan_and_flip (struct bitmap *, size_t start, size_t cnt,
                              bool);
 
-size_t bitmap_count (const struct bitmap *, size_t start, size_t end, bool);
-bool bitmap_any (const struct bitmap *, size_t start, size_t end);
-bool bitmap_none (const struct bitmap *, size_t start, size_t end);
-bool bitmap_all (const struct bitmap *, size_t start, size_t end);
+size_t bitmap_count (const struct bitmap *, size_t start, size_t cnt, bool);
+bool bitmap_any (const struct bitmap *, size_t start, size_t cnt);
+bool bitmap_none (const struct bitmap *, size_t start, size_t cnt);
+bool bitmap_all (const struct bitmap *, size_t start, size_t cnt);
 
 #ifdef FILESYS
 struct file;

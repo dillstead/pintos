@@ -12,9 +12,17 @@
 struct inode_disk
   {
     off_t length;                       /* File size in bytes. */
-    disk_sector_t first_sector;         /* Starting sector. */
+    disk_sector_t start;                /* Starting sector. */
     uint32_t unused[126];               /* Unused padding. */
   };
+
+/* Returns the number of sectors to allocate for a file SIZE
+   bytes long. */
+static inline size_t
+bytes_to_sectors (off_t size)
+{
+  return DIV_ROUND_UP (size, DISK_SECTOR_SIZE);
+}
 
 /* In-memory inode. */
 struct inode 
@@ -28,9 +36,9 @@ struct inode
 
 /* List of open inodes, so that opening a single inode twice
    returns the same `struct inode'. */
-struct list open_inodes;
+static struct list open_inodes;
 
-static struct inode *alloc_inode (disk_sector_t);
+static void deallocate_inode (const struct inode *);
 
 /* Initializes the inode module. */
 void
@@ -39,50 +47,42 @@ inode_init (void)
   list_init (&open_inodes);
 }
 
-/* Allocates sectors from bitmap B for the content of a file
-   whose size is LENGTH bytes, and returns a new `struct inode'
-   properly initialized for the file.
-   It is the caller's responsible to write the inode to disk with
-   inode_commit(), as well as the bitmap.
-   If memory or disk allocation fails, returns a null pointer,
-   leaving bitmap B is unchanged. */
-struct inode *
-inode_create (struct bitmap *b, disk_sector_t sector, off_t length) 
+/* Initializes an inode for a file LENGTH bytes in size and
+   writes the new inode to sector SECTOR on the file system
+   disk.  Allocates sectors for the file from FREE_MAP.
+   Returns true if successful.
+   Returns false if memory or disk allocation fails.  FREE_MAP
+   may be modified regardless. */
+bool
+inode_create (struct bitmap *free_map, disk_sector_t sector, off_t length) 
 {
-  struct inode *idx;
-  size_t sector_cnt;
+  static const char zero_sector[DISK_SECTOR_SIZE];
+  struct inode_disk *idx;
+  size_t start;
+  size_t i;
 
-  ASSERT (b != NULL);
+  ASSERT (free_map != NULL);
   ASSERT (length >= 0);
 
-  /* Allocate inode. */
-  idx = alloc_inode (sector);
+  /* Allocate sectors. */
+  start = bitmap_scan_and_flip (free_map, 0, bytes_to_sectors (length), false);
+  if (start == BITMAP_ERROR)
+    return false;
+
+  /* Create inode. */
+  idx = calloc (sizeof *idx, 1);
   if (idx == NULL)
-    return NULL;
+    return false;
+  idx->length = length;
+  idx->start = start;
 
-  /* Allocate disk sectors. */
-  sector_cnt = DIV_ROUND_UP (length, DISK_SECTOR_SIZE);
-  idx->data.length = length;
-  idx->data.first_sector = bitmap_scan_and_flip (b, 0, sector_cnt, false);
-  if (idx->data.first_sector == BITMAP_ERROR)
-    return NULL;
+  /* Commit to disk. */
+  disk_write (filesys_disk, sector, idx);
+  for (i = 0; i < bytes_to_sectors (length); i++)
+    disk_write (filesys_disk, idx->start + i, zero_sector);
 
-  /* Zero out the file contents. */
-  if (sector_cnt > 0) 
-    {
-      static const char zero_sector[DISK_SECTOR_SIZE];
-      disk_sector_t i;
-      
-      for (i = 0; i < sector_cnt; i++)
-        disk_write (filesys_disk, idx->data.first_sector + i, zero_sector);
-    }
-
-  return idx;
-
- error:
-  inode_remove (idx);
-  inode_close (idx);
-  return NULL;
+  free (idx);
+  return true;
 }
 
 /* Reads an inode from SECTOR
@@ -109,10 +109,16 @@ inode_open (disk_sector_t sector)
         }
     }
 
-  /* Allocate inode. */
-  idx = alloc_inode (sector);
+  /* Allocate memory. */
+  idx = calloc (1, sizeof *idx);
   if (idx == NULL)
     return NULL;
+
+  /* Initialize. */
+  list_push_front (&open_inodes, &idx->elem);
+  idx->sector = sector;
+  idx->open_cnt = 1;
+  idx->removed = false;
 
   /* Read from disk. */
   ASSERT (sizeof idx->data == DISK_SECTOR_SIZE);
@@ -127,48 +133,39 @@ inode_open (disk_sector_t sector)
 void
 inode_close (struct inode *idx) 
 {
+  /* Ignore null pointer. */
   if (idx == NULL)
     return;
 
+  /* Release resources if this was the last opener. */
   if (--idx->open_cnt == 0)
     {
-      if (idx->removed) 
-        {
-          struct bitmap *free_map;
+      /* Deallocate blocks if removed. */
+      if (idx->removed)
+        deallocate_inode (idx);
 
-          free_map = bitmap_create (disk_size (filesys_disk));
-          if (free_map != NULL)
-            {
-              disk_sector_t start, end;
-              
-              bitmap_read (free_map, free_map_file);
-
-              /* Reset inode sector bit. */
-              bitmap_reset (free_map, idx->sector);
-
-              /* Reset inode data sector bits. */
-              start = idx->data.first_sector;
-              end = start + DIV_ROUND_UP (idx->data.length, DISK_SECTOR_SIZE);
-              bitmap_set_multiple (free_map, start, end, false);
-
-              bitmap_write (free_map, free_map_file);
-              bitmap_destroy (free_map);
-            }
-          else
-            printf ("inode_close(): can't free blocks");
-        }
+      /* Remove from inode list and free memory. */
       list_remove (&idx->elem);
       free (idx); 
     }
 }
 
-/* Writes IDX to disk. */
-void
-inode_commit (const struct inode *idx) 
+/* Deallocates the blocks allocated for IDX. */
+static void
+deallocate_inode (const struct inode *idx)
 {
-  ASSERT (idx != NULL);
-  ASSERT (sizeof idx->data == DISK_SECTOR_SIZE);
-  disk_write (filesys_disk, idx->sector, &idx->data);
+  struct bitmap *free_map = bitmap_create (disk_size (filesys_disk));
+  if (free_map != NULL) 
+    {
+      bitmap_read (free_map, free_map_file);
+      bitmap_reset (free_map, idx->sector);
+      bitmap_set_multiple (free_map, idx->data.start,
+                           bytes_to_sectors (idx->data.length), false);
+      bitmap_write (free_map, free_map_file);
+      bitmap_destroy (free_map);
+    }
+  else
+    printf ("inode_close(): can't free blocks");
 }
 
 /* Marks IDX to be deleted when it is closed by the last caller who
@@ -188,11 +185,8 @@ disk_sector_t
 inode_byte_to_sector (const struct inode *idx, off_t pos) 
 {
   ASSERT (idx != NULL);
-
-  if (pos < idx->data.length)
-    return idx->data.first_sector + pos / DISK_SECTOR_SIZE;
-  else
-    return (disk_sector_t) -1;
+  ASSERT (pos < idx->data.length);
+  return idx->data.start + pos / DISK_SECTOR_SIZE;
 }
 
 /* Returns the length, in bytes, of the file with inode IDX. */
@@ -207,27 +201,10 @@ inode_length (const struct inode *idx)
 void
 inode_print (const struct inode *idx) 
 {
+  ASSERT (idx != NULL);
   printf ("Inode %"PRDSNu": %"PRDSNu" bytes, "
           "%zu sectors starting at %"PRDSNu"\n",
           idx->sector, idx->data.length,
           (size_t) DIV_ROUND_UP (idx->data.length, DISK_SECTOR_SIZE),
-          idx->data.first_sector);
-}
-
-/* Returns a newly allocated and initialized inode. */
-static struct inode *
-alloc_inode (disk_sector_t sector) 
-{
-  /* Allocate memory. */
-  struct inode *idx = calloc (1, sizeof *idx);
-  if (idx == NULL)
-    return NULL;
-
-  /* Initialize. */
-  list_push_front (&open_inodes, &idx->elem);
-  idx->sector = sector;
-  idx->open_cnt = 1;
-  idx->removed = false;
-
-  return idx;
+          idx->data.start);
 }
