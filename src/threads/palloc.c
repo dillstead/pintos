@@ -166,6 +166,7 @@ init_pool (struct pool *p, void *start, void *end, const char *name)
 
   lock_init (&p->lock, name);
   bitmap_size = ROUND_UP (bitmap_needed_bytes (page_cnt), PGSIZE);
+  page_cnt -= bitmap_size / PGSIZE;
   p->used_map = bitmap_create_preallocated (page_cnt, start, bitmap_size);
   p->start = start + bitmap_size;
   p->end = end;
