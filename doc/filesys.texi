@@ -24,10 +24,6 @@ filesystem implementation.
 Your submission should define @code{THREAD_JOIN_IMPLEMENTED} in
 @file{constants.h} (@pxref{Conditional Compilation}).
 
-FIXME FIXME FIXME
-The first step is to understand the default filesystem provided by the
-base code.  
-
 @menu
 * File System New Code::        
 * Problem 4-1 Large Files::     
@@ -212,17 +208,16 @@ request for disk block 2 is handled asynchronously.  In other words,
 the process will block to wait for disk block 1, but should not block
 waiting for disk block 2.
 
-FIXME
 When you're implementing this, please make sure you have a scheme for
 making any read-ahead and write-behind threads halt when Pintos is
 ``done'' (when the user program has completed, etc), so that Pintos
-will halt normally and print its various statistics.
+will halt normally and the disk contents will be consistent.
 
 @node File System Design Document Requirements
 @section Design Document Requirements
 
 As always, submit a design document file summarizing your design.  Be
-sure to cover the following points :
+sure to cover the following points:
 
 @itemize @bullet
 @item
@@ -279,24 +274,21 @@ document.
 @b{What exec modes for running Pintos do I absolutely need to
 support?}
 
-FIXME FIXME
-The most standard mode is to run your Pintos with all the command
-flags on one command line, like this: @samp{pintos -f -cp shell
-shell -ex "shell"}.  However, you also need to support these flags
-individually---especially since that's how the grader tests your
-program.  Thus, you should be able to run the above instead as:
+You also need to support the @option{-f}, @option{-ci}, and
+@option{-ex} flags individually, and you need to handle them when
+they're combined, like this: @samp{pintos -f -ci shell 12345 -ex
+"shell"}.  Thus, you should be able to treat the above as equivalent
+to:
 
-FIXME
 @example
 pintos -f
-pintos -cp shell shell
+pintos -ci shell 12345
 pintos -ex "shell"
 @end example
 
-Note that this also provides a way for you to validate that your disks
-are really persistent.  This is a common problem with a write behind
-cache: if you don't shut down properly it will leave the disk in an
-inconsistent state.
+If you don't change the filesystem interface, then this should already
+be implemented properly in @file{threads/init.c} and
+@file{filesys/fsutil.c}.
 
 @item
 @b{Will you test our file system with a different @code{DISK_SECTOR_SIZE}?}

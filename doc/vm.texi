@@ -528,8 +528,9 @@ the linker manual, accessible via @samp{info ld}.
 @item
 @b{Do page tables need to created lazily?}
 
-No.  You can create the page tables at load time (or @code{mmap} time)
-if you like.
+No.  You can create the page tables at load time (or @code{mmap}
+time).  Real OSes often manage their page tables lazily, but it's just
+an unneeded complication for our purposes.
 
 @item
 @b{Our code handles the PageFault exceptions. However, the number of

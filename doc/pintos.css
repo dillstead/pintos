@@ -1,11 +1,12 @@
 body {
 	background: white;
 	color: black;
-	padding: 0em 12em 0em 3em;
+	padding: 0em 1em 0em 3em;
 	margin: 0
 }
 body>p {
-	margin: 0pt 0pt 0pt 0em
+	margin: 0pt 0pt 0pt 0em;
+	text-align: justify
 }
 body>p + p {
 	margin: .75em 0pt 0pt 0pt
@@ -54,75 +55,11 @@ a:hover {
         text-decoration: underline
 }
 
-div.menu {
-	margin: 0;
-	font-size: 80%;
-	font-weight: bold;
-	line-height: 1.1;
-	text-align: center;
-	position: absolute;
-	top: 2em;
-	left: auto;
-	width: 8.5em;
-	right: 2em;
-}
-div.menu p, span.menuitem {
-	display: block;
-	margin: 0;
-	padding: 0.3em 0.4em;
-	font-family: Arial, sans-serif;
-	background: #ddd;
-	border: thin outset #000;
-	color: #000;
-	text-indent: 0em;
-}
-IMG.menuimg {
-	width: 50%;
-	height: auto;
-	border-width: 0
-}
-
-div.menu a, div.menu em {
-	display: block;
-	margin: 0 0.5em
-}
-div.menu a, div.menu em {
-	border-top: 2px groove #000
-}
-div.menu a:first-child {
-	border-top: none
-}
-div.menu em {
-	color: #fff
-}
-
-div.menu a:link {
-	text-decoration: none;
-	color: blue
-}
-div.menu a:visited {
-	text-decoration: none;
-	color: gray
-}
-div.menu a:hover {
-	background: blue;
-	color: white
-}
-
-div.menu span.menugap + span.menuitem {
-	display: block;
-	margin-top: 1em
-}
-
-span.hide {
-	display: none
-}
-
-body>div.menu {
-	position: fixed
-}
-
 address {
 	font-size: 90%;
 	font-style: normal
+}
+
+HR { 
+	display: none
 }

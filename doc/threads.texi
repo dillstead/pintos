@@ -74,7 +74,7 @@ thing the new thread does is to return from
 @code{switch_threads()}.  We realize this comment will seem cryptic to
 you at this point, but you will understand threads once you understand
 why the @code{switch_threads()} that gets called is different from the
-@code{switch_threads()} that returns.  @c FIXME
+@code{switch_threads()} that returns.
 
 @strong{Warning}: In Pintos, each thread is assigned a small,
 fixed-size execution stack just under @w{4 kB} in size.  The kernel
@@ -133,12 +133,13 @@ above.
 
 @item palloc.c
 @itemx palloc.h
-Page allocator, which hands out system memory one 4 kB page at a time.
+Page allocator, which hands out system memory in multiples of 4 kB
+pages.
 
 @item malloc.c
 @itemx malloc.h
 A very simple implementation of @code{malloc()} and @code{free()} for
-the kernel.  The largest block that can be allocated is 2 kB.
+the kernel.
 
 @item interrupt.c
 @itemx interrupt.h
@@ -170,7 +171,108 @@ directories and page tables.  This will be more important to you in
 project 3.  For now, you can ignore it.
 @end table
 
-FIXME devices and lib directories?
+@menu
+* devices code::                
+* lib files::                   
+@end menu
+
+@node devices code
+@subsection @file{devices} code
+
+The basic threaded kernel also includes these files in the
+@file{devices} directory:
+
+@table @file
+@item timer.c
+@itemx timer.h
+System timer that ticks, by default, 100 times per second.  You will
+modify this code in Problem 1-1.
+
+@item vga.c
+@itemx vga.h
+VGA display driver.  Responsible for writing text to the screen.
+You should have no need to look at this code.  @code{printf()} will
+call into the VGA display driver for you, so there's little reason to
+call this code yourself.
+
+@item serial.c
+@itemx serial.h
+Serial port driver.  Again, @code{printf()} calls this code for you,
+so you don't need to do so yourself.  Feel free to look through it if
+you're curious.
+
+@item disk.c
+@itemx disk.h
+Supports reading and writing sectors on up to 4 IDE disks.  This won't
+actually be used until project 2.
+
+@item intq.c
+@itemx intq.h
+Interrupt queue, for managing a circular queue that both kernel
+threads and interrupt handlers want to access.  Used by the keyboard
+and serial drivers.
+@end table
+
+@node lib files
+@subsection @file{lib} files
+
+Finally, @file{lib} and @file{lib/kernel} contain useful library
+routines.  (@file{lib/user} will be used by user programs, starting in
+project 2, but it is not part of the kernel.)  Here's a few more
+details:
+
+@table @file
+@item ctype.h
+@itemx inttypes.h
+@itemx limits.h
+@itemx stdarg.h
+@itemx stdbool.h
+@itemx stddef.h
+@itemx stdint.h
+@itemx stdio.c
+@itemx stdio.h
+@itemx stdlib.c
+@itemx stdlib.h
+@itemx string.c
+@itemx string.h
+Implementation of the standard C library.  @xref{C99}, for information
+on a few recently introduced pieces of the C library that you might
+not have encountered before.  @xref{Unsafe String Functions}, for
+information on what's been intentionally left out for safety.
+
+@item debug.c
+@itemx debug.h
+Functions and macros to aid debugging.  @xref{Debugging Tools}, for
+more information.
+
+@item random.c
+@itemx random.h
+Pseudo-random number generator.
+
+@item round.h
+Macros for rounding.
+
+@item syscall-nr.h
+System call numbers.  Not used until project 2.
+
+@item kernel/list.c
+@itemx kernel/list.h
+Doubly linked list implementation.  Used all over the Pintos code, and
+you'll probably want to use it a few places yourself in project 1.
+
+@item kernel/bitmap.c
+@itemx kernel/bitmap.h
+Bitmap implementation.  You can use this in your code if you like, but
+you probably won't have any need for project 1.
+
+@item kernel/hash.c
+@itemx kernel/hash.h
+Hash table implementation.  Likely to come in handy for project 3.
+
+@item kernel/console.c
+@itemx kernel/console.h
+Implements @code{printf()} and a few other functions.
+@end table
 
 @node Debugging versus Testing
 @section Debugging versus Testing
