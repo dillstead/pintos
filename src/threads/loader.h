@@ -18,8 +18,10 @@
 #define LOADER_PHYS_BASE 0xc0000000     /* 3 GB. */
 
 /* Offsets within the loader. */
-#define LOADER_BIOS_SIG (LOADER_END - 2)         /* 0xaa55 BIOS signature. */
-#define LOADER_CMD_LINE (LOADER_BIOS_SIG - 0x80) /* Kernel command line. */
-#define LOADER_RAM_PAGES (LOADER_CMD_LINE - 4)   /* # of pages of RAM. */
+#define LOADER_BIOS_SIG (LOADER_END - 2)        /* 0xaa55 BIOS signature. */
+#define LOADER_CMD_LINE_LEN 0x80                /* Command line length. */
+#define LOADER_CMD_LINE (LOADER_BIOS_SIG - LOADER_CMD_LINE_LEN)
+                                                /* Kernel command line. */
+#define LOADER_RAM_PAGES (LOADER_CMD_LINE - 4)  /* # of pages of RAM. */
 
 #endif /* loader.h */
