@@ -1,4 +1,4 @@
-TESTS = threads p1-1 p1-2 list stdlib userprog p2 vm filesys
+TESTS = threads p1-1 p1-2 list stdlib stdio userprog p2 vm filesys
 
 PATH := $(shell pwd)/../src/utils:$(PATH)
 
@@ -71,7 +71,7 @@ p1-2::
 	$(clean)
 
 list: PROJECT = threads
-list stdlib::
+list stdlib stdio::
 	$(mk-sandbox)
 	cp ../src/tests/threads/$@.c $@/pintos/src/threads/test.c
 	$(MAKE) -C $@/pintos/src/threads -s
