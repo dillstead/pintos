@@ -3,7 +3,7 @@
 
 #ifndef __ASSEMBLER__
 /* switch_thread()'s stack frame. */
-struct switch_frame 
+struct switch_threads_frame 
   {
     uint32_t ebx;               /*  0: Saved %ebx. */
     uint32_t ebp;               /*  4: Saved %ebp. */
@@ -19,10 +19,12 @@ struct switch_frame
    NEXT's context. */
 struct thread *switch_threads (struct thread *cur, struct thread *next);
 
-struct switch_thunk_frame 
+struct switch_entry_frame
   {
     void (*eip) (void);
   };
+
+void switch_entry (void);
 
 /* Pops the CUR and NEXT arguments off the stack, for use in
    initializing threads. */

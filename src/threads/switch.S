@@ -32,7 +32,16 @@ switch_threads:
 	popl %ebx
         ret
 
-	.globl switch_thunk
-switch_thunk:
+	.globl switch_entry
+switch_entry:
+	# Discard thread_switch() arguments.
 	addl $8, %esp
+
+	# Call schedule_tail(prev).
+	pushl %eax
+	.globl schedule_tail
+	call schedule_tail
+	addl $4, %esp
+
+	# Start thread proper.
 	ret

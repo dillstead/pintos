@@ -44,8 +44,11 @@ struct intr_frame
 typedef void intr_handler_func (struct intr_frame *);
 
 void intr_init (void);
-void intr_register (uint8_t vec, int dpl, enum if_level, intr_handler_func *);
+void intr_register (uint8_t vec, int dpl, enum if_level, intr_handler_func *,
+                    const char *name);
 bool intr_context (void);
 void intr_yield_on_return (void);
+
+const char *intr_name (int vec);
 
 #endif /* interrupt.h */

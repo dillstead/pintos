@@ -67,8 +67,8 @@ thread_create (const char *name, void (*function) (void *aux), void *aux)
 {
   struct thread *t;
   struct thread_root_frame *rf;
-  struct switch_thunk_frame *tf;
-  struct switch_frame *sf;
+  struct switch_entry_frame *ef;
+  struct switch_threads_frame *sf;
 
   ASSERT (function != NULL);
 
@@ -80,13 +80,13 @@ thread_create (const char *name, void (*function) (void *aux), void *aux)
   rf->function = function;
   rf->aux = aux;
 
-  /* Stack frame for switch_thunk(). */
-  tf = alloc_frame (t, sizeof *tf);
-  tf->eip = (void (*) (void)) thread_root;
+  /* Stack frame for switch_entry(). */
+  ef = alloc_frame (t, sizeof *ef);
+  ef->eip = (void (*) (void)) thread_root;
 
   /* Stack frame for thread_switch(). */
   sf = alloc_frame (t, sizeof *sf);
-  sf->eip = (void (*) (void)) switch_thunk;
+  sf->eip = switch_entry;
 
   /* Add to run queue. */
   thread_ready (t);
@@ -108,8 +108,8 @@ thread_execute (const char *filename)
 {
   struct thread *t;
   struct intr_frame *if_;
-  struct switch_thunk_frame *tf;
-  struct switch_frame *sf;
+  struct switch_entry_frame *ef;
+  struct switch_threads_frame *sf;
   void (*start) (void);
 
   ASSERT (filename != NULL);
@@ -130,14 +130,14 @@ thread_execute (const char *filename)
   if_->eflags = FLAG_IF | 2;
   if_->esp = PHYS_BASE;
   if_->ss = SEL_UDSEG;
-  
-  /* Stack frame for switch_thunk(). */
-  tf = alloc_frame (t, sizeof *tf);
-  tf->eip = (void (*) (void)) intr_exit;
+
+  /* Stack frame for switch_entry(). */
+  ef = alloc_frame (t, sizeof *ef);
+  ef->eip = intr_exit;
 
   /* Stack frame for thread_switch(). */
   sf = alloc_frame (t, sizeof *sf);
-  sf->eip = (void (*) (void)) switch_thunk;
+  sf->eip = switch_entry;
 
   /* Add to run queue. */
   thread_ready (t);
@@ -182,6 +182,23 @@ thread_destroy (struct thread *t)
   palloc_free (t);
 }
 
+void schedule_tail (struct thread *prev);
+
+void
+schedule_tail (struct thread *prev) 
+{
+  struct thread *cur = thread_current ();
+
+#ifdef USERPROG
+  addrspace_activate (&cur->addrspace);
+#endif
+
+  if (prev != NULL && prev->status == THREAD_DYING) 
+    thread_destroy (prev);
+
+  intr_enable ();
+}
+
 void
 thread_schedule (void) 
 {
@@ -196,20 +213,16 @@ thread_schedule (void)
     idle ();
 
   next->status = THREAD_RUNNING;
-  prev = switch_threads (cur, next);
+  if (cur != next)
+    {
+      prev = switch_threads (cur, next);
 
-  /* Prevent GCC from reordering anything around the thread
-     switch. */
-  asm volatile ("" : : : "memory");
+      /* Prevent GCC from reordering anything around the thread
+         switch. */
+      asm volatile ("" : : : "memory");
 
-#ifdef USERPROG
-  addrspace_activate (&cur->addrspace);
-#endif
-
-  if (prev != NULL && prev->status == THREAD_DYING) 
-    thread_destroy (prev);
-
-  intr_enable ();
+      schedule_tail (prev); 
+    }
 }
 
 void
@@ -241,6 +254,7 @@ thread_exit (void)
   intr_disable ();
   thread_current ()->status = THREAD_DYING;
   thread_schedule ();
+  NOT_REACHED ();
 }
 
 void

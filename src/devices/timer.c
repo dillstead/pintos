@@ -3,6 +3,10 @@
 #include "interrupt.h"
 #include "io.h"
   
+#if TIMER_FREQ < 19
+#error 8254 timer requires TIMER_FREQ >= 19
+#endif
+
 static volatile uint64_t ticks;
 
 static void
@@ -26,7 +30,7 @@ timer_init (void)
   outb (0x40, count & 0xff);
   outb (0x40, count >> 8);
 
-  intr_register (0x20, 0, IF_OFF, irq20_timer);
+  intr_register (0x20, 0, IF_OFF, irq20_timer, "8254 Timer");
 }
 
 uint64_t

@@ -2,6 +2,7 @@
 #define HEADER_THREAD_H 1
 
 #include <stdint.h>
+#include "debug.h"
 #include "list.h"
 
 #ifdef USERPROG
@@ -40,7 +41,7 @@ bool thread_execute (const char *filename);
 
 void thread_start (struct thread *);
 void thread_ready (struct thread *);
-void thread_exit (void);
+void thread_exit (void) NO_RETURN;
 
 void thread_yield (void);
 void thread_sleep (void);

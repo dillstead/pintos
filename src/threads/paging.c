@@ -8,29 +8,22 @@
 
 static uint32_t *base_page_dir;
 
-static uint32_t
-make_pde (uint32_t *pagetab) 
-{
-  ASSERT (pg_ofs (pagetab) == 0);
-  
-  return vtop (pagetab) | PG_U | PG_P | PG_W;
+static uint32_t make_pde (uint32_t *pt) {
+  ASSERT (pg_ofs (pt) == 0);
+  return vtop (pt) | PG_U | PG_P | PG_W;
 }
 
-static uint32_t
-make_pte (uint32_t *page, bool writable)
-{
-  uint32_t entry;
-
+static uint32_t make_kernel_pte (uint32_t *page, bool writable) {
   ASSERT (pg_ofs (page) == 0);
-  
-  entry = vtop (page) | PG_U | PG_P;
-  if (writable)
-    entry |= PG_W;
-  return entry;
+  return vtop (page) | PG_P | (writable ? PG_W : 0);
+}
+
+static uint32_t make_user_pte (uint32_t *page, bool writable) {
+  return make_kernel_pte (page, writable) | PG_U;
 }
 
 static uint32_t *
-pde_get_pagetab (uint32_t pde) 
+pde_get_pt (uint32_t pde) 
 {
   ASSERT (pde & PG_P);
 
@@ -74,7 +67,7 @@ paging_init (void)
           pd[pde_idx] = make_pde (pt);
         }
 
-      pt[pte_idx] = make_pte (vaddr, true);
+      pt[pte_idx] = make_kernel_pte (vaddr, true);
     }
 
   pagedir_activate (pd);
@@ -100,49 +93,49 @@ pagedir_destroy (uint32_t *pd)
 }
 
 static uint32_t *
-lookup_page (uint32_t *pagedir, void *upage, bool create)
+lookup_page (uint32_t *pd, void *upage, bool create)
 {
-  uint32_t *pagetab;
+  uint32_t *pt;
   uint32_t *pde;
 
-  ASSERT (pagedir != NULL);
+  ASSERT (pd != NULL);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (upage < PHYS_BASE);
 
   /* Check for a page table for UPAGE.
      If one is missing, create one if requested. */
-  pde = pagedir + pd_no (upage);
+  pde = pd + pd_no (upage);
   if (*pde == 0) 
     {
       if (create)
         {
-          pagetab = palloc_get (PAL_ZERO);
-          if (pagetab == NULL) 
+          pt = palloc_get (PAL_ZERO);
+          if (pt == NULL) 
             return NULL; 
       
-          *pde = make_pde (pagetab);
+          *pde = make_pde (pt);
         }
       else
         return NULL;
     }
 
   /* Return the page table entry. */
-  pagetab = pde_get_pagetab (*pde);
-  return &pagetab[pt_no (upage)];
+  pt = pde_get_pt (*pde);
+  return &pt[pt_no (upage)];
 }
 
 bool
-pagedir_set_page (uint32_t *pagedir, void *upage, void *kpage,
+pagedir_set_page (uint32_t *pd, void *upage, void *kpage,
                   bool writable) 
 {
   uint32_t *pte;
 
   ASSERT (pg_ofs (kpage) == 0);
 
-  pte = lookup_page (pagedir, upage, true);
+  pte = lookup_page (pd, upage, true);
   if (pte != NULL) 
     {
-      *pte = make_pte (kpage, writable);
+      *pte = make_user_pte (kpage, writable);
       return true;
     }
   else
@@ -150,16 +143,16 @@ pagedir_set_page (uint32_t *pagedir, void *upage, void *kpage,
 }
 
 void *
-pagedir_get_page (uint32_t *pagedir, void *upage) 
+pagedir_get_page (uint32_t *pd, void *upage) 
 {
-  uint32_t *pte = lookup_page (pagedir, upage, false);
+  uint32_t *pte = lookup_page (pd, upage, false);
   return pte != NULL && *pte != 0 ? pte_get_page (*pte) : NULL;
 }
 
 void
-pagedir_clear_page (uint32_t *pagedir, void *upage)
+pagedir_clear_page (uint32_t *pd, void *upage)
 {
-  uint32_t *pte = lookup_page (pagedir, upage, false);
+  uint32_t *pte = lookup_page (pd, upage, false);
   if (pte != NULL)
     *pte = 0;
 }
@@ -194,7 +187,7 @@ scan_pd (uint32_t *pd, unsigned pde_idx, void **upage)
 
       if (pde != 0) 
         {
-          void *kpage = scan_pt (pde_get_pagetab (pde), pde_idx, 0, upage);
+          void *kpage = scan_pt (pde_get_pt (pde), pde_idx, 0, upage);
           if (kpage != NULL)
             return kpage;
         }
@@ -204,9 +197,9 @@ scan_pd (uint32_t *pd, unsigned pde_idx, void **upage)
 }
 
 void *
-pagedir_first (uint32_t *pagedir, void **upage) 
+pagedir_first (uint32_t *pd, void **upage) 
 {
-  return scan_pd (pagedir, 0, upage);
+  return scan_pd (pd, 0, upage);
 }
 
 void *
@@ -217,7 +210,7 @@ pagedir_next (uint32_t *pd, void **upage)
 
   pde_idx = pd_no (*upage);
   pte_idx = pt_no (*upage);
-  kpage = scan_pt (pde_get_pagetab (pd[pde_idx]),
+  kpage = scan_pt (pde_get_pt (pd[pde_idx]),
                    pde_idx, pte_idx + 1, upage);
   if (kpage == NULL)
     kpage = scan_pd (pd, pde_idx + 1, upage);
@@ -225,7 +218,7 @@ pagedir_next (uint32_t *pd, void **upage)
 }
 
 void
-pagedir_activate (uint32_t *pagedir) 
+pagedir_activate (uint32_t *pd) 
 {
-  asm volatile ("movl %0,%%cr3" :: "r" (vtop (pagedir)));
+  asm volatile ("movl %0,%%cr3" :: "r" (vtop (pd)));
 }

@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "file.h"
 #include "filesys.h"
+#include "init.h"
 #include "lib.h"
 #include "mmu.h"
 #include "malloc.h"
@@ -209,11 +210,6 @@ addrspace_load (struct addrspace *as, const char *filename,
       file_seek (file, file_ofs);
       if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
         LOAD_ERROR (("error reading program header"));
-      printk ("%x: %08x, %08x %08x %08x %05x %05x\n",
-              file_tell (file),
-              phdr.p_type,
-              phdr.p_offset, phdr.p_vaddr, phdr.p_paddr,
-              phdr.p_filesz, phdr.p_memsz);
       file_ofs += sizeof phdr;
       switch (phdr.p_type) 
         {
@@ -270,4 +266,5 @@ addrspace_activate (struct addrspace *as)
   
   if (as->pagedir != NULL)
     pagedir_activate (as->pagedir);
+  tss->esp0 = (uint32_t) pg_round_down (as) + PGSIZE;
 }

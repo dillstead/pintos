@@ -32,7 +32,7 @@ void power_off (void);
 static void
 main_thread (void *aux UNUSED) 
 {
-  printk ("execute=%d\n", (int) thread_execute ("a.out"));
+  thread_execute ("a.out");
 }
 
 int
@@ -71,7 +71,6 @@ main (void)
 
 #ifdef FILESYS
   filesys_init (false);
-  filesys_self_test ();
 #endif
 
   thread_init ();

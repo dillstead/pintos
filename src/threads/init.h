@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+struct tss *tss;
+
 extern size_t kernel_pages;
 extern size_t ram_pages;
 

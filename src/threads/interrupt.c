@@ -1,4 +1,5 @@
 #include "interrupt.h"
+#include <inttypes.h>
 #include <stdint.h>
 #include "intr-stubs.h"
 #include "debug.h"
@@ -93,14 +94,25 @@ pic_eoi (void)
   outb (0x20, 0x20);
 }
 
-uint64_t idt[256];
+#define INTR_CNT 256
 
-intr_handler_func *intr_handlers[256];
+static uint64_t idt[INTR_CNT];
+static intr_handler_func *intr_handlers[INTR_CNT];
+static const char *intr_names[INTR_CNT];
 
 void intr_handler (struct intr_frame *args);
 
 bool intr_in_progress;
 bool yield_on_return;
+
+const char *
+intr_name (int vec) 
+{
+  if (vec < 0 || vec >= INTR_CNT || intr_names[vec] == NULL)
+    return "unknown";
+  else
+    return intr_names[vec];
+}
 
 void
 intr_handler (struct intr_frame *args) 
@@ -128,10 +140,7 @@ intr_handler (struct intr_frame *args)
     }
 
   if (yield_on_return) 
-    {
-      printk (".");
-      thread_yield (); 
-    }
+    thread_yield (); 
 }
 
 bool
@@ -146,29 +155,8 @@ intr_yield_on_return (void)
   yield_on_return = true;
 }
 
-/* Handles interrupts we don't know about. */
-intr_handler_func intr_unexpected;
-
-/* Handlers for CPU exceptions. */
-intr_handler_func excp00_divide_error;
-intr_handler_func excp01_debug;
-intr_handler_func excp02_nmi;
-intr_handler_func excp03_breakpoint;
-intr_handler_func excp04_overflow;
-intr_handler_func excp05_bound;
-intr_handler_func excp06_invalid_opcode;
-intr_handler_func excp07_device_not_available;
-intr_handler_func excp08_double_fault;
-intr_handler_func excp09_coprocessor_overrun;
-intr_handler_func excp0a_invalid_tss;
-intr_handler_func excp0b_segment_not_present;
-intr_handler_func excp0c_stack_fault;
-intr_handler_func excp0d_general_protection;
-intr_handler_func excp0e_page_fault;
-intr_handler_func excp10_fp_error;
-intr_handler_func excp11_alignment;
-intr_handler_func excp12_machine_check;
-intr_handler_func excp13_simd_error;
+intr_handler_func intr_panic NO_RETURN;
+intr_handler_func intr_kill NO_RETURN;
 
 static uint64_t
 make_intr_gate (void (*target) (void),
@@ -200,13 +188,15 @@ make_trap_gate (void (*target) (void),
    enabled. */
 void
 intr_register (uint8_t vec_no, int dpl, enum if_level level,
-               intr_handler_func *handler) 
+               intr_handler_func *handler,
+               const char *name) 
 {
   if (level == IF_ON)
     idt[vec_no] = make_trap_gate (intr_stubs[vec_no], dpl);
   else
     idt[vec_no] = make_intr_gate (intr_stubs[vec_no], dpl);
   intr_handlers[vec_no] = handler;
+  intr_names[vec_no] = name;
 }
 
 void
@@ -219,46 +209,81 @@ intr_init (void)
 
   /* Install default handlers. */
   for (i = 0; i < 256; i++)
-    intr_register (i, 0, IF_OFF, intr_unexpected);
+    intr_register (i, 0, IF_OFF, intr_panic, NULL);
 
   /* Most exceptions require ring 0.
-     Exceptions 3, 4, and 5 can be caused by ring 3 directly.
+     Exceptions 3, 4, and 5 can be caused by ring 3 directly. */
+  intr_register (0, 0, IF_ON, intr_kill, "#DE Divide Error");
+  intr_register (1, 0, IF_ON, intr_kill, "#DB Debug Exception");
+  intr_register (2, 0, IF_ON, intr_panic, "NMI Interrupt");
+  intr_register (3, 3, IF_ON, intr_kill, "#BP Breakpoint Exception");
+  intr_register (4, 3, IF_ON, intr_kill, "#OF Overflow Exception");
+  intr_register (5, 3, IF_ON, intr_kill, "#BR BOUND Range Exceeded Exception");
+  intr_register (6, 0, IF_ON, intr_kill, "#UD Invalid Opcode Exception");
+  intr_register (7, 0, IF_ON, intr_kill, "#NM Device Not Available Exception");
+  intr_register (8, 0, IF_ON, intr_panic, "#DF Double Fault Exception");
+  intr_register (9, 0, IF_ON, intr_panic, "Coprocessor Segment Overrun");
+  intr_register (10, 0, IF_ON, intr_panic, "#TS Invalid TSS Exception");
+  intr_register (11, 0, IF_ON, intr_kill, "#NP Segment Not Present");
+  intr_register (12, 0, IF_ON, intr_kill, "#SS Stack Fault Exception");
+  intr_register (13, 0, IF_ON, intr_kill, "#GP General Protection Exception");
+  intr_register (16, 0, IF_ON, intr_kill, "#MF x87 FPU Floating-Point Error");
+  intr_register (17, 0, IF_ON, intr_panic, "#AC Alignment Check Exception");
+  intr_register (18, 0, IF_ON, intr_panic, "#MC Machine-Check Exception");
+  intr_register (19, 0, IF_ON, intr_kill, "#XF SIMD Floating-Point Exception");
 
-     Most exceptions can be handled with interrupts turned on.
+  /* Most exceptions can be handled with interrupts turned on.
      We need to disable interrupts for page faults because the
-     fault address is stored in CR2 and needs to be preserved.
-  */
-#if 0
-  intr_register (0x00, 0, IF_ON, excp00_divide_error);
-  intr_register (0x01, 0, IF_ON, excp01_debug);
-  intr_register (0x02, 0, IF_ON, excp02_nmi);
-  intr_register (0x03, 3, IF_ON, excp03_breakpoint);
-  intr_register (0x04, 3, IF_ON, excp04_overflow);
-  intr_register (0x05, 3, IF_ON, excp05_bound);
-  intr_register (0x06, 0, IF_ON, excp06_invalid_opcode);
-  intr_register (0x07, 0, IF_ON, excp07_device_not_available);
-  intr_register (0x08, 0, IF_ON, excp08_double_fault);
-  intr_register (0x09, 0, IF_ON, excp09_coprocessor_overrun);
-  intr_register (0x0a, 0, IF_ON, excp0a_invalid_tss);
-  intr_register (0x0b, 0, IF_ON, excp0b_segment_not_present);
-  intr_register (0x0c, 0, IF_ON, excp0c_stack_fault);
-  intr_register (0x0d, 0, IF_ON, excp0d_general_protection);
-  intr_register (0x0e, 0, IF_OFF, excp0e_page_fault);
-  intr_register (0x10, 0, IF_ON, excp10_fp_error);
-  intr_register (0x11, 0, IF_ON, excp11_alignment);
-  intr_register (0x12, 0, IF_ON, excp12_machine_check);
-  intr_register (0x13, 0, IF_ON, excp13_simd_error);
-#endif
+     fault address is stored in CR2 and needs to be preserved. */
+  intr_register (14, 0, IF_OFF, intr_kill, "#PF Page-Fault Exception");
 
   idtr_operand = make_dtr_operand (sizeof idt - 1, idt);
   asm volatile ("lidt %0" :: "m" (idtr_operand));
 }
 
-void
-intr_unexpected (struct intr_frame *regs)
+static void
+dump_intr_frame (struct intr_frame *f) 
 {
-  uint32_t cr2;
+  uint32_t cr2, ss;
   asm ("movl %%cr2, %0" : "=r" (cr2));
-  panic ("Unexpected interrupt 0x%02x, error code %08x, cr2=%08x, eip=%p",
-         regs->vec_no, regs->error_code, cr2, (void *) regs->eip);
+  asm ("movl %%ss, %0" : "=r" (ss));
+
+  printk ("Interrupt %#04x (%s) at eip=%p\n",
+          f->vec_no, intr_name (f->vec_no), f->eip);
+  printk (" cr2=%08"PRIx32" error=%08"PRIx32"\n", cr2, f->error_code);
+  printk (" eax=%08"PRIx32" ebx=%08"PRIx32" ecx=%08"PRIx32" edx=%08"PRIx32"\n",
+          f->eax, f->ebx, f->ecx, f->edx);
+  printk (" esi=%08"PRIx32" edi=%08"PRIx32" esp=%08"PRIx32" ebp=%08"PRIx32"\n",
+          f->esi, f->edi, (uint32_t) f->esp, f->ebp);
+  printk (" cs=%04"PRIx16" ds=%04"PRIx16" es=%04"PRIx16" ss=%04"PRIx16"\n",
+          f->cs, f->ds, f->es, f->cs != SEL_KCSEG ? f->ss : ss);
 }
+
+void
+intr_panic (struct intr_frame *regs) 
+{
+  dump_intr_frame (regs);
+  panic ("Panic!");
+}
+
+void
+intr_kill (struct intr_frame *f) 
+{
+  switch (f->cs)
+    {
+    case SEL_UCSEG:
+      printk ("[%p] Interrupt %#04x (%s), killing process.\n",
+              thread_current (), f->vec_no, intr_name (f->vec_no));
+      thread_exit (); 
+
+    default:
+      panic ("Interrupt %#04x (%s) in unknown segment %04x",
+             f->vec_no, intr_name (f->vec_no), f->cs);
+
+    case SEL_KCSEG:
+      printk ("intr_kill -> panic %d\n", f->vec_no);
+      intr_panic (f);
+    }
+}
+
+
