@@ -1,0 +1,23 @@
+#include "loader.h"
+
+OUTPUT_FORMAT("elf32-i386")
+OUTPUT_ARCH("i386")
+ENTRY(start)
+SECTIONS
+{
+  . = LOADER_PHYS_BASE + LOADER_KERN_BASE;
+
+  _start = .;
+
+  .text : { *(.text) } = 0x9090
+
+  .rodata : { *(.rodata) *(.rodata.*) }
+
+  .data : { *(.data) }
+
+  _start_bss = .;
+  .bss : { *(.bss) }
+  _end_bss = .;
+
+  _end = .;
+}
