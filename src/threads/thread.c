@@ -299,11 +299,19 @@ idle (void *aux UNUSED)
       /* Let someone else run. */
       intr_disable ();
       thread_block ();
-      intr_enable ();
 
-      /* Use CPU `hlt' instruction to wait for interrupt.
-         See [IA32-v2a] "HLT" and [IA32-v3] 7.7. */
-      asm ("hlt");
+      /* Re-enable interrupts and wait for the next one.
+
+         The `sti' instruction disables interrupts until the
+         completion of the next instruction, so these two
+         instructions are executed atomically.  This atomicity is
+         important; otherwise, an interrupt could be handled
+         between re-enabling interrupts and waiting for the next
+         one to occur, wasting as much as one clock tick worth of
+         time.
+
+         See [IA32-v2a] "HLT", [IA32-v2b] "STI", and [IA32-v3] 7.7. */
+      asm ("sti; hlt");
     }
 }
 
