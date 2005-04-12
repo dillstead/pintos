@@ -46,7 +46,7 @@ cd $@ && ../../grading/$(PROJECT)/run-tests
 endef
 
 define clean
-rm -rf $@/pintos
+rm -rf $@
 endef
 
 define apply-patch
