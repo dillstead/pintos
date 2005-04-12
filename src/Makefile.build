@@ -31,11 +31,11 @@ devices_SRC += devices/disk.c		# IDE disk device.
 devices_SRC += devices/intq.c		# Interrupt queue.
 
 # Library code shared between kernel and user programs.
-lib_SRC  = lib/debug.c		# Debug helpers.
-lib_SRC += lib/random.c		# Pseudo-random numbers.
-lib_SRC += lib/stdio.c		# I/O library.
-lib_SRC += lib/stdlib.c		# Utility functions.
-lib_SRC += lib/string.c		# String functions.
+lib_SRC  = lib/debug.c			# Debug helpers.
+lib_SRC += lib/random.c			# Pseudo-random numbers.
+lib_SRC += lib/stdio.c			# I/O library.
+lib_SRC += lib/stdlib.c			# Utility functions.
+lib_SRC += lib/string.c			# String functions.
 
 # Kernel-specific library code.
 lib_kernel_SRC += lib/kernel/list.c	# Doubly-linked lists.
