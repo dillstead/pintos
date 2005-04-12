@@ -7,7 +7,6 @@ introduces you to a few of them.
 @menu
 * printf::                      
 * ASSERT::                      
-* DEBUG::                       
 * UNUSED NO_RETURN NO_INLINE PRINTF_FORMAT::  
 * Backtraces::                  
 * i386-elf-gdb::                
@@ -52,31 +51,6 @@ functions in places where you suspect things are likely to go wrong.
 When an assertion proves untrue, the kernel panics.  The panic message
 should help you to find the problem.  See the description of
 backtraces below for more information.
-
-@node DEBUG
-@section @code{DEBUG}
-
-The @code{DEBUG} macro, also defined in @file{<debug.h>}, is a sort of
-conditional @func{printf}.  It takes as its arguments the name of a
-``message class'' and a @func{printf}-like format string and
-arguments.  The message class is used to filter the messages that are
-actually displayed.  You select the messages to display on the Pintos
-command line using the @option{-d} option.  This allows you to easily
-turn different types of messages on and off while you debug, without
-the need to recompile.
-
-For example, suppose you want to output thread debugging messages.  To
-use a class named @code{thread}, you could invoke @code{DEBUG} like
-this:
-@example
-DEBUG(thread, "thread id: %d\n", id);
-@end example
-@noindent
-and then to start Pintos with @code{thread} messages enable you'd use
-a command line like this:
-@example
-pintos run -d thread
-@end example
 
 @node UNUSED NO_RETURN NO_INLINE PRINTF_FORMAT
 @section UNUSED, NO_RETURN, NO_INLINE, and PRINTF_FORMAT

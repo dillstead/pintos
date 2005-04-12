@@ -222,8 +222,6 @@ argv_init (void)
   for (i = 0; i < argc; i++)
     if (!strcmp (argv[i], "-rs")) 
       random_init (atoi (argv[++i]));
-    else if (!strcmp (argv[i], "-d")) 
-      debug_enable (argv[++i]);
     else if (!strcmp (argv[i], "-q"))
       power_off_when_done = true;
 #ifdef USERPROG
@@ -255,8 +253,7 @@ argv_init (void)
       {
         printf (
           "Kernel options:\n"
-          " -rs SEED            Seed random seed to SEED.\n"
-          " -d CLASS[,...]      Enable the given classes of debug messages.\n"
+          " -rs SEED            Set random seed to SEED.\n"
 #ifdef USERPROG
           " -ex 'PROG [ARG...]' Run PROG, passing the optional arguments.\n"
           " -ul USER_MAX        Limit user memory to USER_MAX pages.\n"
