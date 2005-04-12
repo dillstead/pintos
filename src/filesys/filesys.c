@@ -276,35 +276,6 @@ filesys_list (void)
   return true;
 }
 
-/* Dumps the filesystem state to the system console,
-   including the free map, the list of files, and file contents.
-   Returns true if successful, false on failure,
-   which occurs only if an internal memory allocation fails. */
-bool
-filesys_dump (void) 
-{
-  struct bitmap *free_map;
-  struct dir *dir;  
-
-  printf ("Free map:\n");
-  free_map = bitmap_create (disk_size (filesys_disk));
-  if (free_map == NULL)
-    return false;
-  bitmap_read (free_map, free_map_file);
-  bitmap_dump (free_map);
-  bitmap_destroy (free_map);
-  printf ("\n");
-  
-  dir = dir_create (NUM_DIR_ENTRIES);
-  if (dir == NULL)
-    return false;
-  dir_read (dir, root_dir_file);
-  dir_dump (dir);
-  dir_destroy (dir);
-
-  return true;
-}
-
 static void must_succeed_function (int, bool) NO_INLINE;
 #define MUST_SUCCEED(EXPR) must_succeed_function (__LINE__, EXPR)
 

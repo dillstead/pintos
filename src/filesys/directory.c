@@ -188,19 +188,3 @@ dir_list (const struct dir *d)
     if (e->in_use)
       printf ("%s\n", e->name);
 }
-
-/* Dumps the contents of D, including its files' names and their
-   contents, to the system console. */
-void
-dir_dump (const struct dir *d) 
-{
-  struct dir_entry *e;
-  
-  for (e = d->entries; e < d->entries + d->entry_cnt; e++)
-    if (e->in_use) 
-      {
-        printf ("Contents of %s:\n", e->name);
-        fsutil_print (e->name);
-        printf ("\n");
-      }
-}

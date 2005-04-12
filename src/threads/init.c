@@ -246,8 +246,6 @@ argv_init (void)
       fsutil_remove_file = argv[++i];
     else if (!strcmp (argv[i], "-ls"))
       fsutil_list_files = true;
-    else if (!strcmp (argv[i], "-D"))
-      fsutil_dump_filesys = true;
 #endif
     else if (!strcmp (argv[i], "-u"))
       {
@@ -267,7 +265,6 @@ argv_init (void)
           " -p FILENAME         Print the contents of FILENAME\n"
           " -r FILENAME         Delete FILENAME\n"
           " -ls                 List the files in the filesystem\n"
-          " -D                  Dump complete filesystem contents\n"
 #endif
           " -q                  Power off after doing requested actions.\n"
           " -u                  Print this help message and power off.\n"

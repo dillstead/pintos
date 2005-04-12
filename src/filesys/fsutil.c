@@ -25,9 +25,6 @@ char *fsutil_remove_file;
 /* List all files in the filesystem to the system console? */
 bool fsutil_list_files;
 
-/* Dump full contents of filesystem to the system console? */
-bool fsutil_dump_filesys;
-
 /* Copies from the "scratch" disk, hdc or hd1:0,
    to a file named FILENAME in the filesystem.
    The file will be SIZE bytes in length. */
@@ -144,9 +141,6 @@ fsutil_run (void)
 
   if (fsutil_list_files)
     filesys_list ();
-
-  if (fsutil_dump_filesys)
-    filesys_dump ();
 }
 
 /* Prints the contents of file FILENAME to the system console as

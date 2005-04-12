@@ -9,7 +9,6 @@ extern char *fsutil_copyout_file;
 extern char *fsutil_print_file;
 extern char *fsutil_remove_file;
 extern bool fsutil_list_files;
-extern bool fsutil_dump_filesys;
 
 void fsutil_run (void);
 void fsutil_print (const char *filename);

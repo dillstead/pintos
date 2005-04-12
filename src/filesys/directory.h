@@ -21,6 +21,5 @@ bool dir_lookup (const struct dir *, const char *name, disk_sector_t *);
 bool dir_add (struct dir *, const char *name, disk_sector_t);
 bool dir_remove (struct dir *, const char *name);
 void dir_list (const struct dir *);
-void dir_dump (const struct dir *);
 
 #endif /* filesys/directory.h */
