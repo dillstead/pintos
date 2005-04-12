@@ -258,12 +258,12 @@ argv_init (void)
 #endif
 #ifdef FILESYS
           " -f                  Format the filesystem disk (hdb or hd0:1).\n"
-          " -ci FILENAME SIZE   Copy SIZE bytes from the scratch disk (hdc\n"
-          "                     or hd1:0) into the filesystem as FILENAME.\n"
-          " -co FILENAME        Copy FILENAME to the scratch disk, with\n"
+          " -ci FILE SIZE       Copy SIZE bytes from the scratch disk (hdc\n"
+          "                     or hd1:0) into the filesystem as FILE.\n"
+          " -co FILE            Copy FILE to the scratch disk, with\n"
           "                     size at start of sector 0 and data after.\n"
-          " -p FILENAME         Print the contents of FILENAME.\n"
-          " -r FILENAME         Delete FILENAME.\n"
+          " -p FILE             Print the contents of FILE.\n"
+          " -r FILE             Delete FILE.\n"
           " -ls                 List files in the root directory.\n"
 #endif
           " -q                  Power off after doing requested actions.\n"
