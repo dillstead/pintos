@@ -6,6 +6,7 @@ all::
 
 clean::
 	for d in $(SUBDIRS) tests; do $(MAKE) -C $$d $@; done
+	rm -f TAGS tags
 
 distclean:: clean
 	find . -name '*~' -exec rm '{}' \;
