@@ -56,53 +56,14 @@ read.  We're only going to do a compile in the directory for the current
 project, so you don't need to make sure that the previous projects also
 compile.
 
-@node Conditional Compilation
-@section Conditional Compilation
-
-Given the scope and complexity of your assignments this quarter, you
-may find it convenient while coding and debugging (and we will find it
-convenient while grading) to be able to independently turn different
-parts of the assignments on and off.  To do this, choose a macro name
-and use it in conditional
-compilation directives, e.g.:
-
-@example
-#ifdef @var{NAME}
-@dots{}your code@dots{}
-#endif
-@end example
-
-In general, the code that you turn in must not depend on conditional
-compilation directives.  Project code should be written so that all of
-the subproblems for the project function together, and it should
-compile properly without the need for any new macros to be defined.
-There are a few exceptions:
-
-@itemize @bullet
-@item
-Problem 1-3, the advanced scheduler.  We must be able to turn this on
-and off with a compile-time directive.  You must use the macro name we
-specify for that part.  @xref{Problem 1-3 Advanced Scheduler}, for
-details.
-
-@item
-Problem 3-2, paging to and from disk.  Your page replacement policy must
-default to LRU-like replacement, but we must be able to choose a random
-replacement policy with a compile-time directive.  You must use the
-macro name we specify for that part.  @xref{Problem 3-2 Paging To and
-From Disk}, for details.
-
-@item
-Code written for extra credit may be included conditionally.  If the
-extra credit code changes the normally expected functionality of the
-code, then it @emph{must} be included conditionally, and it must not
-be enabled by default.
-@end itemize
-
-You can use @file{constants.h} in @file{pintos/src} to define macros
-for conditional compilation.  We will replace the @file{constants.h}
-that you supply with one of our own when we test your code, so do not
-define anything important in it.
+Project code should be written so that all of the subproblems for the
+project function together, that is, without the need to rebuild with
+different macros defined, etc.  If you do extra credit work that
+changes normal Pintos behavior so as to interfere with grading, then
+you must implement it so that it only acts that way when given a
+special command-line option of the form @option{-o @var{name}}, where
+@var{name} is a name of your choice.  You can add such an option by
+modifying @func{argv_init} in @file{threads/init.c}.
 
 @node C99
 @section C99

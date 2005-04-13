@@ -7,8 +7,7 @@ VPATH = ../..
 
 # Compiler and assembler options.
 DEFINES += -DKERNEL
-CPPFLAGS = -nostdinc -I../.. -I- -I../../lib -I../../lib/kernel	\
-	   -include constants.h
+CPPFLAGS = -nostdinc -I../.. -I- -I../../lib -I../../lib/kernel
 
 # Core kernel.
 threads_SRC  = threads/init.c		# Main program.

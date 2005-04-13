@@ -412,11 +412,12 @@ pages less frequently using your algorithm than using some inferior
 page replacement policy.  The canonical example of a poor page
 replacement policy is random replacement.
 
-You must write your code so that we can choose a page replacement policy
-at compile time.  By default, the LRU-like algorithm must be in effect,
-but we must be able to choose random replacement by inserting the line
-@code{#define RANDOM_REPLACEMENT 1} in @file{constants.h}.
-@xref{Conditional Compilation}, for details.
+You must write your code so that we can choose a page replacement
+policy at Pintos startup time.  By default, the LRU-like algorithm
+must be in effect, but we must be able to choose random replacement by
+invoking @command{pintos} with the @option{-o random-paging} option.
+Passing this option sets @code{enable_random_paging}, declared in
+@file{threads/init.h}, to true.
 
 Since you will already be paging from disk, you should implement a
 ``lazy'' loading scheme for new processes.  When a process is created,

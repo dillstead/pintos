@@ -499,10 +499,12 @@ relative to the original Pintos scheduling algorithm (round robin) for
 at least one workload of your own design (i.e.@: in addition to the
 provided test).
 
-You must write your code so that we can turn the MLFQS on and off at
-compile time.  By default, it must be off, but we must be able to turn
-it on by inserting the line @code{#define MLFQS 1} in
-@file{constants.h}.  @xref{Conditional Compilation}, for details.
+You must write your code so that we can choose a scheduling algorithm
+policy at Pintos startup time.  By default, the round-robin scheduler
+must be active, but we must be able to choose the MLFQS by invoking
+@command{pintos} with the @option{-o mlfqs} option.  Passing this
+option sets @code{enable_mlfqs}, declared in @file{threads/init.h}, to
+true.
 
 @node Threads FAQ
 @section FAQ

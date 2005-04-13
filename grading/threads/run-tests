@@ -51,14 +51,6 @@ die "Don't know how to '$action'";
 # Runs $test in directory output/$test.
 # Returns 'ok' if it went ok, otherwise an explanation.
 sub run_test {
-    # Change constants.h if necessary.
-    my ($defines) = $test ne 'mlfqs-on' ? "" : "#define MLFQS 1\n";
-    if ($defines ne snarf ("pintos/src/constants.h")) {
-	open (CONSTANTS, ">pintos/src/constants.h");
-	print CONSTANTS $defines;
-	close (CONSTANTS);
-    }
-
     # Changes devices/timer.c if necessary.
     my ($new_time_slice) = $test eq 'priority-fifo' ? 100 : 1;
     my (@timer_c) = snarf ("pintos/src/devices/timer.c");
@@ -103,7 +95,9 @@ sub run_test {
 
     # Run.
     my ($timeout) = $test !~ /^mlfqs/ ? 15 : 600;
-    return run_pintos (["-v", "run", "-q"],
+    my (@command) = ("-v", "run", "-q");
+    push (@command, "-o mlfqs") if $test eq 'mlfqs-on';
+    return run_pintos (\@command,
 		       CHDIR => "pintos/src/threads/build",
 		       LOG => "$test/run",
 		       TIMEOUT => $timeout);

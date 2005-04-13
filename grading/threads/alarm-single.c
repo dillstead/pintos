@@ -11,15 +11,14 @@
 #include "threads/thread.h"
 #include "devices/timer.h"
 
-#ifdef MLFQS
-#error This test not applicable with MLFQS enabled.
-#endif
-
 static void test_sleep (int thread_cnt, int iterations);
 
 void
 test (void) 
 {
+  /* This test does not work with the MLFQS. */
+  ASSERT (!enable_mlfqs);
+
   test_sleep (5, 1);
 }
 

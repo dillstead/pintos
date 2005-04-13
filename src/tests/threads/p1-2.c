@@ -6,10 +6,6 @@
    <gmh@leland.stanford.edu>, Yu Ping Hu <yph@cs.stanford.edu>.
    Modified by arens. */
 
-#ifdef MLFQS
-#error This test not applicable with MLFQS enabled.
-#endif
-
 #include "threads/test.h"
 #include <stdio.h>
 #include "threads/synch.h"
@@ -22,6 +18,9 @@ static void test_donate_return (void);
 void
 test (void) 
 {
+  /* This test does not work with the MLFQS. */
+  ASSERT (!enable_mlfqs);
+
   /* Make sure our priority is the default. */
   ASSERT (thread_get_priority () == PRI_DEFAULT);
 

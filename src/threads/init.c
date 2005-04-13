@@ -39,14 +39,26 @@ size_t ram_pages;
 /* Page directory with kernel mappings only. */
 uint32_t *base_page_dir;
 
-#ifdef FILESYS
-/* -f: Format the filesystem? */
-static bool format_filesys;
-#endif
+/* -o mlfqs:
+   If false (default), use round-robin scheduler.
+   If true, use multi-level feedback queue scheduler. */
+bool enable_mlfqs;
 
 #ifdef USERPROG
 /* -ex: Initial program to run. */
 static char *initial_program;
+#endif
+
+#ifdef VM
+/* -o random-paging:
+   If false (default), use LRU page replacement policy.
+   If true, use random page replacement policy. */
+bool enable_random_paging;
+#endif
+
+#ifdef FILESYS
+/* -f: Format the filesystem? */
+static bool format_filesys;
 #endif
 
 /* -q: Power off after kernel tasks complete? */
@@ -220,7 +232,19 @@ argv_init (void)
 
   /* Parse the words. */
   for (i = 0; i < argc; i++)
-    if (!strcmp (argv[i], "-rs")) 
+    if (!strcmp (argv[i], "-o"))
+      {
+        i++;
+        if (!strcmp (argv[i], "mlfqs"))
+          enable_mlfqs = true;
+#ifdef VM
+        else if (!strcmp (argv[i], "random-paging"))
+          enable_random_paging = true;
+#endif
+        else
+          PANIC ("unknown option `-o %s' (use -u for help)", argv[i]);
+      }
+    else if (!strcmp (argv[i], "-rs")) 
       random_init (atoi (argv[++i]));
     else if (!strcmp (argv[i], "-q"))
       power_off_when_done = true;
@@ -251,10 +275,13 @@ argv_init (void)
       {
         printf (
           "Kernel options:\n"
-          " -rs SEED            Set random seed to SEED.\n"
+          " -o mlfqs            Use multi-level feedback queue scheduler.\n"
 #ifdef USERPROG
           " -ex 'PROG [ARG...]' Run PROG, passing the optional arguments.\n"
           " -ul USER_MAX        Limit user memory to USER_MAX pages.\n"
+#endif
+#ifdef VM
+          " -o random-paging    Use random page replacement policy.\n"
 #endif
 #ifdef FILESYS
           " -f                  Format the filesystem disk (hdb or hd0:1).\n"
@@ -266,6 +293,7 @@ argv_init (void)
           " -r FILE             Delete FILE.\n"
           " -ls                 List files in the root directory.\n"
 #endif
+          " -rs SEED            Set random seed to SEED.\n"
           " -q                  Power off after doing requested actions.\n"
           " -u                  Print this help message and power off.\n"
           );

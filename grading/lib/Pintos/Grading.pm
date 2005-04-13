@@ -96,9 +96,8 @@ EOF
 
 # Source tarballs.
 
-# Extracts the group's source files into pintos/src,
-# applies any patches providing in the grading directory,
-# and installs a default pintos/src/constants.h
+# Extracts the group's source files into pintos/src
+# and applies any patches providing in the grading directory.
 sub extract_sources {
     # Make sure the output dir exists.
     -d ("output") || mkdir ("output") or die "output: mkdir: $!\n";
@@ -137,11 +136,6 @@ sub extract_sources {
 	xsystem ("patch -fs -p0 < $patch",
 		 LOG => $stem, DIE => "applying patch $stem failed\n");
     }
-
-    # Install default pintos/src/constants.h (which is empty).
-    open (CONSTANTS, ">pintos/src/constants.h")
-	or die "constants.h: create: $!\n";
-    close CONSTANTS;
 }
 
 # Returns the name of the tarball to extract.
