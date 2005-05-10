@@ -179,7 +179,14 @@ disk_print_stats (void)
 }
 
 /* Returns the disk numbered DEV_NO--either 0 or 1 for master or
-   slave, respectively--within the channel numbered CHAN_NO. */
+   slave, respectively--within the channel numbered CHAN_NO.
+
+   Pintos uses disks this way:
+        0:0 - operating system kernel
+        0:1 - file system
+        1:0 - scratch
+        1:1 - swap
+*/
 struct disk *
 disk_get (int chan_no, int dev_no) 
 {
