@@ -67,8 +67,7 @@ file_read (struct file *file, void *buffer, off_t size)
    Returns the number of bytes actually read,
    which may be less than SIZE if end of file is reached. */
 off_t
-file_read_at (struct file *file, void *buffer_, off_t size,
-              off_t file_ofs) 
+file_read_at (struct file *file, void *buffer_, off_t size, off_t file_ofs) 
 {
   uint8_t *buffer = buffer_;
   off_t bytes_read = 0;
