@@ -28,6 +28,7 @@ devices_SRC += devices/vga.c		# Video device.
 devices_SRC += devices/serial.c		# Serial port device.
 devices_SRC += devices/disk.c		# IDE disk device.
 devices_SRC += devices/intq.c		# Interrupt queue.
+devices_SRC += devices/pci.c            # PCI device.
 
 # Library code shared between kernel and user programs.
 lib_SRC  = lib/debug.c			# Debug helpers.

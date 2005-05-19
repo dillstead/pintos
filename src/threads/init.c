@@ -28,6 +28,7 @@
 #include "userprog/tss.h"
 #endif
 #ifdef FILESYS
+#include "devices/pci.h"
 #include "devices/disk.h"
 #include "filesys/filesys.h"
 #include "filesys/fsutil.h"
@@ -120,6 +121,8 @@ main (void)
   timer_calibrate ();
 
 #ifdef FILESYS
+  pci_scan ();
+
   /* Initialize filesystem. */
   disk_init ();
   filesys_init (format_filesys);
