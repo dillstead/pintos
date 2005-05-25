@@ -292,6 +292,22 @@ that there is a bug in the original Pintos code.  The first and second
 are quite likely, and you should seriously consider both.  We hope
 that the third is less likely, but it is also possible.
 
+You can also use @command{gdb} to debug a user program running under
+Pintos.  Start by issuing this @command{gdb} command to load the
+program's symbol table:
+@example
+add-symbol-file @var{program}
+@end example
+where @var{program} is the name of the program's executable (in the host
+file system, not in the Pintos file system).  After this, you should be
+able to debug the user program the same way you would the kernel, by
+placing breakpoints, inspecting data, etc.  Your actions apply to every
+user program running in Pintos, not just to the one you want to debug,
+so be careful in interpreting the results.  Also, a name that appears in
+both the kernel and the user program will actually refer to the kernel
+name.  (The latter problem can be avoided by giving the user executable
+name on the @command{gdb} command line, instead of @file{kernel.o}.)
+
 @node Debugging by Infinite Loop
 @section Debugging by Infinite Loop
 
