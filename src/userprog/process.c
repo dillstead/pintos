@@ -103,13 +103,12 @@ process_exit (void)
   if (pd != NULL) 
     {
       /* We must set cur->pagedir to NULL before switching page
-         directories, or a timer interrupt might switch back to
-         the process page directory.  The asm statement prevents
-         GCC from reordering the assignment and the function
-         calls.  */
+         directories, so that a timer interrupt can't switch back
+         to the process page directory.  We must activate the
+         base page directory before destroying the process's page
+         directory, or our active page directory will be one
+         that's been freed (and cleared). */
       cur->pagedir = NULL;
-      asm volatile ("");
-      
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
@@ -351,10 +350,10 @@ load_segment (struct file *file, const struct Elf32_Phdr *phdr)
   /* Validate virtual memory region to be mapped.
      The region must both start and end within the user address
      space range starting at 0 and ending at PHYS_BASE (typically
-     3 GB == 0xc0000000). */
+     3 GB == 0xc0000000).  We don't allow mapping page 0 .*/
   start = pg_round_down ((void *) phdr->p_vaddr);
   end = pg_round_up ((void *) (phdr->p_vaddr + phdr->p_memsz));
-  if (start >= PHYS_BASE || end >= PHYS_BASE || end < start) 
+  if (start == 0 || start >= PHYS_BASE || end >= PHYS_BASE || end < start) 
     {
       printf ("bad virtual region %08lx...%08lx\n",
               (unsigned long) start, (unsigned long) end);
