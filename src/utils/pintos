@@ -327,8 +327,8 @@ sub run_vm {
 	print VMX "serial0.fileName = \"pintos.out\"\n";
 
 	if (! -e 'null.bin') {
-	    open (NULL, ">null.bin") or die "null.bin: create: $!\n";
-	    close (NULL);
+	    open (NULLY, ">null.bin") or die "null.bin: create: $!\n";
+	    close (NULLY);
 	}
 
 	for (my ($i) = 0; $i < 4; $i++) {

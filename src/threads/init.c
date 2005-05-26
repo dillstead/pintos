@@ -9,8 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "devices/kbd.h"
+#include "devices/pci.h"
 #include "devices/serial.h"
 #include "devices/timer.h"
+#include "devices/usb.h"
 #include "devices/vga.h"
 #include "threads/interrupt.h"
 #include "threads/io.h"
@@ -28,7 +30,6 @@
 #include "userprog/tss.h"
 #endif
 #ifdef FILESYS
-#include "devices/pci.h"
 #include "devices/disk.h"
 #include "filesys/filesys.h"
 #include "filesys/fsutil.h"
@@ -110,6 +111,13 @@ main (void)
   intr_init ();
   timer_init ();
   kbd_init ();
+
+  /* Initialize PCI devices */
+  pci_init ();
+
+  /* Initialize USB controllers */
+  usb_init ();
+
 #ifdef USERPROG
   exception_init ();
   syscall_init ();
@@ -121,8 +129,6 @@ main (void)
   timer_calibrate ();
 
 #ifdef FILESYS
-  pci_scan ();
-
   /* Initialize filesystem. */
   disk_init ();
   filesys_init (format_filesys);
