@@ -7,6 +7,7 @@ extern struct list pci_dev_list;
 
 void usb_init(void)
 {
+  printf ("\n");
   printf ("USB: Initializing\n");
 
   /* Scan PCI devices for USB controllers */
@@ -25,4 +26,5 @@ void usb_init(void)
 	}
     }
   printf ("USB: Initialization done\n");
+  printf ("\n");
 }

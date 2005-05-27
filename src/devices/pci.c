@@ -24,13 +24,110 @@ pci_read_config (unsigned bus, unsigned dev, unsigned func, unsigned reg)
 }
 
 static void
+pci_write_config (unsigned bus, unsigned dev, unsigned func, unsigned reg, 
+		  unsigned data)
+{
+  ASSERT (bus < 256);
+  ASSERT (dev < 32);
+  ASSERT (func < 8);
+  ASSERT (reg < 64);
+
+  outl (0xcf8,
+        0x80000000 | (bus << 16) | (dev << 11) | (func << 8) | (reg << 2));
+  outl (0xcfc, data);
+}
+
+static void
 pci_dump_dev (struct pci_dev *dev) 
 {
-  printf ("%04x:%02x:%02x.%x PCI device %04x:%04x\n", 
+  int bar;
+
+  printf ("PCI: Device %04x:%02x:%02x.%x %04x:%04x\n", 
 	  0, dev->bus_id, dev->devfn >> 4, dev->devfn & 0xf, 
 	  dev->ven_id, dev->dev_id);
-  printf ("Class: %02x:%02x:%02x\n", 
+  printf ("PCI: Class %02x:%02x:%02x\n", 
 	  dev->base_class, dev->sub_class, dev->interface);
+
+  for (bar = 0; bar < PCI_NUM_BARS; bar++)
+    {
+      if (dev->resources[bar].start != 0 ||
+	  dev->resources[bar].end != 0)
+	{
+	  printf ("PCI: %s ", 
+		  dev->resources[bar].type == PCI_BAR_TYPE_MEM 
+		  ? "Memory" : "IO");
+	  printf ("range %d: %08x-%08x\n", 
+		  bar, dev->resources[bar].start, dev->resources[bar].end);
+	}
+    }
+}
+
+static void
+pci_setup_bases (struct pci_dev *dev) 
+{
+  int bar;
+  unsigned bar_reg;
+  uint32_t base, size;
+  struct resource *res;
+
+  for (bar = 0; bar < PCI_NUM_BARS; bar++)
+    {
+      bar_reg = PCI_REGNUM_BASE_ADDRESS + bar;
+
+      res = &dev->resources[bar];
+      res->start = 0;
+      res->end = 0;
+      
+      /* Get the base address out of the BAR */
+      base = pci_read_config(dev->bus_id,
+			     dev->devfn >> 4, 
+			     dev->devfn & 0xf, 
+			     bar_reg);
+
+      /* Write 1's and get the size from the BAR */
+      pci_write_config(dev->bus_id, 
+		       dev->devfn >> 4, 
+		       dev->devfn & 0xf, 
+		       bar_reg,
+		       ~0);
+      size = pci_read_config(dev->bus_id, 
+			     dev->devfn >> 4, 
+			     dev->devfn & 0xf, 
+			     bar_reg);
+
+      /* Put the base address back in the BAR */
+      pci_write_config(dev->bus_id, 
+		       dev->devfn >> 4, 
+		       dev->devfn & 0xf, 
+		       bar_reg,
+		       base);
+
+      /* If the size is unreasonable, skip this BAR.
+         Is this redundant for Pintos? */
+      if (!size || size == 0xffffffff) {
+	continue;
+      }
+
+      /* Broken hardware that requests a base at the end? 
+	 Maybe redundant for Pintos? */
+      if (base == 0xffffffff) {
+	base = 0;
+      }
+
+      /* Make a new resource, tag it for I/O vs. memory */
+      res->type = base & PCI_BAR_TYPE_MASK;
+      if (res->type == PCI_BAR_TYPE_MEM) 
+	{
+	  res->start = base & PCI_BAR_MASK_MEM;
+	  size = size & PCI_BAR_MASK_MEM;
+	}
+      else
+	{
+	  res->start = base & PCI_BAR_MASK_IO;
+	  size = size & PCI_BAR_MASK_IO;
+	}
+      res->end = res->start + size;
+    }
 }
 
 static bool
@@ -70,26 +167,36 @@ scan_device (uint8_t bus, uint8_t dev, uint8_t func)
   new_pci_dev->sub_class = byte_cfg[PCI_REG_CLASS_SUB];
   new_pci_dev->interface = byte_cfg[PCI_REG_CLASS_INTERFACE];
   list_push_front (&pci_dev_list, &new_pci_dev->elem);
-  
-  /* Debugging output */
-  pci_dump_dev(new_pci_dev);
-  for (line = 0; line < 16; line++) 
-    {
-      int byte;
-      
-      printf ("%02x:", line * 4);
-      for (byte = 3; byte >= 0; byte--)
-	printf (" %02x", byte_cfg[line * 4 + byte]);
-      printf ("\n");
-    }
-  printf ("\n");
-  
+    
   /* If device is PCI-to-PCI bridge, scan the bus behind it */
   if (new_pci_dev->base_class == PCI_BRIDGE_BASE_CLASS &&
       new_pci_dev->sub_class == PCI_BRIDGE_SUB_CLASS &&
       (byte_cfg[PCI_REG_HEADER_TYPE] & 0x3f) == PCI_BRIDGE_HEADER_TYPE)
-    scan_bus(byte_cfg[PCI_BRIDGE_REG_SBUS]);
+    {
+      scan_bus(byte_cfg[PCI_BRIDGE_REG_SBUS]);
+    }
+
+  /* For normal devices, set up the BARs */
+  else 
+    {
+      pci_setup_bases (new_pci_dev);
+    }
+
+  /* Debugging output */
+  pci_dump_dev(new_pci_dev);
+  /*for (line = 0; line < 16; line++) 
+    {
+      int byte;
+      
+      printf ("PCI: %02x:", line * 4);
+      for (byte = 3; byte >= 0; byte--)
+	printf (" %02x", byte_cfg[line * 4 + byte]);
+      printf ("\n");
+      }*/
+  printf ("\n");
+
   
+  /* Return if we're a multifunction device */
   return byte_cfg[PCI_REG_HEADER_TYPE] & 0x80;
 }
 
@@ -99,6 +206,7 @@ scan_bus(uint8_t bus)
   uint8_t dev;
 
   printf ("PCI: Scanning bus (%u)\n", bus);
+  printf ("\n");
 
   for (dev = 0; dev < 32; dev++) 
     {
@@ -112,11 +220,13 @@ scan_bus(uint8_t bus)
         }
     }
   printf ("PCI: Done (%u)\n", bus);
+  printf ("\n");
 }
 
 void
 pci_init (void) 
 {
+  printf ("\n");
   printf ("PCI: Initializating\n");
   list_init (&pci_dev_list);
   scan_bus(0);  
