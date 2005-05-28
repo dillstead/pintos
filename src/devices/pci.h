@@ -17,6 +17,9 @@
 #define PCI_REG_CLASS_SUB 0x0a
 #define PCI_REG_CLASS_BASE 0x0b
 #define PCI_REG_HEADER_TYPE 0x0e
+#define PCI_INTERRUPT_MASK_PIN 0xff00
+#define PCI_INTERRUPT_MASK_LINE 0xff
+#define PCI_REGNUM_INTERRUPT 15
 #define PCI_REGNUM_BASE_ADDRESS 4
 
 /* Base address related numbers */
@@ -46,6 +49,9 @@ struct pci_dev
 
   /* Resource space */
   struct resource resources[PCI_NUM_BARS];
+
+  /* Interrupt */
+  uint8_t irq;
 };
 
 void pci_init (void);

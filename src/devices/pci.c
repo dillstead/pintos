@@ -60,6 +60,24 @@ pci_dump_dev (struct pci_dev *dev)
 		  bar, dev->resources[bar].start, dev->resources[bar].end);
 	}
     }
+  if (dev->irq) {
+    printf ("PCI: Interrupt: %u\n", dev->irq);
+  }
+}
+
+static void
+pci_setup_irq (struct pci_dev *dev)
+{
+  uint32_t pinline;
+  pinline = pci_read_config(dev->bus_id, 
+			    dev->devfn >> 4, 
+			    dev->devfn & 0xf, 
+			    PCI_REGNUM_INTERRUPT);
+
+  /* Devices without a non-zero pin get IRQ 0. I guess this is acceptable? */
+  if (pinline & PCI_INTERRUPT_MASK_PIN) {
+    dev->irq = pinline & PCI_INTERRUPT_MASK_LINE;
+  }
 }
 
 static void
@@ -167,6 +185,8 @@ scan_device (uint8_t bus, uint8_t dev, uint8_t func)
   new_pci_dev->sub_class = byte_cfg[PCI_REG_CLASS_SUB];
   new_pci_dev->interface = byte_cfg[PCI_REG_CLASS_INTERFACE];
   list_push_front (&pci_dev_list, &new_pci_dev->elem);
+
+  pci_setup_irq (new_pci_dev);
     
   /* If device is PCI-to-PCI bridge, scan the bus behind it */
   if (new_pci_dev->base_class == PCI_BRIDGE_BASE_CLASS &&
@@ -184,7 +204,7 @@ scan_device (uint8_t bus, uint8_t dev, uint8_t func)
 
   /* Debugging output */
   pci_dump_dev(new_pci_dev);
-  /*for (line = 0; line < 16; line++) 
+  for (line = 0; line < 16; line++) 
     {
       int byte;
       
@@ -192,7 +212,7 @@ scan_device (uint8_t bus, uint8_t dev, uint8_t func)
       for (byte = 3; byte >= 0; byte--)
 	printf (" %02x", byte_cfg[line * 4 + byte]);
       printf ("\n");
-      }*/
+    }
   printf ("\n");
 
   
