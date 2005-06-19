@@ -1,0 +1,61 @@
+GCC 3.3.6 has a bug in the i386-elf target: it fails to emit
+.intel_syntax in assembly files if -masm=intel is passed on the
+command line.  This is because elfos.h overrides the ASM_FILE_START
+provided by gcc/config/att.h, which emits that directive, with a
+version that does not.  This patch covers up the problem.
+
+Here are the commands we used to build and install the SPARC
+cross-compiler:
+
+PINTOSROOT=$HOME/private/pintos
+
+PREFIX=/usr/class/cs140/`uname -m`
+PATH=$PATH:$PREFIX/bin
+TMP=`pwd`
+
+wget ftp://ftp.gnu.org/pub/gnu/binutils/binutils-2.16.tar.bz2
+wget ftp://sources.redhat.com/pub/newlib/newlib-1.13.0.tar.gz
+wget ftp://ftp.gnu.org/pub/gnu/gcc/gcc-3.3.6/gcc-core-3.3.6.tar.bz2
+wget ftp://ftp.gnu.org/pub/gnu/gdb/gdb-6.3.tar.bz2
+
+bzcat binutils-2.16.tar.bz2 | tar x
+tar xzf newlib-1.13.0.tar.gz
+bzcat gcc-core-3.3.6.tar.bz2 | tar x
+bzcat gdb-6.3.tar.bz2 | tar x
+
+cd $TMP/binutils-2.16
+mkdir i386
+cd i386
+../configure --target=i386-elf --prefix=$PREFIX
+make LDFLAGS=-lintl
+make install
+
+cd $TMP/gcc-3.3.6
+patch gcc/config/elfos.h < $PINTOSROOT/src/misc/gcc-3.3.6.patch
+mkdir i386
+cd i386
+../configure --target=i386-elf --prefix=$PREFIX --with-gnu-as --with-as=$PREFIX/bin/i386-elf-as --with-gnu-ld --with-ld=$PREFIX/bin/i386-elf-ld --with-headers=$TMP/newlib-1.13.0/newlib/libc/include --with-newlib
+make
+make install
+
+cd $TMP/gdb-6.3
+mkdir i386
+cd i386
+../configure --target=i386-elf --prefix=$PREFIX --disable-tui
+make LDFLAGS=-lintl
+make install
+
+--- gcc/config/elfos.h~ 2005-01-03 21:14:58.312309000 -0800
++++ gcc/config/elfos.h  2005-01-03 21:03:51.758598000 -0800
+@@ -97,9 +97,11 @@
+    directive for any specific target, you should override this definition
+    in the target-specific file which includes this one.  */
+ 
++#if 0
+ #undef ASM_FILE_START
+ #define ASM_FILE_START(FILE)                            \
+   output_file_directive ((FILE), main_input_filename)
++#endif
+ 
+ /* This is how to allocate empty space in some section.  The .zero
+    pseudo-op is used for this on most svr4 assemblers.  */

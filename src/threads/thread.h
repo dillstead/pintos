@@ -20,9 +20,9 @@ typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
 
 /* Thread priorities. */
-#define PRI_MIN 0                       /* Lowest priority. */
-#define PRI_DEFAULT 29                  /* Default priority. */
-#define PRI_MAX 59                      /* Highest priority. */
+#define PRI_MIN 0                       /* Highest priority. */
+#define PRI_DEFAULT 31                  /* Default priority. */
+#define PRI_MAX 63                      /* Lowest priority. */
 
 /* A kernel thread or user process.
 
@@ -103,6 +103,7 @@ struct thread
 
 void thread_init (void);
 void thread_start (void);
+
 void thread_tick (void);
 void thread_print_stats (void);
 
@@ -119,7 +120,12 @@ const char *thread_name (void);
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
 
-void thread_set_priority (int);
 int thread_get_priority (void);
+void thread_set_priority (int);
+
+int thread_get_nice (void);
+void thread_set_nice (int);
+int thread_get_recent_cpu (void);
+int thread_get_load_avg (void);
 
 #endif /* threads/thread.h */

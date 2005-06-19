@@ -1,22 +1,26 @@
 #include "filesys/inode.h"
-#include <bitmap.h>
 #include <list.h>
 #include <debug.h>
 #include <round.h>
-#include <stdio.h>
+#include <string.h>
 #include "filesys/filesys.h"
+#include "filesys/free-map.h"
 #include "threads/malloc.h"
+
+/* Identifies an inode. */
+#define INODE_MAGIC 0x494e4f44
 
 /* On-disk inode.
    Must be exactly DISK_SECTOR_SIZE bytes long. */
 struct inode_disk
   {
+    disk_sector_t start;                /* First data sector. */
     off_t length;                       /* File size in bytes. */
-    disk_sector_t start;                /* Starting sector. */
-    uint32_t unused[126];               /* Unused padding. */
+    unsigned magic;                     /* Magic number. */
+    uint32_t unused[125];               /* Not used. */
   };
 
-/* Returns the number of sectors to allocate for a file SIZE
+/* Returns the number of sectors to allocate for an inode SIZE
    bytes long. */
 static inline size_t
 bytes_to_sectors (off_t size)
@@ -31,14 +35,27 @@ struct inode
     disk_sector_t sector;               /* Sector number of disk location. */
     int open_cnt;                       /* Number of openers. */
     bool removed;                       /* True if deleted, false otherwise. */
-    struct inode_disk data;             /* On-disk data. */
+    int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
+    struct inode_disk data;             /* Inode content. */
   };
+
+/* Returns the disk sector that contains byte offset POS within
+   INODE.
+   Returns -1 if INODE does not contain data for a byte at offset
+   POS. */
+static disk_sector_t
+byte_to_sector (const struct inode *inode, off_t pos) 
+{
+  ASSERT (inode != NULL);
+  if (pos < inode->data.length)
+    return inode->data.start + pos / DISK_SECTOR_SIZE;
+  else
+    return -1;
+}
 
 /* List of open inodes, so that opening a single inode twice
    returns the same `struct inode'. */
 static struct list open_inodes;
-
-static void deallocate_inode (const struct inode *);
 
 /* Initializes the inode module. */
 void
@@ -47,42 +64,42 @@ inode_init (void)
   list_init (&open_inodes);
 }
 
-/* Initializes an inode for a file LENGTH bytes in size and
+/* Initializes an inode with LENGTH bytes of data and
    writes the new inode to sector SECTOR on the file system
-   disk.  Allocates sectors for the file from FREE_MAP.
+   disk.
    Returns true if successful.
-   Returns false if memory or disk allocation fails.  FREE_MAP
-   may be modified regardless. */
+   Returns false if memory or disk allocation fails. */
 bool
-inode_create (struct bitmap *free_map, disk_sector_t sector, off_t length) 
+inode_create (disk_sector_t sector, off_t length)
 {
-  static const char zero_sector[DISK_SECTOR_SIZE];
-  struct inode_disk *idx;
-  size_t start;
-  size_t i;
+  struct inode_disk *disk_inode = NULL;
+  bool success = false;
 
-  ASSERT (free_map != NULL);
   ASSERT (length >= 0);
+  ASSERT (sizeof *disk_inode == DISK_SECTOR_SIZE);
 
-  /* Allocate sectors. */
-  start = bitmap_scan_and_flip (free_map, 0, bytes_to_sectors (length), false);
-  if (start == BITMAP_ERROR)
-    return false;
-
-  /* Create inode. */
-  idx = calloc (sizeof *idx, 1);
-  if (idx == NULL)
-    return false;
-  idx->length = length;
-  idx->start = start;
-
-  /* Commit to disk. */
-  disk_write (filesys_disk, sector, idx);
-  for (i = 0; i < bytes_to_sectors (length); i++)
-    disk_write (filesys_disk, idx->start + i, zero_sector);
-
-  free (idx);
-  return true;
+  disk_inode = calloc (1, sizeof *disk_inode);
+  if (disk_inode != NULL)
+    {
+      size_t sectors = bytes_to_sectors (length);
+      disk_inode->length = length;
+      disk_inode->magic = INODE_MAGIC;
+      if (free_map_allocate (sectors, &disk_inode->start))
+        {
+          disk_write (filesys_disk, sector, disk_inode);
+          if (sectors > 0) 
+            {
+              static char zeros[DISK_SECTOR_SIZE];
+              size_t i;
+              
+              for (i = 0; i < sectors; i++) 
+                disk_write (filesys_disk, disk_inode->start + i, zeros); 
+            }
+          success = true; 
+        } 
+      free (disk_inode);
+    }
+  return success;
 }
 
 /* Reads an inode from SECTOR
@@ -92,119 +109,224 @@ struct inode *
 inode_open (disk_sector_t sector) 
 {
   struct list_elem *e;
-  struct inode *idx;
+  struct inode *inode;
 
-  /* Check whether this inode is already open.
-     (A hash table would be better, but the Pintos base code
-     avoids using the hash table so that users are free to modify
-     it at will.) */
+  /* Check whether this inode is already open. */
   for (e = list_begin (&open_inodes); e != list_end (&open_inodes);
        e = list_next (e)) 
     {
-      idx = list_entry (e, struct inode, elem);
-      if (idx->sector == sector) 
+      inode = list_entry (e, struct inode, elem);
+      if (inode->sector == sector) 
         {
-          idx->open_cnt++;
-          return idx;
+          inode_reopen (inode);
+          return inode; 
         }
     }
 
   /* Allocate memory. */
-  idx = calloc (1, sizeof *idx);
-  if (idx == NULL)
+  inode = malloc (sizeof *inode);
+  if (inode == NULL)
     return NULL;
 
   /* Initialize. */
-  list_push_front (&open_inodes, &idx->elem);
-  idx->sector = sector;
-  idx->open_cnt = 1;
-  idx->removed = false;
-
-  /* Read from disk. */
-  ASSERT (sizeof idx->data == DISK_SECTOR_SIZE);
-  disk_read (filesys_disk, sector, &idx->data);
-
-  return idx;
+  list_push_front (&open_inodes, &inode->elem);
+  inode->sector = sector;
+  inode->open_cnt = 1;
+  inode->deny_write_cnt = 0;
+  inode->removed = false;
+  disk_read (filesys_disk, inode->sector, &inode->data);
+  return inode;
 }
 
-/* Closes inode IDX and writes it to disk.
-   If this was the last reference to IDX, frees its memory.
-   If IDX was also a removed inode, frees its blocks. */
+/* Reopens and returns INODE. */
+struct inode *
+inode_reopen (struct inode *inode) 
+{
+  if (inode != NULL) 
+    inode->open_cnt++;
+  return inode;
+}
+
+/* Closes INODE and writes it to disk.
+   If this was the last reference to INODE, frees its memory.
+   If INODE was also a removed inode, frees its blocks. */
 void
-inode_close (struct inode *idx) 
+inode_close (struct inode *inode) 
 {
   /* Ignore null pointer. */
-  if (idx == NULL)
+  if (inode == NULL)
     return;
 
   /* Release resources if this was the last opener. */
-  if (--idx->open_cnt == 0)
+  if (--inode->open_cnt == 0)
     {
+      /* Remove from inode list and release lock. */
+      list_remove (&inode->elem);
+
       /* Deallocate blocks if removed. */
-      if (idx->removed)
-        deallocate_inode (idx);
+      if (inode->removed)
+        free_map_release (inode->sector,
+                          bytes_to_sectors (inode->data.length));
 
-      /* Remove from inode list and free memory. */
-      list_remove (&idx->elem);
-      free (idx); 
+      free (inode); 
     }
 }
 
-/* Deallocates the blocks allocated for IDX. */
-static void
-deallocate_inode (const struct inode *idx)
-{
-  struct bitmap *free_map = bitmap_create (disk_size (filesys_disk));
-  if (free_map != NULL) 
-    {
-      bitmap_read (free_map, free_map_file);
-      bitmap_reset (free_map, idx->sector);
-      bitmap_set_multiple (free_map, idx->data.start,
-                           bytes_to_sectors (idx->data.length), false);
-      bitmap_write (free_map, free_map_file);
-      bitmap_destroy (free_map);
-    }
-  else
-    printf ("inode_close(): can't free blocks");
-}
-
-/* Marks IDX to be deleted when it is closed by the last caller who
+/* Marks INODE to be deleted when it is closed by the last caller who
    has it open. */
 void
-inode_remove (struct inode *idx) 
+inode_remove (struct inode *inode) 
 {
-  ASSERT (idx != NULL);
-  idx->removed = true;
+  ASSERT (inode != NULL);
+  inode->removed = true;
 }
 
-/* Returns the disk sector that contains byte offset POS within
-   the file with inode IDX.
-   Returns -1 if IDX does not contain data for a byte at offset
-   POS. */
-disk_sector_t
-inode_byte_to_sector (const struct inode *idx, off_t pos) 
-{
-  ASSERT (idx != NULL);
-  ASSERT (pos < idx->data.length);
-  return idx->data.start + pos / DISK_SECTOR_SIZE;
-}
-
-/* Returns the length, in bytes, of the file with inode IDX. */
+/* Reads SIZE bytes from INODE into BUFFER, starting at position OFFSET.
+   Returns the number of bytes actually read, which may be less
+   than SIZE if an error occurs or end of file is reached. */
 off_t
-inode_length (const struct inode *idx)
+inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset) 
 {
-  ASSERT (idx != NULL);
-  return idx->data.length;
+  uint8_t *buffer = buffer_;
+  off_t bytes_read = 0;
+  uint8_t *bounce = NULL;
+
+  while (size > 0) 
+    {
+      /* Disk sector to read, starting byte offset within sector. */
+      disk_sector_t sector_idx = byte_to_sector (inode, offset);
+      int sector_ofs = offset % DISK_SECTOR_SIZE;
+
+      /* Bytes left in inode, bytes left in sector, lesser of the two. */
+      off_t inode_left = inode_length (inode) - offset;
+      int sector_left = DISK_SECTOR_SIZE - sector_ofs;
+      int min_left = inode_left < sector_left ? inode_left : sector_left;
+
+      /* Number of bytes to actually copy out of this sector. */
+      int chunk_size = size < min_left ? size : min_left;
+      if (chunk_size <= 0)
+        break;
+
+      if (sector_ofs == 0 && chunk_size == DISK_SECTOR_SIZE) 
+        {
+          /* Read full sector directly into caller's buffer. */
+          disk_read (filesys_disk, sector_idx, buffer + bytes_read); 
+        }
+      else 
+        {
+          /* Read sector into bounce buffer, then partially copy
+             into caller's buffer. */
+          if (bounce == NULL) 
+            {
+              bounce = malloc (DISK_SECTOR_SIZE);
+              if (bounce == NULL)
+                break;
+            }
+          disk_read (filesys_disk, sector_idx, bounce);
+          memcpy (buffer + bytes_read, bounce + sector_ofs, chunk_size);
+        }
+      
+      /* Advance. */
+      size -= chunk_size;
+      offset += chunk_size;
+      bytes_read += chunk_size;
+    }
+  free (bounce);
+
+  return bytes_read;
 }
 
-/* Prints a representation of IDX to the system console. */
-void
-inode_print (const struct inode *idx) 
+/* Writes SIZE bytes from BUFFER into INODE, starting at OFFSET.
+   Returns the number of bytes actually written, which may be
+   less than SIZE if end of file is reached or an error occurs.
+   (Normally a write at end of file would extend the inode, but
+   growth is not yet implemented.) */
+off_t
+inode_write_at (struct inode *inode, const void *buffer_, off_t size,
+                off_t offset) 
 {
-  ASSERT (idx != NULL);
-  printf ("Inode %"PRDSNu": %"PRDSNu" bytes, "
-          "%zu sectors starting at %"PRDSNu"\n",
-          idx->sector, idx->data.length,
-          (size_t) DIV_ROUND_UP (idx->data.length, DISK_SECTOR_SIZE),
-          idx->data.start);
+  const uint8_t *buffer = buffer_;
+  off_t bytes_written = 0;
+  uint8_t *bounce = NULL;
+
+  if (inode->deny_write_cnt)
+    return 0;
+
+  while (size > 0) 
+    {
+      /* Sector to write, starting byte offset within sector. */
+      off_t sector_idx = byte_to_sector (inode, offset);
+      int sector_ofs = offset % DISK_SECTOR_SIZE;
+
+      /* Bytes left in inode, bytes left in sector, lesser of the two. */
+      off_t inode_left = inode_length (inode) - offset;
+      int sector_left = DISK_SECTOR_SIZE - sector_ofs;
+      int min_left = inode_left < sector_left ? inode_left : sector_left;
+
+      /* Number of bytes to actually write into this sector. */
+      int chunk_size = size < min_left ? size : min_left;
+      if (chunk_size <= 0)
+        break;
+
+      if (sector_ofs == 0 && chunk_size == DISK_SECTOR_SIZE) 
+        {
+          /* Write full sector directly to disk. */
+          disk_write (filesys_disk, sector_idx, buffer + bytes_written); 
+        }
+      else 
+        {
+          /* We need a bounce buffer. */
+          if (bounce == NULL) 
+            {
+              bounce = malloc (DISK_SECTOR_SIZE);
+              if (bounce == NULL)
+                break;
+            }
+
+          /* If the sector contains data before or after the chunk
+             we're writing, then we need to read in the sector
+             first.  Otherwise we start with a sector of all zeros. */
+          if (sector_ofs > 0 || chunk_size < sector_left) 
+            disk_read (filesys_disk, sector_idx, bounce);
+          else
+            memset (bounce, 0, DISK_SECTOR_SIZE);
+          memcpy (bounce + sector_ofs, buffer + bytes_written, chunk_size);
+          disk_write (filesys_disk, sector_idx, bounce); 
+        }
+
+      /* Advance. */
+      size -= chunk_size;
+      offset += chunk_size;
+      bytes_written += chunk_size;
+    }
+  free (bounce);
+
+  return bytes_written;
+}
+
+/* Disables writes to INODE.
+   May be called at most once per inode opener. */
+void
+inode_deny_write (struct inode *inode) 
+{
+  inode->deny_write_cnt++;
+  ASSERT (inode->deny_write_cnt <= inode->open_cnt);
+}
+
+/* Re-enables writes to INODE.
+   Must be called once by each inode opener who has called
+   inode_deny_write() on the inode, before closing the inode. */
+void
+inode_allow_write (struct inode *inode) 
+{
+  ASSERT (inode->deny_write_cnt > 0);
+  ASSERT (inode->deny_write_cnt <= inode->open_cnt);
+  inode->deny_write_cnt--;
+}
+
+/* Returns the length, in bytes, of INODE's data. */
+off_t
+inode_length (const struct inode *inode)
+{
+  return inode->data.length;
 }

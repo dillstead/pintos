@@ -1,6 +1,0 @@
-(mmap-exit) begin
-(mmap-exit) run child
-(child-mm-wrt) begin
-(child-mm-wrt) end
-(mmap-exit) child finished
-(mmap-exit) end

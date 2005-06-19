@@ -1,6 +1,0 @@
-(close-stdin) begin
-(close-stdin) end
-close-stdin: exit(0)
---OR--
-(close-stdin) begin
-close-stdin: exit(-1)

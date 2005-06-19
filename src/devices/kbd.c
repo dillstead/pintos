@@ -34,8 +34,8 @@ static intr_handler_func keyboard_interrupt;
 void
 kbd_init (void) 
 {
-  intq_init (&buffer, "keyboard");
-  intr_register (0x21, 0, INTR_OFF, keyboard_interrupt, "8042 Keyboard");
+  intq_init (&buffer);
+  intr_register_ext (0x21, keyboard_interrupt, "8042 Keyboard");
 }
 
 /* Retrieves a key from the keyboard buffer.

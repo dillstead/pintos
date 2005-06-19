@@ -343,7 +343,7 @@ use vars qw(
 #--##############################################################################
 
 # CVS version:
-# $Id: texi2html,v 1.2 2004-10-14 00:10:34 blp Exp $
+# $Id: texi2html,v 1.3 2005-06-19 03:20:26 blp Exp $
 
 # Homepage:
 $T2H_HOMEPAGE = "http://texi2html.cvshome.org";
@@ -390,7 +390,7 @@ $THISPROG = "texi2html $THISVERSION"; # program name and version
 # Copy this file and make changes to it, if you like.
 # Afterwards, either, load it with command-line option -init_file <your_init_file>
 #
-# $Id: texi2html,v 1.2 2004-10-14 00:10:34 blp Exp $
+# $Id: texi2html,v 1.3 2005-06-19 03:20:26 blp Exp $
 
 ######################################################################
 # stuff which can also be set by command-line options
@@ -1863,7 +1863,7 @@ package Getopt::MySimple;
 
 # --------------------------------------------------------------------------
 # Locally modified by obachman (Display type instead of env, order by cmp)
-# $Id: texi2html,v 1.2 2004-10-14 00:10:34 blp Exp $
+# $Id: texi2html,v 1.3 2005-06-19 03:20:26 blp Exp $
 
 # use strict;
 # no strict 'refs';
@@ -2207,6 +2207,7 @@ $index_properties =
 	       "?", "?",
 	       ".", ".",
 	       "-", "",
+	       "/", "",
               );
 
 #
@@ -2252,7 +2253,7 @@ $index_properties =
 # texinfo styles (@foo{bar}) to HTML ones
 #
 %style_map = (
-	      'acronym', '&do_acronym',
+	      'acronym', 'ACRONYM',
 	      'asis', '',
 	      'b', 'B',
 	      'cite', 'CITE',
@@ -2352,6 +2353,7 @@ $complex_format_map->{smallformat} = $complex_format_map->{smalldisplay};
 	    'deftypefn', 0,
 	    'deftypeop', 0,
 	    'deftypevr', 0,
+	    'deftypecv', 0,
 	    'defcv', 0,
 	    'defop', 0,
 	    'deftp', 0,
@@ -2361,6 +2363,7 @@ $complex_format_map->{smallformat} = $complex_format_map->{smalldisplay};
 	    'deftypefnx', 0,
 	    'deftypeopx', 0,
 	    'deftypevrx', 0,
+	    'deftypecvx', 0,
 	    'defcvx', 0,
 	    'defopx', 0,
 	    'deftpx', 0,
@@ -3982,6 +3985,11 @@ sub pass1
                 $type =~ s/^\{(.*)\}$/$1/;
                 print "# def ($tag): {$type} ", join(', ', @args), "\n"
                     if $T2H_DEBUG & $DEBUG_DEF;
+		if ($tag eq 'deftypecv') {
+		    my $class = shift (@args);
+		    $class =~ s/^\{(.*)\}$/$1/;
+		    $type .= " of $class";
+		}
                 $type .= ':' if (!$T2H_DEF_TABLE); # it's nicer like this
                 $name = shift(@args);
                 $name =~ s/^\{(.*)\}$/$1/;
@@ -4025,7 +4033,7 @@ sub pass1
                 }
                 elsif ($tag eq 'deftypefn' || $tag eq 'deftypevr'
                        || $tag eq 'deftypeop' || $tag eq 'defcv'
-                       || $tag eq 'defop')
+                       || $tag eq 'defop' || $tag eq 'deftypecv')
                 {
                     $ftype = $name;
                     $name = shift(@args);
@@ -4040,8 +4048,9 @@ sub pass1
                     }
                     else
                     {
-                        $_ .= "<U>$type</U> $ftype <B>$name</B>";
-                        $_ .= " <I>@args</I>" if @args;
+			my $sep = $ftype =~ /\*$/ ? '' : ' ';
+                        $_ .= "<U>$type</U> $ftype$sep<B>$name</B>";
+                        $_ .= " @args" if @args;
                     }
                 }
                 else
@@ -6119,7 +6128,7 @@ sub apply_style
         else
         {                       # no style
         }
-        $text = "\`$text\'" if $do_quotes;
+        $text = "<Q>$text</Q>" if $do_quotes;
     }
     else
     {                           # unknown style

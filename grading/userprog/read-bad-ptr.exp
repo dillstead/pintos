@@ -1,6 +1,0 @@
-(read-bad-ptr) begin
-(read-bad-ptr) end
-read-bad-ptr: exit(0)
---OR--
-(read-bad-ptr) begin
-read-bad-ptr: exit(-1)

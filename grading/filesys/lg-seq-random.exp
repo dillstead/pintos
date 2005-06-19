@@ -1,8 +1,0 @@
-(sm-seq-random) begin
-(sm-seq-random) create "nibble"
-(sm-seq-random) open "nibble"
-(sm-seq-random) writing "nibble"
-(sm-seq-random) close "nibble"
-(sm-seq-random) open "nibble" for verification
-(sm-seq-random) close "nibble"
-(sm-seq-random) end

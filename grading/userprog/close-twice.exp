@@ -1,6 +1,0 @@
-(close-twice) begin
-(close-twice) end
-close-twice: exit(0)
---OR--
-(close-twice) begin
-close-twice: exit(-1)

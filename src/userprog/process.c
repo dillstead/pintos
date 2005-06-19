@@ -102,10 +102,11 @@ process_exit (void)
   pd = cur->pagedir;
   if (pd != NULL) 
     {
-      /* We must set cur->pagedir to NULL before switching page
-         directories, so that a timer interrupt can't switch back
-         to the process page directory.  We must activate the
-         base page directory before destroying the process's page
+      /* Correct ordering here is crucial.  We must set
+         cur->pagedir to NULL before switching page directories,
+         so that a timer interrupt can't switch back to the
+         process page directory.  We must activate the base page
+         directory before destroying the process's page
          directory, or our active page directory will be one
          that's been freed (and cleared). */
       cur->pagedir = NULL;
@@ -195,15 +196,6 @@ struct Elf32_Phdr
 static bool load_segment (struct file *, const struct Elf32_Phdr *);
 static bool setup_stack (void **esp);
 
-/* Aborts loading an executable, with an error message. */
-#define LOAD_ERROR(MSG)                                 \
-        do {                                            \
-                printf ("load: %s: ", filename);        \
-                printf MSG;                             \
-                printf ("\n");                          \
-                goto done;                              \
-        } while (0)
-
 /* Loads an ELF executable from FILENAME into the current thread.
    Stores the executable's entry point into *EIP
    and its initial stack pointer into *ESP.
@@ -220,31 +212,30 @@ load (const char *filename, void (**eip) (void), void **esp)
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
-  if (t->pagedir == NULL)
-    LOAD_ERROR (("page directory allocation failed"));
+  if (t->pagedir == NULL) 
+    goto done;
   process_activate ();
 
   /* Open executable file. */
   file = filesys_open (filename);
-  if (file == NULL)
-    LOAD_ERROR (("open failed"));
+  if (file == NULL) 
+    {
+      printf ("load: %s: open failed\n", filename);
+      goto done; 
+    }
 
   /* Read and verify executable header. */
-  if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr) 
-    LOAD_ERROR (("error reading executable header"));
-  if (memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7) != 0)
-    LOAD_ERROR (("file is not ELF"));
-  if (ehdr.e_type != 2)
-    LOAD_ERROR (("ELF file is not an executable"));
-  if (ehdr.e_machine != 3)
-    LOAD_ERROR (("ELF executable is not x86"));
-  if (ehdr.e_version != 1)
-    LOAD_ERROR (("ELF executable has unknown version %d",
-                 (int) ehdr.e_version));
-  if (ehdr.e_phentsize != sizeof (struct Elf32_Phdr))
-    LOAD_ERROR (("bad ELF program header size"));
-  if (ehdr.e_phnum > 1024)
-    LOAD_ERROR (("too many ELF program headers"));
+  if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
+      || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
+      || ehdr.e_type != 2
+      || ehdr.e_machine != 3
+      || ehdr.e_version != 1
+      || ehdr.e_phentsize != sizeof (struct Elf32_Phdr)
+      || ehdr.e_phnum > 1024) 
+    {
+      printf ("load: %s: error loading executable\n", filename);
+      goto done; 
+    }
 
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;
@@ -253,11 +244,11 @@ load (const char *filename, void (**eip) (void), void **esp)
       struct Elf32_Phdr phdr;
 
       if (file_ofs < 0 || file_ofs > file_length (file))
-        LOAD_ERROR (("bad file offset %ld", (long) file_ofs));
+        goto done;
       file_seek (file, file_ofs);
 
       if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
-        LOAD_ERROR (("error reading program header"));
+        goto done;
       file_ofs += sizeof phdr;
       switch (phdr.p_type) 
         {
@@ -265,17 +256,13 @@ load (const char *filename, void (**eip) (void), void **esp)
         case PT_NOTE:
         case PT_PHDR:
         case PT_STACK:
+        default:
           /* Ignore this segment. */
           break;
         case PT_DYNAMIC:
         case PT_INTERP:
         case PT_SHLIB:
-          /* Reject the executable. */
-          LOAD_ERROR (("unsupported ELF segment type %d\n", phdr.p_type));
-          break;
-        default:
-          printf ("unknown ELF segment type %08x\n", phdr.p_type);
-          break;
+          goto done;
         case PT_LOAD:
           if (!load_segment (file, &phdr))
             goto done;
@@ -325,40 +312,25 @@ load_segment (struct file *file, const struct Elf32_Phdr *phdr)
   /* [ELF1] 2-2 says that p_offset and p_vaddr must be congruent
      modulo PGSIZE. */
   if (phdr->p_offset % PGSIZE != phdr->p_vaddr % PGSIZE) 
-    {
-      printf ("%#08"PE32Ox" and %#08"PE32Ax" not congruent modulo %#x\n",
-              phdr->p_offset, phdr->p_vaddr, (unsigned) PGSIZE);
-      return false; 
-    }
+    return false; 
 
   /* p_offset must point within file. */
   if (phdr->p_offset > (Elf32_Off) file_length (file)) 
-    {
-      printf ("bad p_offset %"PE32Ox, phdr->p_offset);
-      return false;
-    }
+    return false;
 
   /* [ELF1] 2-3 says that p_memsz must be at least as big as
      p_filesz. */
   if (phdr->p_memsz < phdr->p_filesz) 
-    {
-      printf ("p_memsz (%08"PE32Wx") < p_filesz (%08"PE32Wx")\n",
-              phdr->p_memsz, phdr->p_filesz);
-      return false; 
-    }
+    return false; 
 
   /* Validate virtual memory region to be mapped.
      The region must both start and end within the user address
-     space range starting at 0 and ending at PHYS_BASE (typically
-     3 GB == 0xc0000000).  We don't allow mapping page 0 .*/
+     space range.  We don't allow mapping page 0.*/
   start = pg_round_down ((void *) phdr->p_vaddr);
   end = pg_round_up ((void *) (phdr->p_vaddr + phdr->p_memsz));
-  if (start == 0 || start >= PHYS_BASE || end >= PHYS_BASE || end < start) 
-    {
-      printf ("bad virtual region %08lx...%08lx\n",
-              (unsigned long) start, (unsigned long) end);
-      return false; 
-    }
+  if (!is_user_vaddr (start) || !is_user_vaddr (end) || end < start
+      || start == 0)
+    return false; 
 
   /* Load the segment page-by-page into memory. */
   filesz_left = phdr->p_filesz + (phdr->p_vaddr & PGMASK);
@@ -410,9 +382,6 @@ setup_stack (void **esp)
       else
         palloc_free_page (kpage);
     }
-  else
-    printf ("failed to allocate process stack\n");
-
   return success;
 }
 

@@ -1,53 +1,65 @@
 @node Project 2--User Programs, Project 3--Virtual Memory, Project 1--Threads, Top
 @chapter Project 2: User Programs
 
-Now that you've worked with Pintos and are familiar with its
+Now that you've worked with Pintos and are becoming familiar with its
 infrastructure and thread package, it's time to start working on the
-parts of the system that will allow users to run programs on top of
-your operating system.  The base code already supports loading and
-running a single user program at a time with little interactivity
-possible.  You will allow multiple programs to be loaded in at once,
-and to interact with the OS via system calls.
+parts of the system that allow running user programs.
+The base code already supports loading and
+running user programs, but no I/O or interactivity
+is possible.  In this project, you will enable programs to interact with
+the OS via system calls.
 
 You will be working out of the @file{userprog} directory for this
 assignment.  However, you will also be interacting with almost every
 other part of the code for this assignment. We will describe the
-relevant parts below. If you are confident in your HW1 code, you can
-build on top of it.  However, if you wish you can start with a fresh
-copy of the code.  No code from project 1 is required for this
-assignment.
+relevant parts below.
 
-Up to now, all of the code you have written for Pintos has been part
+You can build project 2 on top of your project 1 submission or you can
+start with a fresh copy.  No code from project 1 is required for this
+assignment.  The ``alarm clock'' functionality may be useful in later
+projects, but it is not strictly required.
+
+@menu
+* Project 2 Background::        
+* Project 2 Requirements::      
+* Project 2 FAQ::               
+* 80x86 Calling Convention::    
+@end menu
+
+@node Project 2 Background
+@section Background
+
+Up to now, all of the code you have run under Pintos has been part
 of the operating system kernel.  This means, for example, that all the
 test code from the last assignment ran as part of the kernel, with
 full access to privileged parts of the system.  Once we start running
 user programs on top of the operating system, this is no longer true.
 This project deals with consequences of the change.
 
-We allow more than one user program to run at a time.  Because user
+We allow more than one user program to run at a time.  User
 programs are written and compiled to work under the illusion that they
-have the entire machine, when you load into memory and run more than
-one process at a time, you must manage things correctly to maintain
-this illusion.
+have the entire machine.  This means that when you load and
+run multiple processes at a time, you must manage memory, scheduling,
+and other state correctly to maintain this illusion.
 
-Before we delve into the details of the new code that you'll be
-working with, you should probably undo the test cases from project 1.
+In the previous project, we compiled our test code directly into your
+kernel, so we had to require certain specific function interfaces within
+the kernel.  From now on, we will test your operating system by running
+user programs.  This gives you much greater freedom.  You must make sure
+that the user program interface meets the specifications described here,
+but given that constraint you are free to restructure or rewrite kernel
+code however you wish.
 
 @menu
-* Project 2 Code::              
+* Project 2 Source Files::      
 * Using the File System::       
 * How User Programs Work::      
 * Virtual Memory Layout::       
-* Grading Requirements::        
-* Problem 2-1 Argument Passing::  
-* Problem 2-2 System Calls::    
-* User Programs FAQ::           
-* 80x86 Calling Convention::    
-* System Calls::                
+* Accessing User Memory::       
 @end menu
 
-@node Project 2 Code
-@section Code
+@node Project 2 Source Files
+@subsection Source Files
 
 The easiest way to get an overview of the programming you will be
 doing is to simply go over each part you'll be working with.  In
@@ -61,15 +73,14 @@ Loads ELF binaries and starts processes.
 
 @item pagedir.c
 @itemx pagedir.h
-A simple manager for 80@var{x} page directories and page tables.
+A simple manager for 80@var{x}86 page directories and page tables.
 Although you probably won't want to modify this code for this project,
-you may want to call some of its functions.  In particular,
-@func{pagedir_get_page} may be helpful for accessing user memory.
+you may want to call some of its functions.
 
 @item syscall.c
 @itemx syscall.h
 Whenever a user process wants to access some kernel functionality, it
-needs to do so via a system call.  This is a skeleton system call
+invokes a system call.  This is a skeleton system call
 handler.  Currently, it just prints a message and terminates the user
 process.  In part 2 of this project you will add code to do everything
 else needed by system calls.
@@ -79,39 +90,32 @@ else needed by system calls.
 When a user process performs a privileged or prohibited operation, it
 traps into the kernel as an ``exception'' or ``fault.''@footnote{We
 will treat these terms as synonymous.  There is no standard
-distinction between them, although the Intel processor manuals define
+distinction between them, although Intel processor manuals define
 them slightly differently on 80@var{x}86.}  These files handle
 exceptions.  Currently all exceptions simply print a message and
 terminate the process.  Some, but not all, solutions to project 2
 require modifying @func{page_fault} in this file.
 
 @item gdt.c
-@itemx gdt.c
+@itemx gdt.h
 The 80@var{x}86 is a segmented architecture.  The Global Descriptor
 Table (GDT) is a table that describes the segments in use.  These
 files set up the GDT.  @strong{You should not need to modify these
-files for any of the projects.}  However, you can read the code if
+files for any of the projects.}  You can read the code if
 you're interested in how the GDT works.
 
 @item tss.c
-@itemx tss.c
+@itemx tss.h
 The Task-State Segment (TSS) is used for 80@var{x}86 architectural
 task switching.  Pintos uses the TSS only for switching stacks when a
 user process enters an interrupt handler, as does Linux.  @strong{You
 should not need to modify these files for any of the projects.}
-However, you can read the code if you're interested in how the TSS
+You can read the code if you're interested in how the TSS
 works.
 @end table
 
-Finally, in @file{lib/kernel}, you might want to use
-@file{bitmap.[ch]}.  A bitmap is basically an array of bits, each of
-which can be true or false.  Bitmaps are typically used to keep track
-of the usage of a large array of (identical) resources: if resource
-@var{n} is in use, then bit @var{n} of the bitmap is true.  You might
-find it useful for tracking memory pages, for example.
-
 @node Using the File System
-@section Using the File System
+@subsection Using the File System
 
 You will need to use some file system code for this project.  First,
 user programs are loaded from the file system.  Second, many of the
@@ -121,7 +125,7 @@ provided a simple file system in the @file{filesys} directory.  You
 will want to look over the @file{filesys.h} and @file{file.h}
 interfaces to understand how to use the file system, and especially
 its many limitations.  @strong{You should not modify the file system
-code for this project}.  Proper use of the file system routines now
+code for this project.}  Proper use of the file system routines now
 will make life much easier for project 4, when you improve the file
 system implementation.  Until then, you will have to put up with the
 following limitations:
@@ -129,12 +133,12 @@ following limitations:
 @itemize @bullet
 @item
 No synchronization.  Concurrent accesses will interfere with one
-another, so external synchronization is needed.  @xref{Synchronizing
-File Access}, for more details.
+another.  You should use a global lock to ensure that only one process at a
+time is executing file system code.
 
 @item
-File size is fixed at creation time.  Because the root directory is
-represented as a file, the number of files that may be created is also
+File size is fixed at creation time.  The root directory is
+represented as a file, so the number of files that may be created is also
 limited.
 
 @item
@@ -151,95 +155,117 @@ File names are limited to 14 characters.
 
 @item
 A system crash mid-operation may corrupt the disk in a way
-that cannot be repaired automatically.  No `fsck' tool is
-provided in any case.
+that cannot be repaired automatically.  There is no file system repair
+tool anyway.
 @end itemize
 
-However one important feature is included:
+One important feature is included:
 
 @itemize @bullet
 @item
-Unix-like semantics for filesys_remove() are implemented.
+Unix-like semantics for @func{filesys_remove} are implemented.
 That is, if a file is open when it is removed, its blocks
-are not deallocated and it may still be accessed by the
+are not deallocated and it may still be accessed by any
 threads that have it open until the last one closes it.  @xref{Removing
 an Open File}, for more information.
 @end itemize
 
-You need to be able to create and format simulated disks.  The
-@command{pintos} program provides this functionality with its
-@option{make-disk} command.  From the @file{userprog/build} directory,
-execute @code{pintos make-disk fs.dsk 2}.  This command creates a 2 MB
-simulated disk named @file{fs.dsk}.  (It does not actually start
-Pintos.)  Then format the disk by passing the @option{-f} option to
-Pintos on the kernel's command line: @code{pintos run -f}.
+You need to be able to create simulated disks.  The
+@command{pintos-mkdisk} program provides this functionality.  From the
+@file{userprog/build} directory, execute @code{pintos-mkdisk fs.dsk 2}.
+This command creates a 2 MB simulated disk named @file{fs.dsk}.  Then
+format the disk by passing @option{-f -q} on the kernel's command
+line: @code{pintos -f -q}.  The @option{-f} option causes the disk to be
+formatted, and @option{-q} causes Pintos to exit as soon as the format
+is done.
 
-You'll need a way to get files in and out of the simulated file
-system.  The @code{pintos} @option{put} and @option{get} commands are
-designed for this.  To copy @file{@var{file}} into the Pintos file
-system, use the command @file{pintos put @var{file}}.  To copy it to
-the Pintos file system under the name @file{@var{newname}}, add the
-new name to the end of the command: @file{pintos put @var{file}
-@var{newname}}.  The commands for copying files out of a VM are
-similar, but substitute @option{get} for @option{get}.
+You'll need a way to copy files in and out of the simulated file system.
+The @code{pintos} @option{-p} (``put'') and @option{-g} (``get'')
+options do this.  To copy @file{@var{file}} into the
+Pintos file system, use the command @file{pintos -p @var{file} -- -q}.
+(The @samp{--} is needed because @option{-p} is for the @command{pintos}
+script, not for the simulated kernel.)  To copy it to the Pintos file
+system under the name @file{@var{newname}}, add @option{-a
+@var{newname}}: @file{pintos -p @var{file} -a @var{newname} -- -q}.  The
+commands for copying files out of a VM are similar, but substitute
+@option{-g} for @option{-p}.
 
-Incidentally, these commands work by passing special options
-@option{-ci} and @option{-co} on the kernel's command line and copying
-to and from a special simulated disk named @file{scratch.dsk}.  If
-you're very curious, you can look at the @command{pintos} program as
-well as @file{filesys/fsutil.c} to learn the implementation details,
-but it's really not relevant for this project.
+Incidentally, these commands work by passing special commands
+@command{put} and @command{get} on the kernel's command line and copying
+to and from a special simulated ``scratch'' disk.  If you're very
+curious, you can look at the @command{pintos} program as well as
+@file{filesys/fsutil.c} to learn the implementation details.
 
-Here's a summary of how you would create and format a disk, copy the
-@command{echo} program into the new disk, and then run @command{echo}.
-It assumes that you've already built the tests in
-@file{tests/userprog} and that the current directory is
+Here's a summary of how to create and format a disk, copy the
+@command{echo} program into the new disk, and then run @command{echo},
+passing argument @code{x}.  (Argument passing won't work until
+you've implemented it.)  It assumes
+that you've already built the
+examples in @file{examples} and that the current directory is
 @file{userprog/build}:
 
 @example
-pintos make-disk fs.dsk 2
-pintos run -f
-pintos put ../../tests/userprog/echo echo
-pintos run -ex echo
+pintos-mkdisk fs.dsk 2
+pintos -f -q
+pintos -p ../../examples/echo -a echo -- -q
+pintos -q run 'echo x'
 @end example
 
-You can delete a file from the Pintos file system using the @option{-r
-@var{file}} kernel option, e.g.@: @code{pintos run -r @var{file}}.
-Also, @option{-ls} lists the files in the file system and @option{-p
+The three final steps can actually be combined into a single command:
+
+@example
+pintos-mkdisk fs.dsk 2
+pintos -p ../../examples/echo -a echo -- -f -q run 'echo x'
+@end example
+
+If you don't want to keep the file system disk around for later use or
+inspection, you can even combine all four steps into a single command.
+The @code{--fs-disk=2} option creates a temporary disk just for the
+duration of the @command{pintos} run.  The Pintos automatic test suite
+makes extensive use of this syntax:
+
+@example
+pintos --fs-disk=2 -p ../../examples/echo -a echo -- -f -q run 'echo x'
+@end example
+
+You can delete a file from the Pintos file system using the @code{rm
+@var{file}} kernel action, e.g.@: @code{pintos -q rm @var{file}}.  Also,
+@command{ls} lists the files in the file system and @code{cat
 @var{file}} prints a file's contents to the display.
 
 @node How User Programs Work
-@section How User Programs Work
+@subsection How User Programs Work
 
-Pintos can run normal C programs.  In fact, it can run any program you
-want, provided it's compiled into the proper file format, and uses
-only the system calls you implement.  (For example, @func{malloc}
-makes use of functionality that isn't provided by any of the syscalls
-we require you to support.)  The only other limitation is that Pintos
-can't run programs using floating point operations, since it doesn't
-include the necessary kernel functionality to save and restore the
-processor's floating-point unit when switching threads.  You can look
-in @file{tests/userprog} directory for some examples.
+Pintos can run normal C programs.  In fact, Pintos can run any program
+you want, as long as it's compiled into the proper file format and uses
+only the system calls you implement.  Notably, @func{malloc} cannot be
+implemented because none of the system calls required for this project
+allow for memory allocation.  Pintos also can't run programs that use
+floating point operations, since the kernel doesn't save and restore the
+processor's floating-point unit when switching threads.
 
-Pintos loads ELF executables, where ELF is an executable format used
-by Linux, Solaris, and many other Unix and Unix-like systems.
-Therefore, you can use any compiler and linker that produce
-80@var{x}86 ELF executables to produce programs for Pintos.  We
-recommend using the tools we provide in the @file{tests/userprog}
-directory.  By default, the @file{Makefile} in this directory will
-compile the test programs we provide.  You can edit the
-@file{Makefile} to compile your own test programs as well.
+The @file{src/examples} directory contains a few sample user
+programs.  The @file{Makefile} in this directory
+compiles the provided examples, and you can edit it
+compile your own programs as well.
 
-One thing you should realize immediately is that, until you copy a
-test program to the emulated disk, Pintos will be unable to do very
-much useful work.  You will also find that you won't be able to do
+Pintos loads @dfn{ELF} executables.  ELF is a file format used by Linux,
+Solaris, and many other operating systems for object files,
+shared libraries, and executables.  You can actually use any compiler
+and linker that output 80@var{x}86 ELF executables to produce programs
+for Pintos.  (We've provided compilers and linkers that should do just
+fine.)
+
+You should realize immediately that, until you copy a
+test program to the emulated disk, Pintos will be unable to do
+useful work.  You won't be able to do
 interesting things until you copy a variety of programs to the disk.
-A useful technique is to create a clean reference disk and copy that
+You might want to create a clean reference disk and copy that
 over whenever you trash your @file{fs.dsk} beyond a useful state,
 which may happen occasionally while debugging.
 
 @node Virtual Memory Layout
-@section Virtual Memory Layout
+@subsection Virtual Memory Layout
 
 Virtual memory in Pintos is divided into two regions: user virtual
 memory and kernel virtual memory.  User virtual memory ranges from
@@ -248,24 +274,24 @@ virtual address 0 up to @code{PHYS_BASE}, which is defined in
 virtual memory occupies the rest of the virtual address space, from
 @code{PHYS_BASE} up to 4 GB.
 
-User virtual memory is per-process.  Conceptually, each process is
-free to use the entire space of user virtual memory however it
-chooses.  When the kernel switches from one process to another, it
-also switches user virtual address spaces by switching the processor's
-page directory base register (see @func{pagedir_activate in
-@file{userprog/pagedir.c}}.  @struct{thread} contains a pointer to a
+User virtual memory is per-process.
+When the kernel switches from one process to another, it
+also switches user virtual address spaces by changing the processor's
+page directory base register (see @func{pagedir_activate} in
+@file{userprog/pagedir.c}).  @struct{thread} contains a pointer to a
 process's page directory.
 
 Kernel virtual memory is global.  It is always mapped the same way,
 regardless of what user process or kernel thread is running.  In
 Pintos, kernel virtual memory is mapped one-to-one to physical
-memory.  That is, virtual address @code{PHYS_ADDR} accesses physical
+memory, starting at @code{PHYS_BASE}.  That is, virtual address
+@code{PHYS_ADDR} accesses physical
 address 0, virtual address @code{PHYS_ADDR} + @t{0x1234} access
 physical address @t{0x1234}, and so on up to the size of the machine's
 physical memory.
 
-User programs can only access user virtual memory.  An attempt to
-access kernel virtual memory will cause a page fault, handled by
+A user program can only access its own user virtual memory.  An attempt to
+access kernel virtual memory causes a page fault, handled by
 @func{page_fault} in @file{userprog/exception.c}, and the process
 will be terminated.  Kernel threads can access both kernel virtual
 memory and, if a user process is running, the user virtual memory of
@@ -273,155 +299,247 @@ the running process.  However, even in the kernel, an attempt to
 access memory at a user virtual address that doesn't have a page
 mapped into it will cause a page fault.
 
-You must handle memory fragmentation gracefully, that is, a process
-that needs @var{N} pages of memory must not require that all @var{N}
-be contiguous.  In fact, it must not require that any of the pages be
-contiguous.
+You must handle memory fragmentation gracefully, that is, a process that
+needs @var{N} pages of user virtual memory must not require those pages
+to be contiguous in kernel virtual memory.
 
-@node Grading Requirements
-@section Grading Requirements
+@menu
+* Typical Memory Layout::       
+@end menu
 
-For testing and grading purposes, we have some simple overall
-requirements:
+@node Typical Memory Layout
+@subsubsection Typical Memory Layout
 
-@itemize @bullet
-@item
-The kernel should print out the program's name and exit status whenever
-a process terminates, whether termination is caused by the @code{exit}
-system call or for another reason.
+Conceptually, each process is
+free to lay out its own user virtual memory however it
+chooses.  In practice, user virtual memory is laid out like this:
 
-@itemize @minus
-@item
-The message must be formatted exactly as if it was printed with
-@code{printf ("%s: exit(%d)\n", @dots{});} given appropriate arguments.
+@html
+<CENTER>
+@end html
+@example
+@group
+   PHYS_BASE +----------------------------------+
+             |            user stack            |
+             |                 |                |
+             |                 |                |
+             |                 V                |
+             |          grows downward          |
+             |                                  |
+             |                                  |
+             |                                  |
+             |                                  |
+             |           grows upward           |
+             |                 ^                |
+             |                 |                |
+             |                 |                |
+             +----------------------------------+
+             | uninitialized data segment (BSS) |
+             +----------------------------------+
+             |     initialized data segment     |
+             +----------------------------------+
+             |           code segment           |
+  0x08048000 +----------------------------------+
+             |                                  |
+             |                                  |
+             |                                  |
+             |                                  |
+             |                                  |
+           0 +----------------------------------+
+@end group
+@end example
+@html
+</CENTER>
+@end html
 
-@item
-The name printed should be the full name passed to
-@func{process_execute}, except that it is acceptable to truncate it to
-15 characters to allow for the limited space in @struct{thread}.  The
-name printed need not include arguments.
+In this project, the user stack is fixed in size, but in project 3 it
+will be allowed to grow.  Traditionally, the size of the uninitialized
+data segment can be adjusted with a system call, but you will not have
+to implement this.
 
-@item
-Do not print a message when a kernel thread that is not a process
-terminates.
+The code segment in Pintos starts at user virtual address
+@t{0x08084000}, approximately 128 MB from the bottom of the address
+space.  This value is specified in @bibref{SysV-i386} and has no deep
+significance.
 
-@item
-Do not print messages about process termination for the @code{halt}
-system call.
+The linker sets the layout of a user program in memory, as directed by a
+``linker script'' that tells it the names and locations of the various
+program segments.  You can learn more about linker scripts by reading
+the ``Scripts'' chapter in the linker manual, accessible via @samp{info
+ld}.
 
-@item
-No message need be printed when a process fails to load.
-@end itemize
+To view the layout of a particular executable, run @command{objdump}
+(80@var{x}86) or @command{i386-elf-objdump} (SPARC) with the @option{-p}
+option.
 
-@item
-Aside from this, the kernel should print out no other messages that
-Pintos as provided doesn't already print.  You
-may understand all those debug messages, but we won't, and it just
-clutters our ability to see the stuff we care about.
+@node Accessing User Memory
+@subsection Accessing User Memory
 
-@item
-Additionally, while it may be useful to hard-code which process will
-run at startup while debugging, before you submit your code you must
-make sure that it takes the start-up process name and arguments from
-the @samp{-ex} argument.  For example, running @code{pintos run -ex
-"testprogram 1 2 3 4"} will spawn @samp{testprogram 1 2 3 4} as the
-first process.
+As part of a system
+call, the kernel must often access memory through pointers provided by a user
+program.  The kernel must be very careful about doing so, because
+the user can pass a null pointer, a pointer to
+unmapped virtual memory, or a pointer to kernel virtual address space
+(above @code{PHYS_BASE}).  All of these types of invalid pointers must
+be rejected without harm to the kernel or other running processes, by
+terminating the offending process and freeing its resources.
 
-@item
-In the previous project, we required that you provided some specific
-function interfaces, because we tested your project by compiling our
-test code into it.  For this project and all later projects, this is
-no longer necessary, because we will do all of our testing with user
-programs.  You must make sure that the user program interface meets
-the specifications described in the assignments, but given that
-constraint you are free to restructure or rewrite kernel code however
-you wish.
-@end itemize
+There are at least two reasonable ways to do this correctly.  The
+first method is to verify
+the validity of a user-provided pointer, then dereference it.  If you
+choose this route, you'll want to look at the functions in
+@file{userprog/pagedir.c} and in @file{threads/mmu.h}.  This is the
+simplest way to handle user memory access.
 
-@node Problem 2-1 Argument Passing
-@section Problem 2-1: Argument Passing
+The second method is to check only that a user
+pointer points below @code{PHYS_BASE}, then dereference it.
+An invalid user pointer will cause a ``page fault'' that you can
+handle by modifying the code for @func{page_fault} in
+@file{userprog/exception.cc}.  This technique is normally faster
+because it takes advantage of the processor's MMU, so it tends to be
+used in real kernels (including Linux).
 
-Currently, @func{process_execute} does not support passing arguments
-to new processes.  UNIX and other operating systems do allow passing
-command line arguments to a program, which accesses them via the argc,
-argv arguments to main.  You must implement this functionality by
-extending @func{process_execute} so that instead of simply taking a
-program file name as its argument, it divides it into words at spaces.
-The first word is the program name, the second word is the first
-argument, and so on.  That is, @code{process_execute("grep foo bar")}
-should run @command{grep} passing two arguments @code{foo} and
-@file{bar}.  A few details:
+In either case, you need to make sure not to ``leak'' resources.  For
+example, suppose that your system call has acquired a lock or
+allocated a page of memory.  If you encounter an invalid user pointer
+afterward, you must still be sure to release the lock or free the page
+of memory.  If you choose to verify user pointers before dereferencing
+them, this should be straightforward.  It's more difficult to handle
+if an invalid pointer causes a page fault,
+because there's no way to return an error code from a memory access.
+Therefore, for those who want to try the latter technique, we'll
+provide a little bit of helpful code:
 
-@itemize
-@item
-Multiple spaces are considered the same as a single space, so that
-@code{process_execute("grep foo bar")} would be equivalent to our
-original example.
+@verbatim
+/* Tries to copy a byte from user address USRC to kernel address KDST.
+   Returns true if successful, false if USRC is invalid. */
+static inline bool get_user (uint8_t *kdst, const uint8_t *usrc) {
+  int eax;
+  asm ("mov %%eax, offset 1f; mov %%al, %2; mov %0, %%al; 1:"
+       : "=m" (*kdst), "=&a" (eax) : "m" (*usrc));
+  return eax != 0;
+}
 
-@item
-You can impose a reasonable limit on the length of the command line
-arguments.  For example, you could limit the arguments to those that
-will fit in a single page (4 kB).
+/* Tries to write BYTE to user address UDST.
+   Returns true if successful, false if UDST is invalid. */
+static inline bool put_user (uint8_t *udst, uint8_t byte) {
+  int eax;
+  asm ("mov %%eax, offset 1f; mov %0, %b2; 1:"
+       : "=m" (*udst), "=&a" (eax) : "r" (byte));
+  return eax != 0;
+}
+@end verbatim
 
-@item
-You can parse the argument strings any way you like.  If you're lost,
+Each of these functions assumes that the user address has already been
+verified to be below @code{PHYS_BASE}.  They also assume that you've
+modified @func{page_fault} so that a page fault in the kernel causes
+@code{eax} to be set to 0 and its former value copied into @code{eip}.
+
+@node Project 2 Requirements
+@section Requirements
+
+@menu
+* Project 2 Design Document::   
+* Process Termination Messages::  
+* Argument Passing::            
+* System Calls::                
+* Denying Writes to Executables::  
+@end menu
+
+@node Project 2 Design Document
+@subsection Design Document
+
+Before you turn in your project, you must copy @uref{userprog.tmpl, ,
+the project 2 design document template} into your source tree under the
+name @file{pintos/src/userprog/DESIGNDOC} and fill it in.  We recommend
+that you read the design document template before you start working on
+the project.  @xref{Project Documentation}, for a sample design document
+that goes along with a fictitious project.
+
+@node Process Termination Messages
+@subsection Process Termination Messages
+
+Whenever a user process terminates, because it called @code{exit}
+or for any other reason, print the process's name
+and exit code, formatted as if printed by @code{printf ("%s:
+exit(%d)\n", @dots{});}.  The name printed should be the full name
+passed to @func{process_execute}, omitting command-line arguments.
+Do not print these messages when a kernel thread that is not a user
+process terminates, or
+when the @code{halt} system call is invoked.  The message is optional
+when a process fails to load.
+
+Aside from this, don't print any other
+messages that Pintos as provided doesn't already print.  You may find
+extra messages useful during debugging, but they will confuse the
+grading scripts and thus lower your score.
+
+@node Argument Passing
+@subsection Argument Passing
+
+Currently, @func{process_execute} does not support passing arguments to
+new processes.  Implement this functionality, by extending
+@func{process_execute} so that instead of simply taking a program file
+name as its argument, it divides it into words at spaces.  The first
+word is the program name, the second word is the first argument, and so
+on.  That is, @code{process_execute("grep foo bar")} should run
+@command{grep} passing two arguments @code{foo} and @code{bar}.
+
+Within a command line, multiple spaces are equivalent to a single space,
+so that @code{process_execute("grep foo bar")} is equivalent to our
+original example.  You can impose a reasonable limit on the length of
+the command line arguments.  For example, you could limit the arguments
+to those that will fit in a single page (4 kB).
+
+You can parse argument strings any way you like.  If you're lost,
 look at @func{strtok_r}, prototyped in @file{lib/string.h} and
 implemented with thorough comments in @file{lib/string.c}.  You can
 find more about it by looking at the man page (run @code{man strtok_r}
 at the prompt).
 
-@item
-@xref{80x86 Calling Convention}, for information on exactly how you
+@xref{Program Startup Details}, for information on exactly how you
 need to set up the stack.
-@end itemize
 
-@strong{This functionality is extremely important.}  Almost all our
-test cases rely on being able to pass arguments, so if you don't get
-this right, a lot of things will not appear to work correctly with our
-tests.  If the tests fail, so do you.  Fortunately, this part
-shouldn't be too hard.
+@node System Calls
+@subsection System Calls
 
-@node Problem 2-2 System Calls
-@section Problem 2-2: System Calls
+Implement the system call handler in @file{userprog/syscall.c}.  The
+skeleton implementation we provide ``handles'' system calls by
+terminating the process.  It will need to retrieve the system call
+number, then any system call arguments, and carry appropriate actions.
 
-Implement the system call handler in @file{userprog/syscall.c} to
-properly deal with all the system calls described below.  Currently,
-it ``handles'' system calls by terminating the process.  You will need
-to decipher system call arguments and take the appropriate action for
-each.
+Implement the following system calls.  The prototypes listed are those
+seen by a user program that includes @file{lib/user/syscall.h}.  System
+call numbers for each system call are defined in
+@file{lib/syscall-nr.h}:
 
-You are required to support the following system calls, whose syscall
-numbers are defined in @file{lib/syscall-nr.h} and whose C functions
-called by user programs are prototyped in @file{lib/user/syscall.h}:
-
-@table @code
-@item SYS_halt
-@itemx void halt (void)
-Stops Pintos by calling @func{power_off} (declared in
+@deftypefn {System Call} void halt (void)
+Terminates Pintos by calling @func{power_off} (declared in
 @file{threads/init.h}).  Note that this should be seldom used, since
 then you lose some information about possible deadlock situations,
 etc.
+@end deftypefn
 
-@item SYS_exit
-@itemx void exit (int @var{status})
+@deftypefn {System Call} void exit (int @var{status})
 Terminates the current user program, returning @var{status} to the
-kernel.  If the process's parent @func{wait}s for it, this is the status
+kernel.  If the process's parent @code{wait}s for it (see below), this
+is the status
 that will be returned.  Conventionally, a @var{status} of 0 indicates
-a successful exit.  Other values may be used to indicate user-defined
-conditions (usually errors).
+success and nonzero values indicate errors.
+@end deftypefn
 
-@item SYS_exec
-@itemx pid_t exec (const char *@var{cmd_line})
+@deftypefn {System Call} pid_t exec (const char *@var{cmd_line})
 Runs the executable whose name is given in @var{cmd_line}, passing any
 given arguments, and returns the new process's program id (pid).  Must
-return pid -1, which otherwise should not be a valid program id, if
-there is an error loading this program.
+return pid -1, which otherwise should not be a valid pid, if
+the program cannot load or run for any reason.
+@end deftypefn
 
-@item SYS_wait
-@itemx int wait (pid_t @var{pid})
-Waits for process @var{pid} to die and returns its exit status.  If it
-was terminated by the kernel (i.e.@: killed due to an exception),
-returns -1.  If @var{pid} is invalid or if it was not a child of the
+@deftypefn {System Call} int wait (pid_t @var{pid})
+Waits for process @var{pid} to die and returns the status it passed to
+@code{exit}.  Returns -1 if @var{pid}
+was terminated by the kernel (i.e.@: killed due to an exception).  If
+@var{pid} is invalid or if it was not a child of the
 calling thread, or if @code{wait} has already been successfully
 called for the given @var{pid}, returns -1 immediately, without
 waiting.
@@ -438,29 +556,27 @@ All of a process's resources, including its @struct{thread}, must be
 freed whether its parent ever waits for it or not, and regardless of
 whether the child exits before or after its parent.
 
-Children are not inherited, that is, if @var{A} has child @var{B} and
-@var{B} has child @var{C}, then @var{A} always returns immediately
-should it try to wait for @var{C}, even if @var{B} is dead.
+Children are not inherited: if @var{A} has child @var{B} and
+@var{B} has child @var{C}, then @code{wait(C)} always returns immediately
+when called from @var{A}, even if @var{B} is dead.
 
 Consider all the ways a wait can occur: nested waits (@var{A} waits
 for @var{B}, then @var{B} waits for @var{C}), multiple waits (@var{A}
-waits for @var{B}, then @var{A} waits for @var{C}), and so on.  Does
-your @func{wait} work if it is called on a process that has not yet
-been scheduled for the first time?
+waits for @var{B}, then @var{A} waits for @var{C}), and so on.
+@end deftypefn
 
-@item SYS_create
-@itemx bool create (const char *@var{file}, unsigned @var{initial_size})
-Create a new file called @var{file} initially @var{initial_size} bytes
+@deftypefn {System Call} bool create (const char *@var{file}, unsigned @var{initial_size})
+Creates a new file called @var{file} initially @var{initial_size} bytes
 in size.  Returns true if successful, false otherwise.
+@end deftypefn
 
-@item SYS_remove
-@itemx bool remove (const char *@var{file})
-Delete the file called @var{file}.  Returns true if successful, false
+@deftypefn {System Call} bool remove (const char *@var{file})
+Deletes the file called @var{file}.  Returns true if successful, false
 otherwise.
+@end deftypefn
 
-@item SYS_open
-@itemx int open (const char *@var{file})
-Open the file called @var{file}.  Returns a nonnegative integer handle
+@deftypefn {System Call} int open (const char *@var{file})
+Opens the file called @var{file}.  Returns a nonnegative integer handle
 called a ``file descriptor'' (fd), or -1 if the file could not be
 opened.  All open files associated with a process should be closed
 when the process exits or is terminated.
@@ -469,33 +585,33 @@ File descriptors numbered 0 and 1 are reserved for the console: fd 0
 is standard input (@code{stdin}), fd 1 is standard output
 (@code{stdout}).  These special file descriptors are valid as system
 call arguments only as explicitly described below.
+@end deftypefn
 
-@item SYS_filesize
-@itemx int filesize (int @var{fd})
+@deftypefn {System Call} int filesize (int @var{fd})
 Returns the size, in bytes, of the file open as @var{fd}.
+@end deftypefn
 
-@item SYS_read
-@itemx int read (int @var{fd}, void *@var{buffer}, unsigned @var{size})
-Read @var{size} bytes from the file open as @var{fd} into
+@deftypefn {System Call} int read (int @var{fd}, void *@var{buffer}, unsigned @var{size})
+Reads @var{size} bytes from the file open as @var{fd} into
 @var{buffer}.  Returns the number of bytes actually read (0 at end of
 file), or -1 if the file could not be read (due to a condition other
 than end of file).  Fd 0 reads from the keyboard using
 @func{kbd_getc}.
+@end deftypefn
 
-@item SYS_write
-@itemx int write (int @var{fd}, const void *@var{buffer}, unsigned @var{size})
-Write @var{size} bytes from @var{buffer} to the open file @var{fd}.
+@deftypefn {System Call} int write (int @var{fd}, const void *@var{buffer}, unsigned @var{size})
+Writes @var{size} bytes from @var{buffer} to the open file @var{fd}.
 Returns the number of bytes actually written, or -1 if the file could
-not be written.   
+not be written.
 
 Fd 1 writes to the console.  Your code to write to the console should
 write all of @var{buffer} in one call to @func{putbuf}, at least as
 long as @var{size} is not bigger than a few hundred bytes.  Otherwise,
 lines of text output by different processes may end up interleaved on
 the console, confusing both human readers and our grading scripts.
+@end deftypefn
 
-@item SYS_seek
-@itemx void seek (int @var{fd}, unsigned @var{position})
+@deftypefn {System Call} void seek (int @var{fd}, unsigned @var{position})
 Changes the next byte to be read or written in open file @var{fd} to
 @var{position}, expressed in bytes from the beginning of the file.
 (Thus, a @var{position} of 0 is the file's start.)
@@ -507,38 +623,38 @@ have a fixed length until project 4 is complete, so writes past end of
 file will return an error.)  These semantics are implemented in the
 file system and do not require any special effort in system call
 implementation.
+@end deftypefn
 
-@item SYS_tell
-@itemx unsigned tell (int @var{fd})
+@deftypefn {System Call} unsigned tell (int @var{fd})
 Returns the position of the next byte to be read or written in open
 file @var{fd}, expressed in bytes from the beginning of the file.
+@end deftypefn
 
-@item SYS_close
-@itemx void close (int @var{fd})
-Close file descriptor @var{fd}.
-@end table
+@deftypefn {System Call} void close (int @var{fd})
+Closes file descriptor @var{fd}.
+@end deftypefn
 
 The file defines other syscalls.  Ignore them for now.  You will
 implement some of them in project 3 and the rest in project 4, so be
 sure to design your system with extensibility in mind.
 
-To implement syscalls, you will need to provide a way of copying data
-from the user's virtual address space into the kernel and vice versa.
-This can be a bit tricky: what if the user provides an invalid
-pointer, a pointer into kernel memory, or points to a block that is
-partially in one of those regions?  You should handle these cases by
-terminating the user process.  You will need this code before you can
+To implement syscalls, you need to provide ways to copy data
+from user virtual address space into the kernel and vice versa.
+You need this ability before you can
 even obtain the system call number, because the system call number is
-on the user's stack in the user's virtual address space.  We recommend
+on the user's stack in the user's virtual address space.
+This can be a bit tricky: what if the user provides an invalid
+pointer, a pointer into kernel memory, or a block
+partially in one of those regions?  You should handle these cases by
+terminating the user process.    We recommend
 writing and testing this code before implementing any other system
 call functionality.
 
-@anchor{Synchronizing File Access}
-You must make sure that system calls are properly synchronized so that
+You must synchronize system calls so that
 any number of user processes can make them at once.  In particular, it
-is not safe to call into the filesystem code provided in the
+is not safe to call into the file system code provided in the
 @file{filesys} directory from multiple threads at once.  For now, we
-recommend adding a single lock that controls access to the filesystem
+recommend adding a single lock that controls access to the file system
 code.  You should acquire this lock before calling any functions in
 the @file{filesys} directory, and release it afterward.  Don't forget
 that @func{process_execute} also accesses files.  @strong{For now, we
@@ -552,7 +668,7 @@ system call's return value.
 
 When you're done with this part, and forevermore, Pintos should be
 bulletproof.  Nothing that a user program can do should ever cause the
-OS to crash, halt, assert fail, or otherwise stop running.  It is
+OS to crash, panic, fail an assertion, or otherwise malfunction.  It is
 important to emphasize this point: our tests will try to break your
 system calls in many, many ways.  You need to think of all the corner
 cases and handle them.  The sole way a user program should be able to
@@ -562,77 +678,92 @@ If a system call is passed an invalid argument, acceptable options
 include returning an error value (for those calls that return a
 value), returning an undefined value, or terminating the process.
 
-@xref{System Calls}, for more information on how syscalls work.
+@xref{System Call Details}, for details on how system calls work.
 
-@node User Programs FAQ
+@node Denying Writes to Executables
+@subsection Denying Writes to Executables
+
+Add code to deny writes to files in use as executables.  Many OSes do
+this because of the unpredictable results if a process tried to run code
+that was in the midst of being changed on disk.  This is especially
+important once virtual memory is implemented in project 3, but it can't
+hurt even now.
+
+You can use @func{file_deny_write} to prevent writes to an open file.
+Calling @func{file_allow_write} on the file will re-enable them (unless
+the file is denied writes by another opener).  Closing a file will also
+re-enable writes.
+
+@node Project 2 FAQ
 @section FAQ
 
-@enumerate 1
-@item
-@b{Do we need a working project 1 to implement project 2?}
+@table @asis
+@item How much code will I need to write?
 
-No.
+Here's a summary of our reference solution, produced by the
+@command{diffstat} program.  The final row gives total lines inserted
+and deleted; a changed line counts as both an insertion and a deletion.
 
-@item
-@b{@samp{pintos put} always panics.}
+@verbatim
+ threads/thread.c     |   13 
+ threads/thread.h     |   26 +
+ userprog/exception.c |    8 
+ userprog/process.c   |  247 ++++++++++++++--
+ userprog/syscall.c   |  468 ++++++++++++++++++++++++++++++-
+ userprog/syscall.h   |    1 
+ 6 files changed, 725 insertions(+), 38 deletions(-)
+@end verbatim
 
-Here are the most common causes:
+@item The kernel always panics when I run @code{pintos -p @var{file} -- -q}.
 
-@itemize @bullet
-@item
-The disk hasn't yet been formatted (with @samp{pintos run -f}).
+Did you format the disk (with @samp{pintos -f})?
 
-@item
-The file name specified is too long.  The file system limits file names
-to 14 characters.  If you're using a command like @samp{pintos put
-../../tests/userprog/echo}, that overflows the limit.  Use
-@samp{pintos put ../../tests/userprog/echo echo} to put the file under
-the name @file{echo} instead.
+Is your file name too long?  The file system limits file names to 14
+characters.  A command like @samp{pintos -p ../../examples/echo -- -q}
+will exceed the limit.  Use @samp{pintos -p ../../examples/echo -a echo
+-- -q} to put the file under the name @file{echo} instead.
 
-@item
-The file system is full.
+Is the file system full?
 
-@item
-The file system already contains 10 files.  (There's a 10-file limit for
-the base Pintos file system.)
+Does the file system already contain 16 files?  The base Pintos file
+system has a 16-file limit.
 
-@item
-The file system is so fragmented that there's not enough contiguous
+The file system may be so fragmented that there's not enough contiguous
 space for your file.
-@end itemize
 
-@item
-@b{All my user programs die with page faults.}
+@item When I run @code{pintos -p ../file --}, @file{file} isn't copied.
 
-This will generally happen if you haven't implemented problem 2-1
-yet.  The reason is that the basic C library for user programs tries
-to read @var{argc} and @var{argv} off the stack.  Because the stack
-isn't properly set up yet, this causes a page fault.
+Files are written under the name you refer to them, by default, so in
+this case the file copied in would be named @file{../file}.  You
+probably want to run @code{pintos -p ../file -a file --} instead.
 
-@item
-@b{I implemented 2-1 and now all my user programs die with
-@samp{system call!}.}
+@item All my user programs die with page faults.
 
+This will happen if you haven't implemented argument passing
+(or haven't done so correctly).  The basic C library for user programs tries
+to read @var{argc} and @var{argv} off the stack.  If the stack
+isn't properly set up, this causes a page fault.
+
+@item All my user programs die with @code{system call!}
+
+You'll have to implement system calls before you see anything else.
 Every reasonable program tries to make at least one system call
 (@func{exit}) and most programs make more than that.  Notably,
-@func{printf} invokes the @code{write} system call.  The default
-system call handler just prints @samp{system call!} and terminates the
-program.  You'll have to implement 2-2 before you see anything more
-interesting.  Until then, you can use @func{hex_dump} to convince
-yourself that 2-1 is implemented correctly (@pxref{Argument Passing to
-main}).
+@func{printf} invokes the @code{write} system call.  The default system
+call handler just prints @samp{system call!} and terminates the program.
+Until then, you can use @func{hex_dump} to convince yourself that
+argument passing is implemented correctly (@pxref{Program Startup Details}).
 
-@item
-@b{Is there a way I can disassemble user programs?}
+@item How can I can disassemble user programs?
 
-The @command{i386-elf-objdump} utility can disassemble entire user
-programs or object files.  Invoke it as @code{i386-elf-objdump -d
-@var{file}}.  You can also use @code{i386-elf-gdb}'s
-@command{disassemble} command to disassemble individual functions in
-object files compiled with debug information.
+The @command{objdump} (80@var{x}86) or @command{i386-elf-objdump}
+(SPARC) utility can disassemble entire user
+programs or object files.  Invoke it as @code{objdump -d
+@var{file}}.  You can use @code{gdb}'s
+@command{disassemble} command to disassemble individual functions
+(@pxref{gdb}).
 
-@item
-@b{Why can't I use many C include files in my Pintos programs?}
+@item Why do many C include files not work in Pintos programs?
 
 The C library we provide is very limited.  It does not include many of
 the features that are expected of a real operating system's C library.
@@ -641,21 +772,18 @@ architecture), since it must make system calls for I/O and memory
 allocation.  (Not all functions do, of course, but usually the library
 is compiled as a unit.)
 
-@item
-@b{Can I use lib@var{foo} in my Pintos programs?}
+@item Can I use lib@var{foo} in my Pintos programs?
 
 The chances are good that lib@var{foo} uses parts of the C library
 that Pintos doesn't implement.  It will probably take at least some
 porting effort to make it work under Pintos.  Notably, the Pintos
-userland C library does not have a @func{malloc} implementation.
+user program C library does not have a @func{malloc} implementation.
 
-@item
-@b{How do I compile new user programs?}
+@item How do I compile new user programs?
 
-You need to modify @file{tests/Makefile}.
+Modify @file{src/examples/Makefile}, then run @command{make}.
 
-@item
-@b{What's the difference between @code{tid_t} and @code{pid_t}?}
+@item What's the difference between @code{tid_t} and @code{pid_t}?
 
 A @code{tid_t} identifies a kernel thread, which may have a user
 process running in it (if created with @func{process_execute}) or not
@@ -671,314 +799,199 @@ You can choose whatever suitable types you like for @code{tid_t} and
 a one-to-one mapping, so that the same values in both identify the
 same process, or you can use a more complex mapping.  It's up to you.
 
-@item
-@b{I can't seem to figure out how to read from and write to user
-memory. What should I do?}
+@item Keyboard input doesn't work with @command{pintos} option @option{-v}.
 
-The kernel must treat user memory delicately.  As part of a system
-call, the user can pass to the kernel a null pointer, a pointer to
-unmapped virtual memory, or a pointer to kernel virtual address space
-(above @code{PHYS_BASE}).  All of these types of invalid pointers must
-be rejected without harm to the kernel or other running processes.  At
-your option, the kernel may handle invalid pointers by terminating the
-process or returning from the system call with an error.
-
-There are at least two reasonable ways to do this correctly.  The
-first method is to ``verify then access'':@footnote{These terms are
-made up for this document.  They are not standard terminology.} verify
-the validity of a user-provided pointer, then dereference it.  If you
-choose this route, you'll want to look at the functions in
-@file{userprog/pagedir.c} and in @file{threads/mmu.h}.  This is the
-simplest way to handle user memory access.
-
-The second method is to ``assume and react'': directly dereference
-user pointers, after checking that they point below @code{PHYS_BASE}.
-Invalid user pointers will then cause a ``page fault'' that you can
-handle by modifying the code for @func{page_fault} in
-@file{userprog/exception.cc}.  This technique is normally faster
-because it takes advantage of the processor's MMU, so it tends to be
-used in real kernels (including Linux).
-
-In either case, you need to make sure not to ``leak'' resources.  For
-example, suppose that your system call has acquired a lock or
-allocated a page of memory.  If you encounter an invalid user pointer
-afterward, you must still be sure to release the lock or free the page
-of memory.  If you choose to ``verify then access,'' then this should
-be straightforward, but for ``assume and react'' it's more difficult,
-because there's no way to return an error code from a memory access.
-Therefore, for those who want to try the latter technique, we'll
-provide a little bit of helpful code:
-
-@verbatim
-/* Tries to copy a byte from user address USRC to kernel address DST.
-   Returns true if successful, false if USRC is invalid. */
-static inline bool get_user (uint8_t *dst, const uint8_t *usrc) {
-  int eax;
-  asm ("mov %%eax, offset 1f; mov %%al, %2; mov %0, %%al; 1:"
-       : "=m" (*dst), "=&a" (eax) : "m" (*usrc));
-  return eax != 0;
-}
-
-/* Tries write BYTE to user address UDST.
-   Returns true if successful, false if UDST is invalid. */
-static inline bool put_user (uint8_t *udst, uint8_t byte) {
-  int eax;
-  asm ("mov %%eax, offset 1f; mov %0, %b2; 1:"
-       : "=m" (*udst), "=&a" (eax) : "r" (byte));
-  return eax != 0;
-}
-@end verbatim
-
-Each of these functions assumes that the user address has already been
-verified to be below @code{PHYS_BASE}.  They also assume that you've
-modified @func{page_fault} so that a page fault in the kernel causes
-@code{eax} to be set to 0 and its former value copied into @code{eip}.
-
-@item
-@b{I'm also confused about reading from and writing to the stack. Can
-you help?}
-
-@itemize @bullet
-@item
-Only non-@samp{char} values will have issues when writing them to
-memory.  If a digit is in a string, it is considered a character.
-However, the value of @code{argc} would be a non-char.
-
-@item
-You will need to write characters and non-characters into main memory.
-
-@item
-When you add items to the stack, you will be decrementing the stack
-pointer.  You'll need to decrement the stack pointer before writing to
-the location.
-
-@item
-Each character is 1 byte.
-@end itemize
-
-@item
-@b{Why doesn't keyboard input work with @samp{pintos -v}?}
-
-Serial input isn't implemented.  Don't use @samp{pintos -v} if you
-want to use the shell or otherwise provide keyboard input.
-@end enumerate
+Serial input isn't implemented.  Don't use @option{-v} if you
+want to use the shell or otherwise need keyboard input.
+@end table
 
 @menu
-* Problem 2-1 Argument Passing FAQ::  
-* Problem 2-2 System Calls FAQ::  
+* Argument Passing FAQ::        
+* System Calls FAQ::            
 @end menu
 
-@node Problem 2-1 Argument Passing FAQ
-@subsection Problem 2-1: Argument Passing FAQ
+@node Argument Passing FAQ
+@subsection Argument Passing FAQ
 
-@enumerate 1
-@item
-@b{Why is the top of the stack at @t{0xc0000000}?  Isn't that off the
-top of user virtual memory?  Shouldn't it be @t{0xbfffffff}?}
+@table @asis
+@item Isn't the top of stack off the top of user virtual memory?
 
-When the processor pushes data on the stack, it decrements the stack
+The top of stack is at @code{PHYS_BASE}, typically @t{0xc0000000}, which
+is also where kernel virtual memory starts.
+But when the processor pushes data on the stack, it decrements the stack
 pointer first.  Thus, the first (4-byte) value pushed on the stack
 will be at address @t{0xbffffffc}.
 
-Also, the stack should always be aligned to a 4-byte boundary, but
-@t{0xbfffffff} isn't.
-
-@item
-@b{Is @code{PHYS_BASE} fixed?}
+@item Is @code{PHYS_BASE} fixed?
 
 No.  You should be able to support @code{PHYS_BASE} values that are
-any multiple of @t{0x10000000} from @t{0x80000000} to @t{0xc0000000},
+any multiple of @t{0x10000000} from @t{0x80000000} to @t{0xf0000000},
 simply via recompilation.
-@end enumerate
+@end table
 
-@node Problem 2-2 System Calls FAQ
-@subsection Problem 2-2: System Calls FAQ
+@node System Calls FAQ
+@subsection System Calls FAQ
 
-@enumerate 1
-@item
-@b{Can I just cast a pointer to a @struct{file} object to get a
-unique file descriptor?  Can I just cast a @code{struct thread *} to a
-@code{pid_t}?  It's so much simpler that way!}
+@table @asis
+@item Can I just cast a @code{struct file *} to get a file descriptor?
+@itemx Can I just cast a @code{struct thread *} to a @code{pid_t}?
 
-This is a design decision you will have to make for yourself.
-However, note that most operating systems do distinguish between file
+You will have to make these design decisions yourself.
+Most operating systems do distinguish between file
 descriptors (or pids) and the addresses of their kernel data
 structures.  You might want to give some thought as to why they do so
 before committing yourself.
 
-@item
-@b{Can I set a maximum number of open files per process?}
+@item Can I set a maximum number of open files per process?
 
-From a design standpoint, it would be better not to set an arbitrary
-maximum.  That said, if your design calls for it, you may impose a
-limit of 128 open files per process (as the Solaris machines here do).
+It is better not to set an arbitrary limit.  You may impose a limit of
+128 open files per process, if necessary.
 
-@item
+@item What happens when an open file is removed?
 @anchor{Removing an Open File}
-@b{What happens when two (or more) processes have a file open and one of
-them removes it?}
 
-You should copy the standard Unix semantics for files.  That is, when
-a file is removed an process which has a file descriptor for that file
-may continue to do operations on that descriptor.  This means that
+You should implement the standard Unix semantics for files.  That is, when
+a file is removed any process which has a file descriptor for that file
+may continue to use that descriptor.  This means that
 they can read and write from the file.  The file will not have a name,
 and no other processes will be able to open it, but it will continue
 to exist until all file descriptors referring to the file are closed
 or the machine shuts down.
 
-@item
-@b{I've discovered that some of my user programs need more than one 4
-kB page of stack space.  What should I do?}
+@item How can I run user programs that need more than 4 kB stack space?
 
 You may modify the stack setup code to allocate more than one page of
-stack space for each process.
-@end enumerate
+stack space for each process.  In the next project, you will implement a
+better solution.
+@end table
 
 @node 80x86 Calling Convention
 @section 80@var{x}86 Calling Convention
 
-What follows is a quick and dirty discussion of the 80@var{x}86
-calling convention.  Some of the basics should be familiar from CS
-107, and if you've already taken CS 143 or EE 182, then you should
-have seen even more of it.  I've omitted some of the complexity, since
-this isn't a class in how function calls work, so don't expect this to
-be exactly correct in full, gory detail.  If you do want all the
-details, you can refer to @bibref{SysV-i386}.
+This section summarizes important points of the convention used for
+normal function calls on 32-bit 80@var{x}86 implementations of Unix.
+Some details are omitted for brevity.  If you do want all the details,
+you can refer to @bibref{SysV-i386}.
 
-Whenever a function call happens, you need to put the arguments on the
-call stack for that function, before the code for that function
-executes, so that the callee has access to those values.  The caller
-has to be responsible for this (be sure you understand why).
-Therefore, when you compile a program, the assembly code emitted will
-have in it, before every function call, a bunch of instructions that
-prepares for the call in whatever manner is conventional for the
-machine you're working on.  This includes saving registers as needed,
-putting stuff on the stack, saving the location to return to somewhere
-(so that when the callee finishes, it knows where the caller code is),
-and some other bookkeeping stuff.  Then you do the jump to the
-callee's code, and it goes along, assuming that the stack and
-registers are prepared in the appropriate manner.  When the callee is
-done, it looks at the return location as saved earlier, and jumps back
-to that location.  The caller may then have to do some cleanup:
-clearing arguments and the return value off the stack, restoring
-registers that were saved before the call, and so on.
+The basic calling convention works like this:
 
-If you think about it, some of these things should remind you of
-context switching.
+@enumerate 1
+@item
+The caller pushes each of the function's arguments on the stack one by
+one, normally using the @code{PUSH} assembly language instruction.
+Arguments are pushed in right-to-left order.
 
-As an aside, in general, function calls are not cheap.  You have to do
-a bunch of memory writes to prepare the stack, you need to save and
-restore registers before and after a function call, you need to write
-the stack pointer, you have a couple of jumps which probably wrecks
-some of your caches.  This is why inlining code can be much faster.
+@item
+The caller pushes the address of its next instruction (the @dfn{return
+address}) on the stack and jumps to the first instruction of the callee.
+A single 80@var{x}86 instruction, @code{CALL}, does both.
 
-@menu
-* Argument Passing to main::    
-@end menu
+@item
+The callee executes.  When it takes control, the stack pointer points to
+the return address, the first argument is just above it, the second
+argument is just above the first argument, and so on.
 
-@node Argument Passing to main
-@subsection Argument Passing to @code{main()}
+@item
+If the callee has a return value, it stores it into register @code{EAX}.
 
-In @func{main}'s case, there is no caller to prepare the stack
-before it runs.  Therefore, the kernel needs to do it.  Fortunately,
-since there's no caller, there are no registers to save, no return
-address to deal with, etc.  The only difficult detail to take care of,
-after loading the code, is putting the arguments to @func{main} on
-the stack.
+@item
+The callee returns by popping the return address from the stack and
+jumping to the location it specifies, using the 80@var{x}86 @code{RET}
+instruction.
 
-(The above is a small lie: most compilers will emit code where main
-isn't strictly speaking the first function.  This isn't an important
-detail.  If you want to look into it more, try disassembling a program
-and looking around a bit.  However, you can just act as if
-@func{main} is the very first function called.)
+@item
+The caller pops the arguments off the stack.
+@end enumerate
 
-Pintos is written for the 80@var{x}86 architecture.  Therefore, we
-need to adhere to the 80@var{x}86 calling convention.  Basically, you
-put all the arguments on the stack and move the stack pointer
-appropriately.  You also need to insert space for the function's
-``return address'': even though the initial function doesn't really
-have a caller, its stack frame must have the same layout as any other
-function's.  The program will assume that the stack has been laid out
-this way when it begins running.
-
-So, what are the arguments to @func{main}? Just two: an @samp{int}
-(@code{argc}) and a @samp{char **} (@code{argv}).  @code{argv} is an
-array of strings, and @code{argc} is the number of strings in that
-array.  However, the hard part isn't these two things.  The hard part
-is getting all the individual strings in the right place.  As we go
-through the procedure, let us consider the following example command:
-@samp{/bin/ls -l foo bar}.
-
-The first thing to do is to break the command line into individual
-strings: @samp{/bin/ls}, @samp{-l}, @samp{foo}, and @samp{bar}.  These
-constitute the arguments of the command, including the program name
-itself (which belongs in @code{argv[0]}).
-
-These individual, null-terminated strings should be placed on the user
-stack.  They may be placed in any order, as you'll see shortly,
-without affecting how main works, but for simplicity let's assume they
-are in reverse order (keeping in mind that the stack grows downward on
-an 80@var{x}86 machine).  As we copy the strings onto the stack, we
-record their (virtual) stack addresses.  These addresses will become
-important when we write the argument vector (two paragraphs down).
-
-After we push all of the strings onto the stack, we adjust the stack
-pointer so that it is word-aligned: that is, we move it down to the
-next 4-byte boundary.  This is required because we will next be
-placing several words of data on the stack, and they must be aligned
-to be read correctly.  In our example, as you'll see below,
-the strings start at address @t{0xffed}.  One word below that would be
-at @t{0xffe9}, so we could in theory put the next word on the stack
-there.  However, since the stack pointer should always be
-word-aligned, we instead leave the stack pointer at @t{0xffe8}.
-
-Once we align the stack pointer, we then push the elements of the
-argument vector, that is, a null pointer, then the addresses of the
-strings @samp{/bin/ls}, @samp{-l}, @samp{foo}, and @samp{bar}) onto
-the stack.  This must be done in reverse order, such that
-@code{argv[0]} is at the lowest virtual address, again because the
-stack is growing downward.  (The null pointer pushed first is because
-@code{argv[argc]} must be a null pointer.)  This is because we are now
-writing the actual array of strings; if we write them in the wrong
-order, then the strings will be in the wrong order in the array.  This
-is also why, strictly speaking, it doesn't matter what order the
-strings themselves are placed on the stack: as long as the pointers
-are in the right order, the strings themselves can really be anywhere.
-After we finish, we note the stack address of the first element of the
-argument vector, which is @code{argv} itself.
-
-Then we push @code{argv} (that is, the address of the first element of
-the @code{argv} array) onto the stack, along with the length of the
-argument vector (@code{argc}, 4 in this example).  This must also be
-done in this order, since @code{argc} is the first argument to
-@func{main} and therefore is on first (smaller address) on the
-stack.  Finally, we push a fake ``return address'' and leave the stack
-pointer to point to its location.
-
-All this may sound very confusing, so here's a picture which will
-hopefully clarify what's going on. This represents the state of the
-stack and the relevant registers right before the beginning of the
-user program (assuming for this example that the stack bottom is
-@t{0xc0000000}):
+Consider a function @func{f} that takes three @code{int} arguments.
+This diagram shows a sample stack frame as seen by the callee at the
+beginning of step 3 above, supposing that @func{f} is invoked as
+@code{f(1, 2, 3)}.  The stack addresses are arbitrary:
 
 @html
 <CENTER>
 @end html
-@multitable {@t{0xbfffffff}} {``return address''} {@t{/bin/ls\0}}
-@item Address @tab Name @tab Data
-@item @t{0xbffffffc} @tab @code{*argv[3]} @tab @samp{bar\0}
-@item @t{0xbffffff8} @tab @code{*argv[2]} @tab @samp{foo\0}
-@item @t{0xbffffff5} @tab @code{*argv[1]} @tab @samp{-l\0}
-@item @t{0xbfffffed} @tab @code{*argv[0]} @tab @samp{/bin/ls\0}
-@item @t{0xbfffffec} @tab word-align @tab @samp{\0}
-@item @t{0xbfffffe8} @tab @code{argv[4]} @tab @t{0}
-@item @t{0xbfffffe4} @tab @code{argv[3]} @tab @t{0xbffffffc}
-@item @t{0xbfffffe0} @tab @code{argv[2]} @tab @t{0xbffffff8}
-@item @t{0xbfffffdc} @tab @code{argv[1]} @tab @t{0xbffffff5}
-@item @t{0xbfffffd8} @tab @code{argv[0]} @tab @t{0xbfffffed}
-@item @t{0xbfffffd4} @tab @code{argv} @tab @t{0xbfffffd8}
-@item @t{0xbfffffd0} @tab @code{argc} @tab 4
-@item @t{0xbfffffcc} @tab ``return address'' @tab 0
+@example
+                             +----------------+
+                  0xbffffe7c |        3       |
+                             +----------------+
+                  0xbffffe78 |        2       |
+                             +----------------+
+                  0xbffffe74 |        1       |
+                             +----------------+
+stack pointer --> 0xbffffe70 | return address |
+                             +----------------+
+@end example
+@html
+</CENTER>
+@end html
+
+@menu
+* Program Startup Details::     
+* System Call Details::         
+@end menu
+
+@node Program Startup Details
+@subsection Program Startup Details
+
+The Pintos C library for user programs designates @func{_start}, in
+@file{lib/user/entry.c}, as the entry point for user programs.  This
+function is a wrapper around @func{main} that calls @func{exit} if
+@func{main} returns:
+
+@example
+void
+_start (int argc, char *argv[]) 
+@{
+  exit (main (argc, argv));
+@}
+@end example
+
+The kernel is responsible for setting up the arguments for the initial
+function on the stack, in accordance with the calling convention
+explained in the preceding section, before it allows the user program to
+begin executing.
+
+Consider the following example command: @samp{/bin/ls -l foo bar}.
+First, the kernel must break the command into words, as @samp{/bin/ls},
+@samp{-l}, @samp{foo}, and @samp{bar}, and place them at the top of the
+stack.  Order doesn't matter, because they will be referenced through
+pointers.
+
+Then, push the address of each string plus a null pointer sentinel, on
+the stack, in right-to-left order.  These are the elements of
+@code{argv}.  The order ensure that @code{argv[0]} is at the lowest
+virtual address.  Word-aligned accesses are faster than unaligned
+accesses, so for best performance round the stack pointer down to a
+multiple of 4 before the first push.
+
+Then, push @code{argv} (the address of @code{argv[0]}) and @code{argc},
+in that order.  Finally, push a fake ``return address'': although the
+entry function will never return, its stack frame must have the same
+structure as any other.
+
+The table below show the state of the stack and the relevant registers
+right before the beginning of the user program, assuming
+@code{PHYS_BASE} is @t{0xc0000000}:
+
+@html
+<CENTER>
+@end html
+@multitable {@t{0xbfffffff}} {return address} {@t{/bin/ls\0}} {@code{void (*) ()}}
+@item Address @tab Name @tab Data @tab Type
+@item @t{0xbffffffc} @tab @code{argv[3][@dots{}]} @tab @samp{bar\0} @tab @code{char[4]}
+@item @t{0xbffffff8} @tab @code{argv[2][@dots{}]} @tab @samp{foo\0} @tab @code{char[4]}
+@item @t{0xbffffff5} @tab @code{argv[1][@dots{}]} @tab @samp{-l\0} @tab @code{char[3]}
+@item @t{0xbfffffed} @tab @code{argv[0][@dots{}]} @tab @samp{/bin/ls\0} @tab @code{char[8]}
+@item @t{0xbfffffec} @tab word-align @tab 0 @tab @code{uint8_t}
+@item @t{0xbfffffe8} @tab @code{argv[4]} @tab @t{0} @tab @code{char *}
+@item @t{0xbfffffe4} @tab @code{argv[3]} @tab @t{0xbffffffc} @tab @code{char *}
+@item @t{0xbfffffe0} @tab @code{argv[2]} @tab @t{0xbffffff8} @tab @code{char *}
+@item @t{0xbfffffdc} @tab @code{argv[1]} @tab @t{0xbffffff5} @tab @code{char *}
+@item @t{0xbfffffd8} @tab @code{argv[0]} @tab @t{0xbfffffed} @tab @code{char *}
+@item @t{0xbfffffd4} @tab @code{argv} @tab @t{0xbfffffd8} @tab @code{char **}
+@item @t{0xbfffffd0} @tab @code{argc} @tab 4 @tab @code{int}
+@item @t{0xbfffffcc} @tab return address @tab 0 @tab @code{void (*) ()}
 @end multitable
 @html
 </CENTER>
@@ -993,8 +1006,7 @@ the user virtual address space, in the page just below virtual address
 
 You may find the non-standard @func{hex_dump} function, declared in
 @file{<stdio.h>}, useful for debugging your argument passing code.
-Here's what it would show in the above example, given that
-@code{PHYS_BASE} is @t{0xc0000000}:
+Here's what it would show in the above example:
 
 @verbatim
 bfffffc0                                      00 00 00 00 |            ....|
@@ -1003,19 +1015,19 @@ bfffffe0  f8 ff ff bf fc ff ff bf-00 00 00 00 00 2f 62 69 |............./bi|
 bffffff0  6e 2f 6c 73 00 2d 6c 00-66 6f 6f 00 62 61 72 00 |n/ls.-l.foo.bar.|
 @end verbatim
 
-@node System Calls
-@section System Calls
+@node System Call Details
+@subsection System Call Details
 
-We have already been dealing with one way that the operating system
+The first project already dealt with one way that the operating system
 can regain control from a user program: interrupts from timers and I/O
 devices.  These are ``external'' interrupts, because they are caused
-by entities outside the CPU.
+by entities outside the CPU (@pxref{External Interrupt Handling}).
 
-The operating system is also called to deal with software exceptions,
-which are events generated in response to the code.  These can be
-errors such as a page fault or division by zero.  However, exceptions
-are also the means by which a user program can request services
-(``system calls'') from the operating system.
+The operating system also deals with software exceptions, which are
+events that occur in program code (@pxref{Internal Interrupt
+Handling}).  These can be errors such as a page fault or division by
+zero.  Exceptions are also the means by which a user program
+can request services (``system calls'') from the operating system.
 
 In the 80@var{x}86 architecture, the @samp{int} instruction is the
 most commonly used means for invoking system calls.  This instruction
@@ -1025,38 +1037,15 @@ system call number and any additional arguments are expected to be
 pushed on the stack in the normal fashion before invoking the
 interrupt.
 
-The normal calling convention pushes function arguments on the stack
-from right to left and the stack grows downward.  Thus, when the
-system call handler @func{syscall_handler} gets control, the system
-call number is in the 32-bit word at the caller's stack pointer, the
-first argument is in the 32-bit word at the next higher address, and
-so on.  The caller's stack pointer is accessible to
+Thus, when the system call handler @func{syscall_handler} gets control,
+the system call number is in the 32-bit word at the caller's stack
+pointer, the first argument is in the 32-bit word at the next higher
+address, and so on.  The caller's stack pointer is accessible to
 @func{syscall_handler} as the @samp{esp} member of the @code{struct
 intr_frame} passed to it.
 
-Here's an example stack frame for calling a system call numbered 10
-with three arguments passed as 1, 2, and 3.  The stack addresses are
-arbitrary:
-
-@html
-<CENTER>
-@end html
-@multitable {@t{0xbffffe7c}} {Value}
-@item Address @tab Value
-@item @t{0xbffffe7c} @tab 3
-@item @t{0xbffffe78} @tab 2
-@item @t{0xbffffe74} @tab 1
-@item @t{0xbffffe70} @tab 10
-@end multitable
-@html
-</CENTER>
-@end html
-
-In this example, the caller's stack pointer would be at
-@t{0xbffffe70}.
-
 The 80@var{x}86 convention for function return values is to place them
-in the @samp{EAX} register.  System calls that return a value can do
+in the @code{EAX} register.  System calls that return a value can do
 so by modifying the @samp{eax} member of @struct{intr_frame}.
 
 You should try to avoid writing large amounts of repetitive code for

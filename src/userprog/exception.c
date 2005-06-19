@@ -33,28 +33,31 @@ exception_init (void)
      e.g. via the INT, INT3, INTO, and BOUND instructions.  Thus,
      we set DPL==3, meaning that user programs are allowed to
      invoke them via these instructions. */
-  intr_register (3, 3, INTR_ON, kill, "#BP Breakpoint Exception");
-  intr_register (4, 3, INTR_ON, kill, "#OF Overflow Exception");
-  intr_register (5, 3, INTR_ON, kill, "#BR BOUND Range Exceeded Exception");
+  intr_register_int (3, 3, INTR_ON, kill, "#BP Breakpoint Exception");
+  intr_register_int (4, 3, INTR_ON, kill, "#OF Overflow Exception");
+  intr_register_int (5, 3, INTR_ON, kill,
+                     "#BR BOUND Range Exceeded Exception");
 
   /* These exceptions have DPL==0, preventing user processes from
      invoking them via the INT instruction.  They can still be
      caused indirectly, e.g. #DE can be caused by dividing by
      0.  */
-  intr_register (0, 0, INTR_ON, kill, "#DE Divide Error");
-  intr_register (1, 0, INTR_ON, kill, "#DB Debug Exception");
-  intr_register (6, 0, INTR_ON, kill, "#UD Invalid Opcode Exception");
-  intr_register (7, 0, INTR_ON, kill, "#NM Device Not Available Exception");
-  intr_register (11, 0, INTR_ON, kill, "#NP Segment Not Present");
-  intr_register (12, 0, INTR_ON, kill, "#SS Stack Fault Exception");
-  intr_register (13, 0, INTR_ON, kill, "#GP General Protection Exception");
-  intr_register (16, 0, INTR_ON, kill, "#MF x87 FPU Floating-Point Error");
-  intr_register (19, 0, INTR_ON, kill, "#XF SIMD Floating-Point Exception");
+  intr_register_int (0, 0, INTR_ON, kill, "#DE Divide Error");
+  intr_register_int (1, 0, INTR_ON, kill, "#DB Debug Exception");
+  intr_register_int (6, 0, INTR_ON, kill, "#UD Invalid Opcode Exception");
+  intr_register_int (7, 0, INTR_ON, kill,
+                     "#NM Device Not Available Exception");
+  intr_register_int (11, 0, INTR_ON, kill, "#NP Segment Not Present");
+  intr_register_int (12, 0, INTR_ON, kill, "#SS Stack Fault Exception");
+  intr_register_int (13, 0, INTR_ON, kill, "#GP General Protection Exception");
+  intr_register_int (16, 0, INTR_ON, kill, "#MF x87 FPU Floating-Point Error");
+  intr_register_int (19, 0, INTR_ON, kill,
+                     "#XF SIMD Floating-Point Exception");
 
   /* Most exceptions can be handled with interrupts turned on.
      We need to disable interrupts for page faults because the
      fault address is stored in CR2 and needs to be preserved. */
-  intr_register (14, 0, INTR_OFF, page_fault, "#PF Page-Fault Exception");
+  intr_register_int (14, 0, INTR_OFF, page_fault, "#PF Page-Fault Exception");
 }
 
 /* Prints exception statistics. */

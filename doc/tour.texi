@@ -67,22 +67,21 @@ chicken-and-egg problem if we don't include the former: our current
 virtual address is roughly @t{0x7c00}, the location where the BIOS
 loaded us, and we can't jump to @t{0xc0007c00} until we turn on the
 page table, but if we turn on the page table without jumping there,
-then we've just pulled the rug out from under ourselves.  At any rate,
-it's necessary.
+then we've just pulled the rug out from under ourselves.
 
 After the page table is initialized, we load the CPU's control
 registers to turn on protected mode and paging, and then we set up the
 segment registers.  We aren't equipped to handle interrupts in
 protected mode yet, so we disable interrupts.
 
-Finally it's time to load the kernel from disk.  We choose a simple,
-although inflexible, method to do this: we program the IDE disk
+Finally it's time to load the kernel from disk.  We use a simple but
+inflexible method to do this: we program the IDE disk
 controller directly.  We assume that the kernel is stored starting
-from the second sector of the first IDE disk (the first sector
-contains the boot loader itself).  We also assume that the BIOS has
+from the second sector of the first IDE disk (the first sector normally
+contains the boot loader).  We also assume that the BIOS has
 already set up the IDE controller for us.  We read
-@code{KERNEL_LOAD_PAGES} 4 kB pages of data from the disk directly
-into virtual memory starting @code{LOADER_KERN_BASE} bytes past
+@code{KERNEL_LOAD_PAGES} pages of data (4 kB per page) from the disk directly
+into virtual memory, starting @code{LOADER_KERN_BASE} bytes past
 @code{LOADER_PHYS_BASE}, which by default means that we load the
 kernel starting 1 MB into physical memory.
 
@@ -92,7 +91,7 @@ arranged that it begins with the assembly module
 @file{threads/start.S}.  This assembly module just calls
 @func{main}, which never returns.
 
-There's one more trick to the loader: the Pintos kernel command line
+There's one more trick: the Pintos kernel command line
 is stored in the boot loader.  The @command{pintos} program actually
 modifies the boot loader on disk each time it runs the kernel, putting
 in whatever command line arguments the user supplies to the kernel,
@@ -110,19 +109,18 @@ encounter in Pintos from here on out.
 When @func{main} starts, the system is in a pretty raw state.  We're
 in protected mode with paging enabled, but hardly anything else is
 ready.  Thus, the @func{main} function consists primarily of calls
-into other Pintos modules' initialization functions.  You should
-notice that these are usually named @func{@var{module}_init}, where
+into other Pintos modules' initialization functions.  
+These are usually named @func{@var{module}_init}, where
 @var{module} is the module's name, @file{@var{module}.c} is the
 module's source code, and @file{@var{module}.h} is the module's
 header.
 
 First we initialize kernel RAM in @func{ram_init}.  The first step
 is to clear out the kernel's so-called ``BSS'' segment.  The BSS is a
-segment that should be initialized to all zeros.  In C, whenever you
+segment that should be initialized to all zeros.  In most C
+implementations, whenever you
 declare a variable outside a function without providing an
-initializer, that variable goes into the BSS.@footnote{This isn't
-actually required by the ANSI C standard, but it is the case with most
-implementations of C on most machines.}  Because it's all zeros, the
+initializer, that variable goes into the BSS.  Because it's all zeros, the
 BSS isn't stored in the image that the loader brought into memory.  We
 just use @func{memset} to zero it out.  The other task of
 @func{ram_init} is to read out the machine's memory size from where
@@ -132,7 +130,7 @@ later use.
 Next, @func{thread_init} initializes the thread system.  We will defer
 full discussion to our discussion of Pintos threads below.  It is
 called so early in initialization because the console, initialized
-just below, tries to use locks and locks in turn require there to be a
+just afterward, tries to use locks, and locks in turn require there to be a
 running thread.
 
 Then we initialize the console so that we can use @func{printf}.
@@ -144,9 +142,10 @@ character to be output.  (We use polling mode until we're ready to set
 up interrupts later.)  Finally we initialize the console device and
 print a startup message to the console.
 
-@func{main} calls @func{argv_init} to parse the kernel command line.
-This entails reading the command line out of the loader and updating
-global variables appropriately.
+@func{main} calls @func{read_command_line} to break the kernel command
+line into arguments, then @func{parse_options} to read any options at
+the beginning of the command line.  (Executing actions specified on the
+command line happens later.)
 
 The next block of functions we call initialize the kernel's memory
 system.  @func{palloc_init} sets up the kernel page allocator, which
@@ -158,34 +157,34 @@ In projects 2 and later, @func{main} also calls @func{tss_init} and
 @func{gdt_init}, but we'll talk about those later.
 
 @func{main} calls @func{random_init} to initialize the kernel random
-number generator.  @func{argv_init} might already have done this (if
-the user specified @option{-rs} on the @command{pintos} command line)
-but calling it a second time is harmless and has no effect.
+number generator.  If the user specified @option{-rs} on the
+@command{pintos} command line, @func{parse_options} has already done
+this, but calling it a second time is harmless and has no effect.
 
 We initialize the interrupt system in the next set of calls.
 @func{intr_init} sets up the CPU's @dfn{interrupt descriptor table}
-(IDT) to ready it for interrupt handling, then @func{timer_init} and
-@func{kbd_init} prepare us to handle timer interrupts and keyboard
-interrupts, respectively.  In projects 2 and later, we also prepare to
-handle interrupts caused by user programs using @func{exception_init}
-and @func{syscall_init}.
+(IDT) to ready it for interrupt handling (@pxref{Interrupt
+Infrastructure}), then @func{timer_init} and @func{kbd_init} prepare for
+handling timer interrupts and keyboard interrupts, respectively.  In
+projects 2 and later, we also prepare to handle interrupts caused by
+user programs using @func{exception_init} and @func{syscall_init}.
 
 Now that interrupts are set up, we can start preemptively scheduling
 threads with @func{thread_start}, which also enables interrupts.
-Interrupt-driven serial port I/O is also possible now, so we use
+With interrupts enabled, interrupt-driven serial port I/O becomes
+possible, so we use
 @func{serial_init_queue} to switch to that mode.  Finally,
 @func{timer_calibrate} calibrates the timer for accurate short delays.
 
-If the filesystem is compiled in, as it will be in project 2 and
-later, we now initialize the disks with @func{disk_init}, then the
-filesystem with @func{filesys_init}, and run any operations that were
-requested on the kernel command line with @func{fsutil_run}.
+If the file system is compiled in, as it will starting in project 2, we
+now initialize the disks with @func{disk_init}, then the
+file system with @func{filesys_init}.
 
 Boot is complete, so we print a message.
 
-For project 1, now we execute @func{test}, which runs whatever test is
-currently compiled into the kernel.  For later projects, we will
-instead run a user program and wait for it to complete.
+Function @func{run_actions} now parses and executes actions specified on
+the kernel command line, such as @command{run} to run a test (in project
+1) or a user program (in later projects).
 
 Finally, if @option{-q} was specified on the kernel command line, we
 call @func{power_off} to terminate the machine simulator.  Otherwise,
@@ -193,91 +192,34 @@ call @func{power_off} to terminate the machine simulator.  Otherwise,
 threads to continue running.
 
 @node Threads Tour
-@section Threads
+@section Threads Project
 
 @menu
-* struct thread::               
-* Thread Functions::            
-* Thread Switching::            
+* Thread Support::              
 * Synchronization::             
 * Interrupt Handling::          
 * Memory Allocation::           
 @end menu
 
+@node Thread Support
+@subsection Thread Support
+
+@menu
+* struct thread::               
+* Thread Functions::            
+* Thread Switching::            
+@end menu
+
 @node struct thread
-@subsection @code{struct thread}
+@subsubsection @code{struct thread}
 
 The main Pintos data structure for threads is @struct{thread},
-declared in @file{threads/thread.h}.  @struct{thread} has these
-members with the given type:
+declared in @file{threads/thread.h}.
 
-@table @code
-@item tid_t tid;
-The thread's thread identifier or @dfn{tid}.  Every thread must have a
-tid that is unique over the entire lifetime of the kernel.  By
-default, @code{tid_t} is a @code{typedef} for @code{int} and each new
-thread receives the numerically next higher tid, starting from 1 for
-the initial process.  You can change the type and the numbering scheme
-if you like.
-
-@item enum thread_status status;
-The thread's state, one of these:
-
-@table @code
-@item THREAD_RUNNING
-The thread is running.  Exactly one thread is running at a given time.
-@func{thread_current} returns the running thread.
-
-@item THREAD_READY
-The thread is ready to run, but it's not running right now.  The
-thread could be selected to run the next time the scheduler is
-invoked.  Ready threads are kept in a doubly linked list called
-@code{ready_list}.
-
-@item THREAD_BLOCKED
-The thread is waiting for something, e.g.@: a lock to become
-available, an interrupt to be invoked.  The thread won't be scheduled
-again until it transitions to the @code{THREAD_READY} state with a
-call to @func{thread_unblock}.
-
-@item THREAD_DYING
-The thread will be destroyed by the scheduler after switching to the
-next thread.
-@end table
-
-@item char name[16];
-The thread's name as a string, or at least the first few characters of
-it.
-
-@item uint8_t *stack;
-Every thread has its own stack to keep track of its state.  When the
-thread is running, the CPU's stack pointer register tracks the top of
-the stack and this member is unused.  But when the CPU switches to
-another thread, this member saves the thread's stack pointer.  No
-other members are needed to save the thread's registers, because the
-other registers that must be saved are saved on the stack.
-
-@item int priority;
-A thread priority, ranging from the lowest possible priority
-@code{PRI_MIN} (0) to the highest possible priority @code{PRI_MAX}
-(59).  Pintos as provided ignores thread priorities, but you will
-implement priority scheduling in problem 1-2 (@pxref{Problem 1-2
-Priority Scheduling}).
-
-@item struct list_elem elem;
-A ``list element'' used to put the thread into doubly linked lists,
-either the list of threads ready to run or a list of threads waiting
-on a semaphore.  Take a look at @file{lib/kernel/list.h} for
-information on how to use the Pintos doubly linked list ADT.
-
-@item uint32_t *pagedir;
-Only present in project 2 and later.
-
-@item unsigned magic;
-Always set to @code{THREAD_MAGIC}, which is just a random number
-defined in @file{threads/thread.c}, and used to detect stack overflow.
-See below for more information.
-@end table
+@deftp {Structure} {@struct{thread}}
+Represents a thread or a user process.  In the projects, you will have
+to add your own members to @struct{thread}.  You may also change or
+delete the definitions of existing members.
 
 Every @struct{thread} occupies the beginning of its own page of
 memory.  The rest of the page is used for the thread's stack, which
@@ -309,26 +251,105 @@ grows downward from the end of the page.  It looks like this:
 @end group
 @end example
 
-The upshot of this is twofold.  First, @struct{thread} must not be
-allowed to grow too big.  If it does, then there will not be enough
-room for the kernel stack.  Our base @struct{thread} is only a few
-bytes in size.  It probably should stay well under 1 kB.
+This has two consequences.  First, @struct{thread} must not be allowed
+to grow too big.  If it does, then there will not be enough room for the
+kernel stack.  The base @struct{thread} is only a few bytes in size.  It
+probably should stay well under 1 kB.
 
-Second, kernel stacks must not be allowed to grow too large.  If a
-stack overflows, it will corrupt the thread state.  Thus, kernel
-functions should not allocate large structures or arrays as non-static
-local variables.  Use dynamic allocation with @func{malloc} or
-@func{palloc_get_page} instead.
+Second, kernel stacks must not be allowed to grow too large.  If a stack
+overflows, it will corrupt the thread state.  Thus, kernel functions
+should not allocate large structures or arrays as non-static local
+variables.  Use dynamic allocation with @func{malloc} or
+@func{palloc_get_page} instead (@pxref{Memory Allocation}).
+@end deftp
 
-This brings us to the purpose of @struct{thread}'s @code{magic}
-member.  If a thread's stack does overflow, then @code{magic} will be
-the first member of @struct{thread} to be overwritten, because it is
-closest to the kernel stack.  Thus, some of the thread functions
-(notably @func{thread_current}) check that @code{magic} has the proper
-value.
+@deftypecv {Member} {@struct{thread}} {tid_t} tid
+The thread's thread identifier or @dfn{tid}.  Every thread must have a
+tid that is unique over the entire lifetime of the kernel.  By
+default, @code{tid_t} is a @code{typedef} for @code{int} and each new
+thread receives the numerically next higher tid, starting from 1 for
+the initial process.  You can change the type and the numbering scheme
+if you like.
+@end deftypecv
+
+@deftypecv {Member} {@struct{thread}} {enum thread_status} status
+The thread's state, one of the following:
+
+@defvr {Thread State} @code{THREAD_RUNNING}
+The thread is running.  Exactly one thread is running at a given time.
+@func{thread_current} returns the running thread.
+@end defvr
+
+@defvr {Thread State} @code{THREAD_READY}
+The thread is ready to run, but it's not running right now.  The
+thread could be selected to run the next time the scheduler is
+invoked.  Ready threads are kept in a doubly linked list called
+@code{ready_list}.
+@end defvr
+
+@defvr {Thread State} @code{THREAD_BLOCKED}
+The thread is waiting for something, e.g.@: a lock to become
+available, an interrupt to be invoked.  The thread won't be scheduled
+again until it transitions to the @code{THREAD_READY} state with a
+call to @func{thread_unblock}.
+@end defvr
+
+@defvr {Thread State} @code{THREAD_DYING}
+The thread will be destroyed by the scheduler after switching to the
+next thread.
+@end defvr
+@end deftypecv
+
+@deftypecv {Member} {@struct{thread}} {char} name[16]
+The thread's name as a string, or at least the first few characters of
+it.
+@end deftypecv
+
+@deftypecv {Member} {@struct{thread}} {uint8_t *} stack
+Every thread has its own stack to keep track of its state.  When the
+thread is running, the CPU's stack pointer register tracks the top of
+the stack and this member is unused.  But when the CPU switches to
+another thread, this member saves the thread's stack pointer.  No
+other members are needed to save the thread's registers, because the
+other registers that must be saved are saved on the stack.
+
+When an interrupt occurs, whether in the kernel or a user program, an
+@struct{intr_frame} is pushed onto the stack.  When the interrupt occurs
+in a user program, the @struct{intr_frame} is always at the very top of
+the page.  @xref{Interrupt Handling}, for more information.
+@end deftypecv
+
+@deftypecv {Member} {@struct{thread}} {int} priority
+A thread priority, ranging from @code{PRI_MIN} (0) to @code{PRI_MAX}
+(63).  Lower numbers correspond to @emph{higher} priorities, so that
+priority 0 is the highest priority and priority 63 is the lowest.
+Pintos as provided ignores thread priorities, but you will implement
+priority scheduling in project 1 (@pxref{Priority Scheduling}).
+@end deftypecv
+
+@deftypecv {Member} {@struct{thread}} {@struct{list_elem}} elem
+A ``list element'' used to put the thread into doubly linked lists,
+either the list of threads ready to run or a list of threads waiting
+on a semaphore.  Take a look at @file{lib/kernel/list.h} for
+information on how to use Pintos doubly linked lists.
+@end deftypecv
+
+@deftypecv {Member} {@struct{thread}} {uint32_t *} pagedir
+Only present in project 2 and later.
+@end deftypecv
+
+@deftypecv {Member} {@struct{thread}} {unsigned} magic
+Always set to @code{THREAD_MAGIC}, which is just a random number defined
+in @file{threads/thread.c}, and used to detect stack overflow.
+@func{thread_current} checks that the @code{magic} member of the running
+thread's @struct{thread} is set to @code{THREAD_MAGIC}.  Stack overflow
+will normally change this value, triggering the assertion.  For greatest
+benefit, as you add members to @struct{thread}, leave @code{magic} as
+the final member.
+@end deftypecv
 
 @node Thread Functions
-@subsection Thread Functions
+@subsubsection Thread Functions
 
 @file{threads/thread.c} implements several public functions for thread
 support.  Let's take a look at the most useful:
@@ -336,8 +357,11 @@ support.  Let's take a look at the most useful:
 @deftypefun void thread_init (void)
 Called by @func{main} to initialize the thread system.  Its main
 purpose is to create a @struct{thread} for Pintos's initial thread.
-This is possible because the Pintos loader sets up the initial
-thread's stack at the end of a page.  Before @func{thread_init} runs,
+This is possible because the Pintos loader puts the initial
+thread's stack at the top of a page, in the same position as any other
+Pintos thread.
+
+Before @func{thread_init} runs,
 @func{thread_current} will fail because the running thread's
 @code{magic} value is incorrect.  Lots of functions call
 @func{thread_current} directly or indirectly, including
@@ -348,9 +372,18 @@ called early in Pintos initialization.
 @deftypefun void thread_start (void)
 Called by @func{main} to start the scheduler.  Creates the idle
 thread, that is, the thread that is scheduled when no other thread is
-ready.  Then enables interrupts, which enables the scheduler because
-processes are rescheduled on return from the timer interrupt, using
+ready.  Then enables interrupts, which as a side effect enables the
+scheduler because the scheduler runs on return from the timer interrupt, using
 @func{intr_yield_on_return} (@pxref{External Interrupt Handling}).
+@end deftypefun
+
+@deftypefun void thread_tick (void)
+Called by the timer interrupt at each timer tick.  It keeps track of
+thread statistics and triggers the scheduler when a time slice expires.
+@end deftypefun
+
+@deftypefun void thread_print_stats (void)
+Called during Pintos shutdown to print thread statistics.
 @end deftypefun
 
 @deftypefun void thread_create (const char *@var{name}, int @var{priority}, thread_func *@var{func}, void *@var{aux})
@@ -358,35 +391,51 @@ Creates and starts a new thread named @var{name} with the given
 @var{priority}, returning the new thread's tid.  The thread executes
 @var{func}, passing @var{aux} as the function's single argument.
 
-@func{thread_create} works by allocating a page for the thread's
-@struct{thread} and stack and initializing its members, then setting
-up a set of fake stack frames for it (we'll talk more about this
-later).  The thread was initialized in the blocked state, so the final
-action before returning is to unblock it, allowing the new thread to
+@func{thread_create} allocates a page for the thread's
+@struct{thread} and stack and initializes its members, then it sets
+up a set of fake stack frames for it (more about this
+later).  The thread is initialized in the blocked state, so the final
+action before returning is to unblock it, which allows the new thread to
 be scheduled.
 @end deftypefun
 
+@deftp {Type} {void thread_func (void *@var{aux})}
+This is the type of a thread function.  Its @var{aux} argument is the
+value passed to @func{thread_create}.
+@end deftp
+
 @deftypefun void thread_block (void)
 Transitions the running thread from the running state to the blocked
-state.  This thread will not run again until @func{thread_unblock} is
-called on it, so you'd better have some way arranged for that to
-happen.
+state.  The thread will not run again until @func{thread_unblock} is
+called on it, so you'd better have some way arranged for that to happen.
+Because @func{thread_block} is so low-level, you should prefer to use
+one of the synchronization primitives instead (@pxref{Synchronization}).
 @end deftypefun
 
 @deftypefun void thread_unblock (struct thread *@var{thread})
 Transitions @var{thread}, which must be in the blocked state, to the
-ready state, allowing it to continue to run.  This is called when the
-event that the thread is waiting for happens, such as the lock that
-the thread is waiting on becoming available.
+ready state, allowing it to resume running.  This is called when the
+event that the thread is waiting for occurs, e.g.@: when the lock that
+the thread is waiting on becomes available.
 @end deftypefun
 
-@deftypefun struct thread *thread_current (void)
+@deftypefun {struct thread *} thread_current (void)
 Returns the running thread.
 @end deftypefun
 
-@deftypefun void thread_exit (void) NO_RETURN
-Causes the current thread to exit.  Never returns (hence
-@code{NO_RETURN}: @pxref{UNUSED NO_RETURN NO_INLINE PRINTF_FORMAT}).
+@deftypefun {tid_t} thread_tid (void)
+Returns the running thread's thread id.  Equivalent to
+@code{thread_current ()->tid}.
+@end deftypefun
+
+@deftypefun {const char *} thread_name (void)
+Returns the running thread's name.  Equivalent to @code{thread_current
+()->name}.
+@end deftypefun
+
+@deftypefun void thread_exit (void) @code{NO_RETURN}
+Causes the current thread to exit.  Never returns, hence
+@code{NO_RETURN} (@pxref{Function and Parameter Attributes}).
 @end deftypefun
 
 @deftypefun void thread_yield (void)
@@ -396,37 +445,49 @@ function to keep this thread from running for any particular length of
 time.
 @end deftypefun
 
+@deftypefun int thread_get_priority (void)
+@deftypefunx void thread_set_priority (int @var{new_priority})
+Skeleton to set and get thread priority.  @xref{Priority Scheduling}.
+@end deftypefun
+
+@deftypefun int thread_get_nice (void)
+@deftypefunx void thread_set_nice (int @var{new_nice})
+@deftypefunx int thread_get_recent_cpu (void)
+@deftypefunx int thread_get_load_avg (void)
+Skeletons for the advanced scheduler.  @xref{4.4BSD Scheduler}.
+@end deftypefun
+
 @node Thread Switching
-@subsection Thread Switching
+@subsubsection Thread Switching
 
 @func{schedule} is the function responsible for switching threads.  It
 is internal to @file{threads/thread.c} and called only by the three
 public thread functions that need to switch threads:
 @func{thread_block}, @func{thread_exit}, and @func{thread_yield}.
-Before these functions call @func{schedule}, they all disable
+Before any of these functions call @func{schedule}, they disable
 interrupts (or ensure that they are already disabled) and then change
 the running thread's state to something other than running.
 
 The actual @func{schedule} implementation is simple.  It records the
 current thread in local variable @var{cur}, determines the next thread
 to run as local variable @var{next} (by calling
-@func{next_thread_to_run}, and then calls @func{switch_threads} to do
+@func{next_thread_to_run}), and then calls @func{switch_threads} to do
 the actual thread switch.  The thread we switched to was also running
 inside @func{switch_threads}, as are all the threads not currently
 running in Pintos, so the new thread now returns out of
 @func{switch_threads}, returning the previously running thread.
 
 @func{switch_threads} is an assembly language routine in
-@file{threads/switch.S}.  It saves registers on the stack, stores the
-CPU's current stack pointer into the current @struct{thread}'s @code{stack}
+@file{threads/switch.S}.  It saves registers on the stack, saves the
+CPU's current stack pointer in the current @struct{thread}'s @code{stack}
 member, restores the new thread's @code{stack} into the CPU's stack
 pointer, restores registers from the stack, and returns.
 
 The rest of the scheduler is implemented as @func{schedule_tail}.  It
 marks the new thread as running.  If the thread we just switched from
 is in the dying state, then it also frees the page that contained the
-dying thread's @struct{thread} and stack, which couldn't be freed
-before the thread switch because the switch needed to use it.
+dying thread's @struct{thread} and stack.  These couldn't be freed
+prior to the thread switch because the switch needed to use it.
 
 Running a thread for the first time is a special case.  When
 @func{thread_create} creates a new thread, it goes through a fair
@@ -441,6 +502,7 @@ in the new thread's stack:
 The topmost fake stack frame is for @func{switch_threads}, represented
 by @struct{switch_threads_frame}.  The important part of this frame is
 its @code{eip} member, the return address.  We point @code{eip} to
+@func{switch_entry}, indicating it to be the function that called
 @func{switch_entry}.
 
 @item
@@ -465,9 +527,8 @@ interrupts and calls the thread's function (the function passed to
 @node Synchronization
 @subsection Synchronization
 
-Situations often arise in threaded programs in which threads want to
-share resources.  If resource sharing is not handled in a careful,
-controlled fashion, then threads can end up making a big mess.
+If sharing of resources between threads is not handled in a careful,
+controlled fashion, then the result is usually a big mess.
 This is especially the case in operating system kernels, where
 faulty sharing can crash the entire machine.  Pintos provides several
 synchronization primitives to help out.
@@ -477,6 +538,7 @@ synchronization primitives to help out.
 * Semaphores::                  
 * Locks::                       
 * Condition Variables::         
+* Memory Barriers::             
 @end menu
 
 @node Disabling Interrupts
@@ -494,13 +556,16 @@ Incidentally, this means that Pintos is a ``preemptible kernel,'' that
 is, kernel threads can be preempted at any time.  Traditional Unix
 systems are ``nonpreemptible,'' that is, kernel threads can only be
 preempted at points where they explicitly call into the scheduler.
-User programs can be preempted at any time in both models.  As you
+(User programs can be preempted at any time in both models.)  As you
 might imagine, preemptible kernels require more explicit
 synchronization.
 
 You should have little need to set the interrupt state directly.  Most
 of the time you should use the other synchronization primitives
-described in the following sections.
+described in the following sections.  The main reason to disable
+interrupts is to synchronize kernel threads with external interrupt
+handlers, which cannot sleep and thus cannot use most other forms of
+synchronization (@pxref{External Interrupt Handling}).
 
 Types and functions for disabling and enabling interrupts are in
 @file{threads/interrupt.h}.
@@ -515,23 +580,27 @@ Returns the current interrupt state.
 @end deftypefun
 
 @deftypefun {enum intr_level} intr_set_level (enum intr_level @var{level})
-Turns interrupts on or off according to @var{level} and returns the
+Turns interrupts on or off according to @var{level}.  Returns the
 previous interrupt state.
 @end deftypefun
 
 @deftypefun {enum intr_level} intr_enable (void)
-Turns interrupts on and returns the previous interrupt state.
+Turns interrupts on.  Returns the previous interrupt state.
 @end deftypefun
 
 @deftypefun {enum intr_level} intr_disable (void)
-Turns interrupts off and returns the previous interrupt state.
+Turns interrupts off.  Returns the previous interrupt state.
 @end deftypefun
 
 @node Semaphores
 @subsubsection Semaphores
 
-A semaphore is a nonnegative integer along with two operators
-for atomically manipulating it, which are:
+Pintos' semaphore type and operations are declared in
+@file{threads/synch.h}.
+
+@deftp {Type} {struct semaphore}
+Represents a @dfn{semaphore}, a nonnegative integer together with two
+operators that manipulate it atomically, which are:
 
 @itemize @bullet
 @item
@@ -543,13 +612,7 @@ decrement it.
 if any).
 @end itemize
 
-A semaphore initialized to 1 is typically used for controlling access
-to a resource.  Before a block of code starts using the resource, it
-``downs'' the semaphore, then after it is done with the resource it
-``ups'' the resource.  In such a case a lock, described below, may be
-more appropriate.
-
-A semaphore initialized to 0 can be useful for waiting for an event
+A semaphore initialized to 0 may be used to wait for an event
 that will happen exactly once.  For example, suppose thread @var{A}
 starts another thread @var{B} and wants to wait for @var{B} to signal
 that some activity is complete.  @var{A} can create a semaphore
@@ -558,65 +621,81 @@ initialized to 0, pass it to @var{B} as it starts it, and then
 ``ups'' the semaphore.  This works regardless of whether @var{A}
 ``downs'' the semaphore or @var{B} ``ups'' it first.
 
-Pintos declared its semaphore type and operations on them in
-@file{threads/synch.h}.
+A semaphore initialized to 1 is typically used for controlling access
+to a resource.  Before a block of code starts using the resource, it
+``downs'' the semaphore, then after it is done with the resource it
+``ups'' the resource.  In such a case a lock, described below, may be
+more appropriate.
 
-@deftp {Type} {struct semaphore}
-Represents a semaphore.
+Semaphores can also be initialized to values larger than 1.  These are
+rarely used.
 @end deftp
 
-@deftypefun void sema_init (struct semaphore *sema, unsigned value, const char *name)
+@deftypefun void sema_init (struct semaphore *@var{sema}, unsigned @var{value})
 Initializes @var{sema} as a new semaphore with the given initial
-@var{value}.  Gives @var{sema} the specified @var{name} for use in
-debugging.
+@var{value}.
 @end deftypefun
 
 @deftypefun void sema_down (struct semaphore *@var{sema})
-Executes the ``down'' or ``P'' operation on the semaphore, waiting for
+Executes the ``down'' or ``P'' operation on @var{sema}, waiting for
 its value to become positive and then decrementing it by one.
 @end deftypefun
 
+@deftypefun bool sema_try_down (struct semaphore *@var{sema})
+Tries to execute the ``down'' or ``P'' operation on @var{sema},
+without waiting.  Returns true if @var{sema} had a positive value
+that was successfully decremented, or false if it was already
+zero and thus could not be decremented.  Calling this function in a
+tight loop wastes CPU time (use @func{sema_down} instead, or find a
+different approach).
+@end deftypefun
+
 @deftypefun void sema_up (struct semaphore *@var{sema})
-Increments @var{sema}'s value.  If any threads are waiting on
+Executes the ``up'' or ``V'' operation on @var{sema},
+incrementing its value.  If any threads are waiting on
 @var{sema}, wakes one of them up.
 @end deftypefun
 
-Semaphores are internally built out of interrupt disabling
-(@pxref{Disabling Interrupts}), thread blocking and unblocking
-(@func{thread_block} and @func{thread_unblock}).  Semaphores maintain
-a doubly linked list of waiting threads using the linked list
+Semaphores are internally built out of disabling interrupt
+(@pxref{Disabling Interrupts}) and thread blocking and unblocking
+(@func{thread_block} and @func{thread_unblock}).  Each semaphore maintains
+a list of waiting threads, using the linked list
 implementation in @file{lib/kernel/list.c}.
 
 @node Locks
 @subsubsection Locks
 
-A lock is a specialization of a semaphore (@pxref{Semaphores}) with an
-initial value of 1.  The difference between a lock and such a
-semaphore is twofold.  First, a semaphore can have a value greater
-than 1, but a lock can only be owned by a single thread at a time.
-Second, a semaphore does not have an owner, meaning that one thread
-can ``down'' the semaphore and then another one ``up'' it, but with a
-lock a single thread must both acquire and release it.  When these
-restrictions prove onerous, it's a good sign that a semaphore should
-be used, instead of a lock.
-
-Locks in Pintos are not ``recursive,'' that is, it is an error for the
-thread currently holding a lock to try to acquire that lock.
-
 Lock types and functions are declared in @file{threads/synch.h}.
 
 @deftp {Type} {struct lock}
-Represents a lock.
+Represents a @dfn{lock}, a specialized semaphore with an initial value
+of 1 (@pxref{Semaphores}).  The difference between a lock and such a
+semaphore is twofold.  First, a semaphore does not have an owner,
+meaning that one thread can ``down'' the semaphore and then another one
+``up'' it, but a single thread must both acquire and release a lock.
+Second, a semaphore can have a value greater than 1, but a lock can only
+be owned by a single thread at a time.  If these restrictions prove
+onerous, it's a good sign that a semaphore should be used, instead of a
+lock.
+
+Locks in Pintos are not ``recursive,'' that is, it is an error for the
+thread currently holding a lock to try to acquire that lock.
 @end deftp
 
-@deftypefun void lock_init (struct lock *@var{lock}, const char *@var{name})
-Initializes @var{lock} as a new lock and gives it the specified
-@var{name} for use in debugging.
+@deftypefun void lock_init (struct lock *@var{lock})
+Initializes @var{lock} as a new lock.
 @end deftypefun
 
 @deftypefun void lock_acquire (struct lock *@var{lock})
 Acquires @var{lock} for use by the current thread, first waiting for
 any current owner to release it if necessary.
+@end deftypefun
+
+@deftypefun bool lock_try_acquire (struct lock *@var{lock})
+Tries to acquire @var{lock} for use by the current thread, without
+waiting.  Returns true if successful, false if the lock is already
+owned.  Calling this function in a tight loop is a bad idea because it
+wastes CPU time (use @func{lock_acquire} instead).
 @end deftypefun
 
 @deftypefun void lock_release (struct lock *@var{lock})
@@ -631,7 +710,12 @@ false otherwise.
 @node Condition Variables
 @subsubsection Condition Variables
 
-A condition variable allows one piece of code to signal a condition
+Condition variable types and functions are declared in
+@file{threads/synch.h}.
+
+@deftp {Type} {struct condition}
+Represents a condition variable, which allows one piece of code to
+signal a condition
 and cooperating code to receive the signal and act upon it.  Each
 condition variable is associated with a lock.  A given condition
 variable is associated with only a single lock, but one lock may be
@@ -639,14 +723,46 @@ associated with any number of condition variables.  A set of condition
 variables taken together with their lock is called a ``monitor.''
 
 A thread that owns the monitor lock is said to be ``in the monitor.''
-The thread in the monitor has control over all the data protected with
+The thread in the monitor has control over all the data protected by
 the lock.  It may freely examine or modify this data.  If it discovers
 that it needs to wait for some condition to become true, then it
 ``waits'' on the associated condition, which releases the lock and
-waits for the condition to be signaled.  If it, on the other hand, has
+waits for the condition to be signaled.  If, on the other hand, it has
 caused one of these conditions to become true, it ``signals'' the
 condition to wake up one waiter, or ``broadcasts'' the condition to
 wake all of them.
+
+Pintos monitors are ``Mesa'' style, not
+``Hoare'' style.  That is, sending and receiving a signal are not an
+atomic operation.  Thus, typically the caller must recheck the
+condition after the wait completes and, if necessary, wait again.
+@end deftp
+
+@deftypefun void cond_init (struct condition *@var{cond})
+Initializes @var{cond} as a new condition variable.
+@end deftypefun
+
+@deftypefun void cond_wait (struct condition *@var{cond})
+Atomically releases @var{lock} (the monitor lock) and waits for
+@var{cond} to be signaled by some other piece of code.  After
+@var{cond} is signaled, reacquires @var{lock} before returning.
+@var{lock} must be held before calling this function.
+@end deftypefun
+
+@deftypefun void cond_signal (struct condition *@var{cond}, struct lock *@var{lock})
+If any threads are waiting on @var{cond} (protected by monitor lock
+@var{lock}), then this function wakes up one of them.  If no threads are
+waiting, returns without performing any action.
+@var{lock} must be held before calling this function.
+@end deftypefun
+
+@deftypefun void cond_broadcast (struct condition *@var{cond}, struct lock *@var{lock})
+Wakes up all threads, if any, waiting on @var{cond} (protected by
+monitor lock @var{lock}).  @var{lock} must be held before calling this
+function.
+@end deftypefun
+
+@subsubheading Monitor Example
 
 The classical example of a monitor is handling a buffer into which one
 ``producer'' thread writes characters and out of which a second
@@ -678,7 +794,7 @@ void put (char ch) @{
 char get (void) @{
   char ch;
   lock_acquire (&lock);
-  while (n == 0)                  /* @r{Can't read from @var{buf} as long as it's empty.} */
+  while (n == 0)                  /* @r{Can't read @var{buf} as long as it's empty.} */
     cond_wait (&not_empty, &lock);
   ch = buf[tail++ % BUF_SIZE];    /* @r{Get @var{ch} from @var{buf}.} */
   n--;
@@ -687,41 +803,96 @@ char get (void) @{
 @}
 @end example
 
-As the code above illustrates, Pintos monitors are ``Mesa'' style, not
-``Hoare'' style, that is, sending and receiving a signal are not an
-atomic operation.  Thus, typically the caller must recheck the
-condition after the wait completes and, if necessary, wait again.
+@node Memory Barriers
+@subsubsection Memory Barriers
 
-Condition variable types and functions are declared in
-@file{threads/synch.h}.
+Suppose we add a ``feature'' that, whenever a timer interrupt
+occurs, the character in global variable @code{timer_put_char} is
+printed on the console, but only if global Boolean variable
+@code{timer_do_put} is true.
 
-@deftp {Type} {struct condition}
-Represents a condition variable.
-@end deftp
+If interrupts are enabled, this code for setting up @samp{x} to be
+printed is clearly incorrect, because the timer interrupt could intervene
+between the two assignments:
 
-@deftypefun void cond_init (struct condition *@var{cond}, const char *@var{name})
-Initializes @var{cond} as a new condition variable and gives it the
-specified @var{name} for use in debugging.
-@end deftypefun
+@example
+timer_do_put = true;            /* INCORRECT CODE */
+timer_put_char = 'x';
+@end example
 
-@deftypefun void cond_wait (struct condition *@var{cond}, struct lock *@var{name})
-Atomically releases @var{lock} (the monitor lock) and waits for
-@var{cond} to be signaled by some other piece of code.  After
-@var{cond} is signaled, @var{lock} is reacquired before returning.
-@var{lock} must be held before calling this function.
-@end deftypefun
+It might not be as obvious that the following code is just as
+incorrect:
 
-@deftypefun void cond_signal (struct condition *@var{cond}, struct lock *@var{lock})
-If any threads are waiting on @var{cond} (protected by monitor lock
-@var{lock}), then this function signals one of them to wake up from
-its wait.  @var{lock} must be held before calling this function.
-@end deftypefun
+@example
+timer_put_char = 'x';           /* INCORRECT CODE */
+timer_do_put = true;
+@end example
 
-@deftypefun void cond_broadcast (struct condition *@var{cond}, struct lock *@var{lock})
-Wakes up all threads, if any, waiting on @var{cond} (protected by
-monitor lock @var{lock}).  @var{lock} must be held before calling this
-function.
-@end deftypefun
+The reason this second example might be a problem is that the compiler
+is, in general, free to reorder operations when it doesn't have a
+visible reason to keep them in the same order.  In this case, the
+compiler doesn't know that the order of assignments is important, so its
+optimization pass is permitted to exchange their order.
+There's no telling whether it will actually do this, and it is possible
+that passing the compiler different optimization flags or changing
+compiler versions will produce different behavior.
+
+The following is @emph{not} a solution, because locks neither prevent
+interrupts nor prevent the compiler from reordering the code within the
+region where the lock is held:
+
+@example
+lock_acquire (&timer_lock);     /* INCORRECT CODE */
+timer_put_char = 'x';
+timer_do_put = true;
+lock_release (&timer_lock);
+@end example
+
+Fortunately, real solutions do exist.  One possibility is to
+disable interrupts around the assignments.  This does not prevent
+reordering, but it makes the assignments atomic as observed by the
+interrupt handler.  It also has the extra runtime cost of disabling and
+re-enabling interrupts:
+
+@example
+enum intr_level old_level = intr_disable ();
+timer_put_char = 'x';
+timer_do_put = true;
+intr_set_level (old_level);
+@end example
+
+A second possibility is to mark the declarations of
+@code{timer_put_char} and @code{timer_do_put} as @samp{volatile}.  This
+keyword tells the compiler that the variables are externally observable
+and allows it less latitude for optimization.  However, the semantics of
+@samp{volatile} are not well-defined, so it is not a good general
+solution.
+
+Usually, the best solution is to use a compiler feature called a
+@dfn{memory barrier}, a special statement that prevents the compiler
+from reordering memory operations across the barrier.  In Pintos,
+@file{threads/synch.h} defines the @code{barrier()} macro as a memory
+barrier.  Here's how we would use a memory barrier to fix this code:
+
+@example
+timer_put_char = 'x';
+barrier ();
+timer_do_put = true;
+@end example
+
+The compiler also treats invocation of any function defined externally,
+that is, in another source file, as a limited form of a memory barrier.
+Specifically, the compiler assumes that any externally defined function
+may access any statically or dynamically allocated data and any local
+variable whose address is taken.  This often means that explicit
+barriers can be omitted, and, indeed, this is why the base Pintos code
+does not need any barriers.
+
+A function defined in the same source file, or in a header included by
+the source file, cannot be relied upon as a memory barrier.
+This applies even to invocation of a function before its
+definition, because the compiler may read and parse the entire source
+file before performing optimization.
 
 @node Interrupt Handling
 @subsection Interrupt Handling
@@ -735,9 +906,9 @@ For our purposes, we classify interrupts into two broad categories:
 @dfn{External interrupts}, that is, interrupts originating outside the
 CPU.  These interrupts come from hardware devices such as the system
 timer, keyboard, serial ports, and disks.  External interrupts are
-@dfn{asynchronous}, meaning that they don't occur in a fashion
-synchronized with anything going on in the CPU.  External interrupts
-are what @func{intr_disable} and related functions can arrange to
+@dfn{asynchronous}, meaning that their delivery is not
+synchronized with normal CPU activities.  External interrupts
+are what @func{intr_disable} and related functions
 postpone (@pxref{Disabling Interrupts}).
 
 @item
@@ -753,10 +924,9 @@ disable internal interrupts.
 
 Because the CPU treats all interrupts largely the same way, regardless
 of source, Pintos uses the same infrastructure for both internal and
-external interrupts, up to a point.  The next section describes this
-common infrastructure.  But external and internal interrupts are
-actually quite different, so we also follow up that section with one
-specific to each category.
+external interrupts, to a point.  The following section describes this
+common infrastructure, and sections after that give the specifics of
+external and internal interrupts.
 
 If you haven't already read chapter 3 in @bibref{IA32-v1}, it is
 recommended that you do so now.  You might also want to skim chapter 5
@@ -786,13 +956,13 @@ hexadecimal.  Because the CPU doesn't give
 us any other way to find out the interrupt number, this entry point
 pushes the interrupt number on the stack.  Then it jumps to
 @func{intr_entry}, which pushes all the registers that the processor
-didn't save for us, and then calls @func{intr_handler}, which
+didn't already save for us, and then calls @func{intr_handler}, which
 brings us back into C in @file{threads/interrupt.c}.
 
 The main job of @func{intr_handler} is to call any function that has
-been registered for handling the particular interrupt.  (If there's no
-function registered, it dumps some information to the console and
-panics the kernel.)  It does some extra processing for external
+been registered for handling the particular interrupt.  (If no
+function is registered, it dumps some information to the console and
+panics.)  It does some extra processing for external
 interrupts that we'll discuss later.
 
 When @func{intr_handler} returns, the assembly code in
@@ -802,68 +972,54 @@ earlier and directs the CPU to return from the interrupt.
 A few types and functions apply to both internal and external
 interrupts.
 
-@deftypefun void intr_register (uint8_t @var{vec}, int @var{dpl}, enum intr_level @var{level}, intr_handler_func *@var{func}, const char *@var{name})
-Registers @var{func} to be called when the interrupt numbered
-@var{vec} is triggered.  Names the interrupt @var{name} for debugging
-purposes.
-
-If @var{level} is @code{INTR_OFF} then handling of further interrupts
-will be disabled while the interrupt is being processed.  If @var{vec}
-denotes an external interrupt, then @var{level} must be
-@code{INTR_OFF}.  Otherwise, interrupts should normally be turned on
-during the handling of an internal interrupt.
-
-For internal interrupts, @var{dpl} determines how the interrupt can be
-invoked.  If @var{dpl} is 0, then the interrupt can be invoked only by
-kernel threads.  Otherwise @var{dpl} should be 3, which allows user
-processes to invoke the interrupt as well (this is useful only
-starting with project 2).  @var{dpl} has no effect on external
-interrupts
-@end deftypefun
-
 @deftp {Type} {void intr_handler_func (struct intr_frame *@var{frame})}
-This is the type of an interrupt handler function.  Its @var{frame}
+This is how an interrupt handler function must be declared.  Its @var{frame}
 argument (see below) allows it to determine the cause of the interrupt
 and the state of the thread that was interrupted.
 @end deftp
 
 @deftp {Type} {struct intr_frame}
-The stack frame of an interrupt handler.  Its most interesting members
-are as follows:
-@table @code
-@item uint32_t edi;
-@item uint32_t esi;
-@item uint32_t ebp;
-@item uint32_t esp_dummy;
-@item uint32_t ebx;
-@item uint32_t edx;
-@item uint32_t ecx;
-@item uint32_t eax;
-@item uint16_t es;
-@item uint16_t ds;
+The stack frame of an interrupt handler, as saved by CPU, the interrupt
+stubs, and @func{intr_entry}. Its most interesting members are described
+below.
+@end deftp
+
+@deftypecv {Member} {@struct{intr_frame}} uint32_t edi
+@deftypecvx {Member} {@struct{intr_frame}} uint32_t esi
+@deftypecvx {Member} {@struct{intr_frame}} uint32_t ebp
+@deftypecvx {Member} {@struct{intr_frame}} uint32_t esp_dummy
+@deftypecvx {Member} {@struct{intr_frame}} uint32_t ebx
+@deftypecvx {Member} {@struct{intr_frame}} uint32_t edx
+@deftypecvx {Member} {@struct{intr_frame}} uint32_t ecx
+@deftypecvx {Member} {@struct{intr_frame}} uint32_t eax
+@deftypecvx {Member} {@struct{intr_frame}} uint16_t es
+@deftypecvx {Member} {@struct{intr_frame}} uint16_t ds
 Register values in the interrupted thread saved by @func{intr_entry}.
 The @code{esp_dummy} value isn't actually used (refer to the
 description of @code{PUSHA} in @bibref{IA32-v2b} for details).
+@end deftypecv
 
-@item uint32_t vec_no;
+@deftypecv {Member} {@struct{intr_frame}} uint32_t vec_no
 The interrupt vector number, ranging from 0 to 255.
+@end deftypecv
 
-@item uint32_t error_code;
+@deftypecv {Member} {@struct{intr_frame}} uint32_t error_code
 The ``error code'' pushed on the stack by the CPU for some internal
 interrupts.
+@end deftypecv
 
-@item void (*eip) (void);
+@deftypecv {Member} {@struct{intr_frame}} void (*eip) (void)
 The address of the next instruction to be executed by the interrupted
 thread. 
+@end deftypecv
 
-@item void *esp;
+@deftypecv {Member} {@struct{intr_frame}} {void *} esp
 The interrupted thread's stack pointer.
-@end table
-@end deftp
+@end deftypecv
 
 @deftypefun {const char *} intr_name (uint8_t @var{vec})
-Returns the registered name of the interrupt numbered @var{vec}, or
-@code{"unknown"} if the interrupt's name is not known.
+Returns the name of the interrupt numbered @var{vec}, or
+@code{"unknown"} if the interrupt has no registered name.
 @end deftypefun
 
 @node Internal Interrupt Handling
@@ -875,9 +1031,8 @@ caused it.  Thus, because it is related to a thread (or process), an
 internal interrupt is said to happen in a ``process context.''
 
 In an internal interrupt, it can make sense to examine the
-@struct{intr_frame} passed to the interrupt handler.  In cases where
-the interrupted thread intentionally caused the interrupt, it can even
-make sense to modify it.  When the interrupt returns, modified members
+@struct{intr_frame} passed to the interrupt handler, or even to modify
+it.  When the interrupt returns, modified members
 in @struct{intr_frame} become changes to the thread's registers.
 We'll use this in project 2 to return values from system call
 handlers.
@@ -887,6 +1042,23 @@ handler can or can't do.  Generally they should run with interrupts
 enabled, just like other code, and so they can be preempted by other
 kernel threads.  Thus, they do need to synchronize with other threads
 on shared data and other resources (@pxref{Synchronization}).
+
+@deftypefun void intr_register_int (uint8_t @var{vec}, int @var{dpl}, enum intr_level @var{level}, intr_handler_func *@var{handler}, const char *@var{name})
+Registers @var{func} to be called when internal interrupt numbered
+@var{vec} is triggered.  Names the interrupt @var{name} for debugging
+purposes.
+
+If @var{level} is @code{INTR_OFF} then handling of further interrupts
+will be disabled while the interrupt is being processed.  Interrupts
+should normally be turned on during the handling of an internal
+interrupt.
+
+@var{dpl} determines how the interrupt can be
+invoked.  If @var{dpl} is 0, then the interrupt can be invoked only by
+kernel threads.  Otherwise @var{dpl} should be 3, which allows user
+processes to invoke the interrupt as well (this is useful only
+starting with project 2).
+@end deftypefun
 
 @node External Interrupt Handling
 @subsubsection External Interrupt Handling
@@ -900,7 +1072,7 @@ runs in an ``interrupt context.''
 In an external interrupt, the @struct{intr_frame} passed to the
 handler is not very meaningful.  It describes the state of the thread
 or process that was interrupted, but there is no way to predict which
-one that is.  It is possible, though rarely useful, to examine it, but
+one that is.  It is possible, although rarely useful, to examine it, but
 modifying it is a recipe for disaster.
 
 The activities of an external interrupt handler are severely
@@ -911,7 +1083,7 @@ disabled (@pxref{Disabling Interrupts}) and that interrupts may not be
 enabled at any point during their execution.
 
 Second, an interrupt handler must not call any function that can
-sleep, which includes @func{thread_yield}, @func{lock_acquire}, and
+sleep, which rules out @func{thread_yield}, @func{lock_acquire}, and
 many others.  This is because external interrupts use space on the
 stack of the kernel thread that was running at the time the interrupt
 occurred.  If the interrupt handler tried to sleep and that thread
@@ -926,31 +1098,38 @@ run in a kernel thread, possibly a thread whose activity is triggered
 by the interrupt using some synchronization primitive.
 
 External interrupts are also special because they are controlled by a
-device external to the CPU called a @dfn{programmable interrupt
-controller} or @dfn{PIC} for short.  When @func{intr_init} sets up the
-CPU's IDT, it also initializes the PIC for interrupt handling.  The
-PIC also has to be ``acknowledged'' at the end of processing for each
+pair of devices outside the CPU called @dfn{programmable interrupt
+controllers}, @dfn{PICs} for short.  When @func{intr_init} sets up the
+CPU's IDT, it also initializes the PICs for interrupt handling.  The
+PICs also must be ``acknowledged'' at the end of processing for each
 external interrupt.  @func{intr_handler} takes care of that by calling
 @func{pic_end_of_interrupt}, which sends the proper signals to the
-PIC.
+right PIC.
 
-The following additional interrupts functions are related to external
+The following additional functions are related to external
 interrupts.
 
+@deftypefun void intr_register_ext (uint8_t @var{vec}, intr_handler_func *@var{handler}, const char *@var{name})
+Registers @var{handler} to be called when external interrupt numbered
+@var{vec} is triggered.  Names the interrupt @var{name} for debugging
+purposes.  The handler will run with interrupts disabled.
+@end deftypefun
+
 @deftypefun bool intr_context (void)
-Returns true if we are running in an interrupt context and false
-otherwise.  Mainly used at the beginning of functions that might sleep
-or that otherwise should not be, in this form:
+Returns true if we are running in an interrupt context, otherwise
+false.  Mainly used at the beginning of functions that might sleep
+or that otherwise should not be called from interrupt context, in this
+form:
 @example
 ASSERT (!intr_context ());
 @end example
 @end deftypefun
 
-@deftypefun intr_yield_on_return (void)
+@deftypefun void intr_yield_on_return (void)
 When called in an interrupt context, causes @func{thread_yield} to be
 called just before the interrupt returns.  This is used, for example,
 in the timer interrupt handler to cause a new thread to be scheduled
-on every timer tick.
+when a thread's time slice expires.
 @end deftypefun
 
 @node Memory Allocation
@@ -960,12 +1139,12 @@ Pintos contains two memory allocators, one that allocates memory in
 units of a page, and one that can allocate blocks of any size.
 
 @menu
-* Page Allocation::             
+* Page Allocator::              
 * Block Allocator::             
 @end menu
 
-@node Page Allocation
-@subsubsection Page Allocation
+@node Page Allocator
+@subsubsection Page Allocator
 
 The page allocator declared in @file{threads/palloc.h} allocates
 memory in units of a page.  It is most often used to allocate memory
@@ -982,11 +1161,11 @@ for user processes and the kernel pool for all other allocations.
 This will only become important starting with project 3.  Until then,
 all allocations should be made from the kernel pool.
 
-Each pools is managed with a bitmap of used pages, one bit per page in
-the pool.  An allocation request for @var{n} pages scans the bitmap,
-starting from the beginning, for @var{n} consecutive bits set to
+Each pool's usage is tracked with a bitmap, one bit per page in
+the pool.  A request to allocate @var{n} pages scans the bitmap
+for @var{n} consecutive bits set to
 false, indicating that those pages are free, and then sets those bits
-to true to mark them as now used.  This is a ``first fit'' allocation
+to true to mark them as used.  This is a ``first fit'' allocation
 strategy.
 
 The page allocator is subject to fragmentation.  That is, it may not
@@ -994,36 +1173,42 @@ be possible to allocate @var{n} contiguous pages even though @var{n}
 or more pages are free, because the free pages are separated by used
 pages.  In fact, in pathological cases it may be impossible to
 allocate 2 contiguous pages even though @var{n} / 2 pages are free!
-However, single-page requests can't fail due to fragmentation.  Thus,
-it is best to limit the need to allocate more than one contiguous page
-as much as possible.
+Single-page requests can't fail due to fragmentation, so
+it is best to limit, as much as possible, the need for multiple
+contiguous pages.
 
-The interesting page allocator types and functions are described
-below.
+Pages may not be allocated from interrupt context, but they may be
+freed.
+
+When a page is freed, all of its bytes are cleared to @t{0xcc}, as
+a debugging aid (@pxref{Debugging Tips}).
+
+Page allocator types and functions are described below.
 
 @deftp {Type} {enum palloc_flags}
 A set of flags that describe how to allocate pages.  These flags may
-be combined in any combination:
-
-@table @code
-@item PAL_ASSERT
-If the pages cannot be allocated, panic the kernel.  This is only
-appropriate during kernel initialization, because user processes
-should never be permitted to panic the kernel.
-
-@item PAL_ZERO
-Clear the pages to all zeros before returning them.  If not set,
-newly allocated pages' contents are unpredictable.
-
-@item PAL_USER
-Obtain the pages from the user pool.  If not set, pages are allocated
-from the kernel pool.
-@end table
+be combined in any combination.
 @end deftp
 
+@defvr {Page Allocator Flag} @code{PAL_ASSERT}
+If the pages cannot be allocated, panic the kernel.  This is only
+appropriate during kernel initialization.  User processes
+should never be permitted to panic the kernel.
+@end defvr
+
+@defvr {Page Allocator Flag} @code{PAL_ZERO}
+Zero all the bytes in the allocated pages before returning them.  If not
+set, the contents of newly allocated pages are unpredictable.
+@end defvr
+
+@defvr {Page Allocator Flag} @code{PAL_USER}
+Obtain the pages from the user pool.  If not set, pages are allocated
+from the kernel pool.
+@end defvr
+
 @deftypefun {void *} palloc_get_page (enum palloc_flags @var{flags})
-Obtains a single free page, allocating it in the manner specified by
-@var{flags}, and returns it.  Returns a null pointer if no pages are
+Obtains and returns a single page, allocating it in the manner specified by
+@var{flags}.  Returns a null pointer if no pages are
 free.
 @end deftypefun
 
@@ -1053,13 +1238,15 @@ described in the previous section.  Blocks returned by the block
 allocator are obtained from the kernel pool.
 
 The block allocator uses two different strategies for allocating
-memory.  The first of these applies to blocks no larger than 1 kB (one
+memory.  The first of these applies to ``small'' blocks, those 1 kB or
+smaller (one
 fourth of the the page size).  These allocations are rounded up to the
 nearest power of 2, or 16 bytes, whichever is larger.  Then they are
-grouped into a page used only for allocations of that power of 2
+grouped into a page used only for allocations of the smae
 size.
 
-A different strategy applies to allocating blocks larger than 1 kB.
+The second strategy applies to allocating ``large'' blocks, those larger
+than 1 kB.
 These allocations (plus a small amount of overhead) are rounded up to
 the nearest page in size, and then the block allocator requests that
 number of contiguous pages from the page allocator.  
@@ -1080,3 +1267,8 @@ those over approximately 4 kB each.
 
 The interface to the block allocator is through the standard C library
 functions @func{malloc}, @func{calloc}, and @func{free}.
+
+When a block is freed, all of its bytes are cleared to @t{0xcc}, as
+a debugging aid (@pxref{Debugging Tips}).
+
+The block allocator may not be called from interrupt context.

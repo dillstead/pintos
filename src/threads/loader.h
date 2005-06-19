@@ -17,12 +17,17 @@
    This must be aligned on a 4 MB boundary. */
 #define LOADER_PHYS_BASE 0xc0000000     /* 3 GB. */
 
-/* Offsets within the loader. */
-#define LOADER_BIOS_SIG (LOADER_END - 2)        /* 0xaa55 BIOS signature. */
-#define LOADER_CMD_LINE_LEN 0x80                /* Command line length. */
-#define LOADER_CMD_LINE (LOADER_BIOS_SIG - LOADER_CMD_LINE_LEN)
-                                                /* Kernel command line. */
-#define LOADER_RAM_PAGES (LOADER_CMD_LINE - 4)  /* # of pages of RAM. */
+/* Important loader physical addresses. */
+#define LOADER_SIG (LOADER_END - LOADER_SIG_LEN)   /* 0xaa55 BIOS signature. */
+#define LOADER_ARGS (LOADER_SIG - LOADER_ARGS_LEN)     /* Command-line args. */
+#define LOADER_ARG_CNT (LOADER_ARGS - LOADER_ARG_CNT_LEN) /* Number of args. */
+#define LOADER_RAM_PGS (LOADER_ARG_CNT - LOADER_RAM_PGS_LEN) /* # RAM pages. */
+
+/* Sizes of loader data structures. */
+#define LOADER_SIG_LEN 2
+#define LOADER_ARGS_LEN 128
+#define LOADER_ARG_CNT_LEN 4
+#define LOADER_RAM_PGS_LEN 4
 
 /* GDT selectors defined by loader.
    More selectors are defined by userprog/gdt.h. */

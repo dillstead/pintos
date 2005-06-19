@@ -1,2 +1,0 @@
-(args-argvn) argv[argc] = 0
-args-argvn: exit(0)

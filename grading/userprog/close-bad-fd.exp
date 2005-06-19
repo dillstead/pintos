@@ -1,6 +1,0 @@
-(close-bad-fd) begin
-(close-bad-fd) end
-close-bad-fd: exit(0)
---OR--
-(close-bad-fd) begin
-close-bad-fd: exit(-1)

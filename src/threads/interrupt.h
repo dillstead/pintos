@@ -58,8 +58,9 @@ struct intr_frame
 typedef void intr_handler_func (struct intr_frame *);
 
 void intr_init (void);
-void intr_register (uint8_t vec, int dpl, enum intr_level, intr_handler_func *,
-                    const char *name);
+void intr_register_ext (uint8_t vec, intr_handler_func *, const char *name);
+void intr_register_int (uint8_t vec, int dpl, enum intr_level,
+                        intr_handler_func *, const char *name);
 bool intr_context (void);
 void intr_yield_on_return (void);
 

@@ -1,6 +1,0 @@
-(create-null) begin
-(create-null) end
-create-null: exit(0)
---OR--
-(create-null) begin
-create-null: exit(-1)

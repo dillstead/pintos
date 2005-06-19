@@ -38,7 +38,8 @@ Bochs we make available on the elaines:
 
 cd /tmp && tar xzf ~/bochs-2.1.1.tar.gz && cd bochs-2.1.1
 patch -p1 < $PINTOSROOT/src/misc/bochs-2.1.1.patch
-CFGOPTS="--with-x --with-x11 --with-term --with-nogui --prefix=/usr/class/cs140/i386"
+PREFIX="/usr/class/cs140/`uname -m`"
+CFGOPTS="--with-x --with-x11 --with-term --with-nogui --prefix=$PREFIX"
 (mkdir plain &&
  cd plain && 
  ../configure $CFGOPTS && 
@@ -48,12 +49,12 @@ CFGOPTS="--with-x --with-x11 --with-term --with-nogui --prefix=/usr/class/cs140/
  cd with-gdb &&
  ../configure --enable-gdb-stub $CFGOPTS &&
  make &&
- cp bochs /usr/class/cs140/i386/bin/bochs-gdb)
+ cp bochs $PREFIX/bin/bochs-gdb)
 (mkdir with-dbg &&
  cd with-dbg &&
  ../configure --enable-debugger $CFGOPTS &&
  make &&
- cp bochs /usr/class/cs140/i386/bin/bochs-dbg)
+ cp bochs $PREFIX/bin/bochs-dbg)
 
 diff -urp orig/bochs-2.1.1/Makefile.in bochs-2.1.1/Makefile.in
 --- orig/bochs-2.1.1/Makefile.in	2004-02-11 14:28:02.000000000 -0800
@@ -162,9 +163,9 @@ diff -urp orig/bochs-2.1.1/gdbstub.cc bochs-2.1.1/gdbstub.cc
              put_reply(obuf);
              break;
 
-diff -u tmp/bochs-2.1.1/iodev/serial.cc bochs-2.1.1/iodev/serial.cc
---- tmp/bochs-2.1.1/iodev/serial.cc	2004-02-11 14:28:54.000001000 -0800
-+++ bochs-2.1.1/iodev/serial.cc	2004-09-14 23:02:04.000001000 -0700
+diff -urp bochs-2.1.1-upstream/iodev/serial.cc bochs-2.1.1/iodev/serial.cc
+--- tmp/bochs-2.1.1/iodev/serial.cc	2004-02-11 14:28:54.000000000 -0800
++++ bochs-2.1.1/iodev/serial.cc	2005-06-01 20:26:01.000000000 -0700
 @@ -53,7 +53,7 @@
  #endif
  #endif
@@ -174,7 +175,12 @@ diff -u tmp/bochs-2.1.1/iodev/serial.cc bochs-2.1.1/iodev/serial.cc
  #define SERIAL_ENABLE
  #endif
  
-@@ -122,6 +122,7 @@
+@@ -118,10 +118,11 @@ bx_serial_c::init(void)
+ 
+ #ifdef SERIAL_ENABLE
+   if (strlen(bx_options.com[0].Odev->getptr ()) > 0) {
+-    tty_id = open(bx_options.com[0].Odev->getptr (), O_RDWR|O_NONBLOCK,600);
++    tty_id = open(bx_options.com[0].Odev->getptr (), O_RDWR,600);
      if (tty_id < 0)
        BX_PANIC(("open of %s (%s) failed\n",
                  "com1", bx_options.com[0].Odev->getptr ()));
@@ -182,7 +188,7 @@ diff -u tmp/bochs-2.1.1/iodev/serial.cc bochs-2.1.1/iodev/serial.cc
      BX_DEBUG(("tty_id: %d",tty_id));
      tcgetattr(tty_id, &term_orig);
      bcopy((caddr_t) &term_orig, (caddr_t) &term_new, sizeof(struct termios));
-@@ -145,6 +146,7 @@
+@@ -145,6 +148,7 @@ bx_serial_c::init(void)
      term_new.c_cc[VTIME] = 0;
      //term_new.c_iflag |= IXOFF;
      tcsetattr(tty_id, TCSAFLUSH, &term_new);
@@ -190,6 +196,15 @@ diff -u tmp/bochs-2.1.1/iodev/serial.cc bochs-2.1.1/iodev/serial.cc
    }
  #endif   /* def SERIAL_ENABLE */
    // nothing for now
+@@ -955,7 +968,7 @@ bx_serial_c::rx_timer(void)
+     }
+     if (rdy) {
+       chbuf = data;
+-#elif defined(SERIAL_ENABLE)
++#elif 0 && defined(SERIAL_ENABLE)
+     if ((tty_id >= 0) && (select(tty_id + 1, &fds, NULL, NULL, &tval) == 1)) {
+       (void) read(tty_id, &chbuf, 1);
+       BX_DEBUG(("read: '%c'",chbuf));
 
 diff -urp bochs-2.1.1.orig/bochs.h bochs-2.1.1/bochs.h
 --- bochs-2.1.1.orig/bochs.h	2004-02-11 14:28:03.000000000 -0800

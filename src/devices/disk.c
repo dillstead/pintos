@@ -123,9 +123,9 @@ disk_init (void)
         default:
           NOT_REACHED ();
         }
-      lock_init (&c->lock, c->name);
+      lock_init (&c->lock);
       c->expecting_interrupt = false;
-      sema_init (&c->completion_wait, 0, c->name);
+      sema_init (&c->completion_wait, 0);
  
       /* Initialize devices. */
       for (dev_no = 0; dev_no < 2; dev_no++)
@@ -142,7 +142,7 @@ disk_init (void)
         }
 
       /* Register interrupt handler. */
-      intr_register (c->irq, 0, INTR_OFF, interrupt_handler, c->name);
+      intr_register_ext (c->irq, interrupt_handler, c->name);
 
       /* Reset hardware. */
       reset_channel (c);

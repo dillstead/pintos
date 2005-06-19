@@ -1,5 +1,0 @@
-(sm-create) begin
-(sm-create) create "blargle"
-(sm-create) open "blargle" for verification
-(sm-create) close "blargle"
-(sm-create) end

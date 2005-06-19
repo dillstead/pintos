@@ -1,0 +1,53 @@
+#! /usr/bin/perl
+
+use strict;
+use warnings;
+
+my (@rubric) = read_text_file (shift);
+my (@pass) = @ARGV;
+
+my (@grade);
+
+our ($possible_overall, $score_overall) = (0, 0);
+our ($possible, $score) = (0, 0);
+for my $i (0...$#rubric) {
+    local ($_) = $rubric[$i];
+    if (/^\S/ || /^\s*$/) {
+	end_section ();
+	push (@grade, $_);
+    } elsif (my ($value, $name, $desc) = /^\s+(\d+)\s+(\S+):\s+(.*)$/) {
+	$possible += $value;
+	my ($marker);
+	if (grep ($_ eq $name, @pass)) {
+	    $score += $value;
+	    $marker = ' ';
+	} else {
+	    $marker = '-';
+	    }
+	push (@grade, "  $marker$value $name: $desc");
+    } else {
+	die;
+    }
+}
+end_section ();
+
+push (@grade, "", "TESTING TOTAL: $score_overall of $possible_overall points");
+
+print map ("$_\n", @grade);
+
+sub end_section {
+    return if !$possible;
+    push (@grade, "Subtotal: $score of $possible points");
+    $possible_overall += $possible;
+    $score_overall += $score;
+    $possible = $score = 0;
+}
+
+sub read_text_file {
+    my ($file_name) = @_;
+    open (FILE, '<', $file_name) or die "$file_name: open: $!\n";
+    my (@content) = <FILE>;
+    chomp (@content);
+    close (FILE);
+    return @content;
+}

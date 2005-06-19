@@ -65,7 +65,7 @@ serial_init_poll (void)
   outb (FCR_REG, 0);                    /* Disable FIFO. */
   set_serial (115200);                  /* 115.2 kbps, N-8-1. */
   outb (MCR_REG, MCR_OUT2);             /* Turn on OUT2 output line. */
-  intq_init (&txq, "serial xmit");
+  intq_init (&txq);
   mode = POLL;
 } 
 
@@ -76,7 +76,7 @@ void
 serial_init_queue (void) 
 {
   ASSERT (mode == POLL);
-  intr_register (0x20 + 4, 0, INTR_OFF, serial_interrupt, "serial");
+  intr_register_ext (0x20 + 4, serial_interrupt, "serial");
   mode = QUEUE;
 }
 

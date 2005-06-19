@@ -8,4 +8,8 @@
    definition but not any others. */
 typedef int32_t off_t;
 
+/* Format specifier for printf(), e.g.:
+   printf ("offset=%"PROTd"\n", offset); */
+#define PROTd PRId32
+
 #endif /* filesys/off_t.h */

@@ -34,7 +34,7 @@ struct intq
     int tail;                   /* Old data is read here. */
   };
 
-void intq_init (struct intq *, const char *);
+void intq_init (struct intq *);
 bool intq_empty (const struct intq *);
 bool intq_full (const struct intq *);
 uint8_t intq_getc (struct intq *);

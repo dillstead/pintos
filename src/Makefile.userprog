@@ -2,47 +2,45 @@
 
 include $(SRCDIR)/Make.config
 
-SHELL = /bin/sh
-
-VPATH = $(SRCDIR)
-
-DEFINES = -DPINTOS -DUSER
-CPPFLAGS = -nostdinc -I$(SRCDIR) -I- -I$(SRCDIR)/lib -I$(SRCDIR)/lib/user -I.
+$(PROGS): CPPFLAGS += -I$(SRCDIR)/lib/user -I.
 
 # Linker flags.
-LDFLAGS = -nostdlib -static -Wl,-T,$(LDSCRIPT)
-LDLIBS = $(shell $(CC) -print-libgcc-file-name)
-LDSCRIPT = $(SRCDIR)/lib/user/normal.lds
+$(PROGS): LDFLAGS = -nostdlib -static -Wl,-T,$(LDSCRIPT)
+$(PROGS): LDLIBS = $(shell $(CC) -print-libgcc-file-name)
+$(PROGS): LDSCRIPT = $(SRCDIR)/lib/user/normal.lds
 # Uncomment the following line to round up section sizes
 # to full pages (for debugging only).
-#LDSCRIPT = $(SRCDIR)/lib/user/fullpage.lds
+#$(PROGS): LDSCRIPT = $(SRCDIR)/lib/user/fullpage.lds
 
-# C library sources linked into every test program.
-LIB_SRC  = lib/debug.c			# Debug code.
-LIB_SRC += lib/random.c			# Pseudo-random numbers.
-LIB_SRC += lib/stdio.c			# I/O library.
-LIB_SRC += lib/stdlib.c			# atoi()
-LIB_SRC += lib/string.c			# String functions.
-LIB_SRC += lib/user/syscall.c		# System calls.
-LIB_SRC += lib/user/console.c		# Console code.
+# Library code shared between kernel and user programs.
+lib_SRC  = lib/debug.c			# Debug code.
+lib_SRC += lib/random.c			# Pseudo-random numbers.
+lib_SRC += lib/stdio.c			# I/O library.
+lib_SRC += lib/stdlib.c			# Utility functions.
+lib_SRC += lib/string.c			# String functions.
 
-LIB_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(LIB_SRC)))
+# User level only library code.
+lib/user_SRC  = lib/user/debug.c	# Debug helpers.
+lib/user_SRC += lib/user/syscall.c	# System calls.
+lib/user_SRC += lib/user/console.c	# Console code.
+
+LIB_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(lib_SRC) $(lib/user_SRC)))
 LIB_DEP = $(patsubst %.o,%.d,$(LIB_OBJ))
 LIB = lib/user/entry.o libc.a
 
-PROGS_SRC = $(foreach prog,$(PROGS),$($(subst -,_,$(prog))_SRC))
+PROGS_SRC = $(foreach prog,$(PROGS),$($(prog)_SRC))
 PROGS_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(PROGS_SRC)))
 PROGS_DEP = $(patsubst %.o,%.d,$(PROGS_OBJ))
 
 all: $(PROGS)
 
 define TEMPLATE
-$(2)_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$($(2)_SRC)))
-$(1): $$($(2)_OBJ) $$(LIB) $$(LDSCRIPT)
-	$$(CC) $$(LDFLAGS) $$($(2)_OBJ) $$(LIB) $$(LDLIBS) -o $$@
+$(1)_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$($(1)_SRC)))
+$(1): $$($(1)_OBJ) $$(LIB) $$(LDSCRIPT)
+	$$(CC) $$(LDFLAGS) $$($(1)_OBJ) $$(LIB) $$(LDLIBS) -o $$@
 endef
 
-$(foreach prog,$(PROGS),$(eval $(call TEMPLATE,$(prog),$(subst -,_,$(prog)))))
+$(foreach prog,$(PROGS),$(eval $(call TEMPLATE,$(prog))))
 
 libc.a: $(LIB_OBJ)
 	rm -f $@

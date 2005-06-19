@@ -4,27 +4,41 @@ use strict;
 
 # Check command line.
 if (grep ($_ eq '-h' || $_ eq '--help', @ARGV)) {
-    print "backtrace, for converting raw addresses into symbolic backtraces\n";
-    print "\n";
-    print "usage: backtrace BINARY ADDRESS...\n";
-    print "where BINARY is the binary file from which to obtain symbols\n";
-    print "  and each ADDRESS is a raw address to convert to a symbol name.\n";
-    print "\n";
-    print "In use with Pintos, BINARY is usually kernel.o and the ADDRESS\n";
-    print "list is taken from the \"Call stack:\" printed by the kernel.\n";
-    print "Read \"Backtraces\" in the \"Debugging Tools\" chapter\n";
-    print "of the Pintos documentation for more information.\n";
+    print <<'EOF';
+backtrace, for converting raw addresses into symbolic backtraces
+usage: backtrace [BINARY] ADDRESS...
+where BINARY is the binary file from which to obtain symbols
+ and ADDRESS is a raw address to convert to a symbol name.
+
+If BINARY is unspecified, the default is the first of kernel.o or
+build/kernel.o that exists.
+
+The ADDRESS list should be taken from the "Call stack:" printed by the
+kernel.  Read "Backtraces" in the "Debugging Tools" chapter of the
+Pintos documentation for more information.
+EOF
     exit 0;
 }
-die "backtrace: binary file argument required (use --help for help)\n"
+die "backtrace: at least one argument required (use --help for help)\n"
     if @ARGV == 0;
-die "backtrace: at least one address argument required (use --help for help)\n"
-    if @ARGV == 1;
+
+# Drop leading and trailing garbage inserted by kernel.
+shift while grep (/^(call|stack:?)$/i, $ARGV[0]);
+s/\.$// foreach @ARGV;
 
 # Find binary file.
-my ($bin) = shift @ARGV;
-die "backtrace: $bin: not found (use --help for help)\n"
-    if ! -e $bin;
+my ($bin) = $ARGV[0];
+if (-e $bin) {
+    shift @ARGV;
+} elsif ($bin !~ /^0/) {
+    die "backtrace: $bin: not found (use --help for help)\n";
+} elsif (-e 'kernel.o') {
+    $bin = 'kernel.o';
+} elsif (-e 'build/kernel.o') {
+    $bin = 'build/kernel.o';
+} else {
+    die "backtrace: can't find binary for backtrace (use --help for help)\n";
+}
 
 # Find addr2line.
 my ($a2l) = search_path ("i386-elf-addr2line") || search_path ("addr2line");
@@ -39,10 +53,6 @@ sub search_path {
     }
     return undef;
 }
-
-# Drop leading and trailing garbage inserted by kernel.
-shift while grep (/call|stack/i, $ARGV[0]);
-s/\.$// foreach @ARGV;
 
 # Do backtrace.
 open (A2L, "$a2l -fe $bin " . join (' ', @ARGV) . "|");

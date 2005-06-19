@@ -1,6 +1,0 @@
-(write-stdin) begin
-(write-stdin) end
-write-stdin: exit(0)
---OR--
-(write-stdin) begin
-write-stdin: exit(-1)

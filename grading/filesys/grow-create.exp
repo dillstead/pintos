@@ -1,5 +1,0 @@
-(grow-create) begin
-(grow-create) create "blargle"
-(grow-create) open "blargle" for verification
-(grow-create) close "blargle"
-(grow-create) end

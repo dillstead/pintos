@@ -1,0 +1,62 @@
+# -*- makefile -*-
+
+include $(patsubst %,$(SRCDIR)/%/Make.tests,$(TEST_SUBDIRS))
+
+PROGS = $(foreach subdir,$(TEST_SUBDIRS),$($(subdir)_PROGS))
+TESTS = $(foreach subdir,$(TEST_SUBDIRS),$($(subdir)_TESTS))
+
+include ../../Makefile.userprog
+
+PINTOSFLAGS += -v $(foreach file,$(PUTFILES),-p $(file) -a $(notdir $(file)))
+KERNELFLAGS += -q
+PINTOS = pintos $(PINTOSOPTS) $(PINTOSFLAGS) -- $(KERNELFLAGS)
+
+OUTPUTS = $(addsuffix .output,$(TESTS))
+ERRORS = $(addsuffix .errors,$(TESTS))
+RESULTS = $(addsuffix .result,$(TESTS))
+
+clean::
+	rm -f $(OUTPUTS) $(ERRORS) $(RESULTS) 
+
+grade:: ../rubric.txt results
+	@pass=;							\
+	for d in $(TESTS); do					\
+		if echo PASS | cmp -s $$d.result -; then	\
+			pass="$$pass $$d";			\
+		fi						\
+	done;							\
+	$(SRCDIR)/tests/make-grade $< $$pass
+
+check:: results
+	@f=0;							\
+	n=0;							\
+	echo "Test summary:";					\
+	for d in $(TESTS); do					\
+		if echo PASS | cmp -s $$d.result -; then	\
+			echo "pass $$d";			\
+		else						\
+			echo "FAIL $$d";			\
+			f=`expr $$f + 1`;			\
+		fi;						\
+		n=`expr $$n + 1`;				\
+	done;							\
+	if [ $$f = 0 ]; then					\
+		echo "All $$n tests passed.";			\
+	else							\
+		echo "$$f of $$n tests failed.";		\
+		exit 1;						\
+	fi
+
+results:: $(RESULTS)
+outputs:: $(OUTPUTS)
+
+$(foreach prog,$(PROGS),$(eval $(prog).output: $(prog)))
+$(foreach test,$(TESTS),$(eval $(test).output: $($(test)_PUTFILES)))
+tests/%.output: RUNCMD = $(if $($*_ARGS),run '$(*F) $($*_ARGS)',run $(*F))
+tests/%.output: RUNREDIR = 2>$*.errors $(if $(VERBOSE),|tee,>) $*.output
+tests/%.output: RUNTEST = $(PINTOS) $(RUNCMD) $(RUNREDIR)
+%.output: os.dsk
+	$(RUNTEST)
+
+%.result: %.ck %.output
+	perl -I$(SRCDIR) $< $* $@

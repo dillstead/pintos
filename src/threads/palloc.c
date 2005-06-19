@@ -162,7 +162,7 @@ init_pool (struct pool *p, void *base, size_t page_cnt, const char *name)
   /* We'll put the pool's used_map at its base.
      Calculate the space needed for the bitmap
      and subtract it from the pool's size. */
-  size_t bm_pages = DIV_ROUND_UP (bitmap_needed_bytes (page_cnt), PGSIZE);
+  size_t bm_pages = DIV_ROUND_UP (bitmap_buf_size (page_cnt), PGSIZE);
   if (bm_pages > page_cnt)
     PANIC ("Not enough memory in %s for bitmap.", name);
   page_cnt -= bm_pages;
@@ -170,9 +170,8 @@ init_pool (struct pool *p, void *base, size_t page_cnt, const char *name)
   printf ("%zu pages available in %s.\n", page_cnt, name);
 
   /* Initialize the pool. */
-  lock_init (&p->lock, name);
-  p->used_map = bitmap_create_preallocated (page_cnt, base,
-                                            bm_pages * PGSIZE);
+  lock_init (&p->lock);
+  p->used_map = bitmap_create_in_buf (page_cnt, base, bm_pages * PGSIZE);
   p->base = base + bm_pages * PGSIZE;
 }
 

@@ -1,3 +1,0 @@
-(close-normal) begin
-(close-normal) end
-close-normal: exit(0)

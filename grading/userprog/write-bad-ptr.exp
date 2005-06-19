@@ -1,6 +1,0 @@
-(write-bad-ptr) begin
-(write-bad-ptr) end
-write-bad-ptr: exit(0)
---OR--
-(write-bad-ptr) begin
-write-bad-ptr: exit(-1)

@@ -1,111 +1,15 @@
-/* This file is derived from source code for the Nachos
-   instructional operating system.  The Nachos copyright notice
-   is reproduced in full below. */
-
-/* Copyright (c) 1992-1996 The Regents of the University of California.
-   All rights reserved.
-
-   Permission to use, copy, modify, and distribute this software
-   and its documentation for any purpose, without fee, and
-   without written agreement is hereby granted, provided that the
-   above copyright notice and the following two paragraphs appear
-   in all copies of this software.
-
-   IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO
-   ANY PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR
-   CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OF THIS SOFTWARE
-   AND ITS DOCUMENTATION, EVEN IF THE UNIVERSITY OF CALIFORNIA
-   HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-   THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY
-   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-   PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS"
-   BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATION TO
-   PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
-   MODIFICATIONS.
-*/
-
 #include "filesys/filesys.h"
-#include <bitmap.h>
 #include <debug.h>
 #include <stdio.h>
 #include <string.h>
 #include "filesys/file.h"
+#include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
 #include "devices/disk.h"
 
-/* Filesystem.
-
-   For the purposes of the "user processes" and "virtual memory"
-   assignments (projects 2 and 3), please treat all the code in
-   the filesys directory as a black box.  No changes should be
-   needed.  For those projects, a single lock external to the
-   filesystem code suffices.
-
-   The filesystem consists of a set of files.  Each file has a
-   header called an `index node' or `inode', represented by
-   struct inode, that is stored by itself in a single sector (see
-   inode.h).  The header contains the file's length in bytes and
-   an array that lists the sector numbers for the file's
-   contents.
-
-   Two files are special.  The first special file is the free
-   map, whose inode is always stored in sector 0
-   (FREE_MAP_SECTOR).  The free map stores a bitmap (see
-   lib/bitmap.h) that contains one bit for each sector on the
-   disk.  Each bit that corresponds to a sector within a file is
-   set to true, and the other bits, which are not part of any
-   file, are set to false.
-
-   The second special file is the root directory, whose inode is
-   always stored in sector 1 (ROOT_DIR_SECTOR).  The root
-   directory file stores an array of `struct dir_entry' (see
-   directory.h), each of which, if it is in use, associates a
-   filename with the sector of the file's inode.
-
-   The filesystem implemented here has the following limitations:
-
-     - No synchronization.  Concurrent accesses will interfere
-       with one another, so external synchronization is needed.
-
-     - File size is fixed at creation time.  Because the root
-       directory is represented as a file, the number of files
-       that may be created is also limited.
-
-     - File data is allocated as a single extent, so that
-       external fragmentation can become a serious problem as a
-       file system is used over time.
-
-     - No subdirectories.
-
-     - Filenames limited to 14 characters.
-
-     - A system crash mid-operation may corrupt the disk in a way
-       that cannot be repaired automatically.  No `fsck' tool is
-       provided in any case.
-
-   However one important feature is included:
-
-     - Unix-like semantics for filesys_remove() are implemented.
-       That is, if a file is open when it is removed, its blocks
-       are not deallocated and it may still be accessed by the
-       threads that have it open until the last one closes it. */
-
-/* Sectors of system file inodes. */
-#define FREE_MAP_SECTOR 0       /* Free map file inode sector. */
-#define ROOT_DIR_SECTOR 1       /* Root directory file inode sector. */
-
-/* Root directory. */
-#define NUM_DIR_ENTRIES 10      /* Maximum number of directory entries. */
-
 /* The disk that contains the filesystem. */
 struct disk *filesys_disk;
-
-/* The free map and root directory files.
-   These files are opened by filesys_init() and never closed. */
-struct file *free_map_file, *root_dir_file;
 
 static void do_format (void);
 
@@ -114,32 +18,27 @@ static void do_format (void);
 void
 filesys_init (bool format) 
 {
-  inode_init ();
-
   filesys_disk = disk_get (0, 1);
   if (filesys_disk == NULL)
     PANIC ("hd0:1 (hdb) not present, filesystem initialization failed");
 
+  inode_init ();
+  free_map_init ();
+
   if (format) 
     do_format ();
-  
-  free_map_file = file_open (FREE_MAP_SECTOR);
-  if (free_map_file == NULL)
-    PANIC ("can't open free map file");
-  root_dir_file = file_open (ROOT_DIR_SECTOR);
-  if (root_dir_file == NULL)
-    PANIC ("can't open root dir file");
+
+  free_map_open ();
 }
 
 /* Shuts down the filesystem module, writing any unwritten data
-   to disk.
-   Currently there's nothing to do.  You'll need to add code here
-   when you implement write-behind caching. */
+   to disk. */
 void
 filesys_done (void) 
 {
+  free_map_close ();
 }
-
+
 /* Creates a file named NAME with the given INITIAL_SIZE.
    Returns true if successful, false otherwise.
    Fails if a file named NAME already exists,
@@ -147,52 +46,20 @@ filesys_done (void)
 bool
 filesys_create (const char *name, off_t initial_size) 
 {
-  struct dir *dir = NULL;
-  struct bitmap *free_map = NULL;
-  disk_sector_t inode_sector;
-  bool success = false;
-
-  /* Read the root directory. */
-  dir = dir_create (NUM_DIR_ENTRIES);
-  if (dir == NULL)
-    goto done;
-  dir_read (dir, root_dir_file);
-  if (dir_lookup (dir, name, NULL)) 
-    goto done;
-
-  /* Allocate a block for the inode. */
-  free_map = bitmap_create (disk_size (filesys_disk));
-  if (free_map == NULL)
-    goto done;
-  bitmap_read (free_map, free_map_file);
-  inode_sector = bitmap_scan_and_flip (free_map, 0, 1, false);
-  if (inode_sector == BITMAP_ERROR)
-    goto done;
-
-  /* Add the file to the directory. */
-  if (!dir_add (dir, name, inode_sector))
-    goto done;
-
-  /* Allocate space for the file. */
-  if (!inode_create (free_map, inode_sector, initial_size))
-    goto done;
-
-  /* Write everything back. */
-  dir_write (dir, root_dir_file);
-  bitmap_write (free_map, free_map_file);
-
-  success = true;
-
-  /* Clean up. */
- done:
-  bitmap_destroy (free_map);
-  dir_destroy (dir);
+  struct dir *dir;
+  disk_sector_t inode_sector = 0;
+  bool success = (dir_open_root (&dir)
+                  && free_map_allocate (1, &inode_sector)
+                  && inode_create (inode_sector, initial_size)
+                  && dir_add (dir, name, inode_sector));
+  if (!success && inode_sector != 0) 
+    free_map_release (inode_sector, 1);
+  dir_close (dir);
 
   return success;
 }
 
-/* Opens a file named NAME and initializes FILE for usage with
-   the file_*() functions declared in file.h.
+/* Opens the file with the given NAME.
    Returns the new file if successful or a null pointer
    otherwise.
    Fails if no file named NAME exists,
@@ -200,22 +67,14 @@ filesys_create (const char *name, off_t initial_size)
 struct file *
 filesys_open (const char *name)
 {
-  struct dir *dir = NULL;
-  struct file *file = NULL;
-  disk_sector_t inode_sector;
+  struct dir *dir;
+  struct inode *inode = NULL;
 
-  dir = dir_create (NUM_DIR_ENTRIES);
-  if (dir == NULL)
-    goto done;
+  if (dir_open_root (&dir))
+    dir_lookup (dir, name, &inode);
+  dir_close (dir);
 
-  dir_read (dir, root_dir_file);
-  if (dir_lookup (dir, name, &inode_sector))
-    file = file_open (inode_sector);
-
- done:
-  dir_destroy (dir); 
-
-  return file;
+  return file_open (inode);
 }
 
 /* Deletes the file named NAME.
@@ -226,35 +85,9 @@ bool
 filesys_remove (const char *name) 
 {
   struct dir *dir = NULL;
-  struct inode *inode;
-  disk_sector_t inode_sector;
-  bool success = false;
-
-  /* Read the root directory. */
-  dir = dir_create (NUM_DIR_ENTRIES);
-  if (dir == NULL)
-    goto done;
-  dir_read (dir, root_dir_file);
-  if (!dir_lookup (dir, name, &inode_sector))
-    goto done;
-
-  /* Open the inode and delete it. */
-  inode = inode_open (inode_sector);
-  if (inode == NULL)
-    goto done;
-  inode_remove (inode);
-  inode_close (inode);
-
-  /* Remove file from root directory and write directory back to
-     disk. */
-  dir_remove (dir, name);
-  dir_write (dir, root_dir_file);
-
-  success = true;
-
-  /* Clean up. */
- done:
-  dir_destroy (dir);
+  bool success = (dir_open_root (&dir)
+                  && dir_remove (dir, name));
+  dir_close (dir); 
 
   return success;
 }
@@ -266,16 +99,15 @@ filesys_remove (const char *name)
 bool
 filesys_list (void) 
 {
-  struct dir *dir = dir_create (NUM_DIR_ENTRIES);
-  if (dir == NULL)
-    return false;
-  dir_read (dir, root_dir_file);
-  dir_list (dir);
-  dir_destroy (dir);
+  struct dir *dir = NULL;
+  bool success = dir_open_root (&dir);
+  if (success)
+    dir_list (dir);
+  dir_close (dir);
 
-  return true;
+  return success;
 }
-
+
 static void must_succeed_function (int, bool) NO_INLINE;
 #define MUST_SUCCEED(EXPR) must_succeed_function (__LINE__, EXPR)
 
@@ -325,52 +157,6 @@ filesys_self_test (void)
   
   printf ("filesys: self test ok\n");
 }
-
-/* Formats the filesystem. */
-static void
-do_format (void)
-{
-  struct bitmap *free_map;
-  struct dir *dir;
-
-  printf ("Formatting filesystem...");
-
-  /* Create the initial bitmap and reserve sectors for the
-     free map and root directory inodes. */
-  free_map = bitmap_create (disk_size (filesys_disk));
-  if (free_map == NULL)
-    PANIC ("bitmap creation failed--disk is too large");
-  bitmap_mark (free_map, FREE_MAP_SECTOR);
-  bitmap_mark (free_map, ROOT_DIR_SECTOR);
-
-  /* Allocate free map and root dir files. */
-  if (!inode_create (free_map, FREE_MAP_SECTOR, bitmap_file_size (free_map)))
-    PANIC ("free map creation failed--disk is too large");
-  if (!inode_create (free_map, ROOT_DIR_SECTOR, dir_size (NUM_DIR_ENTRIES)))
-    PANIC ("root directory creation failed");
-
-  /* Write out the free map now that we have space reserved
-     for it. */
-  free_map_file = file_open (FREE_MAP_SECTOR);
-  if (free_map_file == NULL)
-    PANIC ("can't open free map file");
-  bitmap_write (free_map, free_map_file);
-  bitmap_destroy (free_map);
-  file_close (free_map_file);
-
-  /* Write out the root directory in the same way. */
-  root_dir_file = file_open (ROOT_DIR_SECTOR);
-  if (root_dir_file == NULL)
-    PANIC ("can't open root directory");
-  dir = dir_create (NUM_DIR_ENTRIES);
-  if (dir == NULL)
-    PANIC ("can't initialize root directory");
-  dir_write (dir, root_dir_file);
-  dir_destroy (dir);
-  file_close (root_dir_file);
-
-  printf ("done.\n");
-}
 
 /* If SUCCESS is false, panics with an error complaining about
    LINE_NO. */
@@ -379,4 +165,16 @@ must_succeed_function (int line_no, bool success)
 {
   if (!success)
     PANIC ("filesys_self_test: operation failed on line %d", line_no);
+}
+
+/* Formats the filesystem. */
+static void
+do_format (void)
+{
+  printf ("Formatting filesystem...");
+  free_map_create ();
+  if (!dir_create (ROOT_DIR_SECTOR, 16))
+    PANIC ("root directory creation failed");
+  free_map_close ();
+  printf ("done.\n");
 }

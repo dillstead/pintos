@@ -1,6 +1,0 @@
-(create-exists) begin
-(create-exists) create("quux.dat"): 1
-(create-exists) create("warble.dat"): 1
-(create-exists) create("quux.dat"): 0
-(create-exists) end
-create-exists: exit(0)

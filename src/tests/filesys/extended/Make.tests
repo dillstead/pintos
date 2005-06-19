@@ -1,0 +1,21 @@
+# -*- makefile -*-
+
+tests/filesys/extended_TESTS = $(addprefix				\
+tests/filesys/extended/,dir-empty-name dir-lsdir dir-mk-tree		\
+dir-mk-vine dir-mkdir dir-open dir-over-file dir-rm-cwd-cd dir-rm-cwd	\
+dir-rm-parent dir-rm-root dir-rm-tree dir-rm-vine dir-rmdir		\
+dir-under-file grow-create grow-dir-lg grow-file-size grow-root-lg	\
+grow-root-sm grow-seq-lg grow-seq-sm grow-sparse grow-tell		\
+grow-too-big grow-two-files syn-rw)
+
+tests/filesys/extended_PROGS = $(tests/filesys/extended_TESTS)	\
+tests/filesys/extended/child-syn-rw
+
+$(foreach prog,$(tests/filesys/extended_PROGS),			\
+	$(eval $(prog)_SRC += $(prog).c tests/lib.c tests/filesys/seq-test.c))
+$(foreach prog,$(tests/filesys/extended_TESTS),		\
+	$(eval $(prog)_SRC += tests/main.c))
+tests/filesys/extended/dir-mk-tree_SRC += tests/filesys/extended/mk-tree.c
+tests/filesys/extended/dir-rm-tree_SRC += tests/filesys/extended/mk-tree.c
+
+tests/filesys/extended/syn-rw_PUTFILES = tests/filesys/extended/child-syn-rw

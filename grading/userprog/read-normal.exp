@@ -1,3 +1,0 @@
-(read-normal) begin
-(read-normal) end
-read-normal: exit(0)

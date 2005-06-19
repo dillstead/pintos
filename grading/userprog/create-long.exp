@@ -1,4 +1,0 @@
-(create-long) begin
-(create-long) create: 0
-(create-long) end
-create-long: exit(0)

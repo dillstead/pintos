@@ -1,78 +1,65 @@
 @node Project 3--Virtual Memory, Project 4--File Systems, Project 2--User Programs, Top
 @chapter Project 3: Virtual Memory
 
-By now you should be familiar with the inner workings of Pintos.
-You've already come a long way: your OS can properly handle multiple
-threads of execution with proper synchronization, and can load
-multiple user programs at once.  However, when loading user programs,
-your OS is limited by how much main memory the simulated machine has.
-In this assignment, you will remove that limitation.
+By now you should be familiar with the inner workings of Pintos.  Your
+OS can properly handle multiple threads of execution with proper
+synchronization, and can load multiple user programs at once.  However,
+the number and size of programs that can run is limited by the machine's
+main memory size.  In this assignment, you will remove that limitation.
 
-You will be using the @file{vm} directory for this project.  The
-@file{vm} directory contains only the @file{Makefile}s.  The only
-change from @file{userprog} is that this new @file{Makefile} turns on
-the setting @option{-DVM}.  All code you write will either be newly
-generated files (e.g.@: if you choose to implement your paging code in
-their own source files), or will be modifications to pre-existing code
-(e.g.@: you will change the behavior of @file{process.c}
-significantly).
-
-There are only a couple of source files you will probably be
-encountering for the first time:
-
-@table @file
-@item devices/disk.h
-@itemx devices/disk.c
-Provides access to the physical disk, abstracting away the rather
-awful IDE interface.
-@end table
-
-You will be building this assignment on the last one.  It will benefit
+You will build this assignment on top of the last one.  It will benefit
 you to get your project 2 in good working order before this assignment
-so those bugs don't keep haunting you.
-
-All the test programs from the previous project should also work with
-this project.  You should also write programs to test the new features
-introduced in this project.
+so those bugs don't keep haunting you.  Test programs from the previous
+project should also work with this project.
 
 You will continue to handle Pintos disks and file systems the same way
 you did in the previous assignment (@pxref{Using the File System}).
 
 @menu
-* VM Design::                   
-* Page Faults::                 
-* Disk as Backing Store::       
-* Memory Mapped Files::         
-* Stack::                       
-* Problem 3-1 Page Table Management::  
-* Problem 3-2 Paging To and From Disk::  
-* Problem 3-3 Memory Mapped Files::  
-* Virtual Memory FAQ::          
+* Project 3 Background::        
+* Project 3 Requirements::      
+* Project 3 FAQ::               
 @end menu
 
-@node VM Design
-@section A Word about Design
+@node Project 3 Background
+@section Background
 
-It is important for you to note that in addition to getting virtual
-memory working, this assignment is also meant to be an open-ended
-design problem.  We will expect you to come up with a design that
-makes sense.  You will have the freedom to choose how to handle page
-faults, how to organize the swap disk, how to implement paging, etc.
-In each case, we will expect you to provide a defensible justification
-in your design documentation as to why your choices are reasonable.
-You should evaluate your design on all the available criteria: speed
-of handling a page fault, space overhead in memory, minimizing the
-number of page faults, simplicity, etc.
+@menu
+* Project 3 Source Files::      
+* Page Faults::                 
+* Disk as Backing Store::       
+* Memory Mapped Files Background::  
+@end menu
 
-In keeping with this, you will find that we are going to say as little
-as possible about how to do things.  Instead we will focus on what end
-functionality we require your OS to support.
+@node Project 3 Source Files
+@subsection Source Files
+
+You will work in the @file{vm} directory for this project.  The
+@file{vm} directory contains only @file{Makefile}s.  The only
+change from @file{userprog} is that this new @file{Makefile} turns on
+the setting @option{-DVM}.  All code you write will be in new
+files or in files introduced in earlier projects.
+
+You will probably be encountering just a few files for the first time:
+
+@table @file
+@item devices/disk.h
+@itemx devices/disk.c
+Provides access to the physical disk, abstracting away the rather awful
+IDE interface.  You will use this interface to access the swap disk.
+@end table
+
+@menu
+* Page Faults::
+* Disk as Backing Store::
+* Memory Mapped Files::
+@end menu
 
 @node Page Faults
-@section Page Faults
+@subsection Page Faults
 
 For the last assignment, whenever a context switch occurred, the new
-process would install its own page table into the machine.  The page
+process installed its own page table into the machine.  The new page
 table contained all the virtual-to-physical translations for the
 process.  Whenever the processor needed to look up a translation, it
 consulted the page table.  As long as the process only accessed
@@ -86,56 +73,64 @@ that the page must be brought in from a disk file or from swap.  You
 will have to implement a more sophisticated page fault handler to
 handle these cases.
 
+@menu
+* Page Table Structure::        
+* Working with Virtual Addresses::  
+* Accessed and Dirty Bits::     
+@end menu
+
+@node Page Table Structure
+@subsubsection Page Table Structure
+
 On the 80@var{x}86, the page table format is fixed by hardware.  We
 have provided code for managing page tables for you to use in
-@file{userprog/pagedir.c}.  The functions in there should provide an
-abstract interface to all the page table functionality that you need
+@file{userprog/pagedir.c}.  The functions in there provide an
+abstract interface to all the page table functionality that you should need
 to complete the project.  However, you may still find it worthwhile to
 understand a little about the hardware page table format, so we'll go
 into a little of detail about that in this section.
 
-The top-level paging data structure is a 4 kB page called the ``page
+The top-level paging data structure is a page called the ``page
 directory'' (PD) arranged as an array of 1,024 32-bit page directory
 entries (PDEs), each of which represents 4 MB of virtual memory.  Each
-PDE may point to the physical address of another 4 kB page called a
-``page table'' (PT) arranged in the same fashion as an array of 1,024
+PDE may point to the physical address of another page called a
+``page table'' (PT) arranged, similarly, as an array of 1,024
 32-bit page table entries (PTEs), each of which translates a single 4
-kB virtual page into physical memory.
+kB virtual page to a physical page.
 
-Thus, translation of a virtual address into a physical address follows
+Translation of a virtual address into a physical address follows
 the three-step process illustrated in the diagram
 below:@footnote{Actually, virtual to physical translation on the
-80@var{x}86 architecture happens via an intermediate ``linear
+80@var{x}86 architecture occurs via an intermediate ``linear
 address,'' but Pintos (and most other 80@var{x}86 OSes) set up the CPU
-so that linear and virtual addresses are one and the same, so that you
+so that linear and virtual addresses are one and the same.  Thus, you
 can effectively ignore this CPU feature.}
 
 @enumerate 1
 @item
-The top 10 bits of the virtual address (bits 22:32) are used to index
-into the page directory.  If the PDE is marked ``present,'' the
+The most-significant 10 bits of the virtual address (bits 22@dots{}32)
+index the page directory.  If the PDE is marked ``present,'' the
 physical address of a page table is read from the PDE thus obtained.
 If the PDE is marked ``not present'' then a page fault occurs.
 
 @item
-The next 10 bits of the virtual address (bits 12:22) are used to index
-into the page table.  If the PTE is marked ``present,'' the physical
+The next 10 bits of the virtual address (bits 12@dots{}21) index
+the page table.  If the PTE is marked ``present,'' the physical
 address of a data page is read from the PTE thus obtained.  If the PTE
 is marked ``not present'' then a page fault occurs.
 
-
 @item
-The bottom 12 bits of the virtual address (bits 0:12) are added to the
-data page's physical base address, producing the final physical
-address.
+The least-significant 12 bits of the virtual address (bits 0@dots{}11)
+are added to the data page's physical base address, yielding the final
+physical address.
 @end enumerate
 
 @example
 @group
-32                    22                     12                      0
-+--------------------------------------------------------------------+
+ 31                  22 21                  12 11                   0
++----------------------+----------------------+----------------------+
 | Page Directory Index |   Page Table Index   |    Page Offset       |
-+--------------------------------------------------------------------+
++----------------------+----------------------+----------------------+
              |                    |                     |
      _______/             _______/                _____/
     /                    /                       /
@@ -162,140 +157,151 @@ address.
 @end group
 @end example
 
+@node Working with Virtual Addresses
+@subsubsection Working with Virtual Addresses
+
 Header @file{threads/mmu.h} has useful functions for various
 operations on virtual addresses.  You should look over the header
-yourself, but its most important functions include these:
+yourself.  The most important functions are described below.
 
-@table @code
-@item pd_no(@var{va})
-Returns the page directory index in virtual address @var{va}.
+@deftypefun uintptr_t pd_no (const void *@var{va})
+Returns the page directory index for virtual address @var{va}.
+@end deftypefun
 
-@item pt_no(@var{va})
-Returns the page table index in virtual address @var{va}.
+@deftypefun uintptr_t pt_no (const void *@var{va})
+Returns the page table index for virtual address @var{va}.
+@end deftypefun
 
-@item pg_ofs(@var{va})
-Returns the page offset in virtual address @var{va}.
+@deftypefun unsigned pg_ofs (const void *@var{va})
+Returns the page offset of virtual address @var{va}.
+@end deftypefun
 
-@item pg_round_down(@var{va})
+@deftypefun {void *} pg_round_down (const void *@var{va})
 Returns @var{va} rounded down to the nearest page boundary, that is,
-@var{va} but with its page offset set to 0.
+@var{va} with its page offset set to 0.
+@end deftypefun
 
-@item pg_round_up(@var{va})
+@deftypefun {void *} pg_round_up (const void *@var{va})
 Returns @var{va} rounded up to the nearest page boundary.
-@end table
+@end deftypefun
+
+@node Accessed and Dirty Bits
+@subsubsection Accessed and Dirty Bits
+
+Most of the page table is under the control of the operating system, but
+two bits in each page table entry are also manipulated by the CPU.  On
+any read or write to the page referenced by a PTE, the CPU sets the
+PTE's @dfn{accessed bit} to 1; on any write, the CPU sets the @dfn{dirty
+bit} to 1.  The CPU never resets these bits to 0, but the OS may do so.
+
+You will need to use the accessed and dirty bits in your submission to
+choose which pages to evict from memory and to decide whether evicted
+pages need to be written to disk.  The page table code in
+@file{userprog/pagedir.c} provides functions for checking and setting
+these bits.  These functions are described at the end of this section.
+
+You need to watch out for @dfn{aliases}, that is, two (or more)
+different virtual pages that refer to the same physical page frame.
+When an aliased page is accessed, the accessed and dirty bits are
+updated in only one page table entry (the one for the virtual address
+used to access the page).  The accessed and dirty bits for the other
+aliased virtual addresses are not updated.
+
+In Pintos, every user virtual page is aliased to its kernel virtual
+address.  You must manage these aliases somehow.  For example, your code
+could check and update the accessed and dirty bits for both addresses.
+Alternatively, the kernel could avoid the problem by only accessing user
+data through the user virtual address.
+
+@deftypefun bool pagedir_is_dirty (uint32_t *@var{pd}, const void *@var{vpage})
+@deftypefunx bool pagedir_is_accessed (uint32_t *@var{pd}, const void *@var{vpage})
+Returns true if page directory @var{pd} contains a page table entry for
+virtual page @var{vpage} that is marked dirty (or accessed).  Otherwise,
+returns false.
+@end deftypefun
+
+@deftypefun void pagedir_set_dirty (uint32_t *@var{pd}, const void *@var{vpage}, bool @var{value})
+@deftypefunx void pagedir_set_accessed (uint32_t *@var{pd}, const void *@var{vpage}, bool @var{value})
+If page directory @var{pd} has a page table entry for @var{vpage}, then
+its dirty (or accessed) bit is set to @var{value}.
+@end deftypefun
 
 @node Disk as Backing Store
-@section Disk as Backing Store
+@subsection Disk as Backing Store
 
-In VM systems, since memory is less plentiful than disk, you will
-effectively use memory as a cache for disk.  Looking at it from
-another angle, you will use disk as a backing store for memory.  This
-provides the abstraction of an (almost) unlimited virtual memory size.
-Part of your task in this project is to do this, with the additional
-constraint that your performance should be close to that provided by
-physical memory.  You will use the page tables' ``dirty'' bits to
-denote whether pages need to be written back to disk when they're
-evicted from main memory and the ``accessed'' bit for page replacement
-algorithms.  Whenever the hardware writes memory, it sets the dirty
-bit, and if it reads or writes to the page, it sets the accessed bit.
+VM systems effectively use memory as a cache for disk.  From another
+perspective, disk is a ``backing store'' for memory.  This provides the
+abstraction of an (almost) unlimited virtual memory size.  You must
+implement such a system, with the additional constraint that performance
+should be close to that provided by physical memory.  You can use dirty
+bits to tell whether pages need to be written back to disk when they're
+evicted from main memory, and the accessed bits for page replacement
+algorithms (@pxref{Accessed and Dirty Bits}).
 
 As with any caching system, performance depends on the policy used to
-decide which things are kept in memory and which are only stored on
-disk.  On a page fault, the kernel must decide which page to replace.
-Ideally, it will throw out a page that will not be referenced for a
-long time, keeping in memory those pages that are soon to be
-referenced.  Another consideration is that if the replaced page has
-been modified, the page must be first saved to disk before the needed
-page can be brought in.  Many virtual memory systems avoid this extra
-overhead by writing modified pages to disk in advance, so that later
-page faults can be completed more quickly (but you do not have to
-implement this optimization).
+decide what to keep in the cache and what to evict.  On a page fault,
+the kernel must decide which page to replace.  Ideally, it will throw
+out a page that will not be referenced for a long time, keeping in
+memory those pages that are soon to be referenced.  Another
+consideration is that if the replaced page has been modified, the page
+must be first written to disk before the needed page can be brought in.
+Many virtual memory systems avoid this extra overhead by writing
+modified pages to disk in advance, so that later page faults can be
+completed more quickly (but you do not have to implement this
+optimization).
 
-@node Memory Mapped Files
-@section Memory Mapped Files
+@node Memory Mapped Files Background
+@subsection Memory Mapped Files
 
-The traditional way to access the file system is via @code{read} and
-@code{write} system calls, but that requires an extra level of copying
-between the kernel and the user level.  A secondary interface is
-simply to ``map'' the file into the virtual address space.  The
-program can then use load and store instructions directly on the file
-data.  (An alternative way of viewing the file system is as ``durable
-memory.''  Files just store data structures.  If you access data
-structures in memory using load and store instructions, why not access
-data structures in files the same way?)
+The file system is most commonly accessed with @code{read} and
+@code{write} system calls.  A secondary interface is to ``map''
+the file into the virtual address space.  The program can then use load
+and store instructions directly on the file data.  An alternative view
+is to see the file system is as ``durable memory'': files just store
+data structures, so if you access ordinary data structures using normal
+program instructions, why not access durable data structures the same
+way?
 
-Memory mapped files are typically implemented using system calls.  One
-system call maps the file to a particular part of the address space.
-For example, one might conceptually map the file @file{foo}, which is
-1000 bytes
-long, starting at address 5000.  Assuming that nothing else is already
-at virtual addresses 5000@dots{}6000, any memory accesses to these
-locations will access the corresponding bytes of @file{foo}.
+Suppose file @file{foo} is @t{0x1000} bytes (4 kB, or one page) long.
+If @file{foo} is mapped into memory starting at address @t{0x5000}, then
+any memory accesses to locations @t{0x5000}@dots{}@t{0x5fff} will access
+the corresponding bytes of @file{foo}.
 
 A consequence of memory mapped files is that address spaces are
 sparsely populated with lots of segments, one for each memory mapped
-file (plus one each for code, data, and stack).  You will implement
-memory mapped files in problem 3-3.  You should
-design your solutions to problems 3-1 and 3-2 to anticipate this.
+file (plus one each for code, data, and stack).
 
-@node Stack
-@section Stack
+@node Project 3 Requirements
+@section Requirements
 
-In project 2, the stack was a single page at the top of the user
-virtual address space.  The stack's location does not change in this
-project, but your kernel should allocate additional pages to the stack
-on demand.  That is, if the stack grows past its current bottom, the
-system should allocate additional pages for the stack as necessary
-(unless those pages are unavailable because they are in use by another
-segment).
+This assignment is an open-ended design problem.  We are going to say as
+little as possible about how to do things.  Instead we will focus on
+what functionality we require your OS to support.  We will expect
+you to come up with a design that makes sense.  You will have the
+freedom to choose how to handle page faults, how to organize the swap
+disk, how to implement paging, etc.
 
-It is impossible to predict how large the stack will grow at compile
-time, so we must allocate pages as necessary.  You should only allocate
-additional pages if they ``appear'' to be stack accesses.  You must
-devise a heuristic that attempts to distinguish stack accesses from
-other accesses.  Document and explain the heuristic in your
-design documentation.
+@menu
+* Project 3 Design Document::   
+* Page Table Management::       
+* Paging To and From Disk::     
+* Lazy Loading::                
+* Stack Growth::                
+* Memory Mapped Files::         
+@end menu
 
-The first stack page need not be loaded lazily.  You can initialize it
-with the command line at load time, with no need to wait for it to be
-faulted in.  Even if you did wait, the very first instruction in the
-user program is likely to be one that faults in the page.
+@node Project 3 Design Document
+@subsection Design Document
 
-Stack facts:
+Before you turn in your project, you must copy @uref{vm.tmpl, , the
+project 3 design document template} into your source tree under the name
+@file{pintos/src/vm/DESIGNDOC} and fill it in.  We recommend that you
+read the design document template before you start working on the
+project.  @xref{Project Documentation}, for a sample design document
+that goes along with a fictitious project.
 
-@itemize
-@item
-The user program's current stack pointer is in the @struct{intr_frame}'s
-@code{esp} member.
-
-@item
-Only buggy 80@var{x}86 user programs write to memory within the
-stack but below the stack pointer.  This is because more advanced OSes
-may interrupt a process at any time to deliver a ``signal'' and this
-uses the stack.@footnote{This rule is common but not universal.  One
-modern exception is the
-@uref{http://www.x86-64.org/documentation/abi.pdf, @var{x}86-64 System
-V ABI}, which designates 128 bytes below the stack pointer as a ``red
-zone'' that may not be modified by signal or interrupt handlers.}
-
-@item
-The 80@var{x}86 @code{push} instruction may cause a page fault 4 bytes
-below the stack pointer, because it checks access permissions before it
-adjusts the stack pointer.  (Otherwise, the instruction would not be
-restartable in a straightforward fashion.)
-
-@item
-Similarly, the 80@var{x}86 @code{pusha} instruction, which pushes all 32
-bytes of the 8 general-purpose registers at once, may cause a page fault
-32 bytes below the stack pointer.
-
-@item
-Most OSes impose some sort of limit on the stack size.  Sometimes it is
-user-adjustable.
-@end itemize
-
-@node Problem 3-1 Page Table Management
-@section Problem 3-1: Page Table Management
+@node Page Table Management
+@subsection Page Table Management
 
 Implement page directory and page table management to support virtual
 memory.  You will need data structures to accomplish the following
@@ -314,9 +320,8 @@ in @bibref{IA32-v3}, and in practice it is probably easier to add a new
 data structure.
 
 @item
-Some way of finding a page on disk if it is not in memory.  You won't
-need this data structure until problem 3-2, but planning ahead is a
-good idea.
+Some way of finding a page on disk (in a file or in swap) if it is not
+in memory.
 
 You can generalize the virtual-to-physical page table, so that it allows
 you to locate a page wherever it is in physical memory or on disk, or
@@ -325,7 +330,7 @@ you can make this a separate table.
 @item
 Some way of translating from physical page frames back to virtual page
 frames, so that when you evict a physical page from its frame, you can
-invalidate its translation(s).
+invalidate its page table entry (or entries).
 @end itemize
 
 The page fault handler, @func{page_fault} in
@@ -337,14 +342,13 @@ Locate the page backing the virtual
 address that faulted.  It might be in the file system, in swap,
 or it might be an invalid virtual address.
 If you implement sharing, it might even
-already be in physical memory and just not set up in the page table,
+already be in physical memory, but not in the page table.
 
 If the virtual address is invalid, that is, if there's nothing
 assigned to go there, or if the virtual address is above
 @code{PHYS_BASE}, meaning that it belongs to the kernel instead of the
-user, then the process's memory access must be disallowed.  You should
-terminate the process at this point, being sure to free all of its
-resources.
+user, then the process's memory access must be disallowed.  
+In this case, terminate the process and free all of its resources.
 
 @item
 If the page is not in physical memory, fetch it by appropriate means.
@@ -360,8 +364,8 @@ physical page.  You can use the functions in @file{userprog/pagedir.c}.
 You'll need to modify the ELF loader in @file{userprog/process.c} to
 do page table management according to your new design.  As supplied,
 it reads all the process's pages from disk and initializes the page
-tables for them at the same time.  For testing purposes, you'll
-probably want to leave the code that reads the pages from disk, but
+tables for them at the same time.  As a first step, you might
+want to leave the code that reads the pages from disk, but
 use your new page table management code to construct the page tables
 only as page faults occur for them.
 
@@ -369,81 +373,89 @@ You should use the @func{palloc_get_page} function to get the page
 frames that you use for storing user virtual pages.  Be sure to pass
 the @code{PAL_USER} flag to this function when you do so, because that
 allocates pages from a ``user pool'' separate from the ``kernel pool''
-that other calls to @func{palloc_get_page} make.
+that other calls to @func{palloc_get_page} make (@pxref{Why PAL_USER?}).
+
+You might find the Pintos bitmap code, in @file{lib/kernel/bitmap.c} and
+@file{lib/kernel/bitmap.h}, useful for tracking pages.  A bitmap is an
+array of bits, each of which can be true or false.  Bitmaps are
+typically used to track usage in a set of (identical) resources: if
+resource @var{n} is in use, then bit @var{n} of the bitmap is true.
 
 There are many possible ways to implement virtual memory.  The above
 is simply an outline of our suggested implementation.
 
-@node Problem 3-2 Paging To and From Disk
-@section Problem 3-2: Paging To and From Disk
+@node Paging To and From Disk
+@subsection Paging To and From Disk
 
 Implement paging to and from files and the swap disk.  You may use the
 disk on interface @code{hd1:1} as the swap disk, using the disk
 interface prototyped in @code{devices/disk.h}.  From the @file{vm/build}
-directory, use the command @code{pintos make-disk swap.dsk @var{n}} to
+directory, use the command @code{pintos-mkdisk swap.dsk @var{n}} to
 create an @var{n} MB swap disk named @file{swap.dsk}.  Afterward,
-@file{swap.dsk} will automatically be attached when you run
-@command{pintos}.
+@file{swap.dsk} will automatically be attached as @code{hd1:1} when you run
+@command{pintos}.  Alternatively, you can tell @command{pintos} to
+use a temporary @var{n}-MB swap disk for a single run with
+@option{--swap-disk=@var{n}}.
 
 You will need routines to move a page from memory to disk and from
 disk to memory, where ``disk'' is either a file or the swap disk.  If
-you do everything correctly, your VM should still work when you
+you do a good job, your VM should still work when you
 implement your own file system for the next assignment.
 
-You will need a way to track pages which are used by a process but
-which are not in physical memory, to fully handle page faults.  Pages
-that you write to swap should not be constrained to be in sequential
-order.  You will also need a way to track all of the physical memory
-pages, to find an unused one when needed, or to evict a page
-when memory is needed but no empty pages are available.  The data
-structures that you designed for problem 3-1 should do most of the work for
-you.
+To fully handle page faults, you will need a way to track pages that
+are used by a process but which are not in physical memory.  Pages in
+swap should not be constrained to any particular ordering.  You will
+also need a way to track physical page frames, to find an unused one
+when needed, or to evict a page when memory is needed but no empty pages
+are available.  The page table data structure that you designed should
+do most of the work for you.
 
-You will need a page replacement algorithm.  The hardware sets the
-accessed and dirty bits when it accesses memory.  You can gain access
-to this information using the functions prototyped in
-@file{userprog/pagedir.h}.  You should be able to take advantage of
-this information to implement some algorithm which attempts to achieve
-LRU-type behavior.  We expect that your algorithm perform at least as
-well as a reasonable implementation of the second-chance (clock)
-algorithm.  You will need to show in your test cases the value of your
-page replacement algorithm by demonstrating for some workload that it
-pages less frequently using your algorithm than using some inferior
-page replacement policy.  The canonical example of a poor page
-replacement policy is random replacement.
+Implement a global page replacement algorithm.  You should be able to
+use the ``accessed'' and ``dirty'' bits (@pxref{Accessed and Dirty
+Bits}) to implement an approximation to LRU.  Your algorithm should
+perform at least as well as the ``second chance'' or ``clock''
+algorithm.
 
-You must write your code so that we can choose a page replacement
-policy at Pintos startup time.  By default, the LRU-like algorithm
-must be in effect, but we must be able to choose random replacement by
-invoking @command{pintos} with the @option{-o random-paging} option.
-Passing this option sets @code{enable_random_paging}, declared in
-@file{threads/init.h}, to true.
+Your design should allow for parallelism.  Multiple processes should
+be able to process page faults at once.  If one page fault require
+I/O, in the meantime processes that do not fault should continue
+executing and other page faults that do not require I/O should be able to
+complete.  These criteria require some synchronization effort.
+
+Write your code so that we can choose a page replacement policy at
+Pintos startup time.  By default, the LRU-like algorithm must be in
+effect, but we must be able to choose random replacement by invoking
+@command{pintos} with the @option{-rndpg} option.  Passing this option
+sets @code{enable_random_paging}, declared in @file{threads/init.h}, to
+true.
+
+@node Lazy Loading
+@subsection Lazy Loading
 
 Since you will already be paging from disk, you should implement a
 ``lazy'' loading scheme for new processes.  When a process is created,
-it will not run immediately.  Therefore, it doesn't make sense to load
-all its code, data, and stack into memory when the process is created,
-since it might incur additional disk accesses to do so (if it gets
-paged out before it runs).  When loading a new process, you should
-leave most pages on disk, and bring them in as demanded when the
-program begins running.  Your VM system should also use the executable
-file itself as backing store for read-only segments, since these
-segments won't change.
+it will not need all of its resources immediately, so it doesn't make
+sense to load all its code, data, and stack into memory when the process
+is created.  Instead, bring pages in from
+the executable only as needed.  Use the
+executable file itself as backing store for read-only segments, since
+these segments won't change.  This means that read-only pages should not
+be written to swap.
 
-There are a few special cases.  Look at the loop in
-@func{load_segment} in @file{userprog/process.c}.  Each time
-around the loop, @code{read_bytes} represents the number of bytes to
-read from the executable file and @code{zero_bytes} represents the number
-of bytes to initialize to zero following the bytes read.  The two
-always sum to @code{PGSIZE}.  The page handling depends on these
-variables' values:
+The core of the program loader is the loop in @func{load_segment} in
+@file{userprog/process.c}.
+Each time around the loop, @code{read_bytes} receives the number of
+bytes to read from the executable file and @code{zero_bytes} receives
+the number of bytes to initialize to zero following the bytes read.  The
+two always sum to @code{PGSIZE} (4,096).  The handling of a page depends
+on these variables' values:
 
 @itemize @bullet
 @item
 If @code{read_bytes} equals @code{PGSIZE}, the page should be demand
 paged from disk on its first access.
 
-@item 
+@item
 If @code{zero_bytes} equals @code{PGSIZE}, the page does not need to
 be read from disk at all because it is all zeroes.  You should handle
 such pages by creating a new page consisting of all zeroes at the
@@ -465,24 +477,49 @@ special ``linker script.''  Read @file{Makefile.userprog} for
 details.  We will not test your submission with this special linker
 script, so the code you turn in must properly handle all cases.
 
-For extra credit, you may implement sharing: when multiple processes
-are created that use the same executable file, share read-only pages
-among those processes instead of creating separate copies of read-only
-segments for each process.  If you carefully designed your data
-structures in problem 3-1, sharing of read-only pages should not make this
-part significantly harder.
+@node Stack Growth
+@subsection Stack Growth
 
-@node Problem 3-3 Memory Mapped Files
-@section Problem 3-3: Memory Mapped Files
+Implement stack growth.  In project 2, the stack was a single page at
+the top of the user virtual address space, and programs were limited to
+that much stack.  Now, if the stack grows past its current size,
+allocate additional page as necessary.
 
-Implement memory mapped files.
+Allocate additional pages only if they ``appear'' to be stack accesses.
+Devise a heuristic that attempts to distinguish stack accesses from
+other accesses.  You can retrieve the user program's current stack
+pointer from the @struct{intr_frame}'s @code{esp} member.
 
-You will need to implement the following system calls:
+User programs are buggy if they write to the stack below the stack
+pointer, because typical real OSes may interrupt a process at any time
+to deliver a ``signal,'' which pushes data on the stack.@footnote{This rule is
+common but not universal.  One modern exception is the
+@uref{http://www.x86-64.org/documentation/abi.pdf, @var{x}86-64 System V
+ABI}, which designates 128 bytes below the stack pointer as a ``red
+zone'' that may not be modified by signal or interrupt handlers.}
+However, the 80@var{x}86 @code{PUSH} instruction checks access
+permissions before it adjusts the stack pointer, so it may cause a page
+fault 4 bytes below the stack pointer.  (Otherwise, @code{PUSH} would
+not be restartable in a straightforward fashion.)  Similarly, the
+@code{PUSHA} instruction pushes 32 bytes at once, so it can fault 32
+bytes below the stack pointer.
 
-@table @code
-@item SYS_mmap
-@itemx mapid_t mmap (int @var{fd}, void *@var{addr})
+You may impose some absolute limit on stack size, as do most OSes.
+(Some OSes make the limit user-adjustable, e.g.@: with the
+@command{ulimit} command on many Unix systems.)
 
+The first stack page need not be allocated lazily.  You can initialize
+it with the command line arguments at load time, with no need to wait
+for it to be faulted in.  (Even if you did wait, the very first
+instruction in the user program is likely to be one that faults in the
+page.)
+
+@node Memory Mapped Files
+@subsection Memory Mapped Files
+
+Implement memory mapped files, including the following system calls.
+
+@deftypefn {System Call} mapid_t mmap (int @var{fd}, void *@var{addr})
 Maps the file open as @var{fd} into the process's virtual address
 space.  The entire file is mapped into consecutive virtual pages
 starting at @var{addr}.
@@ -492,49 +529,81 @@ bytes in the final mapped page ``stick out'' beyond the end of the
 file.  Set these bytes to zero when the page is faulted in from disk,
 and discard them when the page is written back to disk.
 
-If successful, this function returns a ``mapping ID'' that must
-uniquely identify the mapping within the given process.  On failure,
-it must return -1, which otherwise should not be a valid mapping id.
+If successful, this function returns a ``mapping ID'' that
+uniquely identifies the mapping within the process.  On failure,
+it must return -1, which otherwise should not be a valid mapping id,
+and the process's mappings must be unchanged.
 
 A call to @code{mmap} may fail if the file open as @var{fd} has a
 length of zero bytes.  It must fail if @var{addr} is not page-aligned
 or if the range of pages mapped overlaps any existing set of mapped
 pages, including the stack or pages mapped at executable load time.
+It must also fail if @var{addr} is 0, because some Pintos code assumes
+virtual page 0 is not mapped.  Finally, file descriptors 0 and 1,
+representing console input and output, are not mappable.
 
 Your VM system should use the @code{mmap}'d file itself as backing
 store for the mapping.  That is, to evict a page mapped by
 @code{mmap}, write it to the file it was mapped from.  (In fact, you
-may choose to implement executable mappings as a special case of file
-mappings.)
+may choose to implement executable mappings as special, copy-on-write
+file mappings.)
+@end deftypefn
 
-@item SYS_munmap
-@itemx bool munmap (mapid_t @var{mapping})
-
+@deftypefn {System Call} void munmap (mapid_t @var{mapping})
 Unmaps the mapping designated by @var{mapping}, which must be a
 mapping ID returned by a previous call to @code{mmap} by the same
 process that has not yet been unmapped.
-@end table
+@end deftypefn
 
 All mappings are implicitly unmapped when a process exits, whether via
 @code{exit} or by any other means.  When a mapping is unmapped, whether
-implicitly or explicitly, all outstanding changes are written to the
-file, and the pages are removed from the process's list of used
-virtual pages.
+implicitly or explicitly, all pages written to by the process are
+written back to the file, and pages not written must not be.  The pages
+are then removed from the process's list of virtual pages.
 
-@node Virtual Memory FAQ
+@node Project 3 FAQ
 @section FAQ
 
-@enumerate 1
-@item
-@b{Do we need a working HW 2 to implement HW 3?}
+@table @b
+@item How much code will I need to write?
+
+Here's a summary of our reference solution, produced by the
+@command{diffstat} program.  The final row gives total lines inserted
+and deleted; a changed line counts as both an insertion and a deletion.
+
+This summary is relative to the Pintos base code, but we started from
+the reference solution to project 2.  @xref{Project 2 FAQ}, for the
+summary of project 2.
+
+@verbatim
+ Makefile.build       |    4 
+ devices/timer.c      |   42 ++
+ threads/init.c       |    5 
+ threads/interrupt.c  |    2 
+ threads/thread.c     |   31 +
+ threads/thread.h     |   37 +-
+ userprog/exception.c |   12 
+ userprog/pagedir.c   |   10 
+ userprog/process.c   |  319 +++++++++++++-----
+ userprog/syscall.c   |  545 ++++++++++++++++++++++++++++++-
+ userprog/syscall.h   |    1 
+ vm/frame.c           |  162 +++++++++
+ vm/frame.h           |   23 +
+ vm/page.c            |  297 ++++++++++++++++
+ vm/page.h            |   50 ++
+ vm/swap.c            |   85 ++++
+ vm/swap.h            |   11 
+ 17 files changed, 1532 insertions(+), 104 deletions(-)
+@end verbatim
+
+@item Do we need a working HW 2 to implement HW 3?
 
 Yes.
 
-@item
+@item How do I use the hash table provided in @file{lib/kernel/hash.c}?
 @anchor{Hash Table}
-@b{How do I use the hash table provided in @file{lib/kernel/hash.c}?}
 
-First, you need to embed a @struct{hash_elem} as a member of the
+First, you need to add a @struct{hash_elem} as a member of the
 object that the hash table will contain.  Each @struct{hash_elem} allows
 the object to a member of at most one hash table at a given time.  All
 the hash table functions that deal with hash table items actually use
@@ -547,8 +616,9 @@ that is unique for each object, because a given hash table may not
 contain two objects with equal keys.  Then you need to write two
 functions.  The first is a @dfn{hash function} that converts a key
 into an integer.  Some sample hash functions that you can use or just
-examine are given in @file{lib/kernel/hash.c}.  The second function
-needed is a @dfn{comparison function} that compares a pair and returns
+examine are given in @file{lib/kernel/hash.c}.  The second needed
+function is a @dfn{comparison function} that compares a pair of objects
+and returns
 true if the first is less than the second.  These two functions have
 to be compatible with the prototypes for @code{hash_hash_func} and
 @code{hash_less_func} in @file{lib/kernel/hash.h}.
@@ -558,7 +628,7 @@ in a hash table.  First, add a @struct{hash_elem} to the thread
 structure by adding a line to its definition:
 
 @example
-struct hash_elem h_elem;                /* Hash table element. */
+struct hash_elem h_elem;     /* Hash table element. */
 @end example
 
 We'll choose the @code{tid} member in @struct{thread} as the key,
@@ -575,7 +645,8 @@ thread_hash (const struct hash_elem *e, void *aux UNUSED)
 
 /* Returns true if A's tid is less than B's tid. */
 bool
-thread_less (const struct hash_elem *a_, const struct hash_elem *b_, 
+thread_less (const struct hash_elem *a_,
+             const struct hash_elem *b_,
              void *aux UNUSED)
 @{
   struct thread *a = hash_entry (a_, struct thread, h_elem);
@@ -599,13 +670,9 @@ then we can insert it into the hash table with:
 hash_insert (&threads, &@var{t}->h_elem);
 @end example
 
-If you have any other questions about hash tables, the CS109
-and CS161 textbooks have good chapters on them, or you can come
-to any of the TA's office hours for further clarification.
+The CS109 and CS161 textbooks have chapters on hash tables.
 
-@item
-@b{What are the @var{aux} parameters to the hash table functions good
-for?}
+@item Why do the hash table functions have @var{aux} parameters?
 
 In simple cases you won't have any need for the @var{aux} parameters.
 In these cases you can just pass a null pointer to @func{hash_init}
@@ -621,64 +688,61 @@ the items in a hash table contain fixed-length strings, but the items
 themselves don't indicate what that fixed length is, you could pass
 the length as an @var{aux} parameter.
 
-@item
-@b{The current implementation of the hash table does not do something
-that we need it to do. What gives?}
+@item Can we change the hash table implementation?
 
 You are welcome to modify it.  It is not used by any of the code we
 provided, so modifying it won't affect any code but yours.  Do
 whatever it takes to make it work the way you want.
 
-@item
-@b{What controls the layout of user programs?}
+@item What extra credit is available?
 
-The linker is responsible for the layout of a user program in
-memory. The linker is directed by a ``linker script'' which tells it
-the names and locations of the various program segments.  You can
-learn more about linker scripts by reading the ``Scripts'' chapter in
-the linker manual, accessible via @samp{info ld}.
-@end enumerate
+You may implement sharing: when multiple processes are created that use
+the same executable file, share read-only pages among those processes
+instead of creating separate copies of read-only segments for each
+process.  If you carefully designed your page table data structures,
+sharing of read-only pages should not make this part significantly
+harder.
+
+@end table
 
 @menu
-* Problem 3-1 and 3-2 FAQ::    
-* Problem 3-3 Memory Mapped File FAQ::  
+* Page Table and Paging FAQ::   
+* Memory Mapped File FAQ::      
 @end menu
 
-@node Problem 3-1 and 3-2 FAQ
-@subsection Problem 3-1 and 3-2 FAQ
+@node Page Table and Paging FAQ
+@subsection Page Table and Paging FAQ
 
-@enumerate 1
-@item
-@b{Does the virtual memory system need to support growth of the data
-segment?}
+@table @b
+@item Does the virtual memory system need to support data segment growth?
 
-No.  The size of the data segment is determined by the linker.  We
-still have no dynamic allocation in Pintos (although it is possible to
-``fake'' it at the user level by using memory-mapped files).  However,
-implementing it would add little additional complexity to a
+No.  The size of the data segment is determined by the linker.  We still
+have no dynamic allocation in Pintos (although it is possible to
+``fake'' it at the user level by using memory-mapped files).  Supporting
+data segment growth should add little additional complexity to a
 well-designed system.
 
-@item
-@b{Why do I need to pass @code{PAL_USER} to @func{palloc_get_page}
-when I allocate physical page frames?}@anchor{Why PAL_USER?}
+@item Why should I use @code{PAL_USER} for allocating page frames?
+@anchor{Why PAL_USER?}
 
-You can layer some other allocator on top of @func{palloc_get_page}
-if you like, but it should be the underlying mechanism, directly or
-indirectly, for two reasons.  First, running out of pages in the user
-pool just causes user programs to page, but running out of pages in
-the kernel pool will cause all kinds of problems, because many kernel
-functions depend on being able to allocate memory.  Second, you can
-use the @option{-ul} option to @command{pintos} to limit the size of
-the user pool, which makes it easy to test your VM implementation with
-various user memory sizes.
-@end enumerate
+Passing @code{PAL_USER} to @func{palloc_get_page} causes it to allocate
+memory from the user pool, instead of the main kernel pool.  Running out
+of pages in the user pool just causes user programs to page, but running
+out of pages in the kernel pool will cause many failures because so many
+kernel functions need to obtain memory.
+You can layer some other allocator on top of @func{palloc_get_page} if
+you like, but it should be the underlying mechanism.
 
-@node Problem 3-3 Memory Mapped File FAQ
-@subsection Problem 3-3: Memory Mapped File FAQ
+Also, you can use the @option{-u} option to @command{pintos} to limit
+the size of the user pool, which makes it easy to test your VM
+implementation with various user memory sizes.
+@end table
 
-@enumerate 1
-@item
-@b{How do we interact with memory-mapped files?}
+@node Memory Mapped File FAQ
+@subsection Memory Mapped File FAQ
+
+@table @b
+@item How do we interact with memory-mapped files?
 
 Let's say you want to map a file called @file{foo} into your address
 space at address @t{0x10000000}. You open the file then use @code{mmap}:
@@ -723,8 +787,7 @@ it:
 munmap (map);
 @end example
 
-@item
-@b{What if two processes map the same file into memory?}
+@item What if two processes map the same file into memory?
 
 There is no requirement in Pintos that the two processes see
 consistent data.  Unix handles this by making the two mappings share the
@@ -732,34 +795,13 @@ same physical page, but the @code{mmap} system call also has an
 argument allowing the client to specify whether the page is shared or
 private (i.e.@: copy-on-write).
 
-@item
-@b{What happens if a user removes a @code{mmap}'d file?}
+@item What happens if a user removes a @code{mmap}'d file?
 
 The mapping should remain valid, following the Unix convention.
 @xref{Removing an Open File}, for more information.
 
-@item
-@b{What if a process writes to a page that is memory-mapped, but the
-location written to in the memory-mapped page is past the end
-of the memory-mapped file?}
-
-Can't happen.  @code{mmap} maps an entire file and Pintos provides no
-way to shorten a file.  (Until project 4, there's no way to extend a
-file either.)  You can remove a file, but the mapping remains valid
-(see the previous question).
-
-@item
-@b{Do we have to handle memory mapping @code{stdin} or @code{stdout}?}
-
-No.  Memory mapping implies that a file has a length and that a user
-can seek to any location in the file.  Since the console device has
-neither of these properties, @code{mmap} should return false when the
-user attempts to memory map a file descriptor for the console device.
-
-@item
-@b{If a user closes a mapped file, should it be automatically
-unmapped?}
+@item If a user closes a mapped file, should it be automatically unmapped?
 
 No.  Once created the mapping is valid until @code{munmap} is called
 or the process exits.
-@end enumerate
+@end table

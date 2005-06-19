@@ -1,6 +1,0 @@
-(open-null) begin
-(open-null) end
-open-null: exit(0)
---OR--
-(open-null) begin
-open-null: exit(-1)

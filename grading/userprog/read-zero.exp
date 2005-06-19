@@ -1,3 +1,0 @@
-(read-zero) begin
-(read-zero) end
-read-zero: exit(0)

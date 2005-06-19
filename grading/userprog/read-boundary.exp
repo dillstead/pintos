@@ -1,3 +1,0 @@
-(read-boundary) begin
-(read-boundary) end
-read-boundary: exit(0)

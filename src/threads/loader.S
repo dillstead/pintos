@@ -125,7 +125,7 @@ start:
 	jbe 1f
 	mov eax, 0x10000
 1:	shr eax, 2		# Total 4 kB pages
-	mov ram_pages, eax 
+	mov ram_pgs, eax 
 	
 #### Create temporary page directory and page table and set page
 #### directory base register.
@@ -304,7 +304,7 @@ gdtdesc:
 #### Print panicmsg (with help from the BIOS) and spin.
 
 panic:  .code16			# We only panic in real mode.
-	mov si, offset panicmsg
+	mov si, offset panic_message
 	mov ah, 0xe
 	sub bh, bh
 1:	lodsb
@@ -313,22 +313,27 @@ panic:  .code16			# We only panic in real mode.
 	int 0x10
 	jmp 1b
 
-panicmsg:
+panic_message:
 	.ascii "Panic!"
 	.byte 0
 
-#### Memory size in 4 kB pages.
-	.org LOADER_RAM_PAGES - LOADER_BASE
-ram_pages:
+#### Physical memory size in 4 kB pages.
+#### This is initialized by the loader and read by the kernel.
+	.org LOADER_RAM_PGS - LOADER_BASE
+ram_pgs:
 	.long 0
 
-#### Command-line arguments inserted by another utility.
-#### The loader doesn't use these, but we note their
-#### location here for easy reference.
-	.org LOADER_CMD_LINE - LOADER_BASE
-cmd_line:
+#### Command-line arguments and their count.
+#### This is written by the `pintos' utility and read by the kernel.
+#### The loader itself does not do anything with the command line.
+	.org LOADER_ARG_CNT - LOADER_BASE
+arg_cnt:	
+	.long 0
+	.org LOADER_ARGS - LOADER_BASE
+args:		
 	.fill 0x80, 1, 0
 
-#### Boot-sector signature for BIOS inspection.
-	.org LOADER_BIOS_SIG - LOADER_BASE
+#### Boot-sector signature.
+#### The BIOS checks that this is set properly.
+	.org LOADER_SIG - LOADER_BASE
 	.word 0xaa55

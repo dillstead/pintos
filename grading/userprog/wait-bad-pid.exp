@@ -1,6 +1,0 @@
-(wait-bad-pid) begin
-(wait-bad-pid) end
-wait-bad-pid: exit(0)
---OR--
-(wait-bad-pid) begin
-wait-bad-pid: exit(-1)

@@ -1,13 +1,15 @@
 # -*- makefile -*-
 
-include ../Make.vars
-include ../../Make.config
+SRCDIR = ../..
 
-VPATH = ../..
+all: os.dsk
+
+include ../../Make.config
+include ../Make.vars
+include ../../tests/Make.tests
 
 # Compiler and assembler options.
-DEFINES += -DKERNEL
-CPPFLAGS = -nostdinc -I../.. -I- -I../../lib -I../../lib/kernel
+os.dsk: CPPFLAGS += -I$(SRCDIR)/lib/kernel
 
 # Core kernel.
 threads_SRC  = threads/init.c		# Main program.
@@ -19,7 +21,6 @@ threads_SRC += threads/synch.c		# Synchronization.
 threads_SRC += threads/palloc.c		# Page allocator.
 threads_SRC += threads/malloc.c		# Subpage allocator.
 threads_SRC += threads/start.S		# Startup code.
-threads_SRC += threads/test.c		# Test code.
 
 # Device driver code.
 devices_SRC  = devices/timer.c		# Timer device.
@@ -37,10 +38,11 @@ lib_SRC += lib/stdlib.c			# Utility functions.
 lib_SRC += lib/string.c			# String functions.
 
 # Kernel-specific library code.
-lib_kernel_SRC += lib/kernel/list.c	# Doubly-linked lists.
-lib_kernel_SRC += lib/kernel/bitmap.c	# Bitmaps.
-lib_kernel_SRC += lib/kernel/hash.c	# Hash tables.
-lib_kernel_SRC += lib/kernel/console.c	# printf(), putchar().
+lib/kernel_SRC  = lib/kernel/debug.c	# Debug helpers.
+lib/kernel_SRC += lib/kernel/list.c	# Doubly-linked lists.
+lib/kernel_SRC += lib/kernel/bitmap.c	# Bitmaps.
+lib/kernel_SRC += lib/kernel/hash.c	# Hash tables.
+lib/kernel_SRC += lib/kernel/console.c	# printf(), putchar().
 
 # User process code.
 userprog_SRC  = userprog/process.c	# Process loading.
@@ -55,16 +57,15 @@ userprog_SRC += userprog/tss.c		# TSS management.
 
 # Filesystem code.
 filesys_SRC  = filesys/filesys.c	# Filesystem core.
+filesys_SRC += filesys/free-map.c	# Free sector bitmap.
 filesys_SRC += filesys/file.c		# Files.
 filesys_SRC += filesys/directory.c	# Directories.
 filesys_SRC += filesys/inode.c		# File headers.
 filesys_SRC += filesys/fsutil.c		# Utilities.
 
-SOURCES = $(foreach dir,$(SUBDIRS),$($(subst /,_,$(dir))_SRC))
+SOURCES = $(foreach dir,$(KERNEL_SUBDIRS),$($(dir)_SRC))
 OBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))
 DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
-
-all: os.dsk
 
 threads/kernel.lds.s: CPPFLAGS += -P
 threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
@@ -74,8 +75,8 @@ kernel.o: threads/kernel.lds.s $(OBJECTS)
 
 kernel.bin: kernel.o
 	$(OBJCOPY) -O binary -R .note -R .comment -S $< $@.tmp
-	$(DD) if=$@.tmp of=$@ bs=4096 conv=sync
-	$(RM) $@.tmp
+	dd if=$@.tmp of=$@ bs=4096 conv=sync
+	rm $@.tmp
 
 threads/loader.o: threads/loader.S kernel.bin
 	$(CC) -c $< -o $@ $(ASFLAGS) $(CPPFLAGS) $(DEFINES) -DKERNEL_LOAD_PAGES=`perl -e 'print +(-s "kernel.bin") / 4096;'`
@@ -84,15 +85,15 @@ loader.bin: threads/loader.o
 	$(LD) -N -e start -Ttext 0x7c00 --oformat binary -o $@ $<
 
 os.dsk: loader.bin kernel.bin
-	$(CAT) $^ > $@
+	cat $^ > $@
 
-clean:
-	$(RM) -f $(OBJECTS) $(DEPENDS) 
-	$(RM) -f threads/loader.o
-	$(RM) -f kernel.o kernel.lds.s
-	$(RM) -f kernel.bin loader.bin
+clean::
+	rm -f $(OBJECTS) $(DEPENDS) 
+	rm -f threads/loader.o threads/kernel.lds.s threads/loader.d
+	rm -f kernel.o kernel.lds.s
+	rm -f kernel.bin loader.bin os.dsk
 
-Makefile: ../../Makefile.build
+Makefile: $(SRCDIR)/Makefile.build
 	cp $< $@
 
 -include $(DEPENDS)

@@ -18,7 +18,6 @@
 #include "threads/malloc.h"
 #include "threads/mmu.h"
 #include "threads/palloc.h"
-#include "threads/test.h"
 #include "threads/thread.h"
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -26,6 +25,8 @@
 #include "userprog/gdt.h"
 #include "userprog/syscall.h"
 #include "userprog/tss.h"
+#else
+#include "tests/threads/tests.h"
 #endif
 #ifdef FILESYS
 #include "devices/disk.h"
@@ -39,18 +40,13 @@ size_t ram_pages;
 /* Page directory with kernel mappings only. */
 uint32_t *base_page_dir;
 
-/* -o mlfqs:
+/* -mlfqs:
    If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler. */
 bool enable_mlfqs;
 
-#ifdef USERPROG
-/* -ex: Initial program to run. */
-static char *initial_program;
-#endif
-
 #ifdef VM
-/* -o random-paging:
+/* -rndpg:
    If false (default), use LRU page replacement policy.
    If true, use random page replacement policy. */
 bool enable_random_paging;
@@ -66,14 +62,23 @@ bool power_off_when_done;
 
 static void ram_init (void);
 static void paging_init (void);
-static void argv_init (void);
+
+static char **read_command_line (void);
+static char **parse_options (char **argv);
+static void run_actions (char **argv);
+static void usage (void);
+
 static void print_stats (void);
+
 
 int main (void) NO_RETURN;
 
+/* Pintos main program. */
 int
 main (void)
 {
+  char **argv;
+  
   /* Clear BSS and get machine's RAM size. */  
   ram_init ();
 
@@ -88,8 +93,9 @@ main (void)
   /* Greet user. */
   printf ("Pintos booting with %'zu kB RAM...\n", ram_pages * PGSIZE / 1024);
 
-  /* Parse command line. */
-  argv_init ();
+  /* Break command line into arguments and parse options. */
+  argv = read_command_line ();
+  argv = parse_options (argv);
 
   /* Initialize memory system. */
   palloc_init ();
@@ -102,7 +108,7 @@ main (void)
   gdt_init ();
 #endif
 
-  /* Set random seed if argv_init() didn't. */
+  /* Set random seed if parse_options() didn't. */
   random_init (0);
 
   /* Initialize interrupt handlers. */
@@ -123,28 +129,17 @@ main (void)
   /* Initialize filesystem. */
   disk_init ();
   filesys_init (format_filesys);
-  fsutil_run ();
 #endif
 
   printf ("Boot complete.\n");
   
-#ifdef USERPROG
-  /* Run a user program. */
-  if (initial_program != NULL)
-    {
-      printf ("\nExecuting '%s':\n", initial_program);
-      process_wait (process_execute (initial_program));
-    }
-#else
-  /* Run the compiled-in test function. */
-  test ();
-#endif
+  /* Run actions specified on kernel command line. */
+  run_actions (argv);
 
   /* Finish up. */
-  if (power_off_when_done) 
+  if (power_off_when_done)
     power_off ();
-  else 
-    thread_exit ();
+  thread_exit ();
 }
 
 /* Clear BSS and obtain RAM size from loader. */
@@ -161,7 +156,7 @@ ram_init (void)
   memset (&_start_bss, 0, &_end_bss - &_start_bss);
 
   /* Get RAM size from loader.  See loader.S. */
-  ram_pages = *(uint32_t *) ptov (LOADER_RAM_PAGES);
+  ram_pages = *(uint32_t *) ptov (LOADER_RAM_PGS);
 }
 
 /* Populates the base page directory and page table with the
@@ -204,104 +199,181 @@ paging_init (void)
   asm volatile ("mov %%cr3, %0" :: "r" (vtop (base_page_dir)));
 }
 
-/* Parses the command line. */
-static void
-argv_init (void) 
+/* Breaks the kernel command line into words and returns them as
+   an argv-like array. */
+static char **
+read_command_line (void) 
 {
-  char *cmd_line, *pos;
-  char *argv[LOADER_CMD_LINE_LEN / 2 + 2];
-  int argc = 0;
+  static char *argv[LOADER_ARGS_LEN / 2 + 1];
+  char *p, *end;
+  int argc;
   int i;
 
-  /* The command line is made up of null terminated strings
-     followed by an empty string.  Break it up into words. */
-  cmd_line = pos = ptov (LOADER_CMD_LINE);
-  printf ("Kernel command line:");
-  while (pos < cmd_line + LOADER_CMD_LINE_LEN)
+  argc = *(uint32_t *) ptov (LOADER_ARG_CNT);
+  p = ptov (LOADER_ARGS);
+  end = p + LOADER_ARGS_LEN;
+  for (i = 0; i < argc; i++) 
     {
-      ASSERT (argc < LOADER_CMD_LINE_LEN / 2);
-      if (*pos == '\0')
-        break;
-      argv[argc++] = pos;
-      printf (" %s", pos);
-      pos = strchr (pos, '\0') + 1;
-    }
-  printf ("\n");
-  argv[argc] = "";
-  argv[argc + 1] = "";
+      if (p >= end)
+        PANIC ("command line arguments overflow");
 
-  /* Parse the words. */
+      argv[i] = p;
+      p += strnlen (p, end - p) + 1;
+    }
+  argv[argc] = NULL;
+
+  /* Print kernel command line. */
+  printf ("Kernel command line:");
   for (i = 0; i < argc; i++)
-    if (!strcmp (argv[i], "-o"))
-      {
-        i++;
-        if (!strcmp (argv[i], "mlfqs"))
-          enable_mlfqs = true;
-#ifdef VM
-        else if (!strcmp (argv[i], "random-paging"))
-          enable_random_paging = true;
-#endif
-        else
-          PANIC ("unknown option `-o %s' (use -u for help)", argv[i]);
-      }
-    else if (!strcmp (argv[i], "-rs")) 
-      random_init (atoi (argv[++i]));
-    else if (!strcmp (argv[i], "-q"))
-      power_off_when_done = true;
-#ifdef USERPROG
-    else if (!strcmp (argv[i], "-ex")) 
-      initial_program = argv[++i];
-    else if (!strcmp (argv[i], "-ul"))
-      user_page_limit = atoi (argv[++i]);
-#endif
-#ifdef FILESYS
-    else if (!strcmp (argv[i], "-f"))
-      format_filesys = true;
-    else if (!strcmp (argv[i], "-ci")) 
-      {
-        fsutil_copyin_file = argv[++i]; 
-        fsutil_copyin_size = atoi (argv[++i]); 
-      }
-    else if (!strcmp (argv[i], "-co"))
-      fsutil_copyout_file = argv[++i];
-    else if (!strcmp (argv[i], "-p")) 
-      fsutil_print_file = argv[++i];
-    else if (!strcmp (argv[i], "-r"))
-      fsutil_remove_file = argv[++i];
-    else if (!strcmp (argv[i], "-ls"))
-      fsutil_list_files = true;
-#endif
-    else if (!strcmp (argv[i], "-u"))
-      {
-        printf (
-          "Kernel options:\n"
-          " -o mlfqs            Use multi-level feedback queue scheduler.\n"
-#ifdef USERPROG
-          " -ex 'PROG [ARG...]' Run PROG, passing the optional arguments.\n"
-          " -ul USER_MAX        Limit user memory to USER_MAX pages.\n"
-#endif
-#ifdef VM
-          " -o random-paging    Use random page replacement policy.\n"
-#endif
-#ifdef FILESYS
-          " -f                  Format the filesystem disk (hdb or hd0:1).\n"
-          " -ci FILE SIZE       Copy SIZE bytes from the scratch disk (hdc\n"
-          "                     or hd1:0) into the filesystem as FILE.\n"
-          " -co FILE            Copy FILE to the scratch disk, with\n"
-          "                     size at start of sector 0 and data after.\n"
-          " -p FILE             Print the contents of FILE.\n"
-          " -r FILE             Delete FILE.\n"
-          " -ls                 List files in the root directory.\n"
-#endif
-          " -rs SEED            Set random seed to SEED.\n"
-          " -q                  Power off after doing requested actions.\n"
-          " -u                  Print this help message and power off.\n"
-          );
-        power_off ();
-      }
-    else 
-      PANIC ("unknown option `%s' (use -u for help)", argv[i]);
+    printf (" %s", argv[i]);
+  printf ("\n");
+
+  return argv;
 }
+
+/* Parses options in ARGV[]
+   and returns the first non-option argument. */
+static char **
+parse_options (char **argv) 
+{
+  for (; *argv != NULL && **argv == '-'; argv++)
+    {
+      char *save_ptr;
+      char *name = strtok_r (*argv, "=", &save_ptr);
+      char *value = strtok_r (NULL, "", &save_ptr);
+      
+      if (!strcmp (name, "-h"))
+        usage ();
+      else if (!strcmp (name, "-q"))
+        power_off_when_done = true;
+#ifdef FILESYS
+      else if (!strcmp (name, "-f"))
+        format_filesys = true;
+#endif
+      else if (!strcmp (name, "-rs"))
+        random_init (atoi (value));
+      else if (!strcmp (name, "-mlfqs"))
+        enable_mlfqs = true;
+#ifdef USERPROG
+      else if (!strcmp (name, "-ul"))
+        user_page_limit = atoi (value);
+#endif
+#ifdef VM
+      else if (!strcmp (name, "-rndpg"))
+        enable_random_paging = true;
+#endif
+      else
+        PANIC ("unknown option `%s' (use -h for help)", name);
+
+    }
+  
+  return argv;
+}
+
+/* Runs the task specified in ARGV[1]. */
+static void
+run_task (char **argv)
+{
+  const char *task = argv[1];
+  
+  printf ("Executing '%s':\n", task);
+#ifdef USERPROG
+  process_wait (process_execute (task));
+#else
+  run_test (task);
+#endif
+  printf ("Execution of '%s' complete.\n", task);
+}
+
+/* Executes all of the actions specified in ARGV[]
+   up to the null pointer sentinel. */
+static void
+run_actions (char **argv) 
+{
+  /* An action. */
+  struct action 
+    {
+      char *name;                       /* Action name. */
+      int argc;                         /* # of args, including action name. */
+      void (*function) (char **argv);   /* Function to execute action. */
+    };
+
+  /* Table of supported actions. */
+  static const struct action actions[] = 
+    {
+      {"run", 2, run_task},
+#ifdef FILESYS
+      {"ls", 1, fsutil_ls},
+      {"cat", 2, fsutil_cat},
+      {"rm", 2, fsutil_rm},
+      {"put", 2, fsutil_put},
+      {"get", 2, fsutil_get},
+#endif
+      {NULL, 0, NULL},
+    };
+
+  while (*argv != NULL)
+    {
+      const struct action *a;
+      int i;
+
+      /* Find action name. */
+      for (a = actions; ; a++)
+        if (a->name == NULL)
+          PANIC ("unknown action `%s' (use -h for help)", *argv);
+        else if (!strcmp (*argv, a->name))
+          break;
+
+      /* Check for required arguments. */
+      for (i = 1; i < a->argc; i++)
+        if (argv[i] == NULL)
+          PANIC ("action `%s' requires %d argument(s)", *argv, a->argc - 1);
+
+      /* Invoke action and advance. */
+      a->function (argv);
+      argv += a->argc;
+    }
+  
+}
+
+/* Prints a kernel command line help message and powers off the
+   machine. */
+static void
+usage (void)
+{
+  printf ("\nCommand line syntax: [OPTION...] [ACTION...]\n"
+          "Options must precede actions.\n"
+          "Actions are executed in the order specified.\n"
+          "\nAvailable actions:\n"
+#ifdef USERPROG
+          "  run 'PROG [ARG...]' Run PROG and wait for it to complete.\n"
+#else
+          "  run TEST           Run TEST.\n"
+#endif
+#ifdef FILESYS
+          "  ls                 List files in the root directory.\n"
+          "  cat FILE           Print FILE to the console.\n"
+          "  rm FILE            Delete FILE.\n"
+          "Use these actions indirectly via `pintos' -g and -p options:\n"
+          "  put FILE           Put FILE into file system from scratch disk.\n"
+          "  get FILE           Get FILE from file system into scratch disk.\n"
+#endif
+          "\nOptions:\n"
+          "  -h                 Print this help message and power off.\n"
+          "  -q                 Power off VM after actions or on panic.\n"
+          "  -f                 Format file system disk during startup.\n"
+          "  -rs=SEED           Set random number seed to SEED.\n"
+          "  -mlfqs             Use multi-level feedback queue scheduler.\n"
+#ifdef USERPROG
+          "  -ul=COUNT          Limit user memory to COUNT pages.\n"
+#endif
+#ifdef VM
+          "  -rndpg             Use random page replacement policy.\n"
+#endif
+          );
+  power_off ();
+}
+
 
 /* Powers down the machine we're running on,
    as long as we're running on Bochs or qemu. */

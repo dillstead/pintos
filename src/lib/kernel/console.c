@@ -49,7 +49,7 @@ static int64_t write_cnt;
 void
 console_init (void) 
 {
-  lock_init (&console_lock, "console");
+  lock_init (&console_lock);
 }
 
 /* Prints console statistics. */
@@ -83,6 +83,14 @@ release_console (void)
       else
         lock_release (&console_lock); 
     }
+}
+
+/* Returns true if the current thread has the console lock,
+   false otherwise. */
+static bool
+console_locked_by_current_thread (void) 
+{
+  return intr_context () || lock_held_by_current_thread (&console_lock);
 }
 
 /* The standard vprintf() function,
@@ -150,6 +158,7 @@ vprintf_helper (char c, void *char_cnt_)
 static void
 putchar_unlocked (uint8_t c) 
 {
+  ASSERT (console_locked_by_current_thread ());
   write_cnt++;
   serial_putc (c);
   vga_putc (c);

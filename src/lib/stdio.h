@@ -7,6 +7,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* Include lib/user/stdio.h or lib/kernel/stdio.h, as
+   appropriate. */
+#include_next <stdio.h>
+
 /* Predefined file handles. */
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
@@ -20,13 +24,6 @@ int putchar (int);
 int puts (const char *);
 
 /* Nonstandard functions. */
-#ifdef KERNEL
-void putbuf (const char *, size_t);
-#endif
-#ifdef USER
-int hprintf (int, const char *, ...) PRINTF_FORMAT (2, 3);
-int vhprintf (int, const char *, va_list) PRINTF_FORMAT (2, 0);
-#endif
 void hex_dump (uintptr_t ofs, const void *, size_t size, bool ascii);
 
 /* Internal functions. */

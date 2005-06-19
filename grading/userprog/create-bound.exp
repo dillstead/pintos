@@ -1,4 +1,0 @@
-(create-bound) begin
-(create-bound) create(): 1
-(create-bound) end
-create-bound: exit(0)

@@ -3,75 +3,82 @@
 
 In this assignment, we give you a minimally functional thread system.
 Your job is to extend the functionality of this system to gain a
-better understanding of synchronization problems. Additionally, you
-will use at least part of this increased functionality in future
-assignments.
+better understanding of synchronization problems.
 
-You will be working in primarily in the @file{threads} directory for
+You will be working primarily in the @file{threads} directory for
 this assignment, with some work in the @file{devices} directory on the
 side.  Compilation should be done in the @file{threads} directory.
 
-Before you read the description of this project, you should read all
-of the following sections: @ref{Introduction}, @ref{Coding Standards},
-@ref{Project Documentation}, @ref{Debugging Tools}, and
-@ref{Development Tools}.  You should at least skim the material in
-@ref{Threads Tour}.  To complete this project you will also need to
-read @ref{Multilevel Feedback Scheduling}.
+Before you read the description of this project, you should read all of
+the following sections: @ref{Introduction}, @ref{Coding Standards},
+@ref{Debugging Tools}, and @ref{Development Tools}.  You should at least
+skim the material in @ref{Threads Tour} and especially
+@ref{Synchronization}.  To complete this project you will also need to
+read @ref{4.4BSD Scheduler}.
+
+@menu
+* Project 1 Background::        
+* Project 1 Requirements::      
+* Project 1 FAQ::               
+@end menu
+
+@node Project 1 Background
+@section Background
+
 
 @menu
 * Understanding Threads::       
-* Project 1 Code::              
-* Debugging versus Testing::    
-* Tips::                        
-* Problem 1-1 Alarm Clock::     
-* Problem 1-2 Priority Scheduling::  
-* Problem 1-3 Advanced Scheduler::  
-* Threads FAQ::                 
+* Project 1 Source Files::      
+* Project 1 Synchronization::   
+* Development Suggestions::     
 @end menu
 
 @node Understanding Threads
-@section Understanding Threads
+@subsection Understanding Threads
 
-The first step is to read and understand the initial thread system.
-Pintos, by default, implements thread creation and thread completion,
+The first step is to read and understand the code for the initial thread
+system.
+Pintos already implements thread creation and thread completion,
 a simple scheduler to switch between threads, and synchronization
-primitives (semaphores, locks, and condition variables). 
+primitives (semaphores, locks, condition variables, and memory
+barriers).
 
-However, there's a lot of magic going on in some of this code, so if
+Some of this code might seem slightly mysterious.  If
 you haven't already compiled and run the base system, as described in
 the introduction (@pxref{Introduction}), you should do so now.  You
-can read through parts of the source code by hand to see what's going
+can read through parts of the source code to see what's going
 on.  If you like, you can add calls to @func{printf} almost
 anywhere, then recompile and run to see what happens and in what
 order.  You can also run the kernel in a debugger and set breakpoints
 at interesting spots, single-step through code and examine data, and
-so on.  @xref{i386-elf-gdb}, for more information.
+so on.
 
 When a thread is created, you are creating a new context to be
-scheduled. You provide a function to be run in this context as an
-argument to @func{thread_create}. The first time the thread is
-scheduled and runs, it will start from the beginning of that function
-and execute it in the context. When that function returns, that thread
-completes. Each thread, therefore, acts like a mini-program running
+scheduled.  You provide a function to be run in this context as an
+argument to @func{thread_create}.  The first time the thread is
+scheduled and runs, it starts from the beginning of that function
+and executes in that context.  When the function returns, the thread
+terminates.  Each thread, therefore, acts like a mini-program running
 inside Pintos, with the function passed to @func{thread_create}
 acting like @func{main}.
 
-At any given time, Pintos is running exactly one thread, with the
-others switched out.  The scheduler decides which thread to run next
-when it needs to switch between them.  (If no thread is ready to run
-at any given time, then the special ``idle'' thread runs.)  The
-synchronization primitives are used to force context switches when one
+At any given time, exactly one thread runs and the rest, if any,
+become inactive.  The scheduler decides which thread to
+run next.  (If no thread is ready to run
+at any given time, then the special ``idle'' thread, implemented in
+@func{idle}, runs.)
+Synchronization primitives can force context switches when one
 thread needs to wait for another thread to do something.
 
-The exact mechanics of a context switch are pretty gruesome and have
-been provided for you in @file{threads/switch.S} (this is 80@var{x}86
-assembly; don't worry about understanding it).  It involves saving the
-state of the currently running thread and restoring the state of the
+The mechanics of a context switch are
+in @file{threads/switch.S}, which is 80@var{x}86
+assembly code.  (You don't have to understand it.)  It saves the
+state of the currently running thread and restores the state of the
 thread we're switching to.
 
 Using the @command{gdb} debugger, slowly trace through a context
-switch to see what happens (@pxref{i386-elf-gdb}).  You can set a
-breakpoint on the @func{schedule} function to start out, and then
+switch to see what happens (@pxref{gdb}).  You can set a
+breakpoint on @func{schedule} to start out, and then
 single-step from there.@footnote{@command{gdb} might tell you that
 @func{schedule} doesn't exist, which is arguably a @command{gdb} bug.
 You can work around this by setting the breakpoint by filename and
@@ -81,25 +88,21 @@ to keep track of each thread's address
 and state, and what procedures are on the call stack for each thread.
 You will notice that when one thread calls @func{switch_threads},
 another thread starts running, and the first thing the new thread does
-is to return from @func{switch_threads}.  We realize this comment will
-seem cryptic to you at this point, but you will understand threads
-once you understand why the @func{switch_threads} that gets called is
-different from the @func{switch_threads} that returns.
+is to return from @func{switch_threads}.  You will understand the thread
+system once you understand why and how the @func{switch_threads} that
+gets called is different from the @func{switch_threads} that returns.
+@xref{Thread Switching}, for more information.
 
 @strong{Warning}: In Pintos, each thread is assigned a small,
 fixed-size execution stack just under @w{4 kB} in size.  The kernel
-does try to detect stack overflow, but it cannot always succeed.  You
+tries to detect stack overflow, but it cannot do so perfectly.  You
 may cause bizarre problems, such as mysterious kernel panics, if you
 declare large data structures as non-static local variables,
 e.g. @samp{int buf[1000];}.  Alternatives to stack allocation include
-the page allocator in @file{threads/palloc.c} and the block allocator
-in @file{threads/malloc.c}.  Note that the page allocator doles out
-@w{4 kB} chunks and that @func{malloc} has a @w{2 kB} block size
-limit.  If you need larger chunks, consider using a linked structure
-instead.
+the page allocator and the block allocator (@pxref{Memory Allocation}).
 
-@node Project 1 Code
-@section Code
+@node Project 1 Source Files
+@subsection Source Files
 
 Here is a brief overview of the files in the @file{threads}
 directory.  You will not need to modify most of this code, but the
@@ -112,13 +115,14 @@ code to look at.
 The kernel loader.  Assembles to 512 bytes of code and data that the
 PC BIOS loads into memory and which in turn loads the kernel into
 memory, does basic processor initialization, and jumps to the
-beginning of the kernel.  You should not need to look at this code or
-modify it.
+beginning of the kernel.  @xref{Pintos Loader}, for details. You should
+not need to look at this code or modify it.
 
 @item kernel.lds.S
 The linker script used to link the kernel.  Sets the load address of
 the kernel and arranges for @file{start.S} to be at the very beginning
-of the kernel image.  Again, you should not need to look at this code
+of the kernel image.  @xref{Pintos Loader}, for details. Again, you
+should not need to look at this code
 or modify it, but it's here in case you're curious.
 
 @item start.S
@@ -128,48 +132,47 @@ Jumps to @func{main}.
 @itemx init.h
 Kernel initialization, including @func{main}, the kernel's ``main
 program.''  You should look over @func{main} at least to see what
-gets initialized.
+gets initialized.  You might want to add your own initialization code
+here.  @xref{Kernel Initialization}, for details.
 
 @item thread.c
 @itemx thread.h
 Basic thread support.  Much of your work will take place in these
-files.  @file{thread.h} defines @struct{thread}, which you will
-modify in the first three projects.
+files.  @file{thread.h} defines @struct{thread}, which you are likely
+to modify in all four projects.  See @ref{struct thread} and @ref{Thread
+Support} for more information.
 
 @item switch.S
 @itemx switch.h
 Assembly language routine for switching threads.  Already discussed
-above.
+above.  @xref{Thread Functions}, for more information.
 
 @item palloc.c
 @itemx palloc.h
 Page allocator, which hands out system memory in multiples of 4 kB
-pages.
+pages.  @xref{Page Allocator}, for more information.
 
 @item malloc.c
 @itemx malloc.h
-A very simple implementation of @func{malloc} and @func{free} for
-the kernel.
+A simple implementation of @func{malloc} and @func{free} for
+the kernel.  @xref{Block Allocator}, for more information.
 
 @item interrupt.c
 @itemx interrupt.h
 Basic interrupt handling and functions for turning interrupts on and
-off.
+off.  @xref{Interrupt Handling}, for more information.
 
 @item intr-stubs.S
 @itemx intr-stubs.h
-Assembly code for low-level interrupt handling.
+Assembly code for low-level interrupt handling.  @xref{Interrupt
+Infrastructure}, for more information.
 
 @item synch.c
 @itemx synch.h
-Basic synchronization primitives: semaphores, locks, and condition
-variables.  You will need to use these for synchronization through all
-four projects.
-
-@item test.c
-@itemx test.h
-Test code.  For project 1, you will replace this file with your test
-cases.
+Basic synchronization primitives: semaphores, locks, condition
+variables, and memory barriers.  You will need to use these for
+synchronization in all
+four projects.  @xref{Synchronization}, for more information.
 
 @item io.h
 Functions for I/O port access.  This is mostly used by source code in
@@ -179,6 +182,11 @@ the @file{devices} directory that you won't have to touch.
 Functions and macros related to memory management, including page
 directories and page tables.  This will be more important to you in
 project 3.  For now, you can ignore it.
+
+@item flags.h
+Macros that define a few bits in the 80@var{x}86 ``flags'' register.
+Probably of no interest.  See @bibref{IA32-v1}, section 3.4.3, for more
+information.
 @end table
 
 @menu
@@ -187,7 +195,7 @@ project 3.  For now, you can ignore it.
 @end menu
 
 @node devices code
-@subsection @file{devices} code
+@subsubsection @file{devices} code
 
 The basic threaded kernel also includes these files in the
 @file{devices} directory:
@@ -196,13 +204,13 @@ The basic threaded kernel also includes these files in the
 @item timer.c
 @itemx timer.h
 System timer that ticks, by default, 100 times per second.  You will
-modify this code in Problem 1-1.
+modify this code in this project.
 
 @item vga.c
 @itemx vga.h
 VGA display driver.  Responsible for writing text to the screen.
-You should have no need to look at this code.  @func{printf} will
-call into the VGA display driver for you, so there's little reason to
+You should have no need to look at this code.  @func{printf}
+calls into the VGA display driver for you, so there's little reason to
 call this code yourself.
 
 @item serial.c
@@ -224,7 +232,7 @@ and serial drivers.
 @end table
 
 @node lib files
-@subsection @file{lib} files
+@subsubsection @file{lib} files
 
 Finally, @file{lib} and @file{lib/kernel} contain useful library
 routines.  (@file{lib/user} will be used by user programs, starting in
@@ -245,7 +253,8 @@ details:
 @itemx stdlib.h
 @itemx string.c
 @itemx string.h
-Implementation of the standard C library.  @xref{C99}, for information
+A subset of the standard C library.  @xref{C99}, for
+information
 on a few recently introduced pieces of the C library that you might
 not have encountered before.  @xref{Unsafe String Functions}, for
 information on what's been intentionally left out for safety.
@@ -273,7 +282,7 @@ you'll probably want to use it a few places yourself in project 1.
 @item kernel/bitmap.c
 @itemx kernel/bitmap.h
 Bitmap implementation.  You can use this in your code if you like, but
-you probably won't have any need for project 1.
+you probably won't have any need for it in project 1.
 
 @item kernel/hash.c
 @itemx kernel/hash.h
@@ -281,105 +290,62 @@ Hash table implementation.  Likely to come in handy for project 3.
 
 @item kernel/console.c
 @itemx kernel/console.h
+@item kernel/stdio.h
 Implements @func{printf} and a few other functions.
 @end table
 
-@node Debugging versus Testing
-@section Debugging versus Testing
+@node Project 1 Synchronization
+@subsection Synchronization
 
-When you're debugging code, it's useful to be able to be able to run a
-program twice and have it do exactly the same thing.  On second and
-later runs, you can make new observations without having to discard or
-verify your old observations.  This property is called
-``reproducibility.''  The simulator we use, Bochs, can be set up for
-reproducibility, and that's the way that @command{pintos} invokes it
-by default.
-
-Of course, a simulation can only be reproducible from one run to the
-next if its input is the same each time.  For simulating an entire
-computer, as we do, this means that every part of the computer must be
-the same.  For example, you must use the same disks, the same version
-of Bochs, and you must not hit any keys on the keyboard (because you
-could not be sure to hit them at exactly the same point each time)
-during the runs.
-
-While reproducibility is useful for debugging, it is a problem for
-testing thread synchronization, an important part of this project.  In
-particular, when Bochs is set up for reproducibility, timer interrupts
-will come at perfectly reproducible points, and therefore so will
-thread switches.  That means that running the same test several times
-doesn't give you any greater confidence in your code's correctness
-than does running it only once.
-
-So, to make your code easier to test, we've added a feature, called
-``jitter,'' to Bochs, that makes timer interrupts come at random
-intervals, but in a perfectly predictable way.  In particular, if you
-invoke @command{pintos} with the option @option{-j @var{seed}}, timer
-interrupts will come at irregularly spaced intervals.  Within a single
-@var{seed} value, execution will still be reproducible, but timer
-behavior will change as @var{seed} is varied.  Thus, for the highest
-degree of confidence you should test your code with many seed values.
-
-On the other hand, when Bochs runs in reproducible mode, timings are not
-realistic, meaning that a ``one-second'' delay may be much shorter or
-even much longer than one second.  You can invoke @command{pintos} with
-a different option, @option{-r}, to make it set up Bochs for realistic
-timings, in which a one-second delay should take approximately one
-second of real time.  Simulation in real-time mode is not reproducible,
-and options @option{-j} and @option{-r} are mutually exclusive.
-
-@node Tips
-@section Tips
-
-@itemize @bullet
-@item
-There should be no busy waiting in any of your solutions to this
-assignment.  We consider a tight loop that calls @func{thread_yield}
-to be one form of busy waiting.
-
-@item
 Proper synchronization is an important part of the solutions to these
-problems.  It is tempting to synchronize all your code by turning off
-interrupts with @func{intr_disable} or @func{intr_set_level}, because
-this eliminates concurrency and thus the possibility for race
-conditions, but @strong{don't}.  Instead, use semaphores, locks, and
-condition variables to solve the bulk of your synchronization
-problems.  Read the tour section on synchronization
-(@pxref{Synchronization}) or the comments in @file{threads/synch.c} if
-you're unsure what synchronization primitives may be used in what
-situations.
+problems.  Any synchronization problem can be easily solved by turning
+interrupts off: while interrupts are off, there is no concurrency, so
+there's no possibility for race conditions.  Therefore, it's tempting to
+solve all synchronization problems this way, but @strong{don't}.
+Instead, use semaphores, locks, and condition variables to solve the
+bulk of your synchronization problems.  Read the tour section on
+synchronization (@pxref{Synchronization}) or the comments in
+@file{threads/synch.c} if you're unsure what synchronization primitives
+may be used in what situations.
 
-You might run into a few situations where interrupt disabling is the
-best way to handle synchronization.  If so, you need to explain your
-rationale in your design documents.  If you're unsure whether a given
-situation justifies disabling interrupts, talk to the TAs, who can
-help you decide on the right thing to do.
+In the Pintos projects, the only class of problem best solved by
+disabling interrupts is coordinating data shared between a kernel thread
+and an interrupt handler.  Because interrupt handlers can't sleep, they
+can't acquire locks.  This means that data shared between kernel threads
+and an interrupt handler must be protected within a kernel thread by
+turning off interrupts.
+
+This project only requires accessing a little bit of thread state from
+interrupt handlers.  For the alarm clock, the timer interrupt needs to
+wake up sleeping threads.  In the advanced scheduler, the timer
+interrupt needs to access a few global and per-thread variables.  When
+you access these variables from kernel threads, you will need to disable
+interrupts to prevent the timer interrupt from interfering.
+
+When you do turn off interrupts, take care to do so for the least amount
+of code possible, or you can end up losing important things such as
+timer ticks or input events.  Turning off interrupts also increases the
+interrupt handling latency, which can make a machine feel sluggish if
+taken too far.
 
 Disabling interrupts can be useful for debugging, if you want to make
 sure that a section of code is not interrupted.  You should remove
 debugging code before turning in your project.
 
-@item
-All parts of this assignment are required if you intend to earn full
-credit on this project.  Problem 1-1 (Alarm Clock) could be handy for
-later projects, but it is not strictly required.  Problems 1-2
-(Priority Scheduling) and 1-3 (Advanced Scheduler) won't be needed for
-later projects.
+There should be no busy waiting in your submission.  A tight loop that
+calls @func{thread_yield} is one form of busy waiting.
 
-@item
-Problem 1-3 (MLFQS) builds on the features you implement in Problem
-1-2.  You should have Problem 1-2 fully working before you begin to
-tackle Problem 1-3.
+@node Development Suggestions
+@subsection Development Suggestions
 
-@item
 In the past, many groups divided the assignment into pieces, then each
 group member worked on his or her piece until just before the
 deadline, at which time the group reconvened to combine their code and
 submit.  @strong{This is a bad idea.  We do not recommend this
 approach.}  Groups that do this often find that two changes conflict
 with each other, requiring lots of last-minute debugging.  Some groups
-who have done this have turned in code that did not even successfully
-boot.
+who have done this have turned in code that did not even compile or
+boot, much less pass any tests.
 
 Instead, we recommend integrating your team's changes early and often,
 using a source code control system such as CVS (@pxref{CVS}) or a
@@ -389,40 +355,59 @@ everyone else's code as it is written, instead of just when it is
 finished.  These systems also make it possible to review changes and,
 when a change introduces a bug, drop back to working versions of code.
 
-@item
 You should expect to run into bugs that you simply don't understand
-while working on this and subsequent projects.  When you do, go back
-and reread the appendix on debugging tools, which is filled with
+while working on this and subsequent projects.  When you do,
+reread the appendix on debugging tools, which is filled with
 useful debugging tips that should help you to get back up to speed
 (@pxref{Debugging Tools}).  Be sure to read the section on backtraces
 (@pxref{Backtraces}), which will help you to get the most out of every
 kernel panic or assertion failure.
-@end itemize
 
-@node Problem 1-1 Alarm Clock
-@section Problem 1-1: Alarm Clock
+@node Project 1 Requirements
+@section Requirements
 
-Improve the implementation of the timer device defined in
-@file{devices/timer.c} by reimplementing @func{timer_sleep}.
-Threads call @code{timer_sleep(@var{x})} to suspend execution until
-time has advanced by at least @w{@var{x} timer ticks}.  This is
-useful for threads that operate in real-time, for example, for
-blinking the cursor once per second.  There is no requirement that
-threads start running immediately after waking up; just put them on
-the ready queue after they have waited for approximately the right
-amount of time.
+@menu
+* Project 1 Design Document::   
+* Alarm Clock::                 
+* Priority Scheduling::         
+* Advanced Scheduler::          
+@end menu
 
-A working implementation of this function is provided.  However, the
-version provided is poor, because it ``busy waits,'' that is, it spins
-in a tight loop checking the current time until the current time has
-advanced far enough.  This is undesirable because it wastes time that
-could potentially be used more profitably by another thread.  Your
-solution should not busy wait.
+@node Project 1 Design Document
+@subsection Design Document
+
+Before you turn in your project, you must copy @uref{threads.tmpl, , the
+project 1 design document template} into your source tree under the name
+@file{pintos/src/threads/DESIGNDOC} and fill it in.  We recommend that
+you read the design document template before you start working on the
+project.  @xref{Project Documentation}, for a sample design document
+that goes along with a fictitious project.
+
+@node Alarm Clock
+@subsection Alarm Clock
+
+Reimplement @func{timer_sleep}, defined in @file{devices/timer.c}.
+Although a working implementation is provided, it ``busy waits,'' that
+is, it spins in a loop checking the current time and calling
+@func{thread_yield} until enough time has gone by.  Reimplement it to
+avoid busy waiting.
+
+@deftypefun void timer_sleep (int64_t @var{ticks})
+Suspends execution of the calling thread until time has advanced by at
+least @w{@var{x} timer ticks}.  Unless the system is otherwise idle, the
+thread need not wake up after exactly @var{x} ticks.  Just put it on
+the ready queue after they have waited for the right amount of time.
+
+@func{timer_sleep} is useful for threads that operate in real-time,
+e.g.@: for blinking the cursor once per second.
 
 The argument to @func{timer_sleep} is expressed in timer ticks, not in
 milliseconds or any another unit.  There are @code{TIMER_FREQ} timer
 ticks per second, where @code{TIMER_FREQ} is a macro defined in
-@code{devices/timer.h}.
+@code{devices/timer.h}.  The default value is 100.  We don't recommend
+changing this value, because any change is likely to cause many of
+the tests to fail.
+@end deftypefun
 
 Separate functions @func{timer_msleep}, @func{timer_usleep}, and
 @func{timer_nsleep} do exist for sleeping a specific number of
@@ -434,153 +419,140 @@ If your delays seem too short or too long, reread the explanation of the
 @option{-r} option to @command{pintos} (@pxref{Debugging versus
 Testing}).
 
-@node Problem 1-2 Priority Scheduling
-@section Problem 1-2: Priority Scheduling
+The alarm clock implementation is not needed for later projects,
+although it could be useful for project 4.
 
-Implement priority scheduling in Pintos.  Priority scheduling is a key
-building block for real-time systems.  Implement functions
-@func{thread_set_priority} to set the priority of the running thread
-and @func{thread_get_priority} to get the running thread's priority.
-(This API only allows a thread to examine and modify its own
-priority.)  There are already prototypes for these functions in
-@file{threads/thread.h}, which you should not change.
+@node Priority Scheduling
+@subsection Priority Scheduling
 
-Thread priority ranges from @code{PRI_MIN} (0) to @code{PRI_MAX} (59).
-The initial thread priority is passed as an argument to
-@func{thread_create}.  If there's no reason to choose another
-priority, use @code{PRI_DEFAULT} (29).  The @code{PRI_} macros are
-defined in @file{threads/thread.h}, and you should not change their
-values.
-
+Implement priority scheduling in Pintos.
 When a thread is added to the ready list that has a higher priority
 than the currently running thread, the current thread should
 immediately yield the processor to the new thread.  Similarly, when
-threads are waiting for a lock, semaphore or condition variable, the
+threads are waiting for a lock, semaphore, or condition variable, the
 highest priority waiting thread should be woken up first.  A thread
 may raise or lower its own priority at any time, but lowering its
 priority such that it no longer has the highest priority must cause it
 to immediately yield the CPU.
 
-One issue with priority scheduling is ``priority inversion'': if a
-high priority thread needs to wait for a low priority thread (for
-instance, for a lock held by a low priority thread), and a middle priority
-thread is on the ready list, then the high priority thread will never
-get the CPU because the low priority thread will not get any CPU time.
-A partial fix for this problem is to have the waiting thread
-``donate'' its priority to the low priority thread while it is holding
-the lock, then recall the donation once it has acquired the lock.
-Implement this fix.
+Thread priorities range from @code{PRI_MIN} (0) to @code{PRI_MAX} (63).
+Lower numbers correspond to @emph{higher} priorities, so that priority 0
+is the highest priority and priority 63 is the lowest.
+The initial thread priority is passed as an argument to
+@func{thread_create}.  If there's no reason to choose another
+priority, use @code{PRI_DEFAULT} (31).  The @code{PRI_} macros are
+defined in @file{threads/thread.h}, and you should not change their
+values.
 
-You will need to account for all different orders in which priority
-donation and inversion can occur.  Be sure to handle multiple
-donations, in which multiple priorities are donated to a thread.  You
-must also handle nested donation: given high, medium, and low priority
-threads @var{H}, @var{M}, and @var{L}, respectively, if @var{H} is
-waiting on a lock that @var{M} holds and @var{M} is waiting on a lock
-that @var{L} holds, then both @var{M} and @var{L} should be boosted to
-@var{H}'s priority.
+One issue with priority scheduling is ``priority inversion''.  Consider
+high, medium, and low priority threads @var{H}, @var{M}, and @var{L},
+respectively.  If @var{H} needs to wait for @var{L} (for instance, for a
+lock held by @var{L}), and @var{M} is on the ready list, then @var{H}
+will never get the CPU because the low priority thread will not get any
+CPU time.  A partial fix for this problem is for @var{H} to ``donate''
+its priority to @var{L} while @var{L} is holding the lock, then recall
+the donation once @var{L} releases (and thus @var{H} acquires) the lock.
 
-You only need to implement priority donation when a thread is waiting
-for a lock held by a lower-priority thread.  You do not need to
-implement this fix for semaphores or condition variables
-although you are welcome to do so.  However, you do need to implement
+Implement priority donation.  You will need to account for all different
+situations in which priority donation is required.  Be sure to handle
+multiple donations, in which multiple priorities are donated to a single
+thread.  You must also handle nested donation: if @var{H} is waiting on
+a lock that @var{M} holds and @var{M} is waiting on a lock that @var{L}
+holds, then both @var{M} and @var{L} should be boosted to @var{H}'s
+priority.
+
+You need not implement priority donation when a thread is waiting
+for a lock held by a lower-priority thread.  You need not
+implement priority donation for semaphores or condition variables,
+but you are welcome to do so.  You do need to implement
 priority scheduling in all cases.
 
-@node Problem 1-3 Advanced Scheduler
-@section Problem 1-3: Advanced Scheduler
+Finally, implement the following functions that allow a thread to
+examine and modify its own priority.  Skeletons for these functions are
+provided in @file{threads/thread.c}.
 
-Implement Solaris's multilevel feedback queue scheduler (MLFQS) to
+@deftypefun void thread_set_priority (int @var{new_priority})
+Sets the current thread's priority to @var{new_priority}.  If the
+current thread no longer has the highest priority, yields.
+@end deftypefun
+
+@deftypefun int thread_get_priority (void)
+Returns the current thread's priority.  In the presence of priority
+donation, returns the higher (donated) priority.
+@end deftypefun
+
+The priority scheduler is not used in any later project.
+
+@node Advanced Scheduler
+@subsection Advanced Scheduler
+
+Implement a multilevel feedback queue scheduler similar to the
+4.4@acronym{BSD} scheduler to
 reduce the average response time for running jobs on your system.
-@xref{Multilevel Feedback Scheduling}, for a detailed description of
+@xref{4.4BSD Scheduler}, for a detailed description of
 the MLFQS requirements.
 
-Demonstrate that your scheduling algorithm reduces response time
-relative to the original Pintos scheduling algorithm (round robin) for
-at least one workload of your own design (i.e.@: in addition to the
-provided test).
+The advanced scheduler builds on the priority scheduler.  You should
+have the priority scheduler working, except possibly for priority
+donation, before you start work on the advanced scheduler.
 
 You must write your code so that we can choose a scheduling algorithm
 policy at Pintos startup time.  By default, the round-robin scheduler
-must be active, but we must be able to choose the MLFQS by invoking
-@command{pintos} with the @option{-o mlfqs} option.  Passing this
+must be active, but we must be able to choose the 4.4@acronym{BSD}
+scheduler
+with the @option{-mlfqs} kernel option.  Passing this
 option sets @code{enable_mlfqs}, declared in @file{threads/init.h}, to
 true.
 
-@node Threads FAQ
+When the 4.4@acronym{BSD} scheduler is enabled, threads no longer
+directly control their own priorities.  The @var{priority} argument to
+@func{thread_create} should be ignored, as well as any calls to
+@func{thread_set_priority}, and @func{thread_get_priority} should return
+the thread's current priority as set by the scheduler.
+
+The advanced scheduler is not used in any later project.
+
+@node Project 1 FAQ
 @section FAQ
 
-@enumerate 1
-@item
-@b{I am adding a new @file{.h} or @file{.c} file.  How do I fix the
-@file{Makefile}s?}@anchor{Adding c or h Files}
+@table @b
+@item How much code will I need to write?
 
+Here's a summary of our reference solution, produced by the
+@command{diffstat} program.  The final row gives total lines inserted
+and deleted; a changed line counts as both an insertion and a deletion.
+
+@verbatim
+ devices/timer.c       |   42 +++++-
+ threads/fixed-point.h |  120 ++++++++++++++++++
+ threads/synch.c       |   88 ++++++++++++-
+ threads/thread.c      |  196 ++++++++++++++++++++++++++----
+ threads/thread.h      |   23 +++
+ 5 files changed, 440 insertions(+), 29 deletions(-)
+@end verbatim
+
+@item How do I update the @file{Makefile}s when I add a new source file?
+
+@anchor{Adding Source Files}
 To add a @file{.c} file, edit the top-level @file{Makefile.build}.
-You'll want to add your file to variable @samp{@var{dir}_SRC}, where
+Add the new file to variable @samp{@var{dir}_SRC}, where
 @var{dir} is the directory where you added the file.  For this
-project, that means you should add it to @code{threads_SRC}, or
-possibly @code{devices_SRC} if you put in the @file{devices}
-directory.  Then run @code{make}.  If your new file doesn't get
+project, that means you should add it to @code{threads_SRC} or
+@code{devices_SRC}.  Then run @code{make}.  If your new file
+doesn't get
 compiled, run @code{make clean} and then try again.
 
-When you modify the top-level @file{Makefile.build}, the modified
+When you modify the top-level @file{Makefile.build} and re-run
+@command{make}, the modified
 version should be automatically copied to
-@file{threads/build/Makefile} when you re-run make.  The opposite is
+@file{threads/build/Makefile}.  The converse is
 not true, so any changes will be lost the next time you run @code{make
-clean} from the @file{threads} directory.  Therefore, you should
-prefer to edit @file{Makefile.build} (unless your changes are meant to
-be truly temporary).
+clean} from the @file{threads} directory.  Unless your changes are
+truly temporary, you should prefer to edit @file{Makefile.build}.
 
-There is no need to edit the @file{Makefile}s to add a @file{.h} file.
+A new @file{.h} file does not require editing the @file{Makefile}s.
 
-@item
-@b{How do I write my test cases?}
-
-Test cases should be replacements for the existing @file{test.c}
-file.  Put them in a @file{threads/testcases} directory.
-@xref{TESTCASE}, for more information.
-
-@item
-@b{Why can't I disable interrupts?}
-
-Turning off interrupts should only be done for short amounts of time,
-or else you end up losing important things such as disk or input
-events.  Turning off interrupts also increases the interrupt handling
-latency, which can make a machine feel sluggish if taken too far.
-Therefore, in general, setting the interrupt level should be used
-sparingly.  Also, any synchronization problem can be easily solved by
-turning interrupts off, since while interrupts are off, there is no
-concurrency, so there's no possibility for race conditions.
-
-To make sure you understand concurrency well, we are discouraging you
-from taking this shortcut at all in your solution.  If you are unable
-to solve a particular synchronization problem with semaphores, locks,
-or conditions, or think that they are inadequate for a particular
-reason, you may turn to disabling interrupts.  If you want to do this,
-we require in your design document a complete justification and
-scenario (i.e.@: exact sequence of events) to show why interrupt
-manipulation is the best solution.  If you are unsure, the TAs can
-help you determine if you are using interrupts too haphazardly.  We
-want to emphasize that there are only limited cases where this is
-appropriate.
-
-You might find @file{devices/intq.h} and its users to be an
-inspiration or source of rationale.
-
-@item
-@b{Where might interrupt-level manipulation be appropriate?}
-
-You might find it necessary in some solutions to the Alarm problem.
-
-You might want it at one small point for the priority scheduling
-problem.  Note that it is not required to use interrupts for these
-problems.  There are other, equally correct solutions that do not
-require interrupt manipulation.  However, if you do manipulate
-interrupts and @strong{correctly and fully document it} in your design
-document, we will allow limited use of interrupt disabling.
-
-@item
-@b{What does ``warning: no previous prototype for `@var{function}''
-mean?}
+@item What does @code{warning: no previous prototype for `@var{func}'} mean?
 
 It means that you defined a non-@code{static} function without
 preceding it by a prototype.  Because non-@code{static} functions are
@@ -589,264 +561,113 @@ prototyped in a header file included before their definition.  To fix
 the problem, add a prototype in a header file that you include, or, if
 the function isn't actually used by other @file{.c} files, make it
 @code{static}.
-@end enumerate
 
-@menu
-* Problem 1-1 Alarm Clock FAQ::  
-* Problem 1-2 Priority Scheduling FAQ::  
-* Problem 1-3 Advanced Scheduler FAQ::  
-@end menu
-
-@node Problem 1-1 Alarm Clock FAQ
-@subsection Problem 1-1: Alarm Clock FAQ
-
-@enumerate 1
-@item
-@b{Why can't I use most synchronization primitives in an interrupt
-handler?}
-
-As you've discovered, you cannot sleep in an external interrupt
-handler.  Since many lock, semaphore, and condition variable functions
-attempt to sleep, you won't be able to call those in
-@func{timer_interrupt}.  You may still use those that never sleep.
-
-Having said that, you need to make sure that global data does not get
-updated by multiple threads simultaneously executing
-@func{timer_sleep}.  Here are some pieces of information to think
-about:
-
-@enumerate a
-@item
-Interrupts are turned off while @func{timer_interrupt} runs.  This
-means that @func{timer_interrupt} will not be interrupted by a
-thread running in @func{timer_sleep}.
-
-@item
-A thread in @func{timer_sleep}, however, can be interrupted by a
-call to @func{timer_interrupt}, except when that thread has turned
-off interrupts.
-
-@item
-Examples of synchronization mechanisms have been presented in lecture.
-Going over these examples should help you understand when each type is
-useful or needed.  @xref{Synchronization}, for specific information
-about synchronization in Pintos.
-@end enumerate
-
-@item
-@b{What about timer overflow due to the fact that times are defined as
-integers? Do I need to check for that?}
-
-Don't worry about the possibility of timer values overflowing.  Timer
-values are expressed as signed 63-bit numbers, which at 100 ticks per
-second should be good for almost 2,924,712,087 years.
-
-@item
-@b{The test program mostly works but reports a few out-of-order
-wake ups.  I think it's a problem in the test program.  What gives?}
-@anchor{Out of Order 1-1}
-
-This test is inherently full of race conditions.  On a real system it
-wouldn't work perfectly all the time either.  There are a few ways you
-can help it work more reliably:
-
-@itemize @bullet
-@item
-Make time slices longer by increasing @code{TIME_SLICE} in
-@file{timer.c} to a large value, such as 100.
-
-@item
-Make the timer tick more slowly by decreasing @code{TIMER_FREQ} in
-@file{timer.h} to its minimum value of 19.
-@end itemize
-
-The former two changes are only desirable for testing problem 1-1 and
-possibly 1-2.  You should revert them before working on other parts
-of the project or turn in the project.  We will test problem 1-1 with
-@code{TIME_SLICE} set to 100 and @code{TIMER_FREQ} set to 19, but we
-will leave them at their defaults for all the other problems.
-
-@item
-@b{Should @file{p1-1.c} be expected to work with the MLFQS turned on?}
-
-No.  The MLFQS will adjust priorities, changing thread ordering.
-@end enumerate
-
-@node Problem 1-2 Priority Scheduling FAQ
-@subsection Problem 1-2: Priority Scheduling FAQ
-
-@enumerate 1
-@item
-@b{Doesn't the priority scheduling lead to starvation? Or do I have to
-implement some sort of aging?}
-
-It is true that strict priority scheduling can lead to starvation
-because thread may not run if a higher-priority thread is runnable.
-In this problem, don't worry about starvation or any sort of aging
-technique.  Problem 4 will introduce a mechanism for dynamically
-changing thread priorities.
-
-This sort of scheduling is valuable in real-time systems because it
-offers the programmer more control over which jobs get processing
-time.  High priorities are generally reserved for time-critical
-tasks. It's not ``fair,'' but it addresses other concerns not
-applicable to a general-purpose operating system.
-
-@item
-@b{After a lock has been released, does the program need to switch to
-the highest priority thread that needs the lock (assuming that its
-priority is higher than that of the current thread)?}
-
-When a lock is released, the highest priority thread waiting for that
-lock should be unblocked and put on the ready to run list.  The
-scheduler should then run the highest priority thread on the ready
-list.
-
-@item
-@b{If a thread calls @func{thread_yield} and then it turns out that
-it has higher priority than any other threads, does the high-priority
-thread continue running?}
-
-Yes.  If there is a single highest-priority thread, it continues
-running until it blocks or finishes, even if it calls
-@func{thread_yield}.
-
-@item
-@b{If the highest priority thread is added to the ready to run list it
-should start execution immediately.  Is it immediate enough if I
-wait until next timer interrupt occurs?}
-
-The highest priority thread should run as soon as it is runnable,
-preempting whatever thread is currently running.
-
-@item
-@b{What happens to the priority of the donating thread?  Do the priorities
-get swapped?}
-
-No.  Priority donation only changes the priority of the low-priority
-thread.  The donating thread's priority stays unchanged.  Also note
-that priorities aren't additive: if thread A (with priority 5) donates
-to thread B (with priority 3), then B's new priority is 5, not 8.
-
-@item 
-@b{Can a thread's priority be changed while it is sitting on the ready
-queue?}
-
-Yes.  Consider this case: low-priority thread L currently has a lock
-that high-priority thread H wants.  H donates its priority to L (the
-lock holder).  L finishes with the lock, and then loses the CPU and is
-moved to the ready queue.  Now L's old priority is restored while it
-is in the ready queue.
-
-@item
-@b{Can a thread's priority change while it is sitting on the queue of a
-semaphore?}
-
-Yes.  Same scenario as above except L gets blocked waiting on a new
-lock when H restores its priority.
-
-@item
-@b{Why is @file{p1-2.c}'s FIFO test skipping some threads?  I know my
-scheduler is round-robin'ing them like it's supposed to.   Our output
-starts out okay, but toward the end it starts getting out of order.}
-
-The usual problem is that the serial output buffer fills up.  This is
-causing serial_putc() to block in thread @var{A}, so that thread
-@var{B} is scheduled.  Thread @var{B} immediately tries to do output
-of its own and blocks on the serial lock (which is held by thread
-@var{A}).  Now that we've wasted some time in scheduling and locking,
-typically some characters have been drained out of the serial buffer
-by the interrupt handler, so thread @var{A} can continue its output.
-After it finishes, though, some other thread (not @var{B}) is
-scheduled, because thread @var{B} was already scheduled while we
-waited for the buffer to drain.
-
-There's at least one other possibility.  Context switches are being
-invoked by the test when it explicitly calls @func{thread_yield}.
-However, the time slice timer is still alive and so, every tick (by
-default), a thread gets switched out (caused by @func{timer_interrupt}
-calling @func{intr_yield_on_return}) before it gets a chance to run
-@func{printf}, effectively skipping it.  If we use a different jitter
-value, the same behavior is seen where a thread gets started and
-switched out completely.
-
-Normally you can fix these problems using the same techniques
-suggested on problem 1-1 (@pxref{Out of Order 1-1}).
-
-@item
-@b{What happens when a thread is added to the ready list which has
-higher priority than the currently running thread?}
-
-The correct behavior is to immediately yield the processor.  Your
-solution must act this way.
-
-@item
-@b{What should @func{thread_get_priority} return in a thread while
-its priority has been increased by a donation?}
-
-The higher (donated) priority.
-
-@item
-@b{Should @file{p1-2.c} be expected to work with the MLFQS turned on?}
-
-No.  The MLFQS will adjust priorities, changing thread ordering.
-
-@item
-@b{@func{printf} in @func{sema_up} or @func{sema_down} makes the
-system reboot!}
-
-Yes.  These functions are called before @func{printf} is ready to go.
-You could add a global flag initialized to false and set it to true
-just before the first @func{printf} in @func{main}.  Then modify
-@func{printf} itself to return immediately if the flag isn't set.
-@end enumerate
-
-@node Problem 1-3 Advanced Scheduler FAQ
-@subsection Problem 1-3: Advanced Scheduler FAQ
-
-@enumerate 1
-@item
-@b{What is the interval between timer interrupts?}
+@item What is the interval between timer interrupts?
 
 Timer interrupts occur @code{TIMER_FREQ} times per second.  You can
 adjust this value by editing @file{devices/timer.h}.  The default is
 100 Hz.
 
-You can also adjust the number of timer ticks per time slice by
-modifying @code{TIME_SLICE} in @file{devices/timer.c}.
+We don't recommend changing this value, because any changes are likely
+to cause many of the tests to fail.
 
-@item
-@b{Do I have to modify the dispatch table?}
+@item How long is a time slice?
 
-No, although you are allowed to. It is possible to complete
-this problem (i.e.@: demonstrate response time improvement)
-without doing so.
+There are @code{TIME_SLICE} ticks per time slice.  This macro is
+declared in @file{threads/thread.c}.  The default is 4 ticks.
 
-@item
-@b{When the scheduler changes the priority of a thread, how does this
-affect priority donation?}
+We don't recommend changing this values, because any changes are likely
+to cause many of the tests to fail.
+@end table
 
-Short (official) answer: Don't worry about it. Your priority donation
-code may assume static priority assignment.
+@menu
+* Alarm Clock FAQ::             
+* Priority Scheduling FAQ::     
+* Advanced Scheduler FAQ::      
+@end menu
 
-Longer (unofficial) opinion: If you wish to take this into account,
-however, your design may end up being ``cleaner.''  You have
-considerable freedom in what actually takes place. I believe what
-makes the most sense is for scheduler changes to affect the
-``original'' (non-donated) priority.  This change may actually be
-masked by the donated priority.  Priority changes should only
-propagate with donations, not ``backwards'' from donees to donors.
+@node Alarm Clock FAQ
+@subsection Alarm Clock FAQ
 
-@item
-@b{What is meant by ``static priority''?}
+@table @b
+@item Do I need to account for timer values overflowing?
 
-Once thread A has donated its priority to thread B, if thread A's
-priority changes (due to the scheduler) while the donation still
-exists, you do not have to change thread B's donated priority.
-However, you are free to do so.
+Don't worry about the possibility of timer values overflowing.  Timer
+values are expressed as signed 64-bit numbers, which at 100 ticks per
+second should be good for almost 2,924,712,087 years.  By then, we
+expect Pintos to have been phased out of the CS 140 curriculum.
+@end table
 
-@item
-@b{Do I have to make my dispatch table user-configurable?}
+@node Priority Scheduling FAQ
+@subsection Priority Scheduling FAQ
 
-No.  Hard-coding the dispatch table values is fine.
-@end enumerate
+@table @b
+@item Doesn't priority scheduling lead to starvation?
+
+Yes, strict priority scheduling can lead to starvation
+because a thread will not run if any higher-priority thread is runnable.
+The advanced scheduler introduces a mechanism for dynamically
+changing thread priorities.
+
+Strict priority scheduling is valuable in real-time systems because it
+offers the programmer more control over which jobs get processing
+time.  High priorities are generally reserved for time-critical
+tasks. It's not ``fair,'' but it addresses other concerns not
+applicable to a general-purpose operating system.
+
+@item What thread should run after a lock has been released?
+
+When a lock is released, the highest priority thread waiting for that
+lock should be unblocked and put on the list of ready threads.  The
+scheduler should then run the highest priority thread on the ready
+list.
+
+@item If the highest-priority thread yields, does it continue running?
+
+Yes.  As long as there is a single highest-priority thread, it continues
+running until it blocks or finishes, even if it calls
+@func{thread_yield}.
+If there are multiple threads have the same highest priority,
+@func{thread_yield} should switch among them in ``round robin'' order.
+
+@item What happens to the priority of a donating thread?
+
+Priority donation only changes the priority of the donee
+thread.  The donor thread's priority is unchanged.  
+Priority donation is not additive: if thread @var{A} (with priority 5) donates
+to thread @var{B} (with priority 3), then @var{B}'s new priority is 5, not 8.
+
+@item Can a thread's priority change while it is on the ready queue?
+
+Yes.  Consider this case: low-priority thread @var{L} holds a
+lock that high-priority thread @var{H} wants, so @var{H} donates its
+priority to @var{L}.  @var{L} releases the lock and
+thus loses the CPU and is moved to the ready queue.  Now @var{L}'s
+old priority is restored while it is in the ready queue.
+
+@item Can a thread added to the ready list preempt the processor?
+
+Yes.  If a thread added to the ready list has higher priority than the
+running thread, the correct behavior is to immediately yield the
+processor.  It is not acceptable to wait for the next timer interrupt.
+The highest priority thread should run as soon as it is runnable,
+preempting whatever thread is currently running.
+
+@item Calling @func{printf} in @func{sema_up} or @func{sema_down} reboots!
+
+@anchor{printf Reboots}
+Yes.  These functions are called before @func{printf} is ready to go.
+You could add a global flag initialized to false and set it to true
+just before the first @func{printf} in @func{main}.  Then modify
+@func{printf} itself to return immediately if the flag isn't set.
+@end table
+
+@node Advanced Scheduler FAQ
+@subsection Advanced Scheduler FAQ
+
+@table @b
+@item How does priority donation interact with the advanced scheduler?
+
+It doesn't have to.  We won't test priority donation and the advanced
+scheduler at the same time.
+@end table

@@ -39,7 +39,6 @@
 @titlepage
 @title Pintos
 @author by Ben Pfaff
-@author based on past contributions of CS 140 TAs
 @end titlepage
 
 @contents
@@ -57,7 +56,7 @@
 * Project 3--Virtual Memory::   
 * Project 4--File Systems::     
 * References::
-* Multilevel Feedback Scheduling::  
+* 4.4BSD Scheduler::  
 * Coding Standards::            
 * Project Documentation::       
 * Debugging Tools::             
@@ -71,7 +70,7 @@
 @include vm.texi
 @include filesys.texi
 @include references.texi
-@include mlfqs.texi
+@include 44bsd.texi
 @include standards.texi
 @include doc.texi
 @include debug.texi

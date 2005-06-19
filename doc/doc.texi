@@ -1,138 +1,57 @@
 @node Project Documentation, Debugging Tools, Coding Standards, Top
 @appendix Project Documentation
 
-When you submit your projects, you will be expected to also turn in
-three files documenting them: @file{README}, @file{DESIGNDOC} and
-@file{TESTCASE}.  These guidelines explain what we want to see in
-those files.
-
-Your submission should have exactly one of each file, in the
-appropriate directory (e.g.@: for Assignment 1, place the files in the
-@file{threads} directory).  These files must be written in plain text
-format (not Microsoft Word, not PDF).  We recommend a text width of 65
-characters per line, with a hard limit of 80.  If you use tab characters
-in your document files, be sure that your text editor's tab width is set
-to 8.
+This chapter presents a sample assignment and a filled-in design
+document for one possible implementation.  Its purpose is to give you an
+idea of what we expect to see in your own design documents.
 
 @menu
-* README::                      
-* DESIGNDOC::                   
-* TESTCASE::                    
+* Sample Assignment::           
+* Sample Design Document::      
 @end menu
 
-@node README
-@section @file{README}
+@node Sample Assignment
+@section Sample Assignment
 
-This is the easiest of the bunch.  It's the document we'll read while
-trying to get your assignment to run.  First, place all of your names
-and Leland IDs (usernames) at the top.  Next, you should also explain
-any quirks with your program, such as known show-stopper bugs, weird
-dependencies, and so on.
+Implement @func{thread_join}.
 
-If you added extra credit features to your project, explain them
-concisely in the @file{README}.  Otherwise, we're likely to miss them.
+@deftypefun void thread_join (tid_t @var{tid})
+Blocks the current thread until thread @var{tid} exits.  If @var{A} is
+the running thread and @var{B} is the argument, then we say that
+``@var{A} joins @var{B}.''
 
-@node DESIGNDOC
-@section @file{DESIGNDOC}
+Incidentally, the argument is a thread id, instead of a thread pointer,
+because a thread pointer is not unique over time.  That is, when a
+thread dies, its memory may be, whether immediately or much later,
+reused for another thread.  If thread @var{A} over time had two children
+@var{B} and @var{C} that were stored at the same address, then
+@code{thread_join(@var{B})} and @code{thread_join(@var{C})} would be
+ambiguous.
 
-This file is our primary tool for assessing your design.  Therefore,
-you should be certain to explain your design in some decent amount of
-detail.  As a broad rule of thumb, we should be able to explain what
-basic data structures and algorithms you used to solve the problem
-after reading the @file{DESIGNDOC}, but without looking at the code.
+A thread may only join its immediate children.  Calling
+@func{thread_join} on a thread that is not the caller's child should
+cause the caller to return immediately.  Children are not ``inherited,''
+that is, if @var{A} has child @var{B} and @var{B} has child @var{C},
+then @var{A} always returns immediately should it try to join @var{C},
+even if @var{B} is dead.
 
-The easiest way to present your @file{DESIGNDOC} is to break it down
-by parts of the project (e.g.@: for project 1, you can break the
-@file{DESIGNDOC} into four parts).  For each part, you should describe
-the functionality that needs to be added, the data structures and
-algorithms used to solve that problem from a high level, and the
-motivations for each decision/change you make to the code.  Your
-@file{DESIGNDOC} needs to explain and justify your design.  That is,
-we should be able to understand what you did, and why you chose to do
-it that way.  The ``why'' should be in concrete terms of greater speed,
-better space efficiency, cleaner code, or some other real measure of
-goodness.
+A thread need not ever be joined.  Your solution should properly free
+all of a thread's resources, including its @struct{thread},
+whether it is ever joined or not, and regardless of whether the child
+exits before or after its parent.  That is, a thread should be freed
+exactly once in all cases.
 
-Things you @emph{don't} need: an explanation of the pre-existing
-Pintos code, an explanation of the project spec, justification for the
-project (e.g.@: we don't need you to explain to us why filesystems are
-important to an operating system), a play-by-play of every change you
-made to the system, any other pontificating.  (You may laugh at some
-of the things listed above, but we've gotten all of them in the past.)
-The @file{DESIGNDOC} needs to discuss design decisions and trade-offs
-and the rationales behind them.  Any other things can be left out, to
-save your time and ours.
+Joining a given thread is idempotent.  That is, joining a thread
+multiple times is equivalent to joining it once, because it has already
+exited at the time of the later joins.  Thus, joins on a given thread
+after the first should return immediately.
 
-Finally, please keep your @file{DESIGNDOC} as short as you can,
-without sacrificing key design decisions.  You should be brief, yet
-complete.  We don't want to read novels.
+You must handle all the ways a join can occur: nested joins (@var{A}
+joins @var{B}, then @var{B} joins @var{C}), multiple joins (@var{A}
+joins @var{B}, then @var{A} joins @var{C}), and so on.
+@end deftypefun
 
-@node TESTCASE
-@section @file{TESTCASE}
+@node Sample Design Document
+@section Sample Design Document
 
-The @file{TESTCASE} file should contain all the information about how
-you tested your programs.  At minimum, this file should contain the
-output from all the tests that we've provided, with any explanations
-needed to reproduce the output (arguments to the program, turning
-features on the program on or off, and so on).
-
-Additionally, you should detail all tests you write yourself.  You are
-expected to write tests for features which our tests don't cover, and
-to write some additional stress tests, since our tests will not
-necessarily be too strenuous.  If you feel that such tests are not
-required, you should explain why you feel so.  For each test that you
-write, explain how we can use them, and show some sample output from a
-run.
-
-Here are some pointers for writing @file{TESTCASE} files:
-
-@itemize @bullet
-@item
-Show us that you tested each part of your assignment.
-
-@item
-Clearly state in your @file{TESTCASE} file what each test is supposed
-to test.  You should be testing not only the common case, but testing
-corner cases.  Specify what criteria or issue is being tested.
-
-@item
-Make your tests as succinct as possible.
-
-@item
-Your test cases should be placed in a subdirectory called
-@file{testcases} within the project directory.  So for project 1, they
-should be in @file{pintos/src/threads/testcases}.
-
-@item
-Think about what may actually crash your code.
-
-@item
-Think about what the compiler might do to your code.  Suppose you write
-the following to test your virtual memory implementation's ability to
-expand the stack:
-@example
-int main (void) @{
-  int array[4096];
-  array[123] = 234;
-  return 0;
-@}
-@end example
-@noindent The compiler is quite likely to notice that the value that you
-write to the array is never used again and thereby decide not to write
-it at all.  The result is that your test does not test anything at all.
-@end itemize
-
-Your @file{TESTCASE} file is also where you can show us the
-improvements that your code makes to the performance of the system.
-You should be able to show us ``before'' and ``after'' performance
-data, and explain how the data shows the improvement.  For example,
-for Problem 1-3, you should show us in the @file{TESTCASE} printouts
-from a workload for the non-Solaris scheduler and the Solaris
-scheduler and explain why the Solaris scheduler is better.
-
-Finally, we cannot stress enough the importance of being brief and
-complete.
-
-Keep in mind that the quality of your testing is worth 10% of your
-project grade.  The bulk of this will be determined from the
-@file{TESTCASE} file.
+@verbatiminclude sample.tmpl

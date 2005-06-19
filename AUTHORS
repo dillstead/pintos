@@ -1,12 +1,13 @@
-src
+src							-*- text -*-
 ---
 
 * Most code written by Ben Pfaff <blp@cs.stanford.edu>.
 
-* The structure and form of this operating system is inspired by the
-  Nachos system from the University of California, Berkeley.  A few of
-  the source files are more-or-less literal translations of the Nachos
-  C++ code into C.  These files bear the original UCB license notice.
+* The original structure and form of this operating system is inspired
+  by the Nachos system from the University of California, Berkeley.  A
+  few of the source files are more-or-less literal translations of the
+  Nachos C++ code into C.  These files bear the original UCB license
+  notice.
 
 * Some of the source code is derived from code used in the
   Massachusetts Institute of Technology's 6.828 advanced operating
@@ -33,11 +34,7 @@ projects
 
   If you're not on this list but should be, please let me know.
 
-* The section on multilevel feedback schedulers in the threads project
-  is adapted from a handout written by Andrea Arpaci-Dusseau
-  <"dusseau" at the server cs.wisc.edu>.
-
 * Updates for Pintos by Ben Pfaff <blp@cs.stanford.edu>.
 
-* Example code in the tour's description of monitors is from Mendel
-  Roseblum's classroom slides.
+* Example code for condition variables is from classroom slides
+  originally by Dawson Engler and updated by Mendel Roseblum.

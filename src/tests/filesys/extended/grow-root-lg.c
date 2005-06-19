@@ -1,0 +1,2 @@
+#define FILE_CNT 50
+#include "tests/filesys/extended/grow-dir.inc"

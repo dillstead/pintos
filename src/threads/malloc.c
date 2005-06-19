@@ -80,7 +80,7 @@ malloc_init (void)
       d->block_size = block_size;
       d->blocks_per_arena = (PGSIZE - sizeof (struct arena)) / block_size;
       list_init (&d->free_list);
-      lock_init (&d->lock, "malloc");
+      lock_init (&d->lock);
     }
 }
 
@@ -174,53 +174,93 @@ calloc (size_t a, size_t b)
   return p;
 }
 
+/* Returns the number of bytes allocated for BLOCK. */
+static size_t
+block_size (void *block) 
+{
+  struct block *b = block;
+  struct arena *a = block_to_arena (b);
+  struct desc *d = a->desc;
+
+  return d != NULL ? d->block_size : PGSIZE * a->free_cnt - pg_ofs (block);
+}
+
+/* Attempts to resize OLD_BLOCK to NEW_SIZE bytes, possibly
+   moving it in the process.
+   If successful, returns the new block; on failure, returns a
+   null pointer.
+   A call with null OLD_BLOCK is equivalent to malloc(NEW_SIZE).
+   A call with zero NEW_SIZE is equivalent to free(OLD_BLOCK). */
+void *
+realloc (void *old_block, size_t new_size) 
+{
+  if (new_size == 0) 
+    {
+      free (old_block);
+      return NULL;
+    }
+  else 
+    {
+      void *new_block = malloc (new_size);
+      if (old_block != NULL && new_block != NULL)
+        {
+          size_t old_size = block_size (old_block);
+          size_t min_size = new_size < old_size ? new_size : old_size;
+          memcpy (new_block, old_block, min_size);
+          free (old_block);
+        }
+      return new_block;
+    }
+}
+
 /* Frees block P, which must have been previously allocated with
    malloc() or calloc(). */
 void
 free (void *p) 
 {
-  struct block *b;
-  struct arena *a;
-  struct desc *d;
-
-  if (p == NULL)
-    return;
-
-  b = p;
-  a = block_to_arena (b);
-  d = a->desc;
-
-  if (d == NULL) 
+  if (p != NULL)
     {
-      /* It's a big block.  Free its pages. */
-      palloc_free_multiple (a, a->free_cnt);
-      return;
-    }
+      struct block *b = p;
+      struct arena *a = block_to_arena (b);
+      struct desc *d = a->desc;
+      
+      if (d != NULL) 
+        {
+          /* It's a normal block.  We handle it here. */
 
 #ifndef NDEBUG
-  memset (b, 0xcc, d->block_size);
+          /* Clear the block to help detect use-after-free bugs. */
+          memset (b, 0xcc, d->block_size);
 #endif
   
-  lock_acquire (&d->lock);
+          lock_acquire (&d->lock);
 
-  /* Add block to free list. */
-  list_push_front (&d->free_list, &b->free_elem);
+          /* Add block to free list. */
+          list_push_front (&d->free_list, &b->free_elem);
 
-  /* If the arena is now entirely unused, free it. */
-  if (++a->free_cnt >= d->blocks_per_arena) 
-    {
-      size_t i;
+          /* If the arena is now entirely unused, free it. */
+          if (++a->free_cnt >= d->blocks_per_arena) 
+            {
+              size_t i;
 
-      ASSERT (a->free_cnt == d->blocks_per_arena);
-      for (i = 0; i < d->blocks_per_arena; i++) 
-        {
-          struct block *b = arena_to_block (a, i);
-          list_remove (&b->free_elem);
+              ASSERT (a->free_cnt == d->blocks_per_arena);
+              for (i = 0; i < d->blocks_per_arena; i++) 
+                {
+                  struct block *b = arena_to_block (a, i);
+                  list_remove (&b->free_elem);
+                }
+              palloc_free_page (a);
+            }
+
+          lock_release (&d->lock);
         }
-      palloc_free_page (a);
+      else
+        {
+          /* It's a big block.  Free its pages. */
+          palloc_free_multiple (a, a->free_cnt);
+          return;
+        }
     }
-
-  lock_release (&d->lock);
 }
 
 /* Returns the arena that block B is inside. */

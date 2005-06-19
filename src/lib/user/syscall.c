@@ -147,10 +147,10 @@ mmap (int fd, void *addr)
   return syscall2 (SYS_mmap, fd, addr);
 }
 
-bool
+void
 munmap (mapid_t mapid)
 {
-  return syscall1 (SYS_munmap, mapid);
+  syscall1 (SYS_munmap, mapid);
 }
 
 bool

@@ -6,12 +6,11 @@ static int next (int pos);
 static void wait (struct intq *q, struct thread **waiter);
 static void signal (struct intq *q, struct thread **waiter);
 
-/* Initializes interrupt queue Q, naming it NAME (for debugging
-   purposes). */
+/* Initializes interrupt queue Q. */
 void
-intq_init (struct intq *q, const char *name) 
+intq_init (struct intq *q) 
 {
-  lock_init (&q->lock, name);
+  lock_init (&q->lock);
   q->not_full = q->not_empty = NULL;
   q->head = q->tail = 0;
 }
@@ -87,7 +86,7 @@ next (int pos)
 /* WAITER must be the address of Q's not_empty or not_full
    member.  Waits until the given condition is true. */
 static void
-wait (struct intq *q, struct thread **waiter) 
+wait (struct intq *q UNUSED, struct thread **waiter) 
 {
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
@@ -103,7 +102,7 @@ wait (struct intq *q, struct thread **waiter)
    thread is waiting for the condition, wakes it up and resets
    the waiting thread. */
 static void
-signal (struct intq *q, struct thread **waiter) 
+signal (struct intq *q UNUSED, struct thread **waiter) 
 {
   ASSERT (intr_get_level () == INTR_OFF);
   ASSERT ((waiter == &q->not_empty && !intq_empty (q))

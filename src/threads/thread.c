@@ -46,13 +46,17 @@ static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
 static long long user_ticks;    /* # of timer ticks in user programs. */
 
+/* Scheduling. */
+#define TIME_SLICE 4            /* # of timer ticks to give each thread. */
+static unsigned thread_ticks;   /* # of timer ticks since last yield. */
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
 static void init_thread (struct thread *, const char *name, int priority);
-static bool is_thread (struct thread *);
+static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void schedule_tail (struct thread *prev);
@@ -73,7 +77,7 @@ thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
-  lock_init (&tid_lock, "tid");
+  lock_init (&tid_lock);
   list_init (&ready_list);
 
   /* Set up a thread structure for the running thread. */
@@ -88,16 +92,17 @@ thread_init (void)
 void
 thread_start (void) 
 {
-  thread_create ("idle", PRI_DEFAULT, idle, NULL);
+  thread_create ("idle", PRI_MAX, idle, NULL);
   intr_enable ();
 }
 
-/* Called by the timer interrupt handler at each timer tick to
-   update statistics. */
+/* Called by the timer interrupt handler at each timer tick. */
 void
 thread_tick (void) 
 {
   struct thread *t = thread_current ();
+
+  /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
 #ifdef USERPROG
@@ -106,6 +111,10 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
+
+  /* Enforce preemption. */
+  if (++thread_ticks >= TIME_SLICE)
+    intr_yield_on_return ();
 }
 
 /* Prints thread statistics. */
@@ -287,6 +296,37 @@ thread_get_priority (void)
 {
   return thread_current ()->priority;
 }
+
+/* Sets the current thread's nice value to NICE. */
+void
+thread_set_nice (int nice UNUSED) 
+{
+  /* Not yet implemented. */
+}
+
+/* Returns the current thread's nice value. */
+int
+thread_get_nice (void) 
+{
+  /* Not yet implemented. */
+  return 0;
+}
+
+/* Returns 100 times the system load average. */
+int
+thread_get_load_avg (void) 
+{
+  /* Not yet implemented. */
+  return 0;
+}
+
+/* Returns 100 times the current thread's recent_cpu value. */
+int
+thread_get_recent_cpu (void) 
+{
+  /* Not yet implemented. */
+  return 0;
+}
 
 /* Idle thread.  Executes when no other thread is ready to run. */
 static void
@@ -342,7 +382,7 @@ running_thread (void)
 
 /* Returns true if T appears to point to a valid thread. */
 static bool
-is_thread (struct thread *t) 
+is_thread (struct thread *t)
 {
   return t != NULL && t->magic == THREAD_MAGIC;
 }
@@ -416,6 +456,9 @@ schedule_tail (struct thread *prev)
 
   /* Mark us as running. */
   cur->status = THREAD_RUNNING;
+
+  /* Start new time slice. */
+  thread_ticks = 0;
 
 #ifdef USERPROG
   /* Activate the new address space. */

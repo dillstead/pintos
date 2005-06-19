@@ -8,12 +8,15 @@
 struct bitmap;
 
 void inode_init (void);
-bool inode_create (struct bitmap *, disk_sector_t, off_t);
+bool inode_create (disk_sector_t, off_t);
 struct inode *inode_open (disk_sector_t);
+struct inode *inode_reopen (struct inode *);
 void inode_close (struct inode *);
 void inode_remove (struct inode *);
-disk_sector_t inode_byte_to_sector (const struct inode *, off_t);
+off_t inode_read_at (struct inode *, void *, off_t size, off_t offset);
+off_t inode_write_at (struct inode *, const void *, off_t size, off_t offset);
+void inode_deny_write (struct inode *);
+void inode_allow_write (struct inode *);
 off_t inode_length (const struct inode *);
-void inode_print (const struct inode *);
 
 #endif /* filesys/inode.h */

@@ -1,4 +1,4 @@
-@node References, Multilevel Feedback Scheduling, Project 4--File Systems, Top
+@node References, 4.4BSD Scheduler, Project 4--File Systems, Top
 @appendix References
 
 @macro bibdfn{cite}
@@ -9,6 +9,7 @@
 @menu
 * Hardware References::     
 * Software References::     
+* Operating System Design References::
 @end menu
 
 @node Hardware References
@@ -98,3 +99,11 @@ Edition}.  80@var{x}86-specific parts of the Unix interface.
 @uref{specs/sysv-abi-update.html/contents.html, , System V Application Binary
 Interface---DRAFT---24 April 2001}.  A draft of a revised version of
 @bibref{SysV-ABI} which was never completed.
+
+@node Operating System Design References
+@section Operating System Design References
+
+@bibdfn{4.4BSD}
+M.@: K.@: McKusick, K.@: Bostic, M.@: J.@: Karels, J.@: S.@: Quarterman,
+@cite{The Design and Implementation of the 4.4@acronym{BSD} Operating
+System}.  Addison-Wesley 1996.

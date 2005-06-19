@@ -1,5 +1,5 @@
 #ifndef THREADS_FLAGS_H
-#define THREADS_FLAGS_H 1
+#define THREADS_FLAGS_H
 
 /* EFLAGS Register. */
 #define FLAG_MBS  0x00000002    /* Must be set. */

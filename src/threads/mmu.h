@@ -106,6 +106,20 @@ static inline void *pg_round_down (const void *va) {
    virtual address space belongs to the kernel. */
 #define	PHYS_BASE ((void *) LOADER_PHYS_BASE)
 
+/* Returns true if VADDR is a user virtual address. */
+static inline bool
+is_user_vaddr (const void *vaddr) 
+{
+  return vaddr < PHYS_BASE;
+}
+
+/* Returns true if VADDR is a kernel virtual address. */
+static inline bool
+is_kernel_vaddr (const void *vaddr) 
+{
+  return vaddr >= PHYS_BASE;
+}
+
 /* Returns kernel virtual address at which physical address PADDR
    is mapped. */
 static inline void *
@@ -121,7 +135,7 @@ ptov (uintptr_t paddr)
 static inline uintptr_t
 vtop (const void *vaddr)
 {
-  ASSERT (vaddr >= PHYS_BASE);
+  ASSERT (is_kernel_vaddr (vaddr));
 
   return (uintptr_t) vaddr - (uintptr_t) PHYS_BASE;
 }
@@ -169,7 +183,7 @@ static inline uint32_t *pde_get_pt (uint32_t pde) {
 }
 
 /* Obtains page table index from a virtual address. */
-static inline unsigned pt_no (void *va) {
+static inline unsigned pt_no (const void *va) {
   return ((uintptr_t) va & PTMASK) >> PTSHIFT;
 }
 
@@ -190,10 +204,9 @@ static inline uint32_t pte_create_user (uint32_t *page, bool writable) {
   return pte_create_kernel (page, writable) | PG_U;
 }
 
-/* Returns a pointer to the page that page table entry PTE, which
-   must "present", points to. */
+/* Returns a pointer to the page that page table entry PTE points
+   to. */
 static inline void *pte_get_page (uint32_t pte) {
-  ASSERT (pte & PG_P);
   return ptov (pte & ~PGMASK);
 }
 

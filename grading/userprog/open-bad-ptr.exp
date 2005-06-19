@@ -1,6 +1,0 @@
-(open-bad-ptr) begin
-(open-bad-ptr) end
-open-bad-ptr: exit(0)
---OR--
-(open-bad-ptr) begin
-open-bad-ptr: exit(-1)

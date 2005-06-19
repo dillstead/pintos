@@ -23,7 +23,7 @@ In Emacs, use @kbd{M-.} to follow a tag in the current window,
 @kbd{C-x 4 .} in a new window, or @kbd{C-x 5 .} in a new frame.  If
 your cursor is on a symbol name for any of those commands, it becomes
 the default target.  If a tag name has multiple definitions, @kbd{M-0
-M-.} will jump to the next one.  To jump back to where you were before
+M-.} jumps to the next one.  To jump back to where you were before
 you followed the last tag, use @kbd{M-*}.
 
 @node CVS
@@ -38,9 +38,9 @@ version.  Furthermore, you can retrieve any old version of your code
 as of some given day and time.  The version control logs tell you who
 made changes and when.
 
-CVS is not the best version control system out there.  However, it's
-free, it's ubiquitous, and it's fairly easy to use.  More to the
-point, it's already available on the Leland machines you're using for
+CVS is not the best version control system out there, but it's
+free, it's fairly easy to use, and
+it's already available on the Leland machines you're using for
 the projects.
 
 For more information, visit the @uref{https://www.cvshome.org/, , CVS
@@ -53,7 +53,7 @@ SourceForge is a web-based system for facilitating software
 development.  It provides you with a version-control system (typically
 CVS, as described above) and other tools for tracking your software.
 You can use it to store files, track bugs, and post notes about
-development progress.  It's also free.  You can set up your own
+development progress.  You can set up your own
 project in SourceForge at @uref{http://sourceforge.net, ,
 sourceforge.net}.
 

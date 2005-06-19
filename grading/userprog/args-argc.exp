@@ -1,2 +1,0 @@
-(args-argc) argc=5
-args-argc: exit(0)

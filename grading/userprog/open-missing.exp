@@ -1,3 +1,0 @@
-(open-missing) begin
-(open-missing) end
-open-missing: exit(0)

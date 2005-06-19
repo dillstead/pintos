@@ -1,9 +1,0 @@
-(grow-sparse) begin
-(grow-sparse) create "testfile"
-(grow-sparse) open "testfile"
-(grow-sparse) seek "testfile"
-(grow-sparse) write "testfile"
-(grow-sparse) close "testfile"
-(grow-sparse) open "testfile" for verification
-(grow-sparse) close "testfile"
-(grow-sparse) end

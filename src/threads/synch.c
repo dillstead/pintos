@@ -32,9 +32,9 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
-/* Initializes semaphore SEMA to VALUE and names it NAME (for
-   debugging purposes only).  A semaphore is a nonnegative
-   integer along with two atomic operators for manipulating it:
+/* Initializes semaphore SEMA to VALUE.  A semaphore is a
+   nonnegative integer along with two atomic operators for
+   manipulating it:
 
    - down or "P": wait for the value to become positive, then
      decrement it.
@@ -42,12 +42,10 @@
    - up or "V": increment the value (and wake up one waiting
      thread, if any). */
 void
-sema_init (struct semaphore *sema, unsigned value, const char *name) 
+sema_init (struct semaphore *sema, unsigned value) 
 {
   ASSERT (sema != NULL);
-  ASSERT (name != NULL);
 
-  strlcpy (sema->name, name, sizeof sema->name);
   sema->value = value;
   list_init (&sema->waiters);
 }
@@ -77,6 +75,32 @@ sema_down (struct semaphore *sema)
   intr_set_level (old_level);
 }
 
+/* Down or "P" operation on a semaphore, but only if the
+   semaphore is not already 0.  Returns true if the semaphore is
+   decremented, false otherwise.
+
+   This function may be called from an interrupt handler. */
+bool
+sema_try_down (struct semaphore *sema) 
+{
+  enum intr_level old_level;
+  bool success;
+
+  ASSERT (sema != NULL);
+
+  old_level = intr_disable ();
+  if (sema->value > 0) 
+    {
+      sema->value--;
+      success = true; 
+    }
+  else
+    success = false;
+  intr_set_level (old_level);
+
+  return success;
+}
+
 /* Up or "V" operation on a semaphore.  Increments SEMA's value
    and wakes up one thread of those waiting for SEMA, if any.
 
@@ -96,13 +120,6 @@ sema_up (struct semaphore *sema)
   intr_set_level (old_level);
 }
 
-/* Return SEMA's name (for debugging purposes). */
-const char *
-sema_name (const struct semaphore *sema) 
-{
-  return sema->name;
-}
-
 static void sema_test_helper (void *sema_);
 
 /* Self-test for semaphores that makes control "ping-pong"
@@ -115,8 +132,8 @@ sema_self_test (void)
   int i;
 
   printf ("Testing semaphores...");
-  sema_init (&sema[0], 0, "ping");
-  sema_init (&sema[1], 0, "pong");
+  sema_init (&sema[0], 0);
+  sema_init (&sema[1], 0);
   thread_create ("sema-test", PRI_DEFAULT, sema_test_helper, &sema);
   for (i = 0; i < 10; i++) 
     {
@@ -140,11 +157,10 @@ sema_test_helper (void *sema_)
     }
 }
 
-/* Initializes LOCK and names it NAME (for debugging purposes).
-   A lock can be held by at most a single thread at any given
-   time.  Our locks are not "recursive", that is, it is an error
-   for the thread currently holding a lock to try to acquire that
-   lock.
+/* Initializes LOCK.  A lock can be held by at most a single
+   thread at any given time.  Our locks are not "recursive", that
+   is, it is an error for the thread currently holding a lock to
+   try to acquire that lock.
 
    A lock is a specialization of a semaphore with an initial
    value of 1.  The difference between a lock and such a
@@ -157,13 +173,12 @@ sema_test_helper (void *sema_)
    onerous, it's a good sign that a semaphore should be used,
    instead of a lock. */
 void
-lock_init (struct lock *lock, const char *name)
+lock_init (struct lock *lock)
 {
   ASSERT (lock != NULL);
-  ASSERT (name != NULL);
 
   lock->holder = NULL;
-  sema_init (&lock->semaphore, 1, name);
+  sema_init (&lock->semaphore, 1);
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -187,6 +202,30 @@ lock_acquire (struct lock *lock)
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
   intr_set_level (old_level);
+}
+
+/* Tries to acquires LOCK and returns true if successful or false
+   on failure.  The lock must not already be held by the current
+   thread.
+
+   This function will not sleep, so it may be called within an
+   interupt handler. */
+bool
+lock_try_acquire (struct lock *lock)
+{
+  enum intr_level old_level;
+  bool success;
+
+  ASSERT (lock != NULL);
+  ASSERT (!lock_held_by_current_thread (lock));
+
+  old_level = intr_disable ();
+  success = sema_try_down (&lock->semaphore);
+  if (success)
+    lock->holder = thread_current ();
+  intr_set_level (old_level);
+
+  return success;
 }
 
 /* Releases LOCK, which must be owned by the current thread.
@@ -218,15 +257,6 @@ lock_held_by_current_thread (const struct lock *lock)
 
   return lock->holder == thread_current ();
 }
-
-/* Returns the name of LOCK (for debugging purposes). */
-const char *
-lock_name (const struct lock *lock) 
-{
-  ASSERT (lock != NULL);
-
-  return sema_name (&lock->semaphore);
-}
 
 /* One semaphore in a list. */
 struct semaphore_elem 
@@ -235,17 +265,14 @@ struct semaphore_elem
     struct semaphore semaphore;         /* This semaphore. */
   };
 
-/* Initializes condition variable COND and names it NAME.  A
-   condition variable allows one piece of code to signal a
-   condition and cooperating code to receive the signal and act
-   upon it. */
+/* Initializes condition variable COND.  A condition variable
+   allows one piece of code to signal a condition and cooperating
+   code to receive the signal and act upon it. */
 void
-cond_init (struct condition *cond, const char *name) 
+cond_init (struct condition *cond)
 {
   ASSERT (cond != NULL);
-  ASSERT (name != NULL);
 
-  strlcpy (cond->name, name, sizeof cond->name);
   list_init (&cond->waiters);
 }
 
@@ -279,7 +306,7 @@ cond_wait (struct condition *cond, struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
   
-  sema_init (&waiter.semaphore, 0, "condition");
+  sema_init (&waiter.semaphore, 0);
   list_push_back (&cond->waiters, &waiter.elem);
   lock_release (lock);
   sema_down (&waiter.semaphore);
@@ -294,7 +321,7 @@ cond_wait (struct condition *cond, struct lock *lock)
    make sense to try to signal a condition variable within an
    interrupt handler. */
 void
-cond_signal (struct condition *cond, struct lock *lock) 
+cond_signal (struct condition *cond, struct lock *lock UNUSED) 
 {
   ASSERT (cond != NULL);
   ASSERT (lock != NULL);
@@ -320,13 +347,4 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
-}
-
-/* Returns COND's name (for debugging purposes). */
-const char *
-cond_name (const struct condition *cond)
-{
-  ASSERT (cond != NULL);
-
-  return cond->name;
 }

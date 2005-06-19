@@ -7,53 +7,56 @@ introduces you to a few of them.
 @menu
 * printf::                      
 * ASSERT::                      
-* UNUSED NO_RETURN NO_INLINE PRINTF_FORMAT::  
+* Function and Parameter Attributes::  
 * Backtraces::                  
-* i386-elf-gdb::                
+* gdb::                         
 * Debugging by Infinite Loop::  
 * Modifying Bochs::             
 * Debugging Tips::              
 @end menu
 
 @node printf
-@section @code{@code{printf()}}
+@section @code{printf()}
 
 Don't underestimate the value of @func{printf}.  The way
 @func{printf} is implemented in Pintos, you can call it from
 practically anywhere in the kernel, whether it's in a kernel thread or
-an interrupt handler, almost regardless of what locks are held.
+an interrupt handler, almost regardless of what locks are held (but see
+@ref{printf Reboots} for a counterexample).
 
-@func{printf} isn't useful just because it can print data members.
+@func{printf} is useful for more than just examining data.
 It can also help figure out when and where something goes wrong, even
 when the kernel crashes or panics without a useful error message.  The
 strategy is to sprinkle calls to @func{print} with different strings
-(e.g.@: @code{"1\n"}, @code{"2\n"}, @dots{}) throughout the pieces of
-code you suspect are failing.  If you don't even see @code{1} printed,
-then something bad happened before that point, if you see @code{1}
-but not @code{2}, then something bad happened between those two
+(e.g.@: @code{"<1>"}, @code{"<2>"}, @dots{}) throughout the pieces of
+code you suspect are failing.  If you don't even see @code{<1>} printed,
+then something bad happened before that point, if you see @code{<1>}
+but not @code{<2>}, then something bad happened between those two
 points, and so on.  Based on what you learn, you can then insert more
 @func{printf} calls in the new, smaller region of code you suspect.
 Eventually you can narrow the problem down to a single statement.
+@xref{Debugging by Infinite Loop}, for a related technique.
 
 @node ASSERT
 @section @code{ASSERT}
 
 Assertions are useful because they can catch problems early, before
-they'd otherwise be notices.  Pintos provides a macro for assertions
-named @code{ASSERT}, defined in @file{<debug.h>}, that you can use for
-this purpose.  Ideally, each function should begin with a set of
+they'd otherwise be noticed.  Pintos provides the
+@code{ASSERT}, defined in @file{<debug.h>}, for assertions.
+Ideally, each function should begin with a set of
 assertions that check its arguments for validity.  (Initializers for
 functions' local variables are evaluated before assertions are
 checked, so be careful not to assume that an argument is valid in an
 initializer.)  You can also sprinkle assertions throughout the body of
 functions in places where you suspect things are likely to go wrong.
+They are especially useful for checking loop invariants.
 
 When an assertion proves untrue, the kernel panics.  The panic message
 should help you to find the problem.  See the description of
 backtraces below for more information.
 
-@node UNUSED NO_RETURN NO_INLINE PRINTF_FORMAT
-@section UNUSED, NO_RETURN, NO_INLINE, and PRINTF_FORMAT
+@node Function and Parameter Attributes
+@section Function and Parameter Attributes
 
 These macros defined in @file{<debug.h>} tell the compiler special
 attributes of a function or function parameter.  Their expansions are
@@ -78,11 +81,11 @@ backtraces (see below).
 @end defmac
 
 @defmac PRINTF_FORMAT (@var{format}, @var{first})
-Appended to a function prototype to tell the compiler that the
-function takes a @func{printf}-like format string as its
-@var{format}th argument and that the corresponding value arguments
-start at the @var{first}th argument.  This lets the compiler tell you
-if you pass the wrong argument types.
+Appended to a function prototype to tell the compiler that the function
+takes a @func{printf}-like format string as the argument numbered
+@var{format} (starting from 1) and that the corresponding value
+arguments start at the argument numbered @var{first}.  This lets the
+compiler tell you if you pass the wrong argument types.
 @end defmac
 
 @node Backtraces
@@ -92,16 +95,15 @@ When the kernel panics, it prints a ``backtrace,'' that is, a summary
 of how your program got where it is, as a list of addresses inside the
 functions that were running at the time of the panic.  You can also
 insert a call to @func{debug_backtrace}, prototyped in
-@file{<debug.h>}, at any point in your code.
+@file{<debug.h>}, to print a backtrace at any point in your code.
 
 The addresses in a backtrace are listed as raw hexadecimal numbers,
-which are meaningless in themselves.  You can translate them into
+which are meaningless by themselves.  You can translate them into
 function names and source file line numbers using a tool called
-@command{i386-elf-addr2line}.@footnote{If you're using an 80@var{x}86
-system for development, it's probably just called
-@command{addr2line}.}
+@command{addr2line} (80@var{x}86) or @command{i386-elf-addr2line}
+(SPARC).
 
-The output format of @command{i386-elf-addr2line} is not ideal, so
+The output format of @command{addr2line} is not ideal, so
 we've supplied a wrapper for it simply called @command{backtrace}.
 Give it the name of your @file{kernel.o} as the first argument and the
 hexadecimal numbers composing the backtrace (including the @samp{0x}
@@ -115,6 +117,11 @@ thread's stack, because the backtrace is extracted from the stack.
 Alternatively, it could be that the @file{kernel.o} you passed to
 @command{backtrace} does not correspond to the kernel that produced
 the backtrace.
+
+Sometimes backtraces can be confusing without implying corruption.
+Compiler optimizations can cause surprising behavior.  For example, when
+a function has called another function as its final action (a @dfn{tail
+call}), the calling function may not appear in a backtrace at all.
 
 @menu
 * Backtrace Example::           
@@ -136,11 +143,11 @@ You would then invoke the @command{backtrace} utility like shown below,
 cutting and pasting the backtrace information into the command line.
 This assumes that @file{kernel.o} is in the current directory.  You
 would of course enter all of the following on a single shell command
-line:
+line, even though that would overflow our margins here:
 
 @example
-backtrace kernel.o 0xc0106eff 0xc01102fb 0xc010dc22 0xc010cf67 0xc0102319
-0xc010325a 0x804812c 0x8048a96 0x8048ac8
+backtrace kernel.o 0xc0106eff 0xc01102fb 0xc010dc22 0xc010cf67 
+0xc0102319 0xc010325a 0x804812c 0x8048a96 0x8048ac8
 @end example
 
 The backtrace output would then look something like this:
@@ -159,14 +166,14 @@ The backtrace output would then look something like this:
 
 (You will probably not get the same results if you run the command above
 on your own kernel binary, because the source code you compiled from is
-different from the source code that emitted the panic message.)
+different from the source code that panicked.)
 
 The first line in the backtrace refers to @func{debug_panic}, the
 function that implements kernel panics.  Because backtraces commonly
 result from kernel panics, @func{debug_panic} will often be the first
 function shown in a backtrace.
 
-The second line shows @func{file_seek} to be the function that panicked,
+The second line shows @func{file_seek} as the function that panicked,
 in this case as the result of an assertion failure.  In the source code
 tree used for this example, line 405 of @file{filesys/file.c} is the
 assertion
@@ -176,6 +183,7 @@ ASSERT (file_ofs >= 0);
 @end example
 
 @noindent
+(This line was also cited in the assertion failure message.)
 Thus, @func{file_seek} panicked because it passed a negative file offset
 argument.
 
@@ -208,9 +216,9 @@ The results look like this:
 0xc010cf67: ?? (??:0)
 0xc0102319: ?? (??:0)
 0xc010325a: ?? (??:0)
-0x804812c: test_main (/home/blp/cs140/pintos/grading/filesys/grow-too-big.c:20)
-0x8048a96: main (/home/blp/cs140/pintos/grading/filesys/fsmain.c:10)
-0x8048ac8: _start (../../src/lib/user/entry.c:9)
+0x804812c: test_main (../../tests/filesys/extended/grow-too-big.c:20)
+0x8048a96: main (../../tests/main.c:10)
+0x8048ac8: _start (../../lib/user/entry.c:9)
 @end example
 
 Here's an extra tip for anyone who read this far: @command{backtrace}
@@ -224,27 +232,27 @@ backtrace kernel.o Call stack: 0xc0106eff 0xc01102fb 0xc010dc22
 0xc010cf67 0xc0102319 0xc010325a 0x804812c 0x8048a96 0x8048ac8.
 @end example
 
-@node i386-elf-gdb
-@section @command{i386-elf-gdb}
+@node gdb
+@section @command{gdb}
 
 You can run the Pintos kernel under the supervision of the
-@command{i386-elf-gdb} debugger.@footnote{If you're using an
-80@var{x}86 system for development, it's probably just called
-@command{gdb}.}  There are two steps in the process.  First,
+@command{gdb} (80@var{x}86) or @command{i386-elf-gdb} (SPARC)
+debugger.  First,
 start Pintos with the @option{--gdb} option, e.g.@: @command{pintos
---gdb run}.  Second, in a second terminal, invoke @command{gdb} on
+--gdb -- run mytest}.  Second, in a separate terminal, invoke @command{gdb} (or
+@command{i386-elf-gdb}) on
 @file{kernel.o}:
 @example
-i386-elf-gdb kernel.o
+gdb kernel.o
 @end example
 @noindent and issue the following @command{gdb} command:
 @example
 target remote localhost:1234
 @end example
 
-At this point, @command{gdb} is connected to Bochs over a local
+Now @command{gdb} is connected to the simulator over a local
 network connection.  You can now issue any normal @command{gdb}
-commands.  If you issue the @samp{c} command, the Bochs BIOS will take
+commands.  If you issue the @samp{c} command, the simulated BIOS will take
 control, load Pintos, and then Pintos will run in the usual way.  You
 can pause the process at any point with @key{Ctrl+C}.  If you want
 @command{gdb} to stop when Pintos starts running, set a breakpoint on
@@ -256,8 +264,7 @@ terminal command prompt, or you can view it in Emacs with the command
 
 @table @code
 @item c
-Continue execution until the next breakpoint or until @key{Ctrl+C} is
-typed.
+Continues execution until @key{Ctrl+C} or the next breakpoint.
 
 @item break @var{function}
 @itemx break @var{filename}:@var{linenum}
@@ -267,8 +274,8 @@ Sets a breakpoint at the given function, line number, or address.
 
 @item p @var{expression}
 Evaluates the given C expression and prints its value.
-If the expression contains a function call, the function will actually
-be executed, so be careful.
+If the expression contains a function call, that function will actually
+be executed.
 
 @item l *@var{address}
 Lists a few lines of code around the given address.
@@ -282,13 +289,16 @@ Prints a stack backtrace similar to that output by the
 Prints the name of the function or variable that occupies the given
 address.
 (Use a @samp{0x} prefix to specify an address in hex.)
+
+@item diassemble @var{function}
+Disassembles the specified @var{function}.
 @end table
 
 If you notice other strange behavior while using @command{gdb}, there
-are three possibilities.  The first is that there is a bug in your
-modified Pintos.  The second is that there is a bug in Bochs's
-interface to @command{gdb} or in @command{gdb} itself.  The third is
-that there is a bug in the original Pintos code.  The first and second
+are three possibilities: a bug in your
+modified Pintos, a bug in Bochs's
+interface to @command{gdb} or in @command{gdb} itself, or
+a bug in the original Pintos code.  The first and second
 are quite likely, and you should seriously consider both.  We hope
 that the third is less likely, but it is also possible.
 
@@ -298,6 +308,7 @@ program's symbol table:
 @example
 add-symbol-file @var{program}
 @end example
+@noindent
 where @var{program} is the name of the program's executable (in the host
 file system, not in the Pintos file system).  After this, you should be
 able to debug the user program the same way you would the kernel, by
@@ -312,7 +323,7 @@ name on the @command{gdb} command line, instead of @file{kernel.o}.)
 @section Debugging by Infinite Loop
 
 If you get yourself into a situation where the machine reboots in a
-loop, you've probably hit a ``triple fault.''  In such a situation you
+loop, that's probably a ``triple fault.''  In such a situation you
 might not be able to use @func{printf} for debugging, because the
 reboots might be happening even before everything needed for
 @func{printf} is initialized.  In such a situation, you might want to
@@ -326,7 +337,7 @@ possibilities:
 @item
 The machine hangs without rebooting.  If this happens, you know that
 the infinite loop is running.  That means that whatever caused the
-problem must be @emph{after} the place you inserted the infinite loop.
+reboot must be @emph{after} the place you inserted the infinite loop.
 Now move the infinite loop later in the code sequence.
 
 @item
@@ -363,7 +374,7 @@ suggestions are in the patch file).  Finally, run @command{make}.
 This will compile Bochs and eventually produce a new binary
 @file{bochs}.  To use your @file{bochs} binary with @command{pintos},
 put it in your @env{PATH}, and make sure that it is earlier than
-@file{/usr/class/cs140/i386/bochs}.
+@file{/usr/class/cs140/`uname -m`/bochs}.
 
 Of course, to get any good out of this you'll have to actually modify
 Bochs.  Instructions for doing this are firmly out of the scope of

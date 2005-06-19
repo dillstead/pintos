@@ -1,10 +1,10 @@
-SUBDIRS = src grading doc tests
+CLEAN_SUBDIRS = src doc tests
 
 all::
-	@echo "This makefile has only 'clean' targets."
+	@echo "This makefile has only 'clean' and 'check' targets."
 
 clean::
-	for d in $(SUBDIRS); do $(MAKE) -C $$d $@; done
+	for d in $(CLEAN_SUBDIRS); do $(MAKE) -C $$d $@; done
 
 distclean:: clean
 	find . -name '*~' -exec rm '{}' \;

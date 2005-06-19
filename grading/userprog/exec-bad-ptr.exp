@@ -1,6 +1,0 @@
-(exec-bad-ptr) begin
-(exec-bad-ptr) end
-exec-bad-ptr: exit(0)
---OR--
-(exec-bad-ptr) begin
-exec-bad-ptr: exit(-1)

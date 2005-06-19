@@ -16,9 +16,6 @@
 #error TIMER_FREQ <= 1000 recommended
 #endif
 
-/* Number of time ticks to elapse between process yields. */
-#define TIME_SLICE 1
-
 /* Number of timer ticks since OS booted. */
 static volatile int64_t ticks;
 
@@ -45,7 +42,7 @@ timer_init (void)
   outb (0x40, count & 0xff);
   outb (0x40, count >> 8);
 
-  intr_register (0x20, 0, INTR_OFF, timer_interrupt, "8254 Timer");
+  intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -135,8 +132,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-  if (ticks % TIME_SLICE == 0)
-    intr_yield_on_return ();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

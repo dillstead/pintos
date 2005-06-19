@@ -1,18 +1,20 @@
 # -*- makefile -*-
 
+all:
+
 include Make.vars
-BUILD_SUBDIRS = $(addprefix build/, $(SUBDIRS))
 
-all: dirs
-	$(MAKE) -C build
+DIRS = $(sort $(addprefix build/,$(KERNEL_SUBDIRS) $(TEST_SUBDIRS) lib/user))
 
-dirs: build build/Makefile $(BUILD_SUBDIRS)
-build:
-	mkdir $@
+all grade check: $(DIRS) build/Makefile
+	cd build && $(MAKE) $@
+$(DIRS):
+	mkdir -p $@
 build/Makefile: ../Makefile.build
 	cp $< $@
-$(BUILD_SUBDIRS):
-	mkdir $@
+
+build/%: $(DIRS) build/Makefile
+	cd build && $(MAKE) $*
 
 clean:
 	rm -rf build
