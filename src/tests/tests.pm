@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Algorithm::Diff;
+use tests::Algorithm::Diff;
 
 sub fail;
 sub pass;
