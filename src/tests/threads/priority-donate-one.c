@@ -1,6 +1,4 @@
-/* Problem 1-3: Priority Scheduling tests.
-
-   Based on a test originally submitted for Stanford's CS 140 in
+/* Based on a test originally submitted for Stanford's CS 140 in
    winter 1999 by Matt Franklin <startled@leland.stanford.edu>,
    Greg Hutchins <gmh@leland.stanford.edu>, Yu Ping Hu
    <yph@cs.stanford.edu>.  Modified by arens. */
