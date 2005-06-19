@@ -13,17 +13,17 @@ PREFIX=/usr/class/cs140/`uname -m`
 PATH=$PATH:$PREFIX/bin
 TMP=`pwd`
 
-wget ftp://ftp.gnu.org/pub/gnu/binutils/binutils-2.16.tar.bz2
+wget ftp://ftp.gnu.org/pub/gnu/binutils/binutils-2.15.tar.bz2
 wget ftp://sources.redhat.com/pub/newlib/newlib-1.13.0.tar.gz
 wget ftp://ftp.gnu.org/pub/gnu/gcc/gcc-3.3.6/gcc-core-3.3.6.tar.bz2
 wget ftp://ftp.gnu.org/pub/gnu/gdb/gdb-6.3.tar.bz2
 
-bzcat binutils-2.16.tar.bz2 | tar x
+bzcat binutils-2.15.tar.bz2 | tar x
 tar xzf newlib-1.13.0.tar.gz
 bzcat gcc-core-3.3.6.tar.bz2 | tar x
 bzcat gdb-6.3.tar.bz2 | tar x
 
-cd $TMP/binutils-2.16
+cd $TMP/binutils-2.15
 mkdir i386
 cd i386
 ../configure --target=i386-elf --prefix=$PREFIX
