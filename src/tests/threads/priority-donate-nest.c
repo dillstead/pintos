@@ -1,10 +1,9 @@
 /* Problem 1-3: Priority Scheduling tests.
 
    Based on a test originally submitted for Stanford's CS 140 in
-   winter 1999 by by Matt Franklin
-   <startled@leland.stanford.edu>, Greg Hutchins
-   <gmh@leland.stanford.edu>, Yu Ping Hu <yph@cs.stanford.edu>.
-   Modified by arens. */
+   winter 1999 by Matt Franklin <startled@leland.stanford.edu>,
+   Greg Hutchins <gmh@leland.stanford.edu>, Yu Ping Hu
+   <yph@cs.stanford.edu>.  Modified by arens. */
 
 #include <stdio.h>
 #include "tests/threads/tests.h"
