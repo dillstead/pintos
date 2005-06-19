@@ -19,22 +19,13 @@ pintos.ps: pintos.dvi
 pintos.pdf: $(TEXIS)
 	texi2pdf $< -o $@
 
-%.eps: %.jgr
-	(jgraph $< > $@.tmp && mv $@.tmp $@) || touch $@
-
-%.png: %.eps
-	convert $< $@
-
-%.pdf: %.eps
-	epstopdf $< --outfile=$@
-
 clean:
-	rm -f *.info *.html *.png
+	rm -f *.info *.html
 	rm -f *.dvi *.pdf *.ps *.log *~
 	rm -rf WWW
 
 dist: pintos.html pintos.pdf
 	rm -rf WWW
 	mkdir WWW WWW/specs
-	cp *.html *.png *.pdf *.css WWW
+	cp *.html *.pdf *.css WWW
 	(cd ../specs && cp -r *.pdf freevga kbd sysv-abi-update.html ../doc/WWW/specs)
