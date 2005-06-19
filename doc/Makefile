@@ -27,5 +27,5 @@ clean:
 dist: pintos.html pintos.pdf
 	rm -rf WWW
 	mkdir WWW WWW/specs
-	cp *.html *.pdf *.css WWW
+	cp *.html *.pdf *.css *.tmpl WWW
 	(cd ../specs && cp -r *.pdf freevga kbd sysv-abi-update.html ../doc/WWW/specs)
