@@ -17,7 +17,7 @@ extra credit is available if you do build on project 3.
 @menu
 * Project 4 Background::        
 * Project 4 Requirements::      
-* File System FAQ::             
+* Project 4 FAQ::             
 @end menu
 
 @node Project 4 Background
@@ -297,7 +297,7 @@ if B's data is all nonzero bytes, A is not allowed to see any zeros.
 Operations on different directories should take place concurrently.
 Operations on the same directory may wait for one another.
 
-@node File System FAQ
+@node Project 4 FAQ
 @section FAQ
 
 @table @b
