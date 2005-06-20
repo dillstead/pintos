@@ -132,13 +132,17 @@ for my $test (@failures) {
     if (open (OUTPUT, '<', "$test.output")) {
 	print "\nOUTPUT FROM $test:\n\n";
     
-	my ($panics) = 0;
+	my ($panics, $boots) = (0, 0);
 	while (<OUTPUT>) {
 	    if (/PANIC/ && ++$panics > 2) {
 		print "[...details of additional panic(s) omitted...]\n";
 		last;
 	    }
 	    print;
+	    if (/Pintos booting/ && ++$boots > 1) {
+		print "[...details of reboot(s) omitted...]\n";
+		last;
+	    }
 	}
 	close (OUTPUT);
     }
