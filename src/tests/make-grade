@@ -3,51 +3,141 @@
 use strict;
 use warnings;
 
-my (@rubric) = read_text_file (shift);
-my (@pass) = @ARGV;
+@ARGV == 3 || die;
+my ($src_dir, $results_file, $grading_file) = @ARGV;
 
-my (@grade);
+# Read pass/file verdicts from $results_file.
+open (RESULTS, '<', $results_file) || die "$results_file: open: $!\n";
+my (%verdicts, %verdict_counts);
+while (<RESULTS>) {
+    my ($verdict, $test) = /^(pass|FAIL) (.*)$/ or die;
+    $verdicts{$test} = $verdict eq 'pass';
+}
+close RESULTS;
 
-our ($possible_overall, $score_overall) = (0, 0);
-our ($possible, $score) = (0, 0);
-for my $i (0...$#rubric) {
-    local ($_) = $rubric[$i];
-    if (/^\S/ || /^\s*$/) {
-	end_section ();
-	push (@grade, $_);
-    } elsif (my ($value, $name, $desc) = /^\s+(\d+)\s+(\S+):\s+(.*)$/) {
-	$possible += $value;
-	my ($marker);
-	if (grep ($_ eq $name, @pass)) {
-	    $score += $value;
-	    $marker = ' ';
+my (@failures);
+my (@overall, @rubrics, @summary);
+my ($pct_actual, $pct_possible) = (0, 0);
+
+# Read grading file.
+my (@items);
+open (GRADING, '<', $grading_file) || die "$grading_file: open: $!\n";
+while (<GRADING>) {
+    s/#.*//;
+    next if /^\s*$/;
+    my ($max_pct, $rubric_suffix) = /^\s*(\d+)%\t(.*)/ or die;
+    my ($dir) = $rubric_suffix =~ /^(.*)\//;
+    my ($rubric_file) = "$src_dir/$rubric_suffix";
+    open (RUBRIC, '<', $rubric_file) or die "$rubric_file: open: $!\n";
+
+    # Rubric file must begin with title line.
+    my $title = <RUBRIC>;
+    chomp $title;
+    $title =~ s/:$// or die;
+    $title .= " ($rubric_suffix):";
+    push (@rubrics, $title);
+
+    my ($score, $possible) = (0, 0);
+    my ($cnt, $passed) = (0, 0);
+    my ($was_score) = 0;
+    while (<RUBRIC>) {
+	chomp;
+	push (@rubrics, "\t$_"), next if /^-/;
+	push (@rubrics, ""), next if /^\s*$/;
+	my ($poss, $name) = /^(\d+)\t(.*)$/ or die;
+	my ($test) = "$dir/$name";
+	my ($points) = 0;
+	if (!defined $verdicts{$test}) {
+	    push (@overall, "warning: $test not tested, assuming failure");
+	} elsif ($verdicts{$test}) {
+	    $points = $poss;
+	    $passed++;
+	}
+	push (@failures, $test) if !$points;
+	$verdict_counts{$test}++;
+	push (@rubrics, sprintf ("\t%4s%2d/%2d %s",
+				 $points ? '' : '**', $points, $poss, $test));
+	$score += $points;
+	$possible += $poss;
+	$cnt++;
+    }
+    close (RUBRIC);
+
+    push (@rubrics, "");
+    push (@rubrics, "\t- Section summary.");
+    push (@rubrics, sprintf ("\t%4s%3d/%3d %s",
+			     '', $passed, $cnt, 'tests passed'));
+    push (@rubrics, sprintf ("\t%4s%3d/%3d %s",
+			     '', $score, $possible, 'points subtotal'));
+    push (@rubrics, '');
+
+    my ($pct) = ($score / $possible) * $max_pct;
+    push (@summary, sprintf ("%-40s %3d/%3d %5.1f%%/%5.1f%%",
+			     $rubric_suffix,
+			     $score, $possible,
+			     $pct, $max_pct));
+    $pct_actual += $pct;
+    $pct_possible += $max_pct;
+}
+close GRADING;
+
+my ($sum_line)
+  = "---------------------------------------- --- --- ------ ------";
+unshift (@summary,
+	 "SUMMARY BY TEST SET",
+	 '',
+	 sprintf ("%-40s %3s %3s %6s %6s",
+		  "Test Set", "Pts", "Max", "% Ttl", "% Max"),
+	 $sum_line);
+push (@summary,
+      $sum_line,
+      sprintf ("%-40s %3s %3s %5.1f%%/%5.1f%%",
+	       'Total', '', '', $pct_actual, $pct_possible));
+
+unshift (@rubrics,
+	 "SUMMARY OF INDIVIDUAL TESTS",
+	 '');
+
+foreach my $name (keys (%verdicts)) {
+    my ($count) = $verdict_counts{$name};
+    if (!defined ($count) || $count != 1) {
+	if (!defined ($count) || !$count) {
+	    push (@overall, "warning: test $name doesn't count for grading");
 	} else {
-	    $marker = '-';
-	    }
-	push (@grade, "  $marker$value $name: $desc");
-    } else {
-	die;
+	    push (@overall,
+		  "warning: test $name counted $count times in grading");
+	}
     }
 }
-end_section ();
+push (@overall, sprintf ("TOTAL TESTING SCORE: %.1f%%", $pct_actual));
 
-push (@grade, "", "TESTING TOTAL: $score_overall of $possible_overall points");
+my (@divider) = ('', '- ' x 38, '');
 
-print map ("$_\n", @grade);
+print map ("$_\n", @overall, @divider, @summary, @divider, @rubrics);
 
-sub end_section {
-    return if !$possible;
-    push (@grade, "Subtotal: $score of $possible points");
-    $possible_overall += $possible;
-    $score_overall += $score;
-    $possible = $score = 0;
+for my $test (@failures) {
+    open (RESULT, '<', "$test.result") or next;
+    print map ("$_\n", @divider);
+    print "DETAILS OF $test FAILURE:\n\n";
+    my $first_line = <RESULT>;
+    my ($cnt) = 0;
+    while (<RESULT>) {
+	print;
+	$cnt++;
+    }
+    close (RESULT);
+
+    if ($cnt == 0) {
+	open (OUTPUT, '<', "$test.output") or next;
+	my ($panics) = 0;
+	while (<OUTPUT>) {
+	    if (/PANIC/ && ++$panics > 2) {
+		print "[...details of additional panic(s) omitted...]\n";
+		last;
+	    }
+	    print;
+	}
+	close (OUTPUT);
+    }
 }
 
-sub read_text_file {
-    my ($file_name) = @_;
-    open (FILE, '<', $file_name) or die "$file_name: open: $!\n";
-    my (@content) = <FILE>;
-    chomp (@content);
-    close (FILE);
-    return @content;
-}

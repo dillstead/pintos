@@ -1,0 +1,11 @@
+# Percentage of the testing point total designated for each set of
+# tests.
+
+# This project is primarily about implementing system calls.
+# If you do so properly, the base file system functionality
+# should come "for free".  Thus, the points emphasis below.
+
+35%	tests/userprog/Rubric.functionality
+35%	tests/userprog/Rubric.robustness
+ 5%	tests/userprog/no-vm/Rubric
+25%	tests/filesys/base/Rubric

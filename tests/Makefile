@@ -21,7 +21,7 @@ cd $@/src && $(MAKE) clean $(SUBMAKEFLAGS)
 endef
 
 define run-tests
-cd $@/src/$(PROJECT) && make check
+cd $@/src/$(PROJECT) && make check && make grade
 endef
 
 define compile
