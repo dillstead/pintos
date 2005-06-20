@@ -261,6 +261,11 @@ return to the process immediately.  The read-ahead request for disk
 block 2 should be handled asynchronously, in the background.
 @end table
 
+@strong{We recommend integrating the cache into your design early.}  In
+the past, many groups have tried to tack the cache onto a design late in
+the design process.  This is very difficult.  These groups have often
+turned in projects that failed most or all of the tests.
+
 @node File System Synchronization
 @subsection Synchronization
 
