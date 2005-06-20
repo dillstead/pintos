@@ -11,8 +11,8 @@ You may build project 4 on top of project 2 or project 3.  In either
 case, all of the functionality needed for project 2 must work in your
 filesys submission.  If you build on project 3, then all of the project
 3 functionality must work also, and you will need to edit
-@file{filesys/Make.vars} to enable VM functionality.  A small amount of
-extra credit is available if you do build on project 3.
+@file{filesys/Make.vars} to enable VM functionality.  You can receive up
+to 5% extra credit if you do enable VM.
 
 @menu
 * Project 4 Background::        
