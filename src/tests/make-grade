@@ -116,19 +116,22 @@ my (@divider) = ('', '- ' x 38, '');
 print map ("$_\n", @overall, @divider, @summary, @divider, @rubrics);
 
 for my $test (@failures) {
-    open (RESULT, '<', "$test.result") or next;
     print map ("$_\n", @divider);
     print "DETAILS OF $test FAILURE:\n\n";
-    my $first_line = <RESULT>;
-    my ($cnt) = 0;
-    while (<RESULT>) {
-	print;
-	$cnt++;
-    }
-    close (RESULT);
 
-    if ($cnt == 0) {
-	open (OUTPUT, '<', "$test.output") or next;
+    if (open (RESULT, '<', "$test.result")) {
+	my $first_line = <RESULT>;
+	my ($cnt) = 0;
+	while (<RESULT>) {
+	    print;
+	    $cnt++;
+	}
+	close (RESULT);
+    }
+
+    if (open (OUTPUT, '<', "$test.output")) {
+	print "\nOUTPUT FROM $test:\n\n";
+    
 	my ($panics) = 0;
 	while (<OUTPUT>) {
 	    if (/PANIC/ && ++$panics > 2) {
@@ -140,4 +143,3 @@ for my $test (@failures) {
 	close (OUTPUT);
     }
 }
-

@@ -133,13 +133,13 @@ sub compare_output {
     }
     die "unknown option " . (keys (%options))[0] . "\n" if %options;
 
-    my ($msg) = "Actual output:\n" . join ('', map ("  $_\n", @output));
+    my ($msg);
 
     # Compare actual output against each allowed output.
     foreach my $exp_string (@$expected) {
 	my (@expected) = split ("\n", $exp_string);
 
-	$msg .= "\nAcceptable output:\n";
+	$msg .= "Acceptable output:\n";
 	$msg .= join ('', map ("  $_\n", @expected));
 
 	# Check whether actual and expected match.
