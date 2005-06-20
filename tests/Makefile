@@ -21,6 +21,10 @@ cd $@/src && $(MAKE) clean $(SUBMAKEFLAGS)
 endef
 
 define run-tests
+cd $@/src/$(PROJECT) && make check
+endef
+
+define run-tests-grade
 cd $@/src/$(PROJECT) && make check && make grade
 endef
 
@@ -53,26 +57,26 @@ p1: PROJECT = threads
 p1::
 	$(mk-sandbox)
 	$(apply-patch) < ../solutions/p1.patch
-	$(run-tests)
+	$(run-tests-grade)
 	$(clean)
 
 p2: PROJECT = userprog
 p2::
 	$(mk-sandbox)
 	$(apply-patch) < ../solutions/p2.patch
-	$(run-tests)
+	$(run-tests-grade)
 	$(clean)
 
 p3: PROJECT = vm
 p3::
 	$(mk-sandbox)
 	$(apply-patch) < ../solutions/p3.patch
-	$(run-tests)
+	$(run-tests-grade)
 	$(clean)
 
 p4: PROJECT = filesys
 p4::
 	$(mk-sandbox)
 	$(apply-patch) < ../solutions/p4.patch
-	$(run-tests)
+	$(run-tests-grade)
 	$(clean)
