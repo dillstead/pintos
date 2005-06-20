@@ -80,12 +80,6 @@ sub check_for_keyword {
     $kw_line =~ s/^\([^\)]+\)\s+//;
     print "$kw_line\n";
 
-    # Append output, eliminating uninteresting header and trailer info
-    # if possible.
-    my (@core) = get_core_output (@output);
-    @output = @core if @core;
-    print "Program output:\n\n" . join ('', map ("$_\n", @output));
-
     fail;
 }
 
@@ -96,17 +90,8 @@ sub check_for_triple_fault {
 
     print <<EOF;
 Pintos spontaneously rebooted during this test.
-This is most often caused by unhandled page faults.  Output from
-initial boot through the first reboot is shown below:
-
+This is most often caused by unhandled page faults.
 EOF
-
-    my ($i) = 0;
-    local ($_);
-    for (@output) {
-	print "  $_\n";
-	last if /Pintos booting/ && ++$i > 1;
-    }
 
     fail;
 }
