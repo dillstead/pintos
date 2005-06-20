@@ -682,10 +682,12 @@ sub relay_signal {
 # Interrupts $pid and dies with a timeout error message.
 sub timeout {
     my ($pid) = @_;
-    relay_signal ($pid, "INT");
+    kill "INT", $pid;
+    waitpid ($pid, 0);
+    seek (STDOUT, 0, 2);
     my ($load_avg) = `uptime` =~ /(load average:.*)$/i;
-    print "TIMEOUT after $timeout seconds";
+    print "\nTIMEOUT after $timeout seconds";
     print  " - $load_avg" if defined $load_avg;
     print "\n";
-    exit (2);
+    exit 0;
 }
