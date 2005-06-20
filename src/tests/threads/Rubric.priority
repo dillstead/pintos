@@ -1,5 +1,4 @@
 Functionality of priority scheduler:
-
 5	priority-preempt
 5	priority-donate-one
 5	priority-donate-multiple
