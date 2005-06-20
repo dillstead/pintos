@@ -25,7 +25,7 @@ open (GRADING, '<', $grading_file) || die "$grading_file: open: $!\n";
 while (<GRADING>) {
     s/#.*//;
     next if /^\s*$/;
-    my ($max_pct, $rubric_suffix) = /^\s*(\d+)%\t(.*)/ or die;
+    my ($max_pct, $rubric_suffix) = /^\s*(\d+(?:\.\d+)?)%\t(.*)/ or die;
     my ($dir) = $rubric_suffix =~ /^(.*)\//;
     my ($rubric_file) = "$src_dir/$rubric_suffix";
     open (RUBRIC, '<', $rubric_file) or die "$rubric_file: open: $!\n";
