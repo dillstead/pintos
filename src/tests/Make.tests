@@ -7,8 +7,11 @@ TESTS = $(foreach subdir,$(TEST_SUBDIRS),$($(subdir)_TESTS))
 
 include ../../Makefile.userprog
 
-PINTOSFLAGS += -v $(foreach file,$(PUTFILES),-p $(file) -a $(notdir $(file)))
+TIMEOUT = 60
+PINTOSFLAGS += -v -T $(TIMEOUT)						\
+	$(foreach file,$(PUTFILES),-p $(file) -a $(notdir $(file)))
 KERNELFLAGS += -q
+
 PINTOS = pintos $(PINTOSOPTS) $(PINTOSFLAGS) -- $(KERNELFLAGS)
 
 OUTPUTS = $(addsuffix .output,$(TESTS))

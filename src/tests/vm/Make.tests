@@ -81,6 +81,9 @@ tests/vm/mmap-over-data_PUTFILES = tests/vm/sample.txt
 tests/vm/mmap-over-stk_PUTFILES = tests/vm/sample.txt
 tests/vm/mmap-remove_PUTFILES = tests/vm/sample.txt
 
+tests/vm/page-merge-seq.output: TIMEOUT = 300
+tests/vm/page-merge-par.output: TIMEOUT = 300
+
 tests/vm/zeros:
 	dd if=/dev/zero of=$@ bs=1024 count=6
 
