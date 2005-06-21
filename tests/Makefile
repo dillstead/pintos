@@ -26,7 +26,9 @@ endef
 
 define run-tests-grade
 cd $@/src/$(PROJECT) && $(MAKE) check
-cd $@/src/$(PROJECT) && $(MAKE) grade && grep -q PERFECT build/grade
+cd $@/src/$(PROJECT) && $(MAKE) grade
+cd $@/src/$(PROJECT) && grep -q PERFECT build/grade
+cd $@/src/$(PROJECT) && ! grep -q warning build/grade
 endef
 
 define compile
