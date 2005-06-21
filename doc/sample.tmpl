@@ -1,8 +1,9 @@
-       	       	       	 +-----------------+
-			 |	CS 140	   |
-			 |  SAMPLE PROJECT |
-			 | DESIGN DOCUMENT |
-			 +-----------------+
+
+                         +-----------------+
+                         |      CS 140     |
+                         |  SAMPLE PROJECT |
+                         | DESIGN DOCUMENT |
+                         +-----------------+
 
 ---- GROUP ----
 
@@ -21,8 +22,8 @@ Ben Pfaff <blp@stanford.edu>
 
 None.
 
-				 JOIN
-				 ====
+                                 JOIN
+                                 ====
 
 ---- DATA STRUCTURES ----
 
@@ -37,9 +38,9 @@ acquires pass immediately.
     /* Latch. */
     struct latch 
       {
-	bool released;              /* Released yet? */
-	struct lock monitor_lock;   /* Monitor lock. */
-	struct condition rel_cond;  /* Signaled when released. */
+        bool released;              /* Released yet? */
+        struct lock monitor_lock;   /* Monitor lock. */
+        struct condition rel_cond;  /* Signaled when released. */
       };
 
 Added to struct thread:
