@@ -173,7 +173,6 @@ sub finish {
     seek ($msg_file, 0, 0);
     while (<$msg_file>) {
 	$messages .= $_;
-	print "'$_'";
     }
     close ($msg_file);
 
