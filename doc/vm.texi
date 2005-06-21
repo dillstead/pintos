@@ -787,6 +787,9 @@ it:
 munmap (map);
 @end example
 
+The @command{mcp} program in @file{src/examples} shows how to copy a
+file using memory-mapped I/O.
+
 @item What if two processes map the same file into memory?
 
 There is no requirement in Pintos that the two processes see
