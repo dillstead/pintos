@@ -82,8 +82,8 @@ tests/vm/mmap-over-stk_PUTFILES = tests/vm/sample.txt
 tests/vm/mmap-remove_PUTFILES = tests/vm/sample.txt
 
 tests/vm/page-linear.output: TIMEOUT = 300
-tests/vm/page-shuffle.output: TIMEOUT = 300
-tests/vm/mmap-shuffle.output: TIMEOUT = 300
+tests/vm/page-shuffle.output: TIMEOUT = 600
+tests/vm/mmap-shuffle.output: TIMEOUT = 600
 tests/vm/page-merge-seq.output: TIMEOUT = 600
 tests/vm/page-merge-par.output: TIMEOUT = 600
 
