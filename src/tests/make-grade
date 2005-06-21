@@ -110,6 +110,9 @@ foreach my $name (keys (%verdicts)) {
     }
 }
 push (@overall, sprintf ("TOTAL TESTING SCORE: %.1f%%", $pct_actual));
+if (sprintf ("%.1f", $pct_actual) eq sprintf ("%.1f", $pct_possible)) {
+    push (@overall, "ALL TESTED PASSED -- PERFECT SCORE");
+}
 
 my (@divider) = ('', '- ' x 38, '');
 
