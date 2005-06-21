@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use tests::Algorithm::Diff;
+use File::Temp 'tempfile';
 
 sub fail;
 sub pass;
@@ -9,9 +10,8 @@ die if @ARGV != 2;
 our ($test, $src_dir) = @ARGV;
 our ($src_stem) = "$src_dir/$test";
 
-our ($messages) = "";
-open (MESSAGES, '>', \$messages);
-select (MESSAGES);
+my ($msg_file) = tempfile ();
+select ($msg_file);
 
 sub check_expected {
     my ($expected) = pop @_;
@@ -168,6 +168,14 @@ sub pass {
 
 sub finish {
     my ($verdict, @rest) = @_;
+
+    my ($messages) = "";
+    seek ($msg_file, 0, 0);
+    while (<$msg_file>) {
+	$messages .= $_;
+	print "'$_'";
+    }
+    close ($msg_file);
 
     my ($result_fn) = "$test.result";
     open (RESULT, '>', $result_fn) or die "$result_fn: create: $!\n";
