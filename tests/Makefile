@@ -21,15 +21,15 @@ cd $@/src && $(MAKE) clean $(SUBMAKEFLAGS)
 endef
 
 define run-tests
-cd $@/src/$(PROJECT) && make check
+cd $@/src/$(PROJECT) && $(MAKE) check
 endef
 
 define run-tests-grade
-cd $@/src/$(PROJECT) && make check && make grade
+cd $@/src/$(PROJECT) && $(MAKE) check && make grade
 endef
 
 define compile
-cd $@/src/$(PROJECT) && make
+cd $@/src/$(PROJECT) && $(MAKE)
 endef
 
 define clean
@@ -53,6 +53,9 @@ userprog vm filesys::
 	$(compile)
 	$(clean)
 
+FAST_SIM := $(if $(shell which qemu),--qemu)
+export PINTOSOPTS
+
 p1: PROJECT = threads
 p1::
 	$(mk-sandbox)
@@ -61,6 +64,7 @@ p1::
 	$(clean)
 
 p2: PROJECT = userprog
+p2: PINTOSOPTS = $(FAST_SIM)
 p2::
 	$(mk-sandbox)
 	$(apply-patch) < ../solutions/p2.patch
@@ -68,6 +72,7 @@ p2::
 	$(clean)
 
 p3: PROJECT = vm
+p3: PINTOSOPTS = $(FAST_SIM)
 p3::
 	$(mk-sandbox)
 	$(apply-patch) < ../solutions/p3.patch
@@ -75,6 +80,7 @@ p3::
 	$(clean)
 
 p4: PROJECT = filesys
+p4: PINTOSOPTS = $(FAST_SIM)
 p4::
 	$(mk-sandbox)
 	$(apply-patch) < ../solutions/p4.patch
