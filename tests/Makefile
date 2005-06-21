@@ -25,7 +25,8 @@ cd $@/src/$(PROJECT) && $(MAKE) check
 endef
 
 define run-tests-grade
-cd $@/src/$(PROJECT) && $(MAKE) check && make grade
+cd $@/src/$(PROJECT) && $(MAKE) check
+cd $@/src/$(PROJECT) && $(MAKE) grade && grep -q PERFECT build/grade
 endef
 
 define compile
