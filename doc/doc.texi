@@ -54,4 +54,6 @@ joins @var{B}, then @var{A} joins @var{C}), and so on.
 @node Sample Design Document
 @section Sample Design Document
 
-@verbatiminclude sample.tmpl
+@example
+@include sample.tmpl.texi
+@end example

@@ -1,6 +1,6 @@
 TEXIS = pintos.texi intro.texi tour.texi threads.texi userprog.texi	\
 vm.texi filesys.texi references.texi standards.texi doc.texi		\
-sample.tmpl devel.texi debug.texi 44bsd.texi
+sample.tmpl.texi devel.texi debug.texi 44bsd.texi
 
 all: pintos.html pintos.info pintos.dvi pintos.ps pintos.pdf
 
@@ -18,6 +18,9 @@ pintos.ps: pintos.dvi
 
 pintos.pdf: $(TEXIS)
 	texi2pdf $< -o $@
+
+%.texi: %
+	sed < $< > $@ 's/\([{}@]\)/\@\1/g;'
 
 clean:
 	rm -f *.info *.html
