@@ -26,13 +26,13 @@ grade:: results
 
 check:: results
 	@cat $<
-	@COUNT="`egrep '^(pass|FAIL) ' $< | wc -l`";		\
-	FAILURES="`egrep '^FAIL ' $< | wc -l`";			\
-	if [ "$$FAILURES" = 0 ]; then				\
-		echo "All $$COUNT tests passed.";		\
-	else							\
-		echo "$$FAILURES of $$COUNT tests failed.";	\
-		exit 1;						\
+	@COUNT="`egrep '^(pass|FAIL) ' $< | wc -l | sed 's/[ 	]//g;'`"; \
+	FAILURES="`egrep '^FAIL ' $< | wc -l | sed 's/[ 	]//g;'`"; \
+	if [ $$FAILURES = 0 ]; then					  \
+		echo "All $$COUNT tests passed.";			  \
+	else								  \
+		echo "$$FAILURES of $$COUNT tests failed.";		  \
+		exit 1;							  \
 	fi
 
 results: $(RESULTS)
