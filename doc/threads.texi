@@ -461,8 +461,7 @@ a lock that @var{M} holds and @var{M} is waiting on a lock that @var{L}
 holds, then both @var{M} and @var{L} should be boosted to @var{H}'s
 priority.
 
-You need not implement priority donation when a thread is waiting
-for a lock held by a lower-priority thread.  You need not
+You must implement priority donation for locks.  You need not
 implement priority donation for semaphores or condition variables,
 but you are welcome to do so.  You do need to implement
 priority scheduling in all cases.
