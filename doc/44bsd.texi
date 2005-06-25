@@ -64,13 +64,14 @@ they run in ``round robin'' order.
 @section Niceness
 
 Thread priority is dynamically determined by the scheduler using a
-formula given below.  However, each thread also has a relatively static
-@dfn{nice} value between -20 and 20 that determines how ``nice'' the
-thread should be to other threads.  A @var{nice} of zero does not affect
-thread priority.  A positive @var{nice} increases the numeric priority
-of a thread, decreasing its effective priority, and causes it to give up
-some CPU time it would otherwise receive.  On the other hand, a negative
-@var{nice} tends to take away CPU time from other threads.
+formula given below.  However, each thread also has an integer
+@dfn{nice} value that determines how ``nice'' the thread should be to
+other threads.  A @var{nice} of zero does not affect thread priority.  A
+positive @var{nice}, to the maximum of 20, increases the numeric
+priority of a thread, decreasing its effective priority, and causes it
+to give up some CPU time it would otherwise receive.  On the other hand,
+a negative @var{nice}, to the minimum of -20, tends to take away CPU
+time from other threads.
 
 The initial thread starts with a @var{nice} value of zero.  Other
 threads start with a @var{nice} value inherited from their parent
