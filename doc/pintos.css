@@ -46,6 +46,9 @@ html {
 tt, code {
 	font-family: sans-serif
 }
+b, strong {
+	font-weight: bold
+}
 
 a:link {
 	color: blue;
