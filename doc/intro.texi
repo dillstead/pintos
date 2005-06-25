@@ -60,10 +60,11 @@ with this command:@footnote{The term @samp{`uname -m`} expands to either
 @file{sun4u} or @file{i686} according to the type of computer you're
 logged into.}
 @example
-set path = ( $path /usr/class/cs140/`uname -m`/bin )
+set path = ( /usr/class/cs140/`uname -m`/bin $path )
 @end example
 @noindent
-(Notice that both @samp{`} are left single quotes or ``backticks.'')
+@strong{Notice that both @samp{`} are left single quotes or
+``backticks,'' not apostrophes (@samp{'}).}
 It is a good idea to add this line to the @file{.cshrc} file
 in your home directory.  Otherwise, you'll have to type it every time
 you log in.
