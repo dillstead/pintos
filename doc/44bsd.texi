@@ -314,7 +314,7 @@ q}:
 @tab @code{n * f}
 
 @item Convert @code{x} to integer (rounding down):
-@tab @code{x * f}
+@tab @code{x / f}
 
 @item Convert @code{x} to integer (rounding to nearest):
 @tab @code{(x + f / 2) / f}
