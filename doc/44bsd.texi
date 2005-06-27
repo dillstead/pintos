@@ -55,8 +55,8 @@ they run in ``round robin'' order.
 Multiple facets of the scheduler require data to be updated after a
 certain number of timer ticks.  In every case, these updates should
 occur before any ordinary kernel thread has a chance to run, so that
-there is no chance that a kernel thread could see @func{timer_ticks}
-increased but these old values for these data.
+there is no chance that a kernel thread could see a newly increased
+@func{timer_ticks} value but old scheduler data values.
 
 @menu
 * Thread Niceness::             
