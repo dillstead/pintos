@@ -4,7 +4,8 @@ use warnings;
 
 sub mlfqs_expected_load {
     my ($ready, $recent_delta) = @_;
-    my (@load_avg, @recent_cpu);
+    my (@load_avg) = 0;
+    my (@recent_cpu) = 0;
     my ($load_avg) = 0;
     my ($recent_cpu) = 0;
     for my $i (0...$#$ready) {
