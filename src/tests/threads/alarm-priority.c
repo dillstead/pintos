@@ -39,7 +39,7 @@ static void
 alarm_priority_thread (void *aux UNUSED) 
 {
   /* Busy-wait until the current time changes. */
-  int64_t start_time;
+  int64_t start_time = timer_ticks ();
   while (timer_elapsed (start_time) == 0)
     continue;
 
