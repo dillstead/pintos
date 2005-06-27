@@ -742,7 +742,7 @@ condition after the wait completes and, if necessary, wait again.
 Initializes @var{cond} as a new condition variable.
 @end deftypefun
 
-@deftypefun void cond_wait (struct condition *@var{cond})
+@deftypefun void cond_wait (struct condition *@var{cond}, struct lock *@var{lock})
 Atomically releases @var{lock} (the monitor lock) and waits for
 @var{cond} to be signaled by some other piece of code.  After
 @var{cond} is signaled, reacquires @var{lock} before returning.
