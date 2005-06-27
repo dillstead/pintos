@@ -52,6 +52,12 @@ time, the scheduler chooses a thread from the highest-priority non-empty
 queue.  If the highest-priority queue contains multiple threads, then
 they run in ``round robin'' order.
 
+Multiple facets of the scheduler require data to be updated after a
+certain number of timer ticks.  In every case, these updates should
+occur before any ordinary kernel thread has a chance to run, so that
+there is no chance that a kernel thread could see @func{timer_ticks}
+increased but these old values for these data.
+
 @menu
 * Thread Niceness::             
 * Calculating Priority::        
