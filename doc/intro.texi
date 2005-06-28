@@ -478,9 +478,9 @@ Rosenblum.
 Pintos originated as a replacement for Nachos with a similar design.
 Since then Pintos has greatly diverged from the Nachos design.  Pintos
 differs from Nachos in two important ways.  First, Pintos runs on real
-or simulated 80@var{x}86 hardware, whereas Nachos runs as a process on a
-host operating system.  Second, like most real-world operating systems,
-Pintos is written in C, whereas Nachos is written in C++.
+or simulated 80@var{x}86 hardware, but Nachos runs as a process on a
+host operating system.  Second, Pintos is written in C like most
+real-world operating systems, but Nachos is written in C++.
 
 Why the name ``Pintos''?  First, like nachos, pinto beans are a common
 Mexican food.  Second, Pintos is small and a ``pint'' is a small amount.
