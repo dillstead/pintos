@@ -470,7 +470,7 @@ should be, please let me know.
 
 Example code for condition variables (@pxref{Condition Variables}) is
 from classroom slides originally by Dawson Engler and updated by Mendel
-Roseblum.
+Rosenblum.
 
 @node Trivia
 @section Trivia
