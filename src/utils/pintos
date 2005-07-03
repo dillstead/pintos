@@ -9,6 +9,9 @@ use Getopt::Long qw(:config bundling);
 # Command-line options.
 our ($sim);			# Simulator: bochs, qemu, or gsx.
 our ($debug) = "none";		# Debugger: none, monitor, or gdb.
+our ($checkbochs) = 0;		# Use checkbochs race detector?
+our ($checkbochs_logfile)	# Log file for checkbochs.
+  = "checkbochs.log";
 our ($mem) = 4;			# Physical RAM in MB.
 our ($serial_out) = 1;		# Send output to serial port?
 our ($vga);			# VGA output: window, terminal, or none.
@@ -53,6 +56,9 @@ sub parse_command_line {
 		    "no-debug" => sub { set_debug ("none") },
 		    "monitor" => sub { set_debug ("monitor") },
 		    "gdb" => sub { set_debug ("gdb") },
+
+		    "checkbochs" => \$checkbochs,
+		    "logfile=s" => \$checkbochs_logfile,
 
 		    "m|memory=i" => \$mem,
 		    "j|jitter=i" => sub { set_jitter (@_) },
@@ -102,8 +108,12 @@ Simulator selection:
   --gsx                    Use VMware GSX Server 3.x as simulator
 Debugger selection:
   --no-debug               (default) No debugger
-  --monitor                Debug with simulator's monitor
-  --gdb                    Debug with gdb
+  --monitor                Debug with simulator's monitor (Bochs or qemu only)
+  --gdb                    Debug with gdb (Bochs or qemu only)
+Race detector (Bochs only; may be combined with debugger):
+  --no-checkbochs          (default) Do not use race detector
+  --checkbochs             Use race detector
+  --logfile=FILE           Set checkbochs log file (default: checkbochs.log)
 Display options: (default is both VGA and serial)
   -v, --no-vga             No VGA display
   -s, --no-serial          No serial output
@@ -358,15 +368,10 @@ sub run_vm {
 
 # Runs Bochs.
 sub run_bochs {
-    # Select Bochs binary based on the chosen debugger.
-    my ($bin);
-    if ($debug eq 'none') {
-	$bin = 'bochs';
-    } elsif ($debug eq 'monitor') {
-	$bin = 'bochs-dbg';
-    } elsif ($debug eq 'gdb') {
-	$bin = 'bochs-gdb';
-    }
+    # Select Bochs binary based on checkbochs and debugger settings.
+    my ($bin) = $checkbochs ? 'checkbochs' : 'bochs';
+    $bin .= '-dbg' if $debug eq 'monitor';
+    $bin .= '-gdb' if $debug eq 'gdb';
 
     # Write bochsrc.txt configuration file.
     open (BOCHSRC, ">", "bochsrc.txt") or die "bochsrc.txt: create: $!\n";
@@ -394,6 +399,7 @@ EOF
     } else {
 	print BOCHSRC "display_library: term\n";
     }
+    print BOCHSRC "logfile: $checkbochs_logfile\n" if $checkbochs;
     close (BOCHSRC);
 
     # Compose Bochs command line.
@@ -435,6 +441,8 @@ sub run_qemu {
       if $vga eq 'terminal';
     print "warning: qemu doesn't support jitter\n"
       if defined $jitter;
+    print "warning: qemu doesn't support race detection\n"
+      if $checkbochs;
     my (@cmd) = ('qemu');
     for my $iface (0...3) {
 	my ($option) = ('-hda', '-hdb', '-hdc', '-hdd')[$iface];
@@ -464,6 +472,7 @@ sub run_gsx {
     gsx_unsup ("--no-vga") if $vga eq 'none';
     gsx_unsup ("--terminal") if $vga eq 'terminal';
     gsx_unsup ("--jitter") if defined $jitter;
+    gsx_unsup ("--checkbochs") if $checkbochs;
 
     unlink ("pintos.out");
 

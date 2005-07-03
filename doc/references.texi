@@ -107,3 +107,10 @@ Interface---DRAFT---24 April 2001}.  A draft of a revised version of
 M.@: K.@: McKusick, K.@: Bostic, M.@: J.@: Karels, J.@: S.@: Quarterman,
 @cite{The Design and Implementation of the 4.4@acronym{BSD} Operating
 System}.  Addison-Wesley 1996.
+
+@bibdfn{Eraser}
+S.@: Savage, M.@: Burrows, G.@: Nelson, P.@: Sobalvarro, T.@: Anderson,
+``Eraser: a dynamic data race detector for multi-threaded programs,''
+ACM Transactions on Computer Systems 15 (1997):4, pages 391--411.
+Also in Proceeding of the 16th ACM Symposium on Operating Systems
+Principles (1997), pages 27--37.

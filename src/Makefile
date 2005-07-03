@@ -22,3 +22,8 @@ TAGS::
 tags::
 	ctags -T --no-warn $(TAGS_SOURCES)
 
+cscope.files::
+	echo $(TAGS_SOURCES) > $@
+
+cscope.out:: cscope.files
+	cscope -bk

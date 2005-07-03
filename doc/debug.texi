@@ -9,6 +9,7 @@ introduces you to a few of them.
 * ASSERT::                      
 * Function and Parameter Attributes::  
 * Backtraces::                  
+* Automatic Race Detection with Checkbochs::  
 * gdb::                         
 * Debugging by Infinite Loop::  
 * Modifying Bochs::             
@@ -231,6 +232,123 @@ command prints the same output as the first one we used:
 backtrace kernel.o Call stack: 0xc0106eff 0xc01102fb 0xc010dc22
 0xc010cf67 0xc0102319 0xc010325a 0x804812c 0x8048a96 0x8048ac8.
 @end example
+
+@node Automatic Race Detection with Checkbochs
+@section Automatic Race Detection with Checkbochs
+
+In the Pintos projects, especially projects 3 and 4, proper
+synchronization is essential for avoiding race conditions.  There is
+no substitute for good design, but sometimes tools can help with
+debugging an implementation.
+
+We provide a tool called Checkbochs to help find race conditions in
+your implementation.  Checkbochs is a version of Bochs which has been
+modified by Sorav Bansal to implement the Eraser race-detection
+algorithm (@bibref{Eraser}).
+
+Before you can use Checkbochs to to detect data races in your code,
+you must first apply a patch to your Pintos source tree.  FIXME
+
+Once you have applied the Checkbochs patch, you can use Checkbochs
+simply by adding @option{--checkbochs} to the @command{pintos} command
+line.  You can usefully use @option{--checkbochs} in conjunction with
+@option{--monitor} or @option{--gdb}, but not @option{--qemu} or
+@option{--gsx}.  The only immediate effect of @option{--checkbochs} is
+that your run will produce an extra log file, called
+@file{checkbochs.log} by default (use @option{--logfile} to change
+it).  The log file is a plaintext log of accesses to memory locations
+shared by multiple threads.
+
+After you have a log file, use @command{checkbochs-trace} to interpret
+it.  First run it without any options, which causes it to report how
+many potential race conditions were detected.  If any were detected,
+it also tells you the address of the data involved in the race and
+writes backtraces for access to data for the first race it detected to
+@file{btrace}.  If more than one race was detected, you can request
+information about the @var{n}th race, instead, using @option{-n
+@var{n}}.
+
+The @file{btrace} file lists a backtrace for each access to the data
+item implicated in a race.  Each backtrace is listed across several
+lines.  Each backtrace line is divided into several columns containing
+a source file name, function name, and line number.  The first line in
+each backtrace also identifies the thread (as the physical address of
+its @struct{thread}, followed by the state transition of the memory
+location in the format @samp{<OldState>-><NewState>}. More
+information on the state transition can be found in @bibref{Eraser}.
+
+You can save the trouble of reading the backtraces and looking up
+their source file location by hand by using the @option{--cscope}
+option to @command{checkbochs-trace}.  This brings up the backtrace
+info in @command{cscope}, a program for interactively exploring code,
+which lets you quickly view the source lines implicated in each
+backtrace.
+
+@menu
+* Debugging Race Conditions::   
+* Checkbochs Limitations::      
+@end menu
+
+@node Debugging Race Conditions
+@subsection Debugging Race Conditions
+
+Once you know that there is a race condition at memory location
+@var{addr}, you need to know at least two things to debug it.  First,
+you need to know what data corresponds to @var{addr}.  If it is global
+or @code{static} data, then @command{checkbochs-trace} will normally
+print the variable's name.  Otherwise, for automatic (local) or
+heap-allocated data, you will have to figure it out by looking at the
+backtrace.
+
+Second, you need to know the various points in time during code
+execution at which the data variable was accessed, and which thread
+made each access.  You can figure this out from the backtraces:
+@file{btrace} contains both the types of accesses made and the tids of
+the accessing threads.
+
+@node Checkbochs Limitations
+@subsection Limitations
+
+Checkbochs can be useful for debugging race conditions, but it has
+several limitations.
+
+Checkbochs is subject to false negatives, that is, it will not find
+all potential races.  For example, Checkbochs will not detect races
+that result from failing to recheck a condition that might have
+changed while a lock was released.  Suppose that @code{lock} is a lock
+that controls acquisition and release of a resource, such as a page of
+memory.  The following code then has a race, because @code{owner} is
+not re-checked after releasing and re-acquiring @code{lock}.
+Checkbochs fails to detect this race because @code{lock} is always
+held when @code{owner} is accessed:
+
+@example
+struct thread *owner = NULL; /* Initially no owner. */
+struct lock lock;            /* Controls changes to @var{owner}. */
+
+@dots{}
+
+lock_acquire (&lock);
+if (owner == NULL)
+  @{
+    lock_release (&lock);
+    @dots{}
+    lock_acquire (&lock);
+    owner = thread_current ();
+    lock_release (&lock);
+  @}
+@end example
+
+Checkbochs is also subject to false positives, that is, not every race
+it reports is really a race.  (This is why they have been called
+``potential'' races throughout this section.)  This will occur when
+accesses to data are synchronized in a way not visible to Checkbochs.
+For example, Checkbochs does not understand all uses of semaphores,
+so synchronization via semaphores may be reported as races.
+
+Checkbochs is a dynamic checker, meaning that it actually runs the
+code that it checks.  This also means that code that doesn't get run
+doesn't get checked, so you can also get false negatives that way.
 
 @node gdb
 @section @command{gdb}
