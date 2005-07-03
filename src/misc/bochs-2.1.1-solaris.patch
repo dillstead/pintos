@@ -1,0 +1,51 @@
+The following two patches are needed for Bochs to properly compile and
+run under Solaris on Sparc.  If you're not compiling on Solaris, don't
+apply them.
+
+This patch should probably be handled by Autoconf; I'm not sure why it
+isn't.
+
+diff -urp orig/bochs-2.1.1/Makefile.in bochs-2.1.1/Makefile.in
+--- orig/bochs-2.1.1/Makefile.in	2004-02-11 14:28:02.000000000 -0800
++++ bochs-2.1.1/Makefile.in	2004-09-13 15:05:26.281550000 -0700
+@@ -92,7 +92,7 @@ CXX = @CXX@
+ CFLAGS = @CFLAGS@ @GUI_CFLAGS@ $(MCH_CFLAGS) $(FLA_FLAGS) @DEFINE_PLUGIN_PATH@ -DBX_SHARE_PATH='"$(sharedir)"'
+ CXXFLAGS = @CXXFLAGS@ @GUI_CXXFLAGS@ $(MCH_CFLAGS) $(FLA_FLAGS) @DEFINE_PLUGIN_PATH@ -DBX_SHARE_PATH='"$(sharedir)"'
+ 
+-LDFLAGS = @LDFLAGS@
++LDFLAGS = @LDFLAGS@ -lsocket
+ LIBS = @LIBS@
+ # To compile with readline:
+ #   linux needs just -lreadline
+
+This patch is needed to make GCC accept X.h's frequent use of "extern
+foo(...)", because use of an implicit int return type is forbidden in
+C++.
+
+diff -urp orig/bochs-2.1.1/gui/Makefile.in bochs-2.1.1/gui/Makefile.in
+--- orig/bochs-2.1.1/gui/Makefile.in	2003-11-28 07:07:28.000000000 -0800
++++ bochs-2.1.1/gui/Makefile.in	2004-09-13 15:05:09.402039000 -0700
+@@ -44,7 +44,7 @@ SHELL = /bin/sh
+ @SET_MAKE@
+ 
+ CXX = @CXX@
+-CXXFLAGS = $(BX_INCDIRS) @CXXFLAGS@  @GUI_CXXFLAGS@
++CXXFLAGS = $(BX_INCDIRS) @CXXFLAGS@  @GUI_CXXFLAGS@ -fms-extensions
+ LOCAL_CXXFLAGS =
+ LDFLAGS = @LDFLAGS@
+ LIBS = @LIBS@
+
+This patch enables serial ports under Solaris.
+
+diff -urp bochs-2.1.1-upstream/iodev/serial.cc bochs-2.1.1/iodev/serial.cc
+--- tmp/bochs-2.1.1/iodev/serial.cc	2004-02-11 14:28:54.000000000 -0800
++++ bochs-2.1.1/iodev/serial.cc	2005-06-01 20:26:01.000000000 -0700
+@@ -53,7 +53,7 @@
+ #endif
+ #endif
+ 
+-#if defined(__NetBSD__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__linux__) || defined(__GNU__) || defined(__APPLE__)
++#if defined(__NetBSD__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__linux__) || defined(__GNU__) || defined(__APPLE__) || defined(__sun__)
+ #define SERIAL_ENABLE
+ #endif
+ 

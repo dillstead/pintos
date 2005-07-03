@@ -1,0 +1,147 @@
+#! /usr/bin/perl
+
+# Written by Sorav Bansal <sbansal@stanford.edu>.
+# Modified by Ben Pfaff <blp@cs.stanford.edu>.
+
+our $CSCOPE = $ENV{CSCOPE} || "cscope";
+our $invoke_cscope = 0;
+our $nth = 1;
+our $checkbochs_log = "checkbochs.log";
+our $btrace_file = "btrace";
+our $kernel_o;
+
+use Getopt::Long qw(:config require_order bundling);
+
+sub usage {
+    my ($exitcode) = @_;
+    print <<'EOF';
+checkbochs-trace, to interpret logs generated using 'pintos --checkbochs'
+Usage: checkbochs [OPTION...]
+Options:
+  --log=LOG        Log file to read is LOG (default: checkbochs.log)
+  --output=OUT     File to write in cscope format is OUT (default: btrace)
+  --object=OBJECT  Kernel object file (default: build/kernel.o or kernel.o)
+  --cscope         Invoke cscope on backtraces written to OUT
+  -n, -nth=N       Print a backtrace for the Nth warning (default: 1)
+  -h, --help       Print this help message
+EOF
+    exit $exitcode;
+}
+
+GetOptions ("log=s" => \$checkbochs_log,
+	    "output=s" => \$btrace_file,
+	    "object=s" => \$kernel_o,
+	    "n|nth=i" => \$nth,
+	    "cscope" => sub { $invoke_cscope = 1; },
+	    "h|help" => sub { usage (0); }
+	   )
+  or exit 1;
+
+open (LOG, "<", $checkbochs_log) or die "$checkbochs_log: open: $!\n";
+our ($done, $loc);
+our ($count) = 0;
+while (<LOG>) {
+    if (/Warning on location (.*), backtrace:/) {
+	$count++;
+	$loc = $1 if $count == $nth;
+    }
+}
+close LOG;
+
+if ($count == 0) {
+    print "No potential race conditions detected\n";
+    exit 0;
+} elsif ($nth > $count) {
+    print "Only $count potential race conditions detected\n";
+    exit 0;
+} else {
+    print "$count potential race conditions detected\n";
+}
+
+my ($name) = lookup_symbol (hex ($loc));
+print "Potential race condition $nth on data at $loc";
+print " ($name)" if defined $name;
+print "\n";
+
+print "Writing backtraces to $btrace_file\n";
+
+$btnum = 0;
+open (LOG, "<", $checkbochs_log) or die "$checkbochs_log: open: $!\n";
+open (OUT, ">", $btrace_file) or die "$btrace_file: create: $!\n";
+while (<LOG>) {
+    if (my ($op, $bt) = /^(.*) location $loc.*backtrace: (.*)$/) {
+	if ($op =~ /Thread (\S+): Warning on/) {
+	    $op = "Thread $1: Potential race";
+	} else {
+	    $op = "Thread $op";
+	}
+	open (BT, "backtrace kernel.o $bt |" );
+	while (<BT>) {
+	    chomp;
+	    my ($addr, $func, $fn, $ln)
+	      = /^([a-f0-9]+): (\S+) \(([^:]+):([^\)]+)\)/
+		or next;
+	    $fn =~ s%^(\.\./)+%%;
+	    print OUT "$fn $func $ln $op\n";
+	    $op = '.';
+	}
+	close BT;
+	$btnum++;
+    }
+}
+close OUT;
+close LOG;
+
+exec ("$CSCOPE -R -F$btrace_file") if $invoke_cscope;
+
+sub lookup_symbol {
+    my ($address) = 0;
+
+    # Find nm.
+    my ($nm) = search_path ("i386-elf-nm") || search_path ("nm");
+    if (!$nm) {
+	print "neither `i386-elf-nm' nor `nm' in PATH\n";
+	return;
+    }
+
+    # Find kernel.o.
+    if (!defined $kernel_o) {
+	if (-e 'kernel.o') {
+	    $kernel_o = 'kernel.o';
+	} elsif (-e 'build/kernel.o') {
+	    $kernel_o = 'build/kernel.o';
+	} else {
+	    print "can't find kernel.o or build/kernel.o\n";
+	    return;
+	}
+    } elsif (! -e $kernel_o) {
+	print "$kernel_o: stat: $!\n";
+	return;
+    }
+
+    # Use nm to find name.
+    if (!open (NM, "$nm -S $kernel_o|")) {
+	print "nm: exec: $!\n";
+	return;
+    }
+    while (<NM>) {
+	my ($h_start, $h_length, $type, $name)
+	  = /^([a-f0-9]+) ([a-f0-9]+) \S (\S+)$/ or next;
+	my ($start) = hex ($h_start);
+	my ($length) = hex ($h_length);
+	next if $address < $start || $address >= $start + $length;
+
+	$name .= "+" . ($address - $start) if $address != $start;
+	return $name;
+    }
+    close (NM);
+}
+
+sub search_path {
+    my ($target) = @_;
+    for my $dir (split (':', $ENV{PATH})) {
+	my ($file) = "$dir/$target";
+	return $file if -e $file;
+    }
+    return undef;
+}

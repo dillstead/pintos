@@ -1,0 +1,346 @@
+This patch must be applied to Pintos before Checkbochs may be usefully
+applied to it.  To apply it, `cd' to pintos/src and type
+	patch -p2 < misc/checkbochs.patch
+
+Written by Sorav Bansal <sbansal@stanford.edu>.
+Modified by Ben Pfaff <blp@cs.stanford.edu>.
+
+diff -X ignore -urpN pintos.orig/src/lib/debug.h pintos.eraser/src/lib/debug.h
+--- pintos.orig/src/lib/debug.h	2005-06-18 20:20:49.000000000 -0700
++++ pintos.eraser/src/lib/debug.h	2005-06-29 22:38:01.000000000 -0700
+@@ -1,6 +1,8 @@
+ #ifndef __LIB_DEBUG_H
+ #define __LIB_DEBUG_H
+ 
++#include <eraser.h>
++
+ /* GCC lets us add "attributes" to functions, function
+    parameters, etc. to indicate their properties.
+    See the GCC manual for details. */
+@@ -27,10 +29,13 @@ void debug_backtrace (void);
+ #undef NOT_REACHED
+ 
+ #ifndef NDEBUG
+-#define ASSERT(CONDITION)                                       \
+-        if (CONDITION) { } else {                               \
+-                PANIC ("assertion `%s' failed.", #CONDITION);   \
+-        }
++#define ASSERT(CONDITION)                                               \
++        do {                                                            \
++          eraser_ignore_on ();					        \
++          if (!(CONDITION))                                             \
++            PANIC ("assertion `%s' failed.", #CONDITION);               \
++          eraser_ignore_off ();                                         \
++        } while (0)
+ #define NOT_REACHED() PANIC ("executed an unreachable statement");
+ #else
+ #define ASSERT(CONDITION) ((void) 0)
+diff -X ignore -urpN pintos.orig/src/lib/eraser.h pintos.eraser/src/lib/eraser.h
+--- pintos.orig/src/lib/eraser.h	1969-12-31 16:00:00.000000000 -0800
++++ pintos.eraser/src/lib/eraser.h	2005-07-02 16:12:28.000000000 -0700
+@@ -0,0 +1,115 @@
++#ifndef __LIB_ERASER_H
++#define __LIB_ERASER_H
++
++/* New instruction to indicate the lock at ECX is locked. */
++#define ERASER_LOCK ".byte 0x0f, 0x04, 0x10, 0x00, 0x00, 0x00, 0x00;"
++
++/* New instruction to indicate the lock at ECX is unlocked. */
++#define ERASER_UNLOCK ".byte 0x0f, 0x04, 0x18, 0x00, 0x00, 0x00, 0x00;"
++
++/* New instruction for various Eraser purposes.
++   EAX indicates an operation subcode.
++   ECX, EDX may be used for arguments. */
++#define ERASER_OPS ".byte 0x0f, 0x04, 0x20, 0x00, 0x00, 0x00, 0x00;"
++
++/* Operation subcodes for ERASER_OPS. */
++#define ERASER_OP_IGNORE        0 /* Suppress warnings for ECX bytes at EDX. */
++#define ERASER_OP_INIT_LOCK     1 /* New lock at ECX. */
++#define ERASER_OP_IGNORE_ON     2 /* Suppress all warnings. */
++#define ERASER_OP_IGNORE_OFF    3 /* Re-enable warnings. */
++#define ERASER_OP_REUSE         4 /* ECX bytes at EDX are (re)allocated. */
++#define ERASER_OP_DBG_MARK      5 /* Debug message for file EDX, line ECX. */
++#define ERASER_OP_STARTUP       6 /* Start tracking locks. */
++
++/* Returns true if running under Checkbochs, false otherwise. */
++static inline bool
++running_on_checkbochs (void)
++{
++  unsigned dummy, cpuid;
++  asm ("cpuid"
++       : "=a" (dummy), "=b" (cpuid)
++       : "0" (3), "1" (0)
++       : "ecx", "edx");
++  return cpuid == 0x6e696154;
++}
++
++/* Registers LOCK as a lock. */
++static inline void
++eraser_init (unsigned lock)
++{
++  if (running_on_checkbochs ())
++    asm volatile (ERASER_OPS :: "a" (ERASER_OP_INIT_LOCK), "c" (lock));
++}
++
++/* Indicates that LOCK is locked. */
++static inline void
++eraser_lock (unsigned lock)
++{
++  if (running_on_checkbochs ())
++    {
++      asm volatile (ERASER_LOCK :: "c" (lock));
++      eraser_ignore ((void *) lock, 4);
++    }
++}
++
++/* Indicates that LOCK is unlocked. */
++static inline void
++eraser_unlock (unsigned lock)
++{
++  if (running_on_checkbochs ())
++    asm volatile (ERASER_UNLOCK :: "c" (lock));
++}
++
++/* Suppresses warnings for LENGTH bytes starting at START. */
++static inline void
++eraser_ignore (void *start, size_t length)
++{
++  if (running_on_checkbochs ())
++    asm volatile (ERASER_OPS
++                  :: "a" (ERASER_OP_IGNORE), "d" (start), "c" (length));
++}
++
++/* Suppresses all warnings. */
++static inline void
++eraser_ignore_on (void)
++{
++  if (running_on_checkbochs ())
++    asm volatile (ERASER_OPS :: "a" (ERASER_OP_IGNORE_ON));
++}
++
++/* Re-enables warnings. */
++static inline void
++eraser_ignore_off (void)
++{
++  if (running_on_checkbochs ())
++    asm volatile (ERASER_OPS :: "a" (ERASER_OP_IGNORE_OFF));
++}
++
++/* Indicates that LENGTH bytes starting at START have been
++   (re)allocated. */
++static inline void
++eraser_reuse (void *start, size_t length)
++{
++  if (running_on_checkbochs ())
++    asm volatile (ERASER_OPS
++                  :: "a" (ERASER_OP_REUSE), "d" (start), "c" (length));
++}
++
++/* Emits a debug message for the source file and line number of
++   the caller. */
++#define eraser_debug_mark() do {                        \
++  if (running_on_checkbochs ())                         \
++    asm volatile (ERASER_OPS                            \
++                  :: "a" (ERASER_OP_DBG_MARK),          \
++                     "d" (__FILE__), "c" (__LINE__));   \
++} while (0)
++
++/* Starts up the lock checking algorithm. */
++static inline void
++eraser_startup (void)
++{
++  if (running_on_checkbochs ())
++    asm volatile (ERASER_OPS :: "a" (ERASER_OP_STARTUP));
++}
++
++#endif /* lib/eraser.h */
+diff -X ignore -urpN pintos.orig/src/threads/init.c pintos.eraser/src/threads/init.c
+--- pintos.orig/src/threads/init.c	2005-06-18 20:21:19.000000000 -0700
++++ pintos.eraser/src/threads/init.c	2005-07-02 16:13:32.000000000 -0700
+@@ -132,6 +132,8 @@ main (void)
+ #endif
+ 
+   printf ("Boot complete.\n");
++
++  eraser_startup ();
+   
+   /* Run actions specified on kernel command line. */
+   run_actions (argv);
+diff -X ignore -urpN pintos.orig/src/threads/interrupt.c pintos.eraser/src/threads/interrupt.c
+--- pintos.orig/src/threads/interrupt.c	2005-06-18 20:21:19.000000000 -0700
++++ pintos.eraser/src/threads/interrupt.c	2005-06-29 22:38:37.000000000 -0700
+@@ -135,6 +135,8 @@ intr_init (void)
+   intr_names[17] = "#AC Alignment Check Exception";
+   intr_names[18] = "#MC Machine-Check Exception";
+   intr_names[19] = "#XF SIMD Floating-Point Exception";
++
++  eraser_ignore (&in_external_intr, 4);
+ }
+ 
+ /* Registers interrupt VEC_NO to invoke HANDLER with descriptor
+diff -X ignore -urpN pintos.orig/src/threads/malloc.c pintos.eraser/src/threads/malloc.c
+--- pintos.orig/src/threads/malloc.c	2005-06-18 20:21:19.000000000 -0700
++++ pintos.eraser/src/threads/malloc.c	2005-07-02 16:17:07.000000000 -0700
+@@ -150,6 +150,7 @@ malloc (size_t size) 
+   a = block_to_arena (b);
+   a->free_cnt--;
+   lock_release (&d->lock);
++  eraser_reuse (b, size);
+   return b;
+ }
+ 
+@@ -171,6 +172,7 @@ calloc (size_t a, size_t b) 
+   if (p != NULL)
+     memset (p, 0, size);
+ 
++  eraser_reuse (p, size);
+   return p;
+ }
+ 
+@@ -228,6 +230,7 @@ free (void *p) 
+         {
+           /* It's a normal block.  We handle it here. */
+ 
++          eraser_reuse (b, d->block_size);
+ #ifndef NDEBUG
+           /* Clear the block to help detect use-after-free bugs. */
+           memset (b, 0xcc, d->block_size);
+diff -X ignore -urpN pintos.orig/src/threads/palloc.c pintos.eraser/src/threads/palloc.c
+--- pintos.orig/src/threads/palloc.c	2005-06-18 20:21:19.000000000 -0700
++++ pintos.eraser/src/threads/palloc.c	2005-07-02 16:16:18.000000000 -0700
+@@ -104,6 +104,7 @@ palloc_get_multiple (enum palloc_flags f
+         PANIC ("palloc_get: out of pages");
+     }
+ 
++  eraser_reuse (pages, PGSIZE * page_cnt);
+   return pages;
+ }
+ 
+@@ -139,6 +140,7 @@ palloc_free_multiple (void *pages, size_
+ 
+   page_idx = pg_no (pages) - pg_no (pool->base);
+ 
++  eraser_reuse (pages, PGSIZE * page_cnt);
+ #ifndef NDEBUG
+   memset (pages, 0xcc, PGSIZE * page_cnt);
+ #endif
+diff -X ignore -urpN pintos.orig/src/threads/synch.c pintos.eraser/src/threads/synch.c
+--- pintos.orig/src/threads/synch.c	2005-06-18 20:21:19.000000000 -0700
++++ pintos.eraser/src/threads/synch.c	2005-06-29 22:48:42.000000000 -0700
+@@ -179,6 +179,7 @@ lock_init (struct lock *lock)
+ 
+   lock->holder = NULL;
+   sema_init (&lock->semaphore, 1);
++  eraser_init (lock);
+ }
+ 
+ /* Acquires LOCK, sleeping until it becomes available if
+@@ -200,6 +201,7 @@ lock_acquire (struct lock *lock)
+ 
+   old_level = intr_disable ();
+   sema_down (&lock->semaphore);
++  eraser_lock (lock);
+   lock->holder = thread_current ();
+   intr_set_level (old_level);
+ }
+@@ -245,6 +247,7 @@ lock_release (struct lock *lock) 
+   lock->holder = NULL;
+   sema_up (&lock->semaphore);
+   intr_set_level (old_level);
++  eraser_unlock (lock);
+ }
+ 
+ /* Returns true if the current thread holds LOCK, false
+@@ -253,9 +256,15 @@ lock_release (struct lock *lock) 
+ bool
+ lock_held_by_current_thread (const struct lock *lock) 
+ {
++  bool ret;
++
+   ASSERT (lock != NULL);
+ 
+-  return lock->holder == thread_current ();
++  eraser_ignore_on ();
++  ret = lock->holder == thread_current ();
++  eraser_ignore_off ();
++
++  return ret;
+ }
+ 
+ /* One semaphore in a list. */
+diff -X ignore -urpN pintos.orig/src/threads/thread.c pintos.eraser/src/threads/thread.c
+--- pintos.orig/src/threads/thread.c	2005-06-18 20:21:20.000000000 -0700
++++ pintos.eraser/src/threads/thread.c	2005-07-02 16:16:03.000000000 -0700
+@@ -85,6 +85,7 @@ thread_init (void) 
+   init_thread (initial_thread, "main", PRI_DEFAULT);
+   initial_thread->status = THREAD_RUNNING;
+   initial_thread->tid = allocate_tid ();
++  eraser_ignore (&initial_thread->status, 4);
+ }
+ 
+ /* Starts preemptive thread scheduling by enabling interrupts.
+@@ -157,6 +158,9 @@ thread_create (const char *name, int pri
+   if (t == NULL)
+     return TID_ERROR;
+ 
++  eraser_ignore (&t->status, 4);
++  eraser_ignore_on ();
++
+   /* Initialize thread. */
+   init_thread (t, name, priority);
+   tid = t->tid = allocate_tid ();
+@@ -175,6 +179,8 @@ thread_create (const char *name, int pri
+   sf = alloc_frame (t, sizeof *sf);
+   sf->eip = switch_entry;
+ 
++  eraser_ignore_off ();
++
+   /* Add to run queue. */
+   thread_unblock (t);
+ 
+@@ -361,6 +367,7 @@ kernel_thread (thread_func *function, vo
+ {
+   ASSERT (function != NULL);
+ 
++  eraser_lock (thread_current ()->tid);
+   intr_enable ();       /* The scheduler runs with interrupts off. */
+   function (aux);       /* Execute the thread function. */
+   thread_exit ();       /* If function() returns, kill the thread. */
+@@ -396,12 +403,16 @@ init_thread (struct thread *t, const cha
+   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
+   ASSERT (name != NULL);
+ 
++  eraser_ignore_on ();
++
+   memset (t, 0, sizeof *t);
+   t->status = THREAD_BLOCKED;
+   strlcpy (t->name, name, sizeof t->name);
+   t->stack = (uint8_t *) t + PGSIZE;
+   t->priority = priority;
+   t->magic = THREAD_MAGIC;
++
++  eraser_ignore_off ();
+ }
+ 
+ /* Allocates a SIZE-byte frame at the top of thread T's stack and
+@@ -471,7 +482,7 @@ schedule_tail (struct thread *prev) 
+   if (prev != NULL && prev->status == THREAD_DYING) 
+     {
+       ASSERT (prev != cur);
+-      if (prev != initial_thread)
++      if (prev != initial_thread) 
+         palloc_free_page (prev);
+     }
+ }
+diff -X ignore -urpN pintos.orig/src/userprog/tss.c pintos.eraser/src/userprog/tss.c
+--- pintos.orig/src/userprog/tss.c	2004-09-22 17:58:29.000000000 -0700
++++ pintos.eraser/src/userprog/tss.c	2005-06-29 22:41:09.000000000 -0700
+@@ -84,6 +84,8 @@ tss_init (void) 
+   tss->esp0 = ptov(0x20000);
+   tss->ss0 = SEL_KDSEG;
+   tss->bitmap = 0xdfff;
++
++  eraser_ignore (tss, sizeof *tss);
+ }
+ 
+ /* Returns the kernel TSS. */

@@ -1,0 +1,87 @@
+Pintos is designed to run well under Bochs 2.1.1.  A number of patches
+are provided:
+
+	bochs-2.1.1-jitter.patch: 
+		Add `jitter' feature used by pintos -j.
+
+	bochs-2.1.1-tty-stdout.patch:
+		Make Bochs comfortable with stdout for the serial port.
+	
+	bochs-2.1.1-bigendian.patch:
+		Fix gdb stub support on big-endian machines.
+
+	bochs-2.1.1-solaris.patch:
+		Fix compilation under Solaris.
+		Enable serial ports under Solaris.
+
+	bochs-2.1.1-checkbochs.patch:
+		Implements Eraser-like lock checking support.
+
+On Solaris, we recommend applying all the patches for use with Pintos.
+On other host OSes, do not apply the Solaris patch.
+Regardless of OS, you should only apply the Checkbochs patch if you
+want to use the lock checking support.
+
+To apply all the patches, cd into the Bochs directory, then type
+	patch -p1 < $PATCHDIR/bochs-2.1.1-tty-stdout.patch
+	patch -p1 < $PATCHDIR/bochs-2.1.1-jitter.patch
+	patch -p1 < $PATCHDIR/bochs-2.1.1-bigendian.patch
+Only on Solaris, apply the Solaris patch as well:
+	patch -p1 < $PATCHDIR/bochs-2.1.1-solaris.patch
+If you wish to use Checkbochs, apply the Checkbochs patch:
+	patch -p1 < $PATCHDIR/bochs-2.1.1-checkbochs.patch
+You will have to supply the proper $PATCHDIR, of course.  You can can
+provide the --dry-run option to patch if you want to test whether the
+patch would apply cleanly before actually patching.
+
+Here's a ./configure invocation for Bochs that works optimally with
+the `pintos' utility:
+	./configure --with-x --with-x11 --with-term --with-nogui
+If you want the gdb stub, add --enable-gdb-stub
+If you want the internal debugger, add --enable-debugger
+
+Here are the commands used to build and install all the versions of
+Bochs we make available on the elaines.  These commands assume a
+Bourne shell, and that PATCHDIR is set to the directory that contains
+the Bochs patches.
+
+# Setup.
+PREFIX="/usr/class/cs140/`uname -m`"
+BINDIR=$PREFIX/bin
+CFGOPTS="--with-x --with-x11 --with-term --with-nogui --prefix=$PREFIX"
+
+# Fetch sources.
+wget http://easynews.dl.sourceforge.net/sourceforge/bochs/bochs-2.1.1.tar.gz
+
+# Apply patches.
+tar xzf bochs-2.1.1.tar.gz
+(cd bochs-2.1.1 && patch -p1 < $PATCHDIR/bochs-2.1.1-tty-stdout.patch)
+(cd bochs-2.1.1 && patch -p1 < $PATCHDIR/bochs-2.1.1-jitter.patch)
+(cd bochs-2.1.1 && patch -p1 < $PATCHDIR/bochs-2.1.1-bigendian.patch)
+if [ `uname -m` = sun4u ]; then 
+	(cd bochs-2.1.1 && patch -p1 < $PATCHDIR/bochs-2.1.1-solaris.patch)
+fi
+cp -pR bochs-2.1.1 checkbochs-2.1.1
+(cd checkbochs-2.1.1 && patch -p1 < $PATCHDIR/bochs-2.1.1-checkbochs.patch)
+
+# Build and install Bochs variants.
+(cd bochs-2.1.1 && rm -rf plain && mkdir plain && cd plain && 
+ ../configure $CFGOPTS && make && make install)
+(cd bochs-2.1.1 && rm -rf with-gdb mkdir with-gdb && cd with-gdb && 
+ ../configure --enable-gdb-stub $CFGOPTS && 
+ make && cp bochs $BINDIR/bochs-gdb)
+(cd bochs-2.1.1 && rm -rf with-dbg && mkdir with-dbg && cd with-dbg && 
+ ../configure --enable-debugger $CFGOPTS &&
+ make && cp bochs $BINDIR/bochs-dbg)
+
+# Build and install Checkbochs variants.
+(cd checkbochs-2.1.1 && rm -rf plain && mkdir plain && cd plain &&
+ ../configure $CFGOPTS && make && cp bochs $BINDIR/checkbochs)
+(cd checkbochs-2.1.1 && rm -rf with-gdb && mkdir with-gdb && cd with-gdb && 
+ ../configure --enable-gdb-stub $CFGOPTS && 
+ make && cp bochs $BINDIR/checkbochs-gdb)
+(cd checkbochs-2.1.1 && rm -rf with-dbg && mkdir with-dbg && cd with-dbg && 
+ ../configure --enable-debugger $CFGOPTS &&
+ make && cp bochs $BINDIR/checkbochs-dbg)
+
+

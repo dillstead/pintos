@@ -1,0 +1,4208 @@
+This patch provides Eraser-like lock set checking for Bochs.
+See the Pintos documentation for more information.
+
+This patch is provided by Sorav Bansal <sbansal@cs.stanford.edu>.
+
+diff -urpN bochs-2.1.1.orig/Makefile.in checkbochs-2.1.1/Makefile.in
+--- bochs-2.1.1.orig/Makefile.in	2004-02-11 14:28:02.000000000 -0800
++++ checkbochs-2.1.1/Makefile.in	2005-06-29 10:59:56.000000000 -0700
+@@ -177,11 +177,11 @@ all: @PRIMARY_TARGET@ @PLUGIN_TARGET@ bx
+ @EXTERNAL_DEPENDENCY@
+ 
+ bochs@EXE@: @IODEV_LIB_VAR@ @DEBUGGER_VAR@ \
+-           cpu/libcpu.a memory/libmemory.a gui/libgui.a \
++           cpu/libcpu.a memory/libmemory.a gui/libgui.a taint/libtaint.a \
+            @DISASM_VAR@ @INSTRUMENT_VAR@ $(BX_OBJS) \
+            $(SIMX86_OBJS) @FPU_VAR@ @GDBSTUB_VAR@ @PLUGIN_VAR@
+ 	@LINK@ -export-dynamic $(BX_OBJS) $(SIMX86_OBJS) \
+-		iodev/libiodev.a cpu/libcpu.a memory/libmemory.a gui/libgui.a \
++		iodev/libiodev.a cpu/libcpu.a memory/libmemory.a gui/libgui.a taint/libtaint.a \
+ 		@DEBUGGER_VAR@ @DISASM_VAR@ @INSTRUMENT_VAR@ @PLUGIN_VAR@ \
+ 		@GDBSTUB_VAR@ @FPU_VAR@ \
+ 		@NONPLUGIN_GUI_LINK_OPTS@ \
+@@ -195,19 +195,19 @@ bochs@EXE@: @IODEV_LIB_VAR@ @DEBUGGER_VA
+ # libtool.  This creates a .DEF file, and exports file, an import library,
+ # and then links bochs.exe with the exports file.
+ .win32_dll_plugin_target: @IODEV_LIB_VAR@ @DEBUGGER_VAR@ \
+-           cpu/libcpu.a memory/libmemory.a gui/libgui.a \
++           cpu/libcpu.a memory/libmemory.a gui/libgui.a taint/libtaint.a \
+            @DISASM_VAR@ @INSTRUMENT_VAR@ $(BX_OBJS) \
+            $(SIMX86_OBJS) @FPU_VAR@ @GDBSTUB_VAR@ @PLUGIN_VAR@
+ 	$(DLLTOOL) --export-all-symbols --output-def bochs.def \
+ 		$(BX_OBJS) $(SIMX86_OBJS) \
+-		@IODEV_LIB_VAR@ cpu/libcpu.a memory/libmemory.a gui/libgui.a \
++		@IODEV_LIB_VAR@ cpu/libcpu.a memory/libmemory.a gui/libgui.a taint/libtaint.a \
+ 		@DEBUGGER_VAR@ @DISASM_VAR@ @INSTRUMENT_VAR@ @PLUGIN_VAR@ \
+ 		@GDBSTUB_VAR@ @FPU_VAR@
+ 	$(DLLTOOL) --dllname bochs.exe --def bochs.def --output-lib dllexports.a
+ 	$(DLLTOOL) --dllname bochs.exe --output-exp bochs.exp --def bochs.def
+ 	$(CXX) -o bochs.exe $(CXXFLAGS) $(LDFLAGS) -export-dynamic \
+ 	    $(BX_OBJS) bochs.exp $(SIMX86_OBJS) \
+-		@IODEV_LIB_VAR@ cpu/libcpu.a memory/libmemory.a gui/libgui.a \
++		@IODEV_LIB_VAR@ cpu/libcpu.a memory/libmemory.a gui/libgui.a taint/libtaint.a \
+ 		@DEBUGGER_VAR@ @DISASM_VAR@ @INSTRUMENT_VAR@ @PLUGIN_VAR@ \
+ 		@GDBSTUB_VAR@ @FPU_VAR@ \
+ 		$(GUI_LINK_OPTS) \
+@@ -274,6 +274,11 @@ gui/libgui.a::
+ 	$(MAKE) $(MDEFINES) libgui.a
+ 	@CD_UP_ONE@
+ 
++taint/libtaint.a::
++	cd taint @COMMAND_SEPARATOR@
++	$(MAKE) $(MDEFINES) libtaint.a
++	@CD_UP_ONE@
++
+ disasm/libdisasm.a::
+ 	cd disasm @COMMAND_SEPARATOR@
+ 	$(MAKE) $(MDEFINES) libdisasm.a
+@@ -503,6 +508,9 @@ all-clean: clean
+ 	cd fpu @COMMAND_SEPARATOR@
+ 	$(MAKE) clean
+ 	@CD_UP_ONE@
++	cd taint @COMMAND_SEPARATOR@
++	$(MAKE) clean
++	@CD_UP_ONE@
+ 	cd doc/docbook @COMMAND_SEPARATOR@
+ 	$(MAKE) clean
+ 	@CD_UP_TWO@
+@@ -538,6 +546,9 @@ dist-clean: local-dist-clean
+ 	cd fpu @COMMAND_SEPARATOR@
+ 	$(MAKE) dist-clean
+ 	@CD_UP_ONE@
++	cd taint @COMMAND_SEPARATOR@
++	$(MAKE) dist-clean
++	@CD_UP_ONE@
+ 	cd doc/docbook @COMMAND_SEPARATOR@
+ 	$(MAKE) dist-clean
+ 	@CD_UP_TWO@
+diff -urpN bochs-2.1.1.orig/bochs.h checkbochs-2.1.1/bochs.h
+--- bochs-2.1.1.orig/bochs.h	2004-02-11 14:28:03.000000000 -0800
++++ checkbochs-2.1.1/bochs.h	2005-06-29 10:59:53.000000000 -0700
+@@ -671,6 +671,7 @@ typedef struct BOCHSAPI {
+   bx_gdbstub_t      gdbstub;
+   bx_param_enum_c *Osel_config;
+   bx_param_enum_c *Osel_displaylib;
++  bx_param_enum_c *Otaint_type ;
+   } bx_options_t;
+ 
+ BOCHSAPI extern bx_options_t bx_options;
+diff -urpN bochs-2.1.1.orig/configure checkbochs-2.1.1/configure
+--- bochs-2.1.1.orig/configure	2004-02-11 14:28:40.000000000 -0800
++++ checkbochs-2.1.1/configure	2005-06-29 10:59:53.000000000 -0700
+@@ -36189,7 +36189,7 @@ echo "${ECHO_T}no" >&6
+ fi
+ 
+ 
+-                                                                                                                                                                          ac_config_files="$ac_config_files Makefile iodev/Makefile bx_debug/Makefile bios/Makefile cpu/Makefile memory/Makefile gui/Makefile disasm/Makefile ${INSTRUMENT_DIR}/Makefile misc/Makefile fpu/Makefile doc/docbook/Makefile build/linux/bochs-dlx bxversion.h build/macosx/Info.plist build/win32/nsis/Makefile build/win32/nsis/bochs.nsi"
++                                                                                                                                                                          ac_config_files="$ac_config_files Makefile iodev/Makefile bx_debug/Makefile bios/Makefile cpu/Makefile memory/Makefile gui/Makefile disasm/Makefile ${INSTRUMENT_DIR}/Makefile misc/Makefile fpu/Makefile taint/Makefile doc/docbook/Makefile build/linux/bochs-dlx bxversion.h build/macosx/Info.plist build/win32/nsis/Makefile build/win32/nsis/bochs.nsi"
+ cat >confcache <<\_ACEOF
+ # This file is a shell script that caches the results of configure
+ # tests run on this system so they can be shared between configure
+@@ -36724,6 +36724,7 @@ do
+   "${INSTRUMENT_DIR}/Makefile" ) CONFIG_FILES="$CONFIG_FILES ${INSTRUMENT_DIR}/Makefile" ;;
+   "misc/Makefile" ) CONFIG_FILES="$CONFIG_FILES misc/Makefile" ;;
+   "fpu/Makefile" ) CONFIG_FILES="$CONFIG_FILES fpu/Makefile" ;;
++  "taint/Makefile" ) CONFIG_FILES="$CONFIG_FILES taint/Makefile" ;;
+   "doc/docbook/Makefile" ) CONFIG_FILES="$CONFIG_FILES doc/docbook/Makefile" ;;
+   "build/linux/bochs-dlx" ) CONFIG_FILES="$CONFIG_FILES build/linux/bochs-dlx" ;;
+   "bxversion.h" ) CONFIG_FILES="$CONFIG_FILES bxversion.h" ;;
+diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
+--- bochs-2.1.1.orig/cpu/cpu.cc	2004-02-11 14:28:51.000000000 -0800
++++ checkbochs-2.1.1/cpu/cpu.cc	2005-06-29 10:59:54.000000000 -0700
+@@ -30,6 +30,9 @@
+ #include "bochs.h"
+ #define LOG_THIS BX_CPU_THIS_PTR
+ 
++#include "taint/globals.h"
++#include "taint/mydebug.h"
++
+ #if BX_USE_CPU_SMF
+ #define this (BX_CPU(0))
+ #endif
+@@ -111,7 +114,9 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
+   bxInstruction_c iStorage BX_CPP_AlignN(32);
+   bxInstruction_c *i = &iStorage;
+ 
+-  BxExecutePtr_t execute;
++  BxExecutePtr_t execute, taint_execute ;
++
++  BX_CPU_THIS_PTR curInstruction = i ;
+ 
+ #if BX_DEBUGGER
+   BX_CPU_THIS_PTR break_point = 0;
+@@ -209,6 +214,10 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
+     BxExecutePtr_tR resolveModRM = i->ResolveModrm; // Get as soon as possible for speculation.
+ 
+     execute = i->execute; // fetch as soon as possible for speculation.
++
++    taint_execute = i->taint_execute ;
++    if (!taint_execute) taint_execute = &BX_CPU_C::NOP ;
++
+     if (resolveModRM) {
+       BX_CPU_CALL_METHODR(resolveModRM, (i));
+     }
+@@ -281,6 +290,10 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
+     }
+ #endif
+     execute = i->execute; // fetch as soon as possible for speculation.
++
++    taint_execute = i->taint_execute ;
++    if (!taint_execute) taint_execute = &BX_CPU_C::NOP ;
++
+     if (resolveModRM) {
+       BX_CPU_CALL_METHODR(resolveModRM, (i));
+       }
+@@ -303,6 +316,7 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
+       BX_INSTR_BEFORE_EXECUTION(BX_CPU_ID);
+       RIP += i->ilen();
+       BX_CPU_CALL_METHOD(execute, (i));
++      BX_CPU_CALL_METHOD(taint_execute, (i));
+       BX_CPU_THIS_PTR prev_eip = RIP; // commit new EIP
+       BX_CPU_THIS_PTR prev_esp = RSP; // commit new ESP
+       BX_INSTR_AFTER_EXECUTION(BX_CPU_ID);
+@@ -323,6 +337,7 @@ repeat_loop:
+         if (i->as64L()) {
+           if (RCX != 0) {
+             BX_CPU_CALL_METHOD(execute, (i));
++            BX_CPU_CALL_METHOD(taint_execute, (i));
+             RCX --;
+             }
+           if ((i->repUsedValue()==3) && (get_ZF()==0)) goto repeat_done;
+@@ -335,6 +350,7 @@ repeat_loop:
+         if (i->as32L()) {
+           if (ECX != 0) {
+             BX_CPU_CALL_METHOD(execute, (i));
++            BX_CPU_CALL_METHOD(taint_execute, (i));
+             ECX --;
+             }
+           if ((i->repUsedValue()==3) && (get_ZF()==0)) goto repeat_done;
+@@ -345,6 +361,7 @@ repeat_loop:
+         else {
+           if (CX != 0) {
+             BX_CPU_CALL_METHOD(execute, (i));
++            BX_CPU_CALL_METHOD(taint_execute, (i));
+             CX --;
+             }
+           if ((i->repUsedValue()==3) && (get_ZF()==0)) goto repeat_done;
+@@ -358,6 +375,7 @@ repeat_loop:
+         if (i->as64L()) {
+           if (RCX != 0) {
+             BX_CPU_CALL_METHOD(execute, (i));
++            BX_CPU_CALL_METHOD(taint_execute, (i));
+             RCX --;
+             }
+           if (RCX == 0) goto repeat_done;
+@@ -368,6 +386,7 @@ repeat_loop:
+         if (i->as32L()) {
+           if (ECX != 0) {
+             BX_CPU_CALL_METHOD(execute, (i));
++            BX_CPU_CALL_METHOD(taint_execute, (i));
+             ECX --;
+             }
+           if (ECX == 0) goto repeat_done;
+@@ -376,6 +395,7 @@ repeat_loop:
+         else { // 16bit addrsize
+           if (CX != 0) {
+             BX_CPU_CALL_METHOD(execute, (i));
++            BX_CPU_CALL_METHOD(taint_execute, (i));
+             CX --;
+             }
+           if (CX == 0) goto repeat_done;
+@@ -865,6 +885,17 @@ BX_CPU_THIS_PTR eipPageWindowSize = 0; /
+                   BX_CPU_THIS_PTR sregs[BX_SEG_REG_CS].cache.u.segment.d_b);
+ }
+ 
++void
++BX_CPU_C::panic(const char *fmt, ...)
++{
++    va_list arg;
++
++    printf("backtrace: %s.\n",backtrace(btstr));
++
++    va_start(arg,fmt);
++    logfunctions::panic(fmt,arg);
++    va_end(arg);
++}
+ 
+ #if BX_EXTERNAL_DEBUGGER
+ 
+diff -urpN bochs-2.1.1.orig/cpu/cpu.h checkbochs-2.1.1/cpu/cpu.h
+--- bochs-2.1.1.orig/cpu/cpu.h	2004-02-11 14:28:51.000000000 -0800
++++ checkbochs-2.1.1/cpu/cpu.h	2005-06-29 10:59:54.000000000 -0700
+@@ -739,9 +739,11 @@ public:
+ #if BX_USE_CPU_SMF
+   void (*ResolveModrm)(bxInstruction_c *) BX_CPP_AttrRegparmN(1);
+   void (*execute)(bxInstruction_c *);
++  void (*taint_execute)(bxInstruction_c *);
+ #else
+   void (BX_CPU_C::*ResolveModrm)(bxInstruction_c *) BX_CPP_AttrRegparmN(1);
+   void (BX_CPU_C::*execute)(bxInstruction_c *);
++  void (BX_CPU_C::*taint_execute)(bxInstruction_c *);
+ #endif
+ 
+   // 26..23  ilen (0..15).  Leave this one on top so no mask is needed.
+@@ -821,6 +823,11 @@ public:
+ #endif
+     };
+ 
++  /* sorav: to check if the instruction has a lock prefix */
++  bool locked;                  //whether lock prefix is held
++  BX_CPP_INLINE void setLocked(bool val) { locked = val; }
++  BX_CPP_INLINE bool isLocked(void) { return locked ; }
++
+   BX_CPP_INLINE unsigned opcodeReg() {
+     // The opcodeReg form (low 3 bits of the opcode byte (extended
+     // by REX.B on x86-64) can be accessed by IxForm or IqForm.  They
+@@ -1428,8 +1435,18 @@ union {
+                         //   is greated than 2 (the maximum possible for
+                         //   normal cases) it is a native pointer and is used
+                         //   for a direct write access.
++
++    /* taint fields */
++    Bit32u taint_paddress1;
++    Bit32u taint_paddress2;
++    Bit32u taint_len1;
++    Bit32u taint_len2;
++    bx_ptr_equiv_t taint_pages;
++
+     } address_xlation;
+ 
++    bxInstruction_c *curInstruction ;
++
+ #if BX_SUPPORT_X86_64
+   // data upper 32 bits - not used any longer
+   //Bit32s daddr_upper;    // upper bits must be canonical  (-virtmax --> + virtmax)
+@@ -2952,6 +2969,33 @@ union {
+ #if BX_SUPPORT_APIC
+   bx_local_apic_c local_apic;
+ #endif
++
++  /* taint functions */
++  void panic(const char *fmt, ...);
++  BX_SMF Bit32u thread_current(void) ;
++  BX_SMF Bit32s BX_CPP_AttrRegparmN(3) BX_CPU_C::taint_dtranslate_linear(bx_address laddr, unsigned pl, unsigned rw);
++  BX_SMF Bit32u BX_CPP_AttrRegparmN(2) BX_CPU_C::taint_itranslate_linear(bx_address laddr, unsigned pl);
++  BX_SMF int BX_CPP_AttrRegparmN(3) BX_CPU_C::access_linear_taint(bx_address laddr, unsigned length, unsigned pl, unsigned rw, void *taint_value);
++//SHADOW STATE FUNCTIONS
++  BX_SMF void TT_TaintSaveRegs(bxInstruction_c *i);
++  BX_SMF void TT_TaintRestoreRegs(bxInstruction_c *i);
++  BX_SMF void TT_Lock(bxInstruction_c *i);
++  BX_SMF void TT_Unlock(bxInstruction_c *i);
++  BX_SMF void TT_CommonOps(bxInstruction_c *i);
++                                                                                                                                                                                                     
++  BX_SMF int read_virtual_checks_silent(bx_segment_reg_t *seg, bx_address offset, unsigned length) BX_CPP_AttrRegparmN(3);
++  BX_SMF int read_virtual_byte_silent(unsigned s, bx_address offset, Bit8u *data);
++  BX_SMF int read_virtual_word_silent(unsigned s, bx_address offset, Bit16u *data);
++  BX_SMF int read_virtual_dword_silent(unsigned s, bx_address offset, Bit32u *data);
++  BX_SMF int access_linear_silent(bx_address laddr, unsigned length, unsigned pl, unsigned rw, void *data);
++                                                                                                                                                                                                     
++  BX_SMF char *backtrace(char *s);
++  BX_SMF Bit32u callingEIP(void);
++                                                                                                                                                                                                     
++  BX_SMF void eraser_access_linear(bx_address laddr, unsigned len, unsigned pl, unsigned rw, void *data);
++                                                                                                                                                                                                     
++  BX_SMF void eraser_init_globals (void) ;
++
+   };
+ 
+ 
+@@ -3299,6 +3343,7 @@ IMPLEMENT_EFLAG_ACCESSOR   (TF,  8)
+ #define BxGroup14         BxGroupN
+ #define BxGroup15         BxGroupN
+ #define BxGroup16         BxGroupN
++#define BxGroupTaint	  BxGroupN
+ 
+ #if BX_DEBUGGER
+ typedef enum _show_flags {
+diff -urpN bochs-2.1.1.orig/cpu/cpuid.cc checkbochs-2.1.1/cpu/cpuid.cc
+--- bochs-2.1.1.orig/cpu/cpuid.cc	2003-12-31 09:35:43.000000000 -0800
++++ checkbochs-2.1.1/cpu/cpuid.cc	2005-06-29 10:59:54.000000000 -0700
+@@ -251,6 +251,12 @@ void BX_CPU_C::CPUID(bxInstruction_c *i)
+       RDX = get_std_cpuid_features ();
+       break;
+ 
++    case 3:             /*added by sorav */
++      RBX = 0x6e696154; // "Tain"
++      RDX = 0x49646574; // "tedI"
++      RCX = 0x6c65746e; // "ntel"
++      break;
++
+ #if 0
+ #if BX_CPU_LEVEL >= 6
+     case 2:
+diff -urpN bochs-2.1.1.orig/cpu/fetchdecode.cc checkbochs-2.1.1/cpu/fetchdecode.cc
+--- bochs-2.1.1.orig/cpu/fetchdecode.cc	2003-12-28 10:19:41.000000000 -0800
++++ checkbochs-2.1.1/cpu/fetchdecode.cc	2005-06-29 10:59:54.000000000 -0700
+@@ -29,6 +29,8 @@
+ #include "bochs.h"
+ #define LOG_THIS BX_CPU_THIS_PTR
+ 
++#include "taint/eraser.h"
++
+ 
+ ///////////////////////////
+ // prefix bytes
+@@ -156,6 +158,7 @@ typedef struct BxOpcodeInfo_t {
+   Bit16u         Attr;
+   BxExecutePtr_t ExecutePtr;
+   struct BxOpcodeInfo_t *AnotherArray;
++  BxExecutePtr_t TaintExecutePtr ;
+ } BxOpcodeInfo_t;
+ 
+ 
+@@ -458,6 +461,17 @@ static BxOpcodeInfo_t BxOpcodeInfoG16[8]
+   /* 7 */  { 0, &BX_CPU_C::BxError }
+   };
+ 
++BxOpcodeInfo_t BxOpcodeInfoGTaint[8] = {
++  /* 0 */  { BxImmediate_Iv, &BX_CPU_C::NOP, NULL, &BX_CPU_C::TT_TaintSaveRegs},
++  /* 1 */  { BxImmediate_Iv, &BX_CPU_C::NOP, NULL, &BX_CPU_C::TT_TaintRestoreRegs},
++  /* 2 */  { BxImmediate_Iv, &BX_CPU_C::NOP, NULL, &BX_CPU_C::TT_Lock /*&BX_CPU_C::TT_RegionTaint*/},
++  /* 3 */  { BxImmediate_Iv, &BX_CPU_C::NOP, NULL, &BX_CPU_C::TT_Unlock /*&BX_CPU_C::TT_RegionCheck*/},
++  /* 4 */  { BxImmediate_Iv, &BX_CPU_C::NOP, NULL, &BX_CPU_C::TT_CommonOps },
++  /* 5 */  { 0, &BX_CPU_C::NOP, NULL, NULL /*&BX_CPU_C::TT_Taint*/ },
++  /* 6 */  { 0, &BX_CPU_C::NOP, NULL, NULL /*&BX_CPU_C::TT_Untaint*/ },
++  /* 7 */  { 0, &BX_CPU_C::NOP, NULL, NULL /*&BX_CPU_C::TT_Check*/}
++  };
++
+ 
+ /* ************************** */
+ /* 512 entries for 16bit mode */
+@@ -728,7 +742,8 @@ static BxOpcodeInfo_t BxOpcodeInfo[512*2
+   /* 0F 01 */  { BxAnother | BxGroup7, NULL, BxOpcodeInfoG7 },
+   /* 0F 02 */  { BxAnother, &BX_CPU_C::LAR_GvEw },
+   /* 0F 03 */  { BxAnother, &BX_CPU_C::LSL_GvEw },
+-  /* 0F 04 */  { 0, &BX_CPU_C::BxError },
++  ///* 0F 04 */  { 0, &BX_CPU_C::BxError },
++  /* 0F 04 : sorav */  { BxAnother | BxGroupTaint, NULL, BxOpcodeInfoGTaint }, // 2-byte escape
+ #if BX_SUPPORT_X86_64
+   /* 0F 05 */  { 0, &BX_CPU_C::SYSCALL },
+ #else
+@@ -1263,7 +1278,7 @@ static BxOpcodeInfo_t BxOpcodeInfo[512*2
+   /* 0F 01 */  { BxAnother | BxGroup7, NULL, BxOpcodeInfoG7 },
+   /* 0F 02 */  { BxAnother, &BX_CPU_C::LAR_GvEw },
+   /* 0F 03 */  { BxAnother, &BX_CPU_C::LSL_GvEw },
+-  /* 0F 04 */  { 0, &BX_CPU_C::BxError },
++  /* 0F 04 : sorav */  { BxAnother | BxGroupTaint, NULL, BxOpcodeInfoGTaint }, // 2-byte escape
+ #if BX_SUPPORT_X86_64
+   /* 0F 05 */  { 0, &BX_CPU_C::SYSCALL },
+ #else
+@@ -1564,6 +1580,8 @@ BX_CPU_C::fetchDecode(Bit8u *iptr, bxIns
+                   /*os64*/       0,  /*as64*/     0,
+                   /*extend8bit*/ 0,  /*repUsed*/  0);
+ 
++  instruction->setLocked (false) ;
++
+   sse_prefix = SSE_PREFIX_NONE;
+   
+ fetch_b1:
+@@ -1669,6 +1687,7 @@ another_byte:
+         case 0xf0: // LOCK:
+           BX_INSTR_PREFIX_LOCK(BX_CPU_ID);
+           lock = 1;
++	  instruction->setLocked (false) ;
+           if (ilen < remain) {
+             ilen++;
+             goto fetch_b1;
+@@ -1883,6 +1902,7 @@ modrm_done:
+     }
+ 
+     instruction->execute = OpcodeInfoPtr->ExecutePtr;
++    instruction->taint_execute = OpcodeInfoPtr->TaintExecutePtr;
+     instruction->setRepAttr(attr & (BxRepeatable | BxRepeatableZF));
+   }
+   else {
+@@ -1891,6 +1911,7 @@ modrm_done:
+     // the if() above after fetching the 2nd byte, so this path is
+     // taken in all cases if a modrm byte is NOT required.
+     instruction->execute = BxOpcodeInfo[b1+offset].ExecutePtr;
++    instruction->taint_execute = BxOpcodeInfo[b1+offset].TaintExecutePtr;
+     instruction->IxForm.opcodeReg = b1 & 7;
+   }
+ 
+diff -urpN bochs-2.1.1.orig/cpu/paging.cc checkbochs-2.1.1/cpu/paging.cc
+--- bochs-2.1.1.orig/cpu/paging.cc	2003-12-30 14:12:45.000000000 -0800
++++ checkbochs-2.1.1/cpu/paging.cc	2005-06-29 10:59:54.000000000 -0700
+@@ -38,6 +38,8 @@
+ #include "bochs.h"
+ #define LOG_THIS BX_CPU_THIS_PTR
+ 
++#include "taint/globals.h"
++
+ #if BX_USE_CPU_SMF
+ #define this (BX_CPU(0))
+ #endif
+@@ -1124,6 +1126,7 @@ BX_CPU_C::access_linear(bx_address laddr
+         BX_CPU_THIS_PTR mem->writePhysicalPage(this,
+             BX_CPU_THIS_PTR address_xlation.paddress1, length, data);
+         }
++      BX_CPU_THIS_PTR eraser_access_linear(laddr,length,pl,rw,data);
+       return;
+       }
+     else {
+@@ -1195,6 +1198,7 @@ BX_CPU_C::access_linear(bx_address laddr
+         }
+ #endif
+ 
++      BX_CPU_THIS_PTR eraser_access_linear(laddr,length,pl,rw,data);
+       return;
+       }
+     }
+@@ -1216,6 +1220,7 @@ BX_CPU_C::access_linear(bx_address laddr
+         lpf = laddr & 0xfffff000;
+         if (BX_CPU_THIS_PTR TLB.entry[tlbIndex].lpf == BX_TLB_LPF_VALUE(lpf)) {
+           BX_CPU_THIS_PTR mem->readPhysicalPage(this, laddr, length, data);
++          BX_CPU_THIS_PTR eraser_access_linear(laddr,length,pl,rw,data);
+           return;
+           }
+         // We haven't seen this page, or it's been bumped before.
+@@ -1258,6 +1263,7 @@ BX_CPU_C::access_linear(bx_address laddr
+         lpf = laddr & 0xfffff000;
+         if (BX_CPU_THIS_PTR TLB.entry[tlbIndex].lpf == BX_TLB_LPF_VALUE(lpf)) {
+           BX_CPU_THIS_PTR mem->writePhysicalPage(this, laddr, length, data);
++          BX_CPU_THIS_PTR eraser_access_linear(laddr,length,pl,rw,data);
+           return;
+           }
+         // We haven't seen this page, or it's been bumped before.
+@@ -1401,6 +1407,8 @@ BX_CPU_C::access_linear(Bit32u laddr, un
+       BX_CPU_THIS_PTR mem->readPhysicalPage(this, laddr, length, data);
+     else
+       BX_CPU_THIS_PTR mem->writePhysicalPage(this, laddr, length, data);
++
++    BX_CPU_THIS_PTR eraser_access_linear(laddr,length,pl,rw,data);
+     return;
+     }
+ 
+diff -urpN bochs-2.1.1.orig/gdbstub.cc checkbochs-2.1.1/gdbstub.cc
+diff -urpN bochs-2.1.1.orig/gdbstub.cc.rej checkbochs-2.1.1/gdbstub.cc.rej
+diff -urpN bochs-2.1.1.orig/gui/Makefile.in checkbochs-2.1.1/gui/Makefile.in
+--- bochs-2.1.1.orig/gui/Makefile.in	2003-11-28 07:07:28.000000000 -0800
++++ checkbochs-2.1.1/gui/Makefile.in	2005-06-29 10:13:21.000000000 -0700
+@@ -44,7 +44,7 @@ SHELL = /bin/sh
+ @SET_MAKE@
+ 
+ CXX = @CXX@
+-CXXFLAGS = $(BX_INCDIRS) @CXXFLAGS@  @GUI_CXXFLAGS@
++CXXFLAGS = $(BX_INCDIRS) @CXXFLAGS@  @GUI_CXXFLAGS@ -fms-extensions
+ LOCAL_CXXFLAGS =
+ LDFLAGS = @LDFLAGS@
+ LIBS = @LIBS@
+diff -urpN bochs-2.1.1.orig/gui/siminterface.h checkbochs-2.1.1/gui/siminterface.h
+--- bochs-2.1.1.orig/gui/siminterface.h	2004-02-11 14:28:52.000000000 -0800
++++ checkbochs-2.1.1/gui/siminterface.h	2005-06-29 10:59:55.000000000 -0700
+@@ -464,6 +464,7 @@ typedef enum {
+ #endif
+   BXP_SEL_CONFIG_INTERFACE,
+   BXP_SEL_DISPLAY_LIBRARY,
++  BXP_SEL_TAINT_TYPE,
+   BXP_THIS_IS_THE_LAST    // used to determine length of list
+ } bx_id;
+ 
+diff -urpN bochs-2.1.1.orig/iodev/pit82c54.cc checkbochs-2.1.1/iodev/pit82c54.cc
+diff -urpN bochs-2.1.1.orig/iodev/pit82c54.cc~ checkbochs-2.1.1/iodev/pit82c54.cc~
+diff -urpN bochs-2.1.1.orig/iodev/serial.cc checkbochs-2.1.1/iodev/serial.cc
+diff -urpN bochs-2.1.1.orig/iodev/serial.cc.rej checkbochs-2.1.1/iodev/serial.cc.rej
+diff -urpN bochs-2.1.1.orig/main.cc checkbochs-2.1.1/main.cc
+--- bochs-2.1.1.orig/main.cc	2004-02-11 14:28:41.000000000 -0800
++++ checkbochs-2.1.1/main.cc	2005-06-29 11:29:46.000000000 -0700
+@@ -28,6 +28,10 @@
+ #include <assert.h>
+ #include "state_file.h"
+ 
++#include "taint/taint_type.h"
++#include "taint/mydebug.h"
++#include "taint/globals.h"
++
+ #ifdef HAVE_LOCALE_H
+ #include <locale.h>
+ #endif
+@@ -1768,6 +1773,7 @@ int bxmain () {
+   if (setjmp (context) == 0) {
+     SIM->set_quit_context (&context);
+     if (bx_init_main (bx_startup_flags.argc, bx_startup_flags.argv) < 0) 
++    BX_CPU(0)->eraser_init_globals() ;
+       return 0;
+     // read a param to decide which config interface to start.
+     // If one exists, start it.  If not, just begin.
+@@ -2309,6 +2322,18 @@ bx_begin_simulation (int argc, char *arg
+   SIM->set_init_done (1);
+ 
+   // update headerbar buttons since drive status can change during init
++  static char *taint_type_list[] = {
++      "eraser",
++      "none",
++      NULL
++  };
++  bx_options.Otaint_type = new bx_param_enum_c (BXP_SEL_TAINT_TYPE,
++    "Taint Type (Eraser,..)",
++    "Select Taint Type",
++    taint_type_list,
++    0,
++    0);
++                                                                                                                                                                                                     
+   bx_gui->update_drive_status_buttons ();
+ 
+   // The set handler for mouse_enabled does not actually update the gui
+@@ -2507,7 +2532,7 @@ bx_init_hardware()
+ #if !BX_DEBUGGER
+   signal(SIGINT, bx_signal_handler);
+ #endif
+-
++  assign_taint_functions ("eraser") ;
+ #if BX_SHOW_IPS
+ #ifndef __MINGW32__
+   signal(SIGALRM, bx_signal_handler);
+@@ -3971,6 +3996,20 @@ parse_line_formatted(char *context, int 
+     if (!bx_options.Osel_config->set_by_name (params[1]))
+       PARSE_ERR(("%s: config_interface '%s' not available", context, params[1]));
+     }
++  else if (!strcmp (params[0], "taint")) {
++    if (num_params!=2) {
++	PARSE_ERR(("%s: taint directive: wrong # of args. Usage: taint <option>",context)) ;
++    }
++    if (!bx_options.Otaint_type->set_by_name (params[1])) {
++	PARSE_ERR(("%s: taint type '%s' not available.", context, params[1]));
++    }
++  }
++  else if (!strcmp (params[0], "logfile")) {
++    if (num_params!=2) {
++	PARSE_ERR(("%s: logfile directive: wrong # of args. Usage- logfile: <filename>",context)) ;
++    }
++    strncpy (g_logfn, params[1], 128) ;
++  }
+   else if (!strcmp(params[0], "display_library")) {
+     if (num_params != 2) {
+       PARSE_ERR(("%s: display_library directive: wrong # args.", context));
+diff -urpN bochs-2.1.1.orig/main.cc~ checkbochs-2.1.1/main.cc~
+diff -urpN bochs-2.1.1.orig/memory/memory.h checkbochs-2.1.1/memory/memory.h
+--- bochs-2.1.1.orig/memory/memory.h	2004-02-11 14:28:54.000000000 -0800
++++ checkbochs-2.1.1/memory/memory.h	2005-06-29 10:59:56.000000000 -0700
+@@ -45,6 +45,10 @@ class BOCHSAPI BX_MEM_C : public logfunc
+ public:
+   Bit8u   *actual_vector;
+   Bit8u   *vector;  // aligned correctly
++
++  Bit32u   *actual_taint_vector;        //keep a word for every byte
++  Bit32u   *taint_vector;       // aligned correctly
++
+   size_t  len;
+   size_t  megabytes;  // (len in Megabytes)
+ #if BX_PCI_SUPPORT
+@@ -77,6 +81,12 @@ public:
+     unsigned long (*f)(unsigned char *buf, int len),
+     Bit32u addr1, Bit32u addr2, Bit32u *crc);
+   BX_MEM_SMF Bit8u * getHostMemAddr(BX_CPU_C *cpu, Bit32u a20Addr, unsigned op) BX_CPP_AttrRegparmN(3);
++
++//Taint functions
++  BX_MEM_SMF void    readPhysicalTaintPage(BX_CPU_C *cpu, Bit32u addr,
++                                      unsigned len, void *data) BX_CPP_AttrRegparmN(3);
++  BX_MEM_SMF void    writePhysicalTaintPage(BX_CPU_C *cpu, Bit32u addr,
++                                       unsigned len, void *data) BX_CPP_AttrRegparmN(3);
+   };
+ 
+ #if BX_PROVIDE_CPU_MEMORY==1
+diff -urpN bochs-2.1.1.orig/memory/misc_mem.cc checkbochs-2.1.1/memory/misc_mem.cc
+--- bochs-2.1.1.orig/memory/misc_mem.cc	2004-02-11 14:28:54.000000000 -0800
++++ checkbochs-2.1.1/memory/misc_mem.cc	2005-06-29 10:59:56.000000000 -0700
+@@ -54,7 +54,9 @@ BX_MEM_C::BX_MEM_C(void)
+   settype(MEMLOG);
+ 
+   vector = NULL;
++  taint_vector = NULL;
+   actual_vector = NULL;
++  actual_taint_vector = NULL;
+   len    = 0;
+   megabytes = 0;
+ }
+@@ -69,11 +71,15 @@ BX_MEM_C::alloc_vector_aligned (size_t b
+   if (actual_vector != NULL) {
+     BX_INFO (("freeing existing memory vector"));
+     delete [] actual_vector;
++    delete [] actual_taint_vector;
+     actual_vector = NULL;
++    actual_taint_vector = NULL;
+     vector = NULL;
++    taint_vector = NULL;
+   }
+   Bit64u test_mask = alignment - 1;
+   actual_vector = new Bit8u [bytes+test_mask];
++  actual_taint_vector = new Bit32u [bytes+test_mask];
+   // round address forward to nearest multiple of alignment.  Alignment 
+   // MUST BE a power of two for this to work.
+   Bit64u masked = ((Bit64u)(actual_vector + test_mask)) & ~test_mask;
+@@ -84,6 +90,13 @@ BX_MEM_C::alloc_vector_aligned (size_t b
+   BX_ASSERT (vector+bytes <= actual_vector+bytes+test_mask);
+   BX_INFO (("allocated memory at %p. after alignment, vector=%p", 
+ 	actual_vector, vector));
++
++  //sorav
++  unsigned int wasted_memory = masked - (Bit64u)vector ;
++  BX_ASSERT(wasted_memory<=test_mask);
++  taint_vector = &(actual_taint_vector[wasted_memory]);
++  //sanity check: after realignment, everything fits in allocated space
++  BX_ASSERT(&(taint_vector[bytes]) <= &(actual_taint_vector[bytes+test_mask]));
+ }
+ #endif
+ 
+@@ -136,6 +150,7 @@ BX_MEM_C::init_memory(int memsize)
+ 
+   if (BX_MEM_THIS vector == NULL) {
+     // memory not already allocated, do now...
++    assert (taint_vector==NULL) ;
+     alloc_vector_aligned (memsize, BX_MEM_VECTOR_ALIGN);
+     BX_MEM_THIS len    = memsize;
+     BX_MEM_THIS megabytes = memsize / (1024*1024);
+diff -urpN bochs-2.1.1.orig/taint/Makefile.in checkbochs-2.1.1/taint/Makefile.in
+--- bochs-2.1.1.orig/taint/Makefile.in	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/Makefile.in	2005-06-29 11:14:31.000000000 -0700
+@@ -0,0 +1,184 @@
++.SUFFIXES: .cc
++
++VPATH = @srcdir@
++
++srcdir = @srcdir@
++
++top_builddir    = $(srcdir)/..
++top_srcdir      = $(srcdir)/..
++
++SHELL = /bin/sh
++
++
++
++CXX = g++
++CXXFLAGS = -g -O2 -D_FILE_OFFSET_BITS=64 -D_LARGE_FILES  $(X_CFLAGS)
++
++LDFLAGS = 
++LIBS =  -lm
++X_LIBS =  -L/usr/X11R6/lib
++X_PRE_LIBS =  -lSM -lICE
++RANLIB = ranlib
++
++
++
++BX_INCDIRS = -I.. -I$(srcdir)/.. -I../instrument/stubs -I$(srcdir)/../instrument/stubs
++
++APIC_OBJS = 
++EXT_DEBUG_OBJS = 
++
++# Objects which are synced between the cpu and cpu64 code and
++# are used for either compile.
++OBJS = common.o globals.o taint_type.o eraser.o paging.o memory.o \
++       lockset.o list.o hash.o silent_access.o silent_paging.o
++	
++OBJS64 =
++	
++
++BX_INCLUDES = ../bochs.h ../config.h
++
++
++all: libtaint.a
++
++.cc.o:
++	$(CXX) -c $(BX_INCDIRS) $(CXXFLAGS) $< -o $@
++
++
++libtaint.a: $(OBJS) 
++	rm -f  libtaint.a
++	ar rv $@ $(OBJS) 
++	$(RANLIB) libtaint.a
++
++$(OBJS): $(BX_INCLUDES)
++
++$(OBJS64): $(BX_INCLUDES)
++
++clean:
++	rm -f  *.o
++	rm -f  *.a
++
++dist-clean: clean
++	rm -f  Makefile
++
++common.o: common.cc ../bochs.h ../config.h ../osdep.h ../bx_debug/debug.h \
++  ../bxversion.h ../gui/siminterface.h ../state_file.h ../cpu/cpu.h \
++  ../cpu/lazy_flags.h ../cpu/i387.h ../cpu/xmm.h ../memory/memory.h \
++  ../pc_system.h ../plugin.h ../extplugin.h ../gui/gui.h \
++  ../gui/textconfig.h ../gui/keymap.h ../iodev/iodev.h ../iodev/pci.h \
++  ../iodev/pci2isa.h ../iodev/pcivga.h ../iodev/vga.h ../iodev/ioapic.h \
++  ../iodev/biosdev.h ../iodev/cmos.h ../iodev/dma.h ../iodev/floppy.h \
++  ../iodev/harddrv.h ../iodev/cdrom.h ../iodev/vmware3.h \
++  ../iodev/keyboard.h ../iodev/parallel.h ../iodev/pic.h ../iodev/pit.h \
++  ../iodev/pit_wrap.h ../iodev/pit82c54.h ../iodev/virt_timer.h \
++  ../iodev/serial.h ../iodev/unmapped.h ../iodev/eth.h ../iodev/ne2k.h \
++  ../iodev/guest2host.h ../iodev/slowdown_timer.h ../iodev/extfpuirq.h \
++  ../instrument/stubs/instrument.h mydebug.h
++
++taint_type.o: taint_type.cc taint_type.h \
++  ../bochs.h ../config.h ../osdep.h ../bx_debug/debug.h \
++  ../bxversion.h ../gui/siminterface.h ../state_file.h ../cpu/cpu.h \
++  ../cpu/lazy_flags.h ../cpu/i387.h ../cpu/xmm.h ../memory/memory.h \
++  ../pc_system.h ../plugin.h ../extplugin.h ../gui/gui.h \
++  ../gui/textconfig.h ../gui/keymap.h ../iodev/iodev.h ../iodev/pci.h \
++  ../iodev/pci2isa.h ../iodev/pcivga.h ../iodev/vga.h ../iodev/ioapic.h \
++  ../iodev/biosdev.h ../iodev/cmos.h ../iodev/dma.h ../iodev/floppy.h \
++  ../iodev/harddrv.h ../iodev/cdrom.h ../iodev/vmware3.h \
++  ../iodev/keyboard.h ../iodev/parallel.h ../iodev/pic.h ../iodev/pit.h \
++  ../iodev/pit_wrap.h ../iodev/pit82c54.h ../iodev/virt_timer.h \
++  ../iodev/serial.h ../iodev/unmapped.h ../iodev/eth.h ../iodev/ne2k.h \
++  ../iodev/guest2host.h ../iodev/slowdown_timer.h ../iodev/extfpuirq.h \
++  ../instrument/stubs/instrument.h mydebug.h
++
++memory.o: memory.cc ../bochs.h ../config.h ../osdep.h ../bx_debug/debug.h \
++  ../bxversion.h ../gui/siminterface.h ../state_file.h ../cpu/cpu.h \
++  ../cpu/lazy_flags.h ../cpu/i387.h ../cpu/xmm.h ../memory/memory.h \
++  ../pc_system.h ../plugin.h ../extplugin.h ../gui/gui.h \
++  ../gui/textconfig.h ../gui/keymap.h ../iodev/iodev.h ../iodev/pci.h \
++  ../iodev/pci2isa.h ../iodev/pcivga.h ../iodev/vga.h ../iodev/ioapic.h \
++  ../iodev/biosdev.h ../iodev/cmos.h ../iodev/dma.h ../iodev/floppy.h \
++  ../iodev/harddrv.h ../iodev/cdrom.h ../iodev/vmware3.h \
++  ../iodev/keyboard.h ../iodev/parallel.h ../iodev/pic.h ../iodev/pit.h \
++  ../iodev/pit_wrap.h ../iodev/pit82c54.h ../iodev/virt_timer.h \
++  ../iodev/serial.h ../iodev/unmapped.h ../iodev/eth.h ../iodev/ne2k.h \
++  ../iodev/guest2host.h ../iodev/slowdown_timer.h ../iodev/extfpuirq.h \
++  ../instrument/stubs/instrument.h mydebug.h
++
++paging.o: paging.cc ../bochs.h ../config.h ../osdep.h ../bx_debug/debug.h \
++  ../bxversion.h ../gui/siminterface.h ../state_file.h ../cpu/cpu.h \
++  ../cpu/lazy_flags.h ../cpu/i387.h ../cpu/xmm.h ../memory/memory.h \
++  ../pc_system.h ../plugin.h ../extplugin.h ../gui/gui.h \
++  ../gui/textconfig.h ../gui/keymap.h ../iodev/iodev.h ../iodev/pci.h \
++  ../iodev/pci2isa.h ../iodev/pcivga.h ../iodev/vga.h ../iodev/ioapic.h \
++  ../iodev/biosdev.h ../iodev/cmos.h ../iodev/dma.h ../iodev/floppy.h \
++  ../iodev/harddrv.h ../iodev/cdrom.h ../iodev/vmware3.h \
++  ../iodev/keyboard.h ../iodev/parallel.h ../iodev/pic.h ../iodev/pit.h \
++  ../iodev/pit_wrap.h ../iodev/pit82c54.h ../iodev/virt_timer.h \
++  ../iodev/serial.h ../iodev/unmapped.h ../iodev/eth.h ../iodev/ne2k.h \
++  ../iodev/guest2host.h ../iodev/slowdown_timer.h ../iodev/extfpuirq.h \
++  ../instrument/stubs/instrument.h mydebug.h
++
++eraser.o: eraser.cc lockset.h eraser.h \
++  ../bochs.h ../config.h ../osdep.h ../bx_debug/debug.h \
++  ../bxversion.h ../gui/siminterface.h ../state_file.h ../cpu/cpu.h \
++  ../cpu/lazy_flags.h ../cpu/i387.h ../cpu/xmm.h ../memory/memory.h \
++  ../pc_system.h ../plugin.h ../extplugin.h ../gui/gui.h \
++  ../gui/textconfig.h ../gui/keymap.h ../iodev/iodev.h ../iodev/pci.h \
++  ../iodev/pci2isa.h ../iodev/pcivga.h ../iodev/vga.h ../iodev/ioapic.h \
++  ../iodev/biosdev.h ../iodev/cmos.h ../iodev/dma.h ../iodev/floppy.h \
++  ../iodev/harddrv.h ../iodev/cdrom.h ../iodev/vmware3.h \
++  ../iodev/keyboard.h ../iodev/parallel.h ../iodev/pic.h ../iodev/pit.h \
++  ../iodev/pit_wrap.h ../iodev/pit82c54.h ../iodev/virt_timer.h \
++  ../iodev/serial.h ../iodev/unmapped.h ../iodev/eth.h ../iodev/ne2k.h \
++  ../iodev/guest2host.h ../iodev/slowdown_timer.h ../iodev/extfpuirq.h \
++  ../instrument/stubs/instrument.h mydebug.h
++
++silent_paging.o: silent_paging.cc \
++  ../bochs.h ../config.h ../osdep.h ../bx_debug/debug.h \
++  ../bxversion.h ../gui/siminterface.h ../state_file.h ../cpu/cpu.h \
++  ../cpu/lazy_flags.h ../cpu/i387.h ../cpu/xmm.h ../memory/memory.h \
++  ../pc_system.h ../plugin.h ../extplugin.h ../gui/gui.h \
++  ../gui/textconfig.h ../gui/keymap.h ../iodev/iodev.h ../iodev/pci.h \
++  ../iodev/pci2isa.h ../iodev/pcivga.h ../iodev/vga.h ../iodev/ioapic.h \
++  ../iodev/biosdev.h ../iodev/cmos.h ../iodev/dma.h ../iodev/floppy.h \
++  ../iodev/harddrv.h ../iodev/cdrom.h ../iodev/vmware3.h \
++  ../iodev/keyboard.h ../iodev/parallel.h ../iodev/pic.h ../iodev/pit.h \
++  ../iodev/pit_wrap.h ../iodev/pit82c54.h ../iodev/virt_timer.h \
++  ../iodev/serial.h ../iodev/unmapped.h ../iodev/eth.h ../iodev/ne2k.h \
++  ../iodev/guest2host.h ../iodev/slowdown_timer.h ../iodev/extfpuirq.h \
++  ../instrument/stubs/instrument.h mydebug.h
++
++silent_access.o: silent_access.cc \
++  ../bochs.h ../config.h ../osdep.h ../bx_debug/debug.h \
++  ../bxversion.h ../gui/siminterface.h ../state_file.h ../cpu/cpu.h \
++  ../cpu/lazy_flags.h ../cpu/i387.h ../cpu/xmm.h ../memory/memory.h \
++  ../pc_system.h ../plugin.h ../extplugin.h ../gui/gui.h \
++  ../gui/textconfig.h ../gui/keymap.h ../iodev/iodev.h ../iodev/pci.h \
++  ../iodev/pci2isa.h ../iodev/pcivga.h ../iodev/vga.h ../iodev/ioapic.h \
++  ../iodev/biosdev.h ../iodev/cmos.h ../iodev/dma.h ../iodev/floppy.h \
++  ../iodev/harddrv.h ../iodev/cdrom.h ../iodev/vmware3.h \
++  ../iodev/keyboard.h ../iodev/parallel.h ../iodev/pic.h ../iodev/pit.h \
++  ../iodev/pit_wrap.h ../iodev/pit82c54.h ../iodev/virt_timer.h \
++  ../iodev/serial.h ../iodev/unmapped.h ../iodev/eth.h ../iodev/ne2k.h \
++  ../iodev/guest2host.h ../iodev/slowdown_timer.h ../iodev/extfpuirq.h \
++  ../instrument/stubs/instrument.h mydebug.h
++
++globals.o: globals.cc \
++  ../bochs.h ../config.h ../osdep.h ../bx_debug/debug.h \
++  ../bxversion.h ../gui/siminterface.h ../state_file.h ../cpu/cpu.h \
++  ../cpu/lazy_flags.h ../cpu/i387.h ../cpu/xmm.h ../memory/memory.h \
++  ../pc_system.h ../plugin.h ../extplugin.h ../gui/gui.h \
++  ../gui/textconfig.h ../gui/keymap.h ../iodev/iodev.h ../iodev/pci.h \
++  ../iodev/pci2isa.h ../iodev/pcivga.h ../iodev/vga.h ../iodev/ioapic.h \
++  ../iodev/biosdev.h ../iodev/cmos.h ../iodev/dma.h ../iodev/floppy.h \
++  ../iodev/harddrv.h ../iodev/cdrom.h ../iodev/vmware3.h \
++  ../iodev/keyboard.h ../iodev/parallel.h ../iodev/pic.h ../iodev/pit.h \
++  ../iodev/pit_wrap.h ../iodev/pit82c54.h ../iodev/virt_timer.h \
++  ../iodev/serial.h ../iodev/unmapped.h ../iodev/eth.h ../iodev/ne2k.h \
++  ../iodev/guest2host.h ../iodev/slowdown_timer.h ../iodev/extfpuirq.h \
++  ../instrument/stubs/instrument.h mydebug.h
++
++lockset.o: lockset.h lockset.cc hash.h mydebug.h
++
++hash.o: hash.h hash.cc
++
++list.o: list.h list.cc
+diff -urpN bochs-2.1.1.orig/taint/common.cc checkbochs-2.1.1/taint/common.cc
+--- bochs-2.1.1.orig/taint/common.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/common.cc	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,146 @@
++#define NEED_CPU_REG_SHORTCUTS 1
++#include "bochs.h"
++#define LOG_THIS BX_CPU_THIS_PTR
++
++#include "taint/mydebug.h"
++#include "taint/globals.h"
++
++#define PINTOS
++
++#define STACK_DEPTH 256
++
++#if BX_USE_CPU_SMF
++#define this (BX_CPU(0))
++#endif
++
++#define MASK(SHIFT, CNT) (((1ul << (CNT)) - 1) << (SHIFT))
++
++/* Page offset (bits 0:13). */
++#define PGSHIFT 0                       /* Index of first offset bit. */
++
++#ifdef LINUX
++#define PGBITS  13                      /* Number of offset bits. */
++#else
++#ifdef PINTOS
++#define PGBITS 12
++#else
++#define PGBITS  13                      /* Number of offset bits. */
++#warning "Dont know whether compiling for Pintos or Linux. Assuming Linux (PGBITS=13)"
++#endif
++#endif
++
++#define PGMASK  MASK(PGSHIFT, PGBITS)   /* Page offset bits (0:12). */
++#define PGSIZE  (1 << PGBITS)           /* Bytes in a page. */
++
++struct stack {
++    Bit32u arr[STACK_DEPTH];
++    unsigned int top;
++} savedRegsStack;
++bool savedRegsStackInitialized = false;
++
++void push(struct stack *s, Bit32u val) {
++    assert(s->top>=0);
++    if (s->top++==STACK_DEPTH) {
++	DBG(ERR,("Stack Overflow. Exiting.."));
++	exit(1);
++    }
++    s->arr[s->top-1] = val;
++}
++
++Bit32u pop(struct stack *s) {
++    Bit32u ret;
++    assert(s->top>=0);
++    if (s->top==0) {
++	DBG(ERR,("Stack Underflow. Exiting.."));
++	exit(1);
++    }
++    ret = s->arr[s->top-1];
++    s->top--;
++    return ret;
++}
++
++Bit32u stack_init(struct stack *s) {
++    s->top = 0;
++}
++
++void BX_CPU_C::TT_TaintSaveRegs(bxInstruction_c *i) {
++	Bit32u opId = i->Id();
++
++	if (!savedRegsStackInitialized) {
++	    stack_init(&savedRegsStack);
++	    savedRegsStackInitialized = true;
++	}
++	//if (opId==999) mylog(D1,("%s %d: called with opId 999.\n",__func__,__LINE__));
++	push(&savedRegsStack, EAX);
++	push(&savedRegsStack, EBX);
++	push(&savedRegsStack, ECX);
++	push(&savedRegsStack, EDX);
++	//DBG(L1,("pushing EAX=%x, EBX=%x, ECX=%x, EDX=%x.\n",EAX,EBX,ECX,EDX));
++	//g_instruction_display_count = 10;
++}
++
++void BX_CPU_C::TT_TaintRestoreRegs(bxInstruction_c *i) {
++	assert(savedRegsStackInitialized);
++	//mylog(D1,("%s %d: ECX=%x, EDX=%x\n",__func__,__LINE__,ECX,EDX));
++	EDX = pop(&savedRegsStack);
++	ECX = pop(&savedRegsStack);
++	EBX = pop(&savedRegsStack);
++	EAX = pop(&savedRegsStack);
++	//DBG(L1,("popping EAX=%x, EBX=%x, ECX=%x, EDX=%x.\n",EAX,EBX,ECX,EDX));
++}
++
++Bit32u
++BX_CPU_C::thread_current(void) {
++    unsigned kernelPL = 0;
++    Bit32u pid;
++    if (CPL==kernelPL) {
++	//pid = (ESP & 0xffffe000);
++	pid = ((ESP-1) & ~PGMASK);	//subtract 1 so that we do not get incorrect pid, if stack is empty
++    } else {
++	/*Bit32u esp;
++	Bit16u ss;
++	get_SS_ESP_from_TSS(kernelPL,&ss,&esp);
++	pid = esp;*/
++    }
++    return pid;
++}
++
++char *BX_CPU_C::backtrace(char *s) {
++    Bit32u ebp, eip;
++    int stackdepth = 0, readsuccessful = 1;
++    char tmp[17];
++    //printf("EIP = %x.\n",EIP);
++    snprintf(s,16,"%x ",EIP);
++    ebp = EBP;
++    //while (ebp>0xc0000000 && stackdepth<10 && readsuccessful) {
++    while (ebp>0xc0000000 && stackdepth<10) {
++	readsuccessful &= read_virtual_dword_silent(BX_SEG_REG_SS, ebp+4, &eip);
++	readsuccessful &= read_virtual_dword_silent(BX_SEG_REG_SS, ebp, &ebp);
++        snprintf(tmp,16,"%x ",eip);
++	s = strncat(s,tmp,16);
++	stackdepth++;
++    }
++    return s;
++}
++
++Bit32u BX_CPU_C::callingEIP(void) {
++    Bit32u ebp, eip;
++    int stackdepth = 0, readsuccessful = 1;
++    char tmp[17];
++    ebp = EBP;
++    readsuccessful = read_virtual_dword_silent(BX_SEG_REG_SS, ebp+4, &eip);
++    if (readsuccessful) return eip;
++    else return 0;
++}
++
++void checkbochs_log (const char *fmt, ...)
++{
++	va_list ap;
++
++	if (!g_logfp) {
++	    return ;
++	}
++	va_start (ap, fmt) ;
++	vfprintf (g_logfp, fmt, ap) ;
++	va_end (ap) ;
++}
+diff -urpN bochs-2.1.1.orig/taint/common.cc.bak checkbochs-2.1.1/taint/common.cc.bak
+diff -urpN bochs-2.1.1.orig/taint/eraser.cc checkbochs-2.1.1/taint/eraser.cc
+--- bochs-2.1.1.orig/taint/eraser.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/eraser.cc	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,240 @@
++#define NEED_CPU_REG_SHORTCUTS 1
++#include "bochs.h"
++#define LOG_THIS BX_CPU_THIS_PTR
++
++#if BX_USE_CPU_SMF
++#define this (BX_CPU(0))
++#endif
++
++#define PHYS_BASE	0xc0000000
++
++#include "mydebug.h"
++#include "taint_type.h"
++#include "lockset.h"
++#include "hash.h"
++#include "eraser.h"
++#include "globals.h"
++#include "mydebug.h"
++
++void breakme() {}
++
++#define WRN_UNINIT(loc) do {  \
++    /* DBG(WRN,("Thread %x: Read on uninitialized location %x, backtrace: %s\n",myid,loc, backtrace(btstr))); */ \
++} while (0)
++
++#define WRN_ERASER(myid,loc,tval) do {  \
++    if (!already_warned(loc)) { \
++        warn(loc); \
++	DBG(WRN,("Thread %x: Warning on location %x, backtrace: %s\n",myid,loc, backtrace(btstr))); \
++	breakme(); \
++    } \
++} while (0)
++
++struct warn_table_entry {
++    unsigned loc;
++    hash_elem h_elem;
++};
++
++static int warn_table_initialized = 0;
++static struct hash warn_table ;
++
++unsigned warn_hash (const hash_elem *e, void *aux)
++{
++    struct warn_table_entry *h = hash_entry (e, struct warn_table_entry, h_elem);
++    return h->loc;
++}
++
++bool
++warn_less (const hash_elem *a_, const hash_elem *b_,
++			void *aux)
++{
++    struct warn_table_entry *a = hash_entry (a_, struct warn_table_entry, h_elem);
++    struct warn_table_entry *b = hash_entry (b_, struct warn_table_entry, h_elem);
++    return (a->loc < b->loc);
++}
++
++static int
++already_warned(unsigned loc) {
++    struct warn_table_entry tmp;
++    hash_elem *h_element;
++    if (!warn_table_initialized) return 0;
++    tmp.loc = loc;
++    h_element = hash_find(&warn_table, &tmp.h_elem);
++    if (h_element) return 1;
++    else return 0;
++}
++
++static int
++warn(unsigned loc) {
++    struct warn_table_entry *tmp = (struct warn_table_entry*)malloc(sizeof(struct warn_table_entry));
++    if (!warn_table_initialized) {
++	hash_init(&warn_table, warn_hash, warn_less, NULL);
++	warn_table_initialized = 1;
++    }
++    tmp->loc = loc;
++    hash_insert(&warn_table, &tmp->h_elem);
++}
++
++
++void BX_CPU_C::TT_Lock(bxInstruction_c *i) {
++    Bit32u opId = i->Id();
++    if (opId!=ERASER_ID) return;
++
++    Bit32u myid = (BX_CPU_THIS_PTR thread_current())&0x3fffffff;
++    DBG(LOCKS,("%x: acquiring lock %x. backtrace: %s\n",myid,ECX,backtrace(btstr)));
++    eraser_lock(ECX);
++    //lockset_t lset = add_lock(cur_held(myid),ECX);
++    //update_lockset(myid,lset);
++}
++
++void BX_CPU_C::TT_Unlock(bxInstruction_c *i) {
++    Bit32u opId = i->Id();
++    if (opId!=ERASER_ID) return;
++
++    Bit32u myid = (BX_CPU_THIS_PTR thread_current())&0x3fffffff;
++    DBG(LOCKS,("%x: releasing lock %x. backtrace: %s\n",myid,ECX,backtrace(btstr)));
++    eraser_unlock(ECX);
++    //Bit32u myid = (BX_CPU_THIS_PTR thread_current())&0x3fffffff;
++    //lockset_t lset = remove_lock(cur_held(myid),ECX);
++    //update_lockset(myid,lset);
++}
++
++void BX_CPU_C::eraser_access_linear(bx_address laddr, unsigned len, unsigned pl, unsigned rw, void *notused) {
++    Bit32u myid = (BX_CPU_THIS_PTR thread_current())&0x3fffffff;
++    Bit32u taintval[4], origval;
++    int i, try_access;
++    if (ignore_on(myid)) return;
++    if (laddr + len <= PHYS_BASE) return ;
++    if (laddr < PHYS_BASE) {
++    	len -= (PHYS_BASE-laddr) ;
++    	laddr = PHYS_BASE ;
++    }
++    DBG (ACCESS_LINEAR, ("%s() %d: entry. laddr=%x, len=%x, rw=%x\n",__func__,__LINE__,laddr,len,rw)) ;
++    if (!BX_CPU_THIS_PTR get_IF()) {
++    	eraser_lock(INTERRUPT_LOCK); //acquire a dummy lock for disabled interrupts
++	assert(cur_held(myid)!=0);
++    }
++    if (BX_CPU_THIS_PTR curInstruction->isLocked()) {
++        DBG(LOCKS,("acquiring HW_PREFIX_LOCK. laddr=%x, len=%d.\n",laddr,len));
++    	eraser_lock(HW_PREFIX_LOCK); //acquire a dummy lock for h/w prefix "LOCK"
++	assert(cur_held(myid)!=0);
++    }
++
++    for (i=0;i<len;i++) {
++        //taintval[i] = 0x0;
++	try_access = access_linear_taint(laddr+i,1,pl,BX_READ,&taintval[i]);
++	ASSERT(try_access);
++	origval = taintval[i];
++	if (get_state(taintval[i])==VIRGIN) {
++	    if (rw==BX_WRITE || rw==BX_RW) {
++		taintval[i] = set_state(taintval[i], EXCLUSIVE);
++		taintval[i] = set_value(taintval[i], myid);
++		DBG(CHECKBOCHS,("%x: Virgin->Exclusive(%x) location %x.if=%x. backtrace: %s\n",myid,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),backtrace(btstr)));
++	    } else {
++		WRN_UNINIT(laddr) ;
++	    }
++	}
++	else if (get_state(taintval[i])==EXCLUSIVE) {
++	    if (get_value(taintval[i])!=myid) {
++		taintval[i] =  set_value(taintval[i],cur_held(myid));
++		if (rw==BX_WRITE || rw==BX_RW) {
++		    taintval[i] = set_state(taintval[i],SHARED_MOD);
++		    DBG(CHECKBOCHS,("%x: Ex(%x)->SM(%x) location %x from exclusive to shared-mod state. if=%x, cur_held=%d. backtrace: %s\n",myid,origval,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),cur_held(myid),backtrace(btstr)));
++		} else {
++		    taintval[i] = set_state(taintval[i],SHARED);
++		    DBG(CHECKBOCHS,("%x: Ex(%x)->Shared(%x) location %x from exclusive to shared-mod state. if=%x, cur_held=%d. backtrace: %s\n",myid,origval,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),cur_held(myid),backtrace(btstr)));
++		}
++	    }
++	}
++	else if (get_state(taintval[i])==SHARED) {
++	    taintval[i] = set_value(taintval[i],intersect_locksets(get_value(taintval[i]),cur_held(myid)));
++	    if (rw==BX_WRITE || rw==BX_RW) {
++		taintval[i] = set_state(taintval[i],SHARED_MOD);
++		DBG(CHECKBOCHS,("%x: Shared(%x)->SM(%x) location %x from shared to shared-mod state. if=%x, cur_held=%d. backtrace: %s\n",myid,origval,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),cur_held(myid),backtrace(btstr)));
++	    } else
++	    if (origval!=taintval[i]) {
++		DBG(CHECKBOCHS,("%x: Shared(%x)->Shared(%x) location %x from shared to shared-mod state. if=%x, cur_held=%d. backtrace: %s\n",myid,origval,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),cur_held(myid),backtrace(btstr)));
++	    }
++	}
++	else if (get_state(taintval[i])==SHARED_MOD) {
++	    taintval[i] = set_value(taintval[i],intersect_locksets(get_value(taintval[i]),cur_held(myid)));
++	    if (origval!=taintval[i]) {
++		DBG(CHECKBOCHS,("%x: SM(%x)->SM(%x) location %x from exclusive to shared-mod state. if=%x, cur_held=%d. backtrace: %s\n",myid,origval,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),cur_held(myid),backtrace(btstr)));
++	    }
++	}
++
++	/* Update the taintval in shadow memory */
++	if (origval!=taintval[i]) {
++	    try_access = access_linear_taint(laddr+i,1,pl,BX_WRITE,
++	    				     &taintval[i]);
++	    ASSERT(try_access);
++	}
++
++	/* Warn if needed */
++	if (get_state(taintval[i])==SHARED_MOD && get_value(taintval[i])==LOCKSET_EMPTY) WRN_ERASER(myid,laddr+i,taintval[i]);
++    }
++    if (!BX_CPU_THIS_PTR get_IF()) eraser_unlock(INTERRUPT_LOCK); //release the lock that I had earlier acquired (to avoid duplicates)
++
++    if (BX_CPU_THIS_PTR curInstruction->isLocked()) {
++        DBG(LOCKS,("releasing HW_PREFIX_LOCK. laddr=%x, len=%d.\n",laddr,len));
++	eraser_unlock(HW_PREFIX_LOCK);
++    }
++}
++
++void BX_CPU_C::TT_CommonOps(bxInstruction_c *i) {
++    Bit32u opId = i->Id();
++    Bit32u myid = (BX_CPU_THIS_PTR thread_current())&0x3fffffff;
++    if (opId!=ERASER_ID) return;
++
++    if (EAX==IGNORE_OP) {
++	for (int i=0;i<ECX;i++) warn(EDX+i);
++	DBG(L1,("ignoring location %x (%d).\n",EDX,ECX));
++    }
++    else if (EAX==LOCKINIT_OP) {
++	eraser_init(ECX);
++    }
++    else if (EAX==IGNOREON_OP) {
++	if (global_startup_ignore) {
++	    return ;
++	}
++	set_ignore(myid,true);
++	DBG(L1,("setting ignore on for thread %x. backtrace: %s\n",myid,backtrace(btstr)));
++    }
++    else if (EAX==IGNOREOFF_OP) {
++	if (global_startup_ignore) {
++	    return ;
++	}
++	set_ignore(myid,false);
++	DBG(L1,("setting ignore off for thread %x. backtrace: %s\n",myid,backtrace(btstr)));
++    }
++    else if (EAX==REUSE_OP) {
++        Bit32u taintval = 0;
++	int pl = 0;	//kernel privileges
++	DBG(L1,("%x: reusing location %x (%d). ESP=%x\n",myid,EDX,ECX,ESP));
++	for (int i=0;i<ECX;i++) {
++	    int ret = access_linear_taint(EDX+i,1,pl,BX_WRITE,&taintval);
++	    if (ret==0) DBG(L1,("reuse on location %x failed.\n",EDX+i));
++	}
++    } else if (EAX==DBG_MARK_OP) {
++        Bit32u taintval = 0;
++	char str[MAX_STRLEN];
++	int pl = 0;	//kernel privileges
++	int ret, i=0;
++	do {
++	    ret = access_linear_silent(EDX+i,1,pl,BX_READ,&str[i]) ;
++	} while (ret && str[i] && ++i<MAX_STRLEN);
++	str[i] = '\0';
++	DBG(L1,("%x: dbg mark at %s:%d. EIP=%x\n",myid,str,ECX,EIP));
++    } else if (EAX==GLOBAL_STARTUP_IGNOREOFF_OP) {
++	assert (global_startup_ignore) ;
++	global_startup_ignore = false ;
++	DBG(L1,("%x: setting global_startup_ignore to off\n",myid));
++    }
++}
++
++void BX_CPU_C::eraser_init_globals(void) {
++    g_logfp = fopen (g_logfn, "w") ;
++    if (g_logfp==NULL) {
++	DBG (ERR, ("%s(): Error opening checkbochs log %s for writing.\n",__func__,g_logfn)) ;
++    }
++}
+diff -urpN bochs-2.1.1.orig/taint/eraser.cc.bak checkbochs-2.1.1/taint/eraser.cc.bak
+diff -urpN bochs-2.1.1.orig/taint/eraser.h checkbochs-2.1.1/taint/eraser.h
+--- bochs-2.1.1.orig/taint/eraser.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/eraser.h	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,37 @@
++#ifndef __ERASER_H
++#define __ERASER_H
++
++#define IGNORE_OP 0
++#define LOCKINIT_OP 1
++#define IGNOREON_OP 2
++#define IGNOREOFF_OP 3
++#define REUSE_OP 4
++#define DBG_MARK_OP 5
++#define GLOBAL_STARTUP_IGNOREOFF_OP 6
++
++#define eraser_lock(x) do {	\
++    Bit32u myid = (BX_CPU_THIS_PTR thread_current())&0x3fffffff;	\
++    lockset_t lset = add_lock(cur_held(myid),x);	\
++    update_lockset(myid,lset);	\
++}  while (0);
++
++#define eraser_unlock(x) do {	\
++    Bit32u myid = (BX_CPU_THIS_PTR thread_current())&0x3fffffff; \
++    lockset_t lset = remove_lock(cur_held(myid),x); \
++    update_lockset(myid,lset); \
++} while (0);
++
++#define eraser_init(x) do {	\
++    Bit32u myid = (BX_CPU_THIS_PTR thread_current())&0x3fffffff; \
++    lockset_t mylocks = cur_held(myid); \
++    lockset_t lset; \
++    if (belongs(mylocks,x)) { \
++	lset = remove_lock(mylocks,x); \
++	update_lockset(myid,lset); \
++    } \
++} while (0);
++
++#define INTERRUPT_LOCK 0x1234
++#define HW_PREFIX_LOCK 0x2345
++
++#endif
+diff -urpN bochs-2.1.1.orig/taint/eraser.h.bak checkbochs-2.1.1/taint/eraser.h.bak
+diff -urpN bochs-2.1.1.orig/taint/globals.cc checkbochs-2.1.1/taint/globals.cc
+--- bochs-2.1.1.orig/taint/globals.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/globals.cc	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,13 @@
++#define NEED_CPU_REG_SHORTCUTS 1
++#include "bochs.h"
++#define LOG_THIS BX_CPU_THIS_PTR
++
++#include "taint/globals.h"
++
++void (*g_access_linear_fptr)(bx_address laddr, unsigned length, unsigned pl, unsigned rw, void *taint_value) = NULL;
++
++char btstr[512];	//a global string to print the backtrace
++int disassemble_num = 0;
++bool global_startup_ignore = true ;
++FILE *g_logfp = NULL ;
++char g_logfn [128] = "checkbochs.log" ;
+diff -urpN bochs-2.1.1.orig/taint/globals.cc.bak checkbochs-2.1.1/taint/globals.cc.bak
+diff -urpN bochs-2.1.1.orig/taint/globals.h checkbochs-2.1.1/taint/globals.h
+--- bochs-2.1.1.orig/taint/globals.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/globals.h	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,15 @@
++#ifndef __GLOBALS_H
++#define __GLOBALS_H
++
++#define MAX_STRLEN 128
++
++extern void (*g_access_linear_fptr)(bx_address laddr, unsigned length, unsigned pl, unsigned rw, void *taint_value);
++extern char btstr[512];	//a global string to print the backtrace
++
++extern bool global_startup_ignore ;
++extern int disassemble_num ;
++
++extern FILE *g_logfp ;
++extern char g_logfn[128] ;
++
++#endif
+diff -urpN bochs-2.1.1.orig/taint/globals.h.bak checkbochs-2.1.1/taint/globals.h.bak
+diff -urpN bochs-2.1.1.orig/taint/hash.cc checkbochs-2.1.1/taint/hash.cc
+--- bochs-2.1.1.orig/taint/hash.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/hash.cc	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,353 @@
++#include <stdlib.h>
++#include <stdio.h>
++#include <assert.h>
++#include "hash.h"
++
++static struct list *find_bucket (struct hash *, hash_elem *);
++static struct list_elem *find_elem (struct hash *, struct list *, hash_elem *);
++static void insert_elem (struct hash *, struct list *, hash_elem *);
++static void remove_elem (struct hash *, hash_elem *);
++static void rehash (struct hash *);
++
++/* Initializes hash table H to compute hash values using HASH and
++   compare hash elements using LESS, given auxiliary data AUX.
++   this function can sleep on malloc. hence, CANNOT be called from thread_init.
++ */
++bool
++hash_init (struct hash *h,
++           hash_hash_func *hash, hash_less_func *less, void *aux) 
++{
++  h->elem_cnt = 0;
++  h->bucket_cnt = 4;
++  h->buckets = (list *)(malloc (sizeof *h->buckets * h->bucket_cnt));
++  h->hash = hash;
++  h->less = less;
++  h->aux = aux;
++
++  if (h->buckets != NULL) 
++    {
++      hash_clear (h);
++      return true;
++    }
++  else
++    return false;
++}
++
++/* Removes all the elements from H. */
++void
++hash_clear (struct hash *h) 
++{
++  size_t i;
++      
++  for (i = 0; i < h->bucket_cnt; i++) 
++    list_init (&h->buckets[i]);
++  h->elem_cnt = 0;
++}
++
++/* Destroys hash table H. */
++void
++hash_destroy (struct hash *h) 
++{
++  free (h->buckets);
++}
++
++/* Inserts NEW into hash table H and returns a null pointer, if
++   no equal element is already in the table.
++   If an equal element is already in the table, returns it
++   without inserting NEW. */   
++hash_elem *
++hash_insert (struct hash *h, hash_elem *newelem)
++{
++  struct list *bucket = find_bucket (h, newelem);
++  struct list_elem *old = find_elem (h, bucket, newelem);
++
++  if (old == NULL) 
++    insert_elem (h, bucket, newelem);
++
++  rehash (h);
++
++  return old; 
++}
++
++/* Inserts NEW into hash table H, replacing any equal element
++   already in the table, which is returned. */
++hash_elem *
++hash_replace (struct hash *h, hash_elem *newelem) 
++{
++  struct list *bucket = find_bucket (h, newelem);
++  struct list_elem *old = find_elem (h, bucket, newelem);
++
++  if (old != NULL)
++    remove_elem (h, old);
++  insert_elem (h, bucket, newelem);
++
++  rehash (h);
++
++  return old;
++}
++
++/* Finds and returns an element equal to E in hash table H, or a
++   null pointer if no equal element exists in the table. */
++hash_elem *
++hash_find (struct hash *h, hash_elem *e) 
++{
++  return find_elem (h, find_bucket (h, e), e);
++}
++
++/* Finds, removes, and returns an element equal to E in hash
++   table H.  Returns a null pointer if no equal element existed
++   in the table. */
++hash_elem *
++hash_delete (struct hash *h, hash_elem *e)
++{
++  struct list_elem *found = find_elem (h, find_bucket (h, e), e);
++  if (found != NULL) 
++    {
++      remove_elem (h, found);
++      rehash (h); 
++    }
++  return found;
++}
++
++/* Initializes I for iterating hash table H.
++
++   Iteration idiom:
++
++      struct hash_iterator i;
++
++      hash_first (&i, h);
++      while (hash_next (&i))
++        {
++          struct foo *f = hash_entry (hash_cur (&i), struct foo, elem);
++          ...do something with f...
++        }
++
++   NOTE: Modifying a hash table during iteration invalidates all
++   iterators.
++*/
++void
++hash_first (struct hash_iterator *i, struct hash *h) 
++{
++  assert (i != NULL);
++  assert (h != NULL);
++
++  i->hash = h;
++  i->bucket = i->hash->buckets;
++  i->elem = list_head (i->bucket);
++}
++
++/* Advances I to the next element in the hash table and returns
++   it.  Returns a null pointer if no elements are left.  Elements
++   are returned in arbitrary order.
++
++   NOTE: Modifying a hash table during iteration invalidates all
++   iterators. */
++hash_elem *
++hash_next (struct hash_iterator *i)
++{
++  assert (i != NULL);
++
++  i->elem = list_next (i->elem);
++  while (i->elem == list_end (i->bucket)) 
++    {
++      if (++i->bucket >= i->hash->buckets + i->hash->bucket_cnt)
++        {
++          i->elem = NULL;
++          break;
++        }
++      i->elem = list_begin (i->bucket);
++    }
++  
++  return i->elem;
++}
++
++/* Returns the current element in the hash table iteration, or a
++   null pointer at the end of the table.  Undefined behavior
++   after calling hash_first() but before hash_next(). */
++hash_elem *
++hash_cur (struct hash_iterator *i) 
++{
++  return i->elem;
++}
++
++/* Returns the number of elements in H. */
++size_t
++hash_size (struct hash *h) 
++{
++  return h->elem_cnt;
++}
++
++/* Returns true if H contains no elements, false otherwise. */
++bool
++hash_empty (struct hash *h) 
++{
++  return h->elem_cnt == 0;
++}
++
++/* Fowler-Noll-Vo hash constants, for 32-bit word sizes. */
++#define FNV_32_PRIME 16777619u
++#define FNV_32_BASIS 2166136261u
++
++/* Returns a hash of the SIZE bytes in BUF. */
++unsigned
++hash_bytes (const void *buf_, size_t size)
++{
++  /* Fowler-Noll-Vo 32-bit hash, for bytes. */
++  const unsigned char *buf = (unsigned char *)buf_;
++  unsigned hash;
++
++  assert (buf != NULL);
++
++  hash = FNV_32_BASIS;
++  while (size-- > 0)
++    hash = (hash * FNV_32_PRIME) ^ *buf++;
++
++  return hash;
++} 
++
++/* Returns a hash of string S. */
++unsigned
++hash_string (const char *s_) 
++{
++  const unsigned char *s = (unsigned char *)s_;
++  unsigned hash;
++
++  assert (s != NULL);
++
++  hash = FNV_32_BASIS;
++  while (*s != '\0')
++    hash = (hash * FNV_32_PRIME) ^ *s++;
++
++  return hash;
++}
++
++/* Returns a hash of integer I. */
++unsigned
++hash_int (int i) 
++{
++  return hash_bytes (&i, sizeof i);
++}
++
++/* Returns the bucket in H that E belongs in. */
++static struct list *
++find_bucket (struct hash *h, hash_elem *e) 
++{
++  size_t bucket_idx = h->hash (e, h->aux) & (h->bucket_cnt - 1);
++  return &h->buckets[bucket_idx];
++}
++
++/* Searches BUCKET in H for a hash element equal to E.  Returns
++   it if found or a null pointer otherwise. */
++static struct list_elem *
++find_elem (struct hash *h, struct list *bucket, hash_elem *e) 
++{
++  struct list_elem *i;
++
++  for (i = list_begin (bucket); i != list_end (bucket); i = list_next (i)) 
++    if (!h->less (i, e, h->aux) && !h->less (e, i, h->aux))
++      return i; 
++  return NULL;
++}
++
++/* Returns X with its lowest-order bit set to 1 turned off. */
++static inline size_t
++turn_off_least_1bit (size_t x) 
++{
++  return x & (x - 1);
++}
++
++/* Returns true if X is a power of 2, otherwise false. */
++static inline size_t
++is_power_of_2 (size_t x) 
++{
++  return x != 0 && turn_off_least_1bit (x) == 0;
++}
++
++/* Element per bucket ratios. */
++#define MIN_ELEMS_PER_BUCKET  1 /* Elems/bucket < 1: reduce # of buckets. */
++#define BEST_ELEMS_PER_BUCKET 2 /* Ideal elems/bucket. */
++#define MAX_ELEMS_PER_BUCKET  4 /* Elems/bucket > 4: increase # of buckets. */
++
++/* Changes the number of buckets in hash table H to match the
++   ideal.  This function can fail because of an out-of-memory
++   condition, but that'll just make hash accesses less efficient;
++   we can still continue. */
++static void
++rehash (struct hash *h) 
++{
++  size_t old_bucket_cnt, new_bucket_cnt;
++  struct list *new_buckets, *old_buckets;
++  size_t i;
++
++  assert (h != NULL);
++
++  /* Save old bucket info for later use. */
++  old_buckets = h->buckets;
++  old_bucket_cnt = h->bucket_cnt;
++
++  /* Calculate the number of buckets to use now.
++     We want one bucket for about every BEST_ELEMS_PER_BUCKET.
++     We must have at least four buckets, and the number of
++     buckets must be a power of 2. */
++  new_bucket_cnt = h->elem_cnt / BEST_ELEMS_PER_BUCKET;
++  if (new_bucket_cnt < 4)
++    new_bucket_cnt = 4;
++  while (!is_power_of_2 (new_bucket_cnt))
++    new_bucket_cnt = turn_off_least_1bit (new_bucket_cnt);
++
++  /* Don't do anything if the bucket count wouldn't change. */
++  if (new_bucket_cnt == old_bucket_cnt)
++    return;
++
++  /* Allocate new buckets and initialize them as empty. */
++  new_buckets = (struct list *)malloc (sizeof *new_buckets * new_bucket_cnt);
++  if (new_buckets == NULL) 
++    {
++      /* Allocation failed.  This means that use of the hash table will
++         be less efficient.  However, it is still usable, so
++         there's no reason for it to be an error. */
++      return;
++    }
++  for (i = 0; i < new_bucket_cnt; i++) 
++    list_init (&new_buckets[i]);
++
++  /* Install new bucket info. */
++  h->buckets = new_buckets;
++  h->bucket_cnt = new_bucket_cnt;
++
++  /* Move each old element into the appropriate new bucket. */
++  for (i = 0; i < old_bucket_cnt; i++) 
++    {
++      struct list *old_bucket;
++      struct list_elem *elem, *next;
++
++      old_bucket = &old_buckets[i];
++      for (elem = list_begin (old_bucket);
++           elem != list_end (old_bucket); elem = next) 
++        {
++          struct list *new_bucket = find_bucket (h, elem);
++          next = list_next (elem);
++          list_remove (elem);
++          list_push_front (new_bucket, elem);
++        }
++    }
++
++  free (old_buckets);
++}
++
++/* Inserts E into BUCKET (in hash table H). */
++static void
++insert_elem (struct hash *h, struct list *bucket, hash_elem *e) 
++{
++  h->elem_cnt++;
++  list_push_front (bucket, e);
++}
++
++/* Removes E from hash table H. */
++static void
++remove_elem (struct hash *h, hash_elem *e) 
++{
++  h->elem_cnt--;
++  list_remove (e);
++}
++
+diff -urpN bochs-2.1.1.orig/taint/hash.cc.bak checkbochs-2.1.1/taint/hash.cc.bak
+diff -urpN bochs-2.1.1.orig/taint/hash.h checkbochs-2.1.1/taint/hash.h
+--- bochs-2.1.1.orig/taint/hash.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/hash.h	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,92 @@
++#ifndef __HASH_H
++#define __HASH_H
++
++/* Hash table.
++
++   This is a standard hash table with chaining.  To locate an
++   element in the table, we compute a hash function over the
++   element's data and use that as an index into an array of
++   doubly linked lists, then linearly search the list.
++
++   The chain lists do not use dynamic allocation.  Instead, each
++   structure that can potentially be in a hash must embed a
++   hash_elem member.  All of the hash functions operate on these
++   `hash_elem's.  The hash_entry macro allows conversion from a
++   hash_elem back to a structure object that contains it.  This
++   is the same technique used in the linked list implementation.
++   Refer to lib/kernel/list.h for a detailed explanation.
++
++   The FAQ for the VM project contains a detailed example of how
++   to use the hash table. */
++
++#include <stdbool.h>
++#include <stddef.h>
++#include <inttypes.h>
++#include "list.h"
++
++/* Hash element. */
++typedef list_elem hash_elem;
++
++/* Converts pointer to hash element HASH_ELEM into a pointer to
++   the structure that HASH_ELEM is embedded inside.  Supply the
++   name of the outer structure STRUCT and the member name MEMBER
++   of the hash element.  See the big comment at the top of the
++   file for an example. */
++#define hash_entry(HASH_ELEM, STRUCT, MEMBER)                              \
++        ((STRUCT *) ((uint8_t *) (HASH_ELEM) - offsetof (STRUCT, MEMBER)))
++
++/* Computes and returns the hash value for hash element E, given
++   auxiliary data AUX. */
++typedef unsigned hash_hash_func (const hash_elem *e, void *aux);
++
++/* Compares the value of two hash elements A and B, given
++   auxiliary data AUX.  Returns true if A is less than B, or
++   false if A is greater than or equal to B. */
++typedef bool hash_less_func (const hash_elem *a, const hash_elem *b,
++                             void *aux);
++
++/* Hash table. */
++struct hash 
++  {
++    size_t elem_cnt;            /* Number of elements in table. */
++    size_t bucket_cnt;          /* Number of buckets, a power of 2. */
++    struct list *buckets;       /* Array of `bucket_cnt' lists. */
++    hash_hash_func *hash;       /* Hash function. */
++    hash_less_func *less;       /* Comparison function. */
++    void *aux;                  /* Auxiliary data for `hash' and `less'. */
++  };
++
++/* A hash table iterator. */
++struct hash_iterator 
++  {
++    struct hash *hash;          /* The hash table. */
++    struct list *bucket;        /* Current bucket. */
++    hash_elem *elem;            /* Current hash element in current bucket. */
++  };
++
++/* Basic life cycle. */
++bool hash_init (struct hash *, hash_hash_func *, hash_less_func *, void *aux);
++void hash_clear (struct hash *);
++void hash_destroy (struct hash *);
++
++/* Search, insertion, deletion. */
++hash_elem *hash_insert (struct hash *, hash_elem *);
++hash_elem *hash_replace (struct hash *, hash_elem *);
++hash_elem *hash_find (struct hash *, hash_elem *);
++hash_elem *hash_delete (struct hash *, hash_elem *);
++
++/* Iteration. */
++void hash_first (struct hash_iterator *, struct hash *);
++hash_elem *hash_next (struct hash_iterator *);
++hash_elem *hash_cur (struct hash_iterator *);
++
++/* Information. */
++size_t hash_size (struct hash *);
++bool hash_empty (struct hash *);
++
++/* Sample hash functions. */
++unsigned hash_bytes (const void *, size_t);
++unsigned hash_string (const char *);
++unsigned hash_int (int);
++
++#endif /* lib/kernel/hash.h */
+diff -urpN bochs-2.1.1.orig/taint/hash.h.bak checkbochs-2.1.1/taint/hash.h.bak
+diff -urpN bochs-2.1.1.orig/taint/list.cc checkbochs-2.1.1/taint/list.cc
+--- bochs-2.1.1.orig/taint/list.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/list.cc	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,471 @@
++#include <stdlib.h>
++#include <assert.h>
++#include "list.h"
++
++/* Our doubly linked lists have two header elements: the "head"
++   just before the first element and the "tail" just after the
++   last element.  The `prev' link of the front header is null, as
++   is the `next' link of the back header.  Their other two links
++   point toward each other via the interior elements of the list.
++
++   An empty list looks like this:
++
++                      +------+     +------+
++                  <---| head |<--->| tail |--->
++                      +------+     +------+
++
++   A list with two elements in it looks like this:
++
++        +------+     +-------+     +-------+     +------+
++    <---| head |<--->|   1   |<--->|   2   |<--->| tail |<--->
++        +------+     +-------+     +-------+     +------+
++
++   The symmetry of this arrangement eliminates lots of special
++   cases in list processing.  For example, take a look at
++   list_remove(): it takes only two pointer assignments and no
++   conditionals.  That's a lot simpler than the code would be
++   without header elements.
++
++   (Because only one of the pointers in each header element is used,
++   we could in fact combine them into a single header element
++   without sacrificing this simplicity.  But using two separate
++   elements allows us to do a little bit of checking on some
++   operations, which can be valuable.) */
++
++/* Returns true if ELEM is a head, false otherwise. */
++inline bool
++is_head (list_elem *elem)
++{
++  return elem != NULL && elem->prev == NULL && elem->next != NULL;
++}
++
++/* Returns true if ELEM is an interior element,
++   false otherwise. */
++static inline bool
++is_interior (list_elem *elem)
++{
++  return elem != NULL && elem->prev != NULL && elem->next != NULL;
++}
++
++/* Returns true if ELEM is a tail, false otherwise. */
++static inline bool
++is_tail (list_elem *elem)
++{
++  return elem != NULL && elem->prev != NULL && elem->next == NULL;
++}
++
++/* Initializes LIST as an empty list. */
++void
++list_init (struct list *list)
++{
++  assert (list != NULL);
++  list->head.prev = NULL;
++  list->head.next = &list->tail;
++  list->tail.prev = &list->head;
++  list->tail.next = NULL;
++}
++
++/* Returns the beginning of LIST.  */
++list_elem *
++list_begin (struct list *list)
++{
++  assert (list != NULL);
++  return list->head.next;
++}
++
++/* Returns the element after ELEM in its list.  If ELEM is the
++   last element in its list, returns the list tail.  Results are
++   undefined if ELEM is itself a list tail. */
++list_elem *
++list_next (list_elem *elem)
++{
++  assert (is_head (elem) || is_interior (elem));
++  return elem->next;
++}
++
++/* Returns LIST's tail.
++
++   list_end() is often used in iterating through a list from
++   front to back.  See the big comment at the top of list.h for
++   an example. */
++list_elem *
++list_end (struct list *list)
++{
++  assert (list != NULL);
++  return &list->tail;
++}
++
++/* Returns the LIST's reverse beginning, for iterating through
++   LIST in reverse order, from back to front. */
++list_elem *
++list_rbegin (struct list *list) 
++{
++  assert (list != NULL);
++  return list->tail.prev;
++}
++
++/* Returns the element before ELEM in its list.  If ELEM is the
++   first element in its list, returns the list head.  Results are
++   undefined if ELEM is itself a list head. */
++list_elem *
++list_prev (list_elem *elem)
++{
++  assert (is_interior (elem) || is_tail (elem));
++  return elem->prev;
++}
++
++/* Returns LIST's head.
++
++   list_rend() is often used in iterating through a list in
++   reverse order, from back to front.  Here's typical usage,
++   following the example from the top of list.h:
++
++      for (e = list_rbegin (&foo_list); e != list_rend (&foo_list);
++           e = list_prev (e))
++        {
++          struct foo *f = list_entry (e, struct foo, elem);
++          ...do something with f...
++        }
++*/
++list_elem *
++list_rend (struct list *list) 
++{
++  assert (list != NULL);
++  return &list->head;
++}
++
++/* Return's LIST's head.
++
++   list_head() can be used for an alternate style of iterating
++   through a list, e.g.:
++
++      e = list_head (&list);
++      while ((e = list_next (e)) != list_end (&list)) 
++        {
++          ...
++        }
++*/
++list_elem *
++list_head (struct list *list) 
++{
++  assert (list != NULL);
++  return &list->head;
++}
++
++/* Return's LIST's tail. */
++list_elem *
++list_tail (struct list *list) 
++{
++  assert (list != NULL);
++  return &list->tail;
++}
++
++/* Inserts ELEM just before BEFORE, which may be either an
++   interior element or a tail.  The latter case is equivalent to
++   list_push_back(). */
++void
++list_insert (list_elem *before, list_elem *elem)
++{
++  assert (is_interior (before) || is_tail (before));
++  assert (elem != NULL);
++
++  elem->prev = before->prev;
++  elem->next = before;
++  before->prev->next = elem;
++  before->prev = elem;
++}
++
++/* Removes elements FIRST though LAST (exclusive) from their
++   current list, then inserts them just before BEFORE, which may
++   be either an interior element or a tail. */
++void
++list_splice (list_elem *before,
++             list_elem *first, list_elem *last)
++{
++  assert (is_interior (before) || is_tail (before));
++  if (first == last)
++    return;
++  last = list_prev (last);
++
++  assert (is_interior (first));
++  assert (is_interior (last));
++
++  /* Cleanly remove FIRST...LAST from its current list. */
++  first->prev->next = last->next;
++  last->next->prev = first->prev;
++
++  /* Splice FIRST...LAST into new list. */
++  first->prev = before->prev;
++  last->next = before;
++  before->prev->next = first;
++  before->prev = last;
++}
++
++/* Inserts ELEM at the beginning of LIST, so that it becomes the
++   front in LIST. */
++void
++list_push_front (struct list *list, list_elem *elem)
++{
++  list_insert (list_begin (list), elem);
++}
++
++/* Inserts ELEM at the end of LIST, so that it becomes the
++   back in LIST. */
++void
++list_push_back (struct list *list, list_elem *elem)
++{
++  list_insert (list_end (list), elem);
++}
++
++/* Removes ELEM from its list and returns the element that
++   followed it.  Undefined behavior if ELEM is not in a list.  */
++list_elem *
++list_remove (list_elem *elem)
++{
++  assert (is_interior (elem));
++  elem->prev->next = elem->next;
++  elem->next->prev = elem->prev;
++  return elem->next;
++}
++
++/* Removes the front element from LIST and returns it.
++   Undefined behavior if LIST is empty before removal. */
++list_elem *
++list_pop_front (struct list *list)
++{
++  list_elem *front = list_front (list);
++  list_remove (front);
++  return front;
++}
++
++/* Removes the back element from LIST and returns it.
++   Undefined behavior if LIST is empty before removal. */
++list_elem *
++list_pop_back (struct list *list)
++{
++  list_elem *back = list_back (list);
++  list_remove (back);
++  return back;
++}
++
++/* Returns the front element in LIST.
++   Undefined behavior if LIST is empty. */
++list_elem *
++list_front (struct list *list)
++{
++  assert (!list_empty (list));
++  return list->head.next;
++}
++
++/* Returns the back element in LIST.
++   Undefined behavior if LIST is empty. */
++list_elem *
++list_back (struct list *list)
++{
++  assert (!list_empty (list));
++  return list->tail.prev;
++}
++
++/* Returns the number of elements in LIST.
++   Runs in O(n) in the number of elements. */
++size_t
++list_size (struct list *list)
++{
++  list_elem *e;
++  size_t cnt = 0;
++
++  for (e = list_begin (list); e != list_end (list); e = list_next (e))
++    cnt++;
++  return cnt;
++}
++
++/* Returns true if LIST is empty, false otherwise. */
++bool
++list_empty (struct list *list)
++{
++  return list_begin (list) == list_end (list);
++}
++
++/* Swaps the `list_elem *'s that A and B point to. */
++static void
++swap (list_elem **a, list_elem **b) 
++{
++  list_elem *t = *a;
++  *a = *b;
++  *b = t;
++}
++
++/* Reverses the order of LIST. */
++void
++list_reverse (struct list *list)
++{
++  if (!list_empty (list)) 
++    {
++      list_elem *e;
++
++      for (e = list_begin (list); e != list_end (list); e = e->prev)
++        swap (&e->prev, &e->next);
++      swap (&list->head.next, &list->tail.prev);
++      swap (&list->head.next->prev, &list->tail.prev->next);
++    }
++}
++
++/* Merges lists AL and BL, which must each be sorted according to
++   LESS given auxiliary data AUX, by inserting each element of BL
++   at the proper place in AL to preserve the ordering.
++   Runs in O(n) in the combined length of AL and BL. */
++void
++list_merge (struct list *al, struct list *bl,
++            list_less_func *less, void *aux)
++{
++  list_elem *a;
++
++  assert (al != NULL);
++  assert (bl != NULL);
++  assert (less != NULL);
++
++  a = list_begin (al);
++  while (a != list_end (al))
++    {
++      list_elem *b = list_begin (bl);
++      if (less (b, a, aux))
++        {
++          list_splice (a, b, list_next (b));
++          if (list_empty (bl))
++            break;
++        }
++      else
++        a = list_next (a);
++    }
++  list_splice (list_end (al), list_begin (bl), list_end (bl));
++}
++
++/* Returns the middle element in LIST, that is, the N/2'th
++   element (rounding down) in a N-element list.
++   Given an empty list, returns the list tail. */
++static list_elem *
++middle_of_list (struct list *list) 
++{
++  list_elem *middle, *last;
++
++  middle = last = list_begin (list);
++  while (last != list_end (list) && list_next (last) != list_end (list))
++    {
++      middle = list_next (middle);
++      last = list_next (list_next (last));
++    }
++  return middle;
++}
++
++/* Sorts LIST according to LESS given auxiliary data AUX.
++   Runs in O(n lg n) time in the number of elements in LIST. */
++void
++list_sort (struct list *list,
++           list_less_func *less, void *aux)
++{
++  /* Find the middle of the list. */
++  list_elem *middle = middle_of_list (list);
++  if (middle != list_begin (list))
++    {
++      /* Extract first half of LIST into a temporary list. */
++      struct list tmp;
++      list_init (&tmp);
++      list_splice (list_begin (&tmp), list_begin (list), middle);
++
++      /* Sort each half-list and merge the result. */
++      list_sort (&tmp, less, aux);
++      list_sort (list, less, aux);
++      list_merge (list, &tmp, less, aux);
++    }
++  else 
++    {
++      /* The middle is at the beginning of the list.
++         This only happens in empty lists and 1-element lists.
++         Because such lists are already sorted, we have nothing
++         to do. */
++    }
++}
++
++/* Inserts ELEM in the proper position in LIST, which must be
++   sorted according to LESS given auxiliary data AUX.
++   Runs in O(n) average case in the number of elements in LIST. */
++void
++list_insert_ordered (struct list *list, list_elem *elem,
++                     list_less_func *less, void *aux)
++{
++  list_elem *e;
++
++  assert (list != NULL);
++  assert (elem != NULL);
++  assert (less != NULL);
++
++  for (e = list_begin (list); e != list_end (list); e = list_next (e))
++    if (less (elem, e, aux))
++      break;
++  return list_insert (e, elem);
++}
++
++/* Iterates through LIST and removes all but the first in each
++   set of adjacent elements that are equal according to LESS
++   given auxiliary data AUX.  If DUPLICATES is non-null, then the
++   elements from LIST are appended to DUPLICATES. */
++void
++list_unique (struct list *list, struct list *duplicates,
++             list_less_func *less, void *aux)
++{
++  list_elem *elem, *next;
++
++  assert (list != NULL);
++  assert (less != NULL);
++  if (list_empty (list))
++    return;
++
++  elem = list_begin (list);
++  while ((next = list_next (elem)) != list_end (list))
++    if (!less (elem, next, aux) && !less (next, elem, aux)) 
++      {
++        list_remove (next);
++        if (duplicates != NULL)
++          list_push_back (duplicates, next);
++      }
++    else
++      elem = next;
++}
++
++/* Returns the element in LIST with the largest value according
++   to LESS given auxiliary data AUX.  If there is more than one
++   maximum, returns the one that appears earlier in the list.  If
++   the list is empty, returns its tail. */
++list_elem *
++list_max (struct list *list, list_less_func *less, void *aux)
++{
++  list_elem *max = list_begin (list);
++  if (max != list_end (list)) 
++    {
++      list_elem *e;
++      
++      for (e = list_next (max); e != list_end (list); e = list_next (e))
++        if (less (max, e, aux))
++          max = e; 
++    }
++  return max;
++}
++
++/* Returns the element in LIST with the smallest value according
++   to LESS given auxiliary data AUX.  If there is more than one
++   minimum, returns the one that appears earlier in the list.  If
++   the list is empty, returns its tail. */
++list_elem *
++list_min (struct list *list, list_less_func *less, void *aux)
++{
++  list_elem *min = list_begin (list);
++  if (min != list_end (list)) 
++    {
++      list_elem *e;
++      
++      for (e = list_next (min); e != list_end (list); e = list_next (e))
++        if (less (e, min, aux))
++          min = e; 
++    }
++  return min;
++}
+diff -urpN bochs-2.1.1.orig/taint/list.cc.bak checkbochs-2.1.1/taint/list.cc.bak
+diff -urpN bochs-2.1.1.orig/taint/list.h checkbochs-2.1.1/taint/list.h
+--- bochs-2.1.1.orig/taint/list.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/list.h	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,171 @@
++#ifndef __LIB_KERNEL_LIST_H
++#define __LIB_KERNEL_LIST_H
++
++/* Doubly linked list.
++
++   This implementation of a doubly linked list does not require
++   use of dynamically allocated memory.  Instead, each structure
++   that is a potential list element must embed a list_elem
++   member.  All of the list functions operate on these
++   `list_elem's.  The list_entry macro allows conversion from a
++   list_elem back to a structure object that contains it.
++
++   For example, suppose there is a needed for a list of `struct
++   foo'.  `struct foo' should contain a `list_elem' member, like
++   so:
++
++      struct foo
++        {
++          list_elem elem;
++          int bar;
++          ...other members...
++        };
++
++   Then a list of `struct foo' can be be declared and initialized
++   like so:
++
++      struct list foo_list;
++
++      list_init (&foo_list);
++
++   Iteration is a typical situation where it is necessary to
++   convert from a list_elem back to its enclosing structure.
++   Here's an example using foo_list:
++
++      list_elem *e;
++
++      for (e = list_begin (&foo_list); e != list_end (&foo_list);
++           e = list_next (e))
++        {
++          struct foo *f = list_entry (e, struct foo, elem);
++          ...do something with f...
++        }
++
++   You can find real examples of list usage throughout the
++   source; for example, malloc.c, palloc.c, and thread.c in the
++   threads directory all use lists.
++
++   The interface for this list is inspired by the list<> template
++   in the C++ STL.  If you're familiar with list<>, you should
++   find this easy to use.  However, it should be emphasized that
++   these lists do *no* type checking and can't do much other
++   correctness checking.  If you screw up, it will bite you.
++
++   Glossary of list terms:
++
++     - "front": The first element in a list.  Undefined in an
++       empty list.  Returned by list_front().
++
++     - "back": The last element in a list.  Undefined in an empty
++       list.  Returned by list_back().
++
++     - "tail": The element figuratively just after the last
++       element of a list.  Well defined even in an empty list.
++       Returned by list_end().  Used as the end sentinel for an
++       iteration from front to back.
++
++     - "beginning": In a non-empty list, the front.  In an empty
++       list, the tail.  Returned by list_begin().  Used as the
++       starting point for an iteration from front to back.
++
++     - "head": The element figuratively just before the first
++       element of a list.  Well defined even in an empty list.
++       Returned by list_rend().  Used as the end sentinel for an
++       iteration from back to front.
++
++     - "reverse beginning": In a non-empty list, the back.  In an
++       empty list, the head.  Returned by list_rbegin().  Used as
++       the starting point for an iteration from back to front.
++
++     - "interior element": An element that is not the head or
++       tail, that is, a real list element.  An empty list does
++       not have any interior elements.
++*/
++
++#include <stdbool.h>
++#include <stddef.h>
++#include <inttypes.h>
++
++/* List element. */
++typedef struct list_elem 
++  {
++    struct list_elem *prev;     /* Previous list element. */
++    struct list_elem *next;     /* Next list element. */
++  }
++list_elem;
++
++/* List. */
++struct list 
++  {
++    list_elem head;             /* List head. */
++    list_elem tail;             /* List tail. */
++  };
++
++/* Converts pointer to list element LIST_ELEM into a pointer to
++   the structure that LIST_ELEM is embedded inside.  Supply the
++   name of the outer structure STRUCT and the member name MEMBER
++   of the list element.  See the big comment at the top of the
++   file for an example. */
++#define list_entry(LIST_ELEM, STRUCT, MEMBER)                              \
++        ((STRUCT *) ((uint8_t *) (LIST_ELEM) - offsetof (STRUCT, MEMBER)))
++
++void list_init (struct list *);
++
++/* List traversal. */
++list_elem *list_begin (struct list *);
++list_elem *list_next (list_elem *);
++list_elem *list_end (struct list *);
++
++list_elem *list_rbegin (struct list *);
++list_elem *list_prev (list_elem *);
++list_elem *list_rend (struct list *);
++
++list_elem *list_head (struct list *);
++list_elem *list_tail (struct list *);
++
++/* List insertion. */
++void list_insert (list_elem *, list_elem *);
++void list_splice (list_elem *before,
++                  list_elem *first, list_elem *last);
++void list_push_front (struct list *, list_elem *);
++void list_push_back (struct list *, list_elem *);
++
++/* List removal. */
++list_elem *list_remove (list_elem *);
++list_elem *list_pop_front (struct list *);
++list_elem *list_pop_back (struct list *);
++
++/* List elements. */
++list_elem *list_front (struct list *);
++list_elem *list_back (struct list *);
++
++/* List properties. */
++size_t list_size (struct list *);
++bool list_empty (struct list *);
++
++/* Miscellaneous. */
++void list_reverse (struct list *);
++
++/* Compares the value of two list elements A and B, given
++   auxiliary data AUX.  Returns true if A is less than B, or
++   false if A is greater than or equal to B. */
++typedef bool list_less_func (const list_elem *a, const list_elem *b,
++                             void *aux);
++
++/* Operations on lists with ordered elements. */
++void list_merge (struct list *, struct list *,
++                 list_less_func *, void *aux);
++void list_sort (struct list *,
++                list_less_func *, void *aux);
++void list_insert_ordered (struct list *, list_elem *,
++                          list_less_func *, void *aux);
++void list_unique (struct list *, struct list *duplicates,
++                  list_less_func *, void *aux);
++
++/* Max and min. */
++list_elem *list_max (struct list *, list_less_func *, void *aux);
++list_elem *list_min (struct list *, list_less_func *, void *aux);
++
++inline bool
++is_head (list_elem *elem);
++#endif /* lib/kernel/list.h */
+diff -urpN bochs-2.1.1.orig/taint/list.h.bak checkbochs-2.1.1/taint/list.h.bak
+diff -urpN bochs-2.1.1.orig/taint/lockset.cc checkbochs-2.1.1/taint/lockset.cc
+--- bochs-2.1.1.orig/taint/lockset.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/lockset.cc	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,635 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <assert.h>
++
++#define NEED_CPU_REG_SHORTCUTS 1
++#include "bochs.h"
++#define LOG_THIS BX_CPU_THIS_PTR
++#include "lockset.h"
++#include "hash.h"
++#include "eraser.h"
++#include "globals.h"
++#include "mydebug.h"
++
++
++#define MAX_LOCKSETS ((unsigned int)100000)
++#define HTABLE_SIZE ((unsigned int)4*MAX_LOCKSETS)   //overprovision for closed hashing
++
++typedef unsigned int hval_t;
++
++struct add_lock_entry {
++    locksetidx_t oldindex;
++    address_t newlock;
++    locksetidx_t newindex;
++    hash_elem h_elem;	/* Hash element */
++};
++
++struct remove_lock_entry {
++    locksetidx_t oldindex;
++    address_t oldlock;
++    locksetidx_t newindex;
++    hash_elem h_elem;	/* Hash element */
++};
++
++
++struct intersect_entry {
++    locksetidx_t index1, index2, newindex;
++    hash_elem h_elem;	/* Hash element */
++};
++
++unsigned add_lock_hash (const hash_elem *e, void *aux)
++{
++    struct add_lock_entry *h = hash_entry (e, struct add_lock_entry, h_elem);
++    return hash_int ((h->oldindex << 16) | (h->newlock&0x0000ffff) );
++}
++
++bool
++add_lock_less (const hash_elem *a_, const hash_elem *b_,
++			void *aux)
++{
++    struct add_lock_entry *a = hash_entry (a_, struct add_lock_entry, h_elem);
++    struct add_lock_entry *b = hash_entry (b_, struct add_lock_entry, h_elem);
++    return (a->oldindex < b->oldindex || (a->oldindex==b->oldindex && a->newlock < b->newlock));
++}
++
++unsigned remove_lock_hash (const hash_elem *e, void *aux)
++{
++    struct remove_lock_entry *h = hash_entry (e, struct remove_lock_entry, h_elem);
++    return hash_int ((h->oldindex << 16) | (h->oldlock&0x0000ffff));
++}
++
++bool
++remove_lock_less (const hash_elem *a_, const hash_elem *b_,
++			void *aux)
++{
++    struct remove_lock_entry *a = hash_entry (a_, struct remove_lock_entry, h_elem);
++    struct remove_lock_entry *b = hash_entry (b_, struct remove_lock_entry, h_elem);
++    return (a->oldindex < b->oldindex || (a->oldindex==b->oldindex && a->oldlock < b->oldlock));
++}
++
++unsigned intersect_hash (const hash_elem *e, void *aux)
++{
++    struct intersect_entry *h = hash_entry (e, struct intersect_entry, h_elem);
++    return hash_int ((h->index1 << 16) | (h->index2&0x0000ffff));
++}
++
++bool
++intersect_less (const hash_elem *a_, const hash_elem *b_,
++			void *aux)
++{
++    struct intersect_entry *a = hash_entry (a_, struct intersect_entry, h_elem);
++    struct intersect_entry *b = hash_entry (b_, struct intersect_entry, h_elem);
++    return (a->index1 < b->index1 || (a->index1==b->index1 && a->index2 < b->index2));
++}
++
++
++
++
++static int add_lock_cache_initialized = 0;
++static struct hash add_lock_cache;
++
++static int remove_lock_cache_initialized = 0;
++static struct hash remove_lock_cache;
++
++static int intersect_cache_initialized = 0;
++static struct hash intersect_cache;
++
++typedef struct lockvector {
++  address_t lockaddress;
++  struct lockvector *next;
++} lockvector_t;
++
++
++static locksetidx_t lockset_index = 1;
++static lockvector_t *index_table[MAX_LOCKSETS];
++static locksetidx_t hash_table[HTABLE_SIZE];
++
++static unsigned int cum_hash(unsigned int a, address_t b) {
++    return (3*a+b);
++}
++
++static unsigned int hashfn(lockvector_t *vec) {
++    lockvector_t *cur;
++    unsigned int ret=0;
++    assert(vec);
++    cur = vec;
++    while (cur) {
++        ret = cum_hash(ret,cur->lockaddress);
++	cur = cur->next;
++    }
++    return ret;
++}
++
++static void
++freevector(lockvector_t *lockvec) {
++    static lockvector_t *cur, *prev;
++    cur = lockvec;
++    while (cur) {
++        prev = cur;
++	cur = cur->next;
++	free(prev);
++    }
++}
++
++static lockvector_t *
++clonevector(lockvector_t *lockvec) {
++    static lockvector_t *cur, *newlockvec,*newprev;
++    if (!lockvec) return NULL;
++    assert(lockvec);
++    newlockvec = (lockvector_t*)malloc(sizeof(lockvector_t));
++    newlockvec->lockaddress = lockvec->lockaddress;
++    newprev = newlockvec;
++    cur = lockvec->next;
++    while (cur) {
++        newprev->next = (lockvector_t*)malloc(sizeof(lockvector_t));
++	newprev->next->lockaddress = cur->lockaddress;
++	cur = cur->next;
++	newprev = newprev->next;
++    }
++    newprev->next = NULL;
++    return newlockvec;
++}
++
++static lockvector_t *
++remove_from_lockvector(lockvector_t *lockvec, address_t oldlock) {
++    lockvector_t *ret, *cur, *newlockvec, *tmp;
++    assert(lockvec);
++
++    if (oldlock<lockvec->lockaddress) assert(0);
++    if (oldlock==lockvec->lockaddress) {
++	ret = clonevector(lockvec->next);
++	return ret;
++    }
++
++    cur = newlockvec = clonevector(lockvec);
++    while (cur->next && oldlock>cur->next->lockaddress) {
++        cur = cur->next;
++    }
++    assert(oldlock==cur->next->lockaddress);
++
++    tmp = cur->next;
++    cur->next = cur->next->next;
++    tmp->lockaddress = 0;
++    tmp->next = NULL;
++    free(tmp);
++    return newlockvec;
++}
++
++static lockvector_t *
++intersect_lockvectors(lockvector_t *lockvec1, lockvector_t *lockvec2) {
++    lockvector_t *cur1, *cur2, *out, *ret;
++    cur1 = lockvec1;
++    cur2 = lockvec2;
++    ret = out = NULL;
++    while (cur1 && cur2) {
++	if (cur1->lockaddress < cur2->lockaddress) {
++	    cur1 = cur1->next;
++	} else if (cur1->lockaddress > cur2->lockaddress) {
++	    cur2 = cur2->next;
++	} else {
++	    if (out) {
++	        out->next = (lockvector_t *)malloc(sizeof(lockvector_t));
++		out = out->next;
++	    } else {
++	        ret = out = (lockvector_t *)malloc(sizeof(lockvector_t));
++	    }
++	    out->lockaddress = cur1->lockaddress;
++	    out->next = NULL;
++	    cur1 = cur1->next;
++	    cur2 = cur2->next;
++	}
++    }
++    return ret;
++}
++
++
++
++
++static lockvector_t *
++add_to_lockvector(lockvector_t *lockvec, address_t newlock) {
++    lockvector_t *ret, *cur, *newlockvec;
++    if (lockvec==NULL) {
++	ret = (lockvector_t *)malloc(sizeof(lockvector_t));
++	ret->lockaddress = newlock;
++	ret->next = NULL;
++	return ret;
++    }
++    if (newlock<lockvec->lockaddress) {
++	ret = (lockvector_t *)malloc(sizeof(lockvector_t));
++	ret->lockaddress = newlock;
++	ret->next = clonevector(lockvec);
++	return ret;
++    }
++    if (newlock==lockvec->lockaddress) {
++	if (BX_CPU(0)) BX_CPU(0)->backtrace(btstr);
++        assert(0);
++	return clonevector(lockvec);
++    }
++    assert(newlock>lockvec->lockaddress);
++
++    cur = newlockvec = clonevector(lockvec);
++    while (cur->next && newlock>cur->next->lockaddress) {
++        cur = cur->next;
++    }
++
++    if (!cur->next) {
++	ret = (lockvector_t *)malloc(sizeof(lockvector_t));
++	ret->lockaddress = newlock;
++	cur->next = ret;
++	ret->next = NULL;
++	return newlockvec;
++    }
++
++    if (newlock==cur->next->lockaddress) {
++	BX_CPU(0)->backtrace(btstr);
++	assert(0); //acquiring the same lock twice
++        return newlockvec;
++    }
++
++    ret = (lockvector_t *)malloc(sizeof(lockvector_t));
++    ret->lockaddress = newlock;
++    ret->next = cur->next;
++    cur->next = ret;
++    return newlockvec;
++}
++
++void add_to_hashtable(lockvector_t *newlockset, locksetidx_t index) {
++    hval_t hval = (hashfn(newlockset))%HTABLE_SIZE;
++    int numtries = 0;
++    while (hash_table[hval]) {
++        hval = (hval+1)%HTABLE_SIZE; //closed hashing
++	//printf("hval=%d.\n",hval);
++	numtries++;
++    }
++    if (numtries>20) printf("%s: Warning: numtries too large for closed hashing (=%d).\n",__func__,numtries);
++    hash_table[hval] = index;
++}
++
++//returns true if they are equal
++static int
++compare_locksets(lockvector_t *vec1, lockvector_t *vec2) {
++    lockvector_t *cur1, *cur2;
++
++    assert(vec1);
++    assert(vec2);
++    
++    cur1 = vec1;
++    cur2 = vec2;
++    while (cur1 && cur2 && cur1->lockaddress==cur2->lockaddress) {
++	cur1 = cur1->next;
++	cur2 = cur2->next;
++    }
++
++    if (cur1) return 0;
++    if (cur2) return 0;
++    return 1;
++}
++
++
++static locksetidx_t
++find_in_add_cache(locksetidx_t index, address_t newlock) {
++    hval_t hval;
++    locksetidx_t new_index;
++    hash_elem *h_element = NULL;
++    struct add_lock_entry tmp;
++    tmp.oldindex = index; tmp.newlock = newlock;
++    if (add_lock_cache_initialized) h_element = hash_find(&add_lock_cache, &tmp.h_elem);
++    if (h_element) {
++        struct add_lock_entry *answer = hash_entry(h_element, struct add_lock_entry, h_elem);
++	//printf("%s: returning (%d, %x)->%d from cache.\n",__func__,index,newlock,answer->newindex);
++	return answer->newindex;
++    }
++    return 0;
++}
++
++
++static locksetidx_t
++find_in_remove_cache(locksetidx_t index, address_t oldlock) {
++    hval_t hval;
++    locksetidx_t new_index;
++    hash_elem *h_element = NULL;
++    struct remove_lock_entry tmp;
++    tmp.oldindex = index; tmp.oldlock = oldlock;
++    if (remove_lock_cache_initialized) h_element = hash_find(&remove_lock_cache, &tmp.h_elem);
++    if (h_element) {
++        struct remove_lock_entry *answer = hash_entry(h_element, struct remove_lock_entry, h_elem);
++	//printf("%s: returning (%d, %d)->%d from cache.\n",__func__,index,oldlock,answer->newindex);
++	return answer->newindex;
++    }
++
++    return 0;
++}
++
++static locksetidx_t
++find_in_intersect_cache(locksetidx_t index1, locksetidx_t index2) {
++    hval_t hval;
++    locksetidx_t new_index;
++    hash_elem *h_element = NULL;
++    struct intersect_entry tmp;
++    tmp.index1 = index1; tmp.index2 = index2;
++    if (intersect_cache_initialized) h_element = hash_find(&intersect_cache, &tmp.h_elem);
++    if (h_element) {
++        struct intersect_entry *answer = hash_entry(h_element, struct intersect_entry, h_elem);
++	//printf("%s: returning (%d, %x)->%d from cache.\n",__func__,index1,index2,answer->newindex);
++	return answer->newindex;
++    }
++    return 0;
++}
++
++
++void insert_in_remove_cache(locksetidx_t index, address_t lock, locksetidx_t new_index)
++{
++    struct remove_lock_entry *e;
++    if (!remove_lock_cache_initialized) {
++	hash_init(&remove_lock_cache, remove_lock_hash, remove_lock_less, NULL);
++	remove_lock_cache_initialized = 1;
++    }
++    e = (struct remove_lock_entry *)malloc(sizeof(struct remove_lock_entry));
++    e->oldindex = index; e->oldlock = lock; e->newindex = new_index;
++    hash_insert(&remove_lock_cache, &e->h_elem);
++}
++
++void
++insert_in_add_cache(locksetidx_t index, address_t lock, locksetidx_t new_index)
++{
++    struct add_lock_entry *e;
++    if (!add_lock_cache_initialized) {
++	hash_init(&add_lock_cache, add_lock_hash, add_lock_less, NULL);
++	add_lock_cache_initialized = 1;
++    }
++    e = (struct add_lock_entry *)malloc(sizeof(struct add_lock_entry));
++    e->oldindex = index; e->newlock = lock; e->newindex = new_index;
++    hash_insert(&add_lock_cache, &e->h_elem);
++}
++
++void
++insert_in_intersect_cache(locksetidx_t index1, locksetidx_t index2, locksetidx_t new_index)
++{
++    struct intersect_entry *e;
++    if (!intersect_cache_initialized) {
++	hash_init(&intersect_cache, intersect_hash, intersect_less, NULL);
++	intersect_cache_initialized = 1;
++    }
++    e = (struct intersect_entry *)malloc(sizeof(struct intersect_entry));
++    e->index1 = index1; e->index2 = index2; e->newindex = new_index;
++    hash_insert(&intersect_cache, &e->h_elem);
++}
++
++static locksetidx_t
++find_duplicate(lockvector_t *vec) {
++    hval_t hval;
++    locksetidx_t new_index;
++    hash_elem *h_element = NULL;
++
++    hval = (hashfn(vec))%HTABLE_SIZE;
++    new_index = hash_table[hval];
++
++    while (new_index) {
++        if (compare_locksets(vec,index_table[new_index])) {
++	  return new_index;
++	}
++	hval = (hval+1)%HTABLE_SIZE;
++	new_index = hash_table[hval];
++    }
++    return 0;
++}
++
++locksetidx_t add_lock(locksetidx_t index, address_t newlock) {
++    lockvector_t *newlockset;
++    locksetidx_t ret_index;
++    ret_index = find_in_add_cache(index,newlock);
++    if (ret_index) return ret_index;
++
++    if (lockset_index >= MAX_LOCKSETS) {
++	printf("%s: Number of locksets exceed %d. returning 0\n",__func__,MAX_LOCKSETS);
++        return 0;
++    }
++
++    if (!index) {	//adding a lock to an empty lockset
++        newlockset = (lockvector_t *)malloc(sizeof(lockvector_t));
++	newlockset->lockaddress = newlock;
++	newlockset->next = NULL;
++    } else {
++	newlockset = add_to_lockvector(index_table[index],newlock);
++    }
++    assert(newlockset);
++    ret_index = find_duplicate(newlockset);
++    if (ret_index) {
++        insert_in_add_cache(index,newlock,ret_index);
++        freevector(newlockset);
++	return ret_index;
++    }
++
++    index_table[lockset_index] = newlockset;
++    add_to_hashtable(newlockset,lockset_index);
++    ret_index = lockset_index;
++    lockset_index++;
++    return ret_index;
++}
++
++static int
++singleton_lockset(lockvector_t *vec) {
++    assert(vec);
++    if (vec->next==NULL) return 1;
++    return 0;
++}
++
++locksetidx_t remove_lock(locksetidx_t index, address_t oldlock) {
++    lockvector_t *newlockset;
++    locksetidx_t ret_index;
++    if (!index_table[index]) {
++	assert(oldlock==INTERRUPT_LOCK);
++	assert(index==0);
++	return 0;
++    }
++    if (singleton_lockset(index_table[index])) {
++        if (index_table[index]->lockaddress!=oldlock) {
++	    BX_CPU(0)->backtrace(btstr);
++	    printf("ERROR: index=%d, index_table[index]->lockaddress=%x, oldlock=%x.\n",index,index_table[index]->lockaddress,oldlock);
++	}
++        assert(index_table[index]->lockaddress==oldlock);
++	return 0;
++    }
++    ret_index = find_in_remove_cache(index,oldlock);
++    if (ret_index) return ret_index;
++
++    if (lockset_index >= MAX_LOCKSETS) {
++	printf("%s: Number of locksets exceed %d. returning 0\n",__func__,MAX_LOCKSETS);
++        return 0;
++    }
++
++    assert(index);	//you cannot remove from an empty lockset
++    newlockset = remove_from_lockvector(index_table[index],oldlock);
++    assert(newlockset);
++
++    ret_index = find_duplicate(newlockset);
++    if (ret_index) {
++        insert_in_remove_cache(index,oldlock,ret_index);
++        freevector(newlockset);
++	return ret_index;
++    }
++
++    index_table[lockset_index] = newlockset;
++    add_to_hashtable(newlockset,lockset_index);
++    ret_index = lockset_index;
++    lockset_index++;
++    return ret_index;
++}
++
++locksetidx_t intersect_locksets(locksetidx_t index1, locksetidx_t index2) {
++    lockvector_t *newlockset;
++    locksetidx_t ret_index;
++
++    if (index1==0) return 0;
++    if (index2==0) return 0;
++    
++    ret_index = find_in_intersect_cache(index1,index2);
++    if (ret_index) return ret_index;
++
++    if (lockset_index >= MAX_LOCKSETS) {
++	printf("%s: Number of locksets exceed %d. returning 0\n",__func__,MAX_LOCKSETS);
++        return 0;
++    }
++    assert(index1);
++    assert(index2);
++
++    newlockset = intersect_lockvectors(index_table[index1],index_table[index2]);
++    if (!newlockset) return 0;		//empty lockset
++    ret_index = find_duplicate(newlockset);
++    if (ret_index) {
++        insert_in_intersect_cache(index1,index2,ret_index);
++        freevector(newlockset);
++	return ret_index;
++    }
++
++    index_table[lockset_index] = newlockset;
++    add_to_hashtable(newlockset,lockset_index);
++    ret_index = lockset_index;
++    lockset_index++;
++    return ret_index;
++}
++
++typedef struct locks_held {
++    unsigned threadId;
++    locksetidx_t locks_held;
++    int ignore;	//whether this thread should be ignored. =0 if not. otherwise stores ignore depth
++    hash_elem h_elem;	/* Hash element */
++} locks_held_t ;
++
++static int locks_held_table_initialized = 0;
++static struct hash locks_held_table ;
++
++unsigned locks_held_hash (const hash_elem *e, void *aux)
++{
++    locks_held_t *h = hash_entry (e, struct locks_held, h_elem);
++    return hash_int (h->threadId);
++}
++
++bool
++locks_held_less (const hash_elem *a_, const hash_elem *b_,
++			void *aux)
++{
++    locks_held_t *a = hash_entry (a_, struct locks_held, h_elem);
++    locks_held_t *b = hash_entry (b_, struct locks_held, h_elem);
++    return (a->threadId < b->threadId);
++}
++
++
++locksetidx_t
++cur_held(unsigned threadId) {
++    hash_elem *h_element;
++    locks_held_t tmp;
++    if (!locks_held_table_initialized) return 0;
++    tmp.threadId = threadId;
++    h_element = hash_find(&locks_held_table, &tmp.h_elem);
++    if (h_element) {
++        locks_held_t *answer = hash_entry(h_element, struct locks_held, h_elem);
++	assert(answer->locks_held<lockset_index);
++	return answer->locks_held;
++    }
++    return 0;
++}
++
++void update_lockset(unsigned threadId, locksetidx_t lset) {
++    locks_held_t *e;
++    hash_elem *h_element;
++    locks_held_t tmp;
++    assert(lset<lockset_index);
++    if (!locks_held_table_initialized) {
++	hash_init(&locks_held_table, locks_held_hash, locks_held_less, NULL);
++	locks_held_table_initialized = 1;
++    }
++    tmp.threadId = threadId;
++    h_element = hash_find(&locks_held_table, &tmp.h_elem);
++    if (!h_element) {
++	e = (struct locks_held *)malloc(sizeof(struct locks_held));
++	e->threadId = threadId; e->locks_held = lset; e->ignore = 0;
++	hash_insert(&locks_held_table, &e->h_elem);
++    } else {
++	e = hash_entry(h_element, struct locks_held, h_elem);
++	assert(e->threadId==threadId);
++	e->locks_held = lset;
++    }
++}
++
++
++static bool
++find_in_lockvector(lockvector_t *lockvec, address_t lock) {
++    lockvector_t *cur;
++    assert(lockvec!=NULL);
++    if (lock<lockvec->lockaddress) return false;
++    if (lock==lockvec->lockaddress) return true;
++    cur = lockvec;
++    while (cur->next && lock>cur->next->lockaddress) {
++        cur = cur->next;
++    }
++    if (!cur->next) return false;
++    if (cur->next->lockaddress==lock) return true;
++    return false;
++}
++
++bool belongs(locksetidx_t index, address_t lock) {
++    if (!index) return false;
++    return (find_in_lockvector(index_table[index],lock));
++}
++
++void set_ignore(unsigned threadId, bool val) {
++    locks_held_t *e;
++    hash_elem *h_element;
++    locks_held_t tmp;
++    if (!locks_held_table_initialized) {
++	hash_init(&locks_held_table, locks_held_hash, locks_held_less, NULL);
++	locks_held_table_initialized = 1;
++    }
++    tmp.threadId = threadId;
++    h_element = hash_find(&locks_held_table, &tmp.h_elem);
++    if (!h_element) {
++	e = (struct locks_held *)malloc(sizeof(struct locks_held));
++	e->threadId = threadId; e->locks_held = LOCKSET_EMPTY; e->ignore=0;
++	if (val) e->ignore++; else if (e->ignore) e->ignore--;
++	assert(e->ignore>=0);
++	hash_insert(&locks_held_table, &e->h_elem);
++    } else {
++	e = hash_entry(h_element, struct locks_held, h_elem);
++	assert(e->threadId==threadId);
++	if (val) e->ignore++; else if (e->ignore) e->ignore--;
++	assert(e->ignore>=0);
++    }
++    DBG(L1,("ignore value for thread %x = %d.\n",threadId,e->ignore));
++}
++
++bool
++ignore_on(unsigned threadId) {
++    hash_elem *h_element;
++    locks_held_t tmp;
++    if (global_startup_ignore) return true;
++    if (!locks_held_table_initialized) return 0;
++    tmp.threadId = threadId;
++    h_element = hash_find(&locks_held_table, &tmp.h_elem);
++    if (h_element) {
++        locks_held_t *answer = hash_entry(h_element, struct locks_held, h_elem);
++	assert(answer->ignore>=0);
++	return answer->ignore > 0;
++    }
++    return false;
++}
+diff -urpN bochs-2.1.1.orig/taint/lockset.cc.bak checkbochs-2.1.1/taint/lockset.cc.bak
+diff -urpN bochs-2.1.1.orig/taint/lockset.h checkbochs-2.1.1/taint/lockset.h
+--- bochs-2.1.1.orig/taint/lockset.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/lockset.h	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,32 @@
++#ifndef __LOCKSET_H
++#define __LOCKSET_H
++
++#define LOCKSET_EMPTY 0
++
++#define VIRGIN 0x0
++#define EXCLUSIVE	0x40000000
++#define SHARED		0x80000000
++#define SHARED_MOD	0xc0000000
++
++#define get_state(x) (x&0xc0000000)
++#define set_state(x,s) ((x&0x3fffffff)|s)
++
++#define get_value(x) (x&0x3fffffff)
++#define set_value(x,v) ((x&0xc0000000)|(v&0x3fffffff))
++
++typedef unsigned int address_t;
++typedef unsigned long locksetidx_t;
++typedef locksetidx_t lockset_t;
++
++locksetidx_t add_lock(locksetidx_t index, address_t newlock);
++locksetidx_t remove_lock(locksetidx_t index, address_t newlock);
++locksetidx_t intersect_locksets(locksetidx_t index1, locksetidx_t index2);
++bool belongs(locksetidx_t index, address_t lock);
++
++locksetidx_t cur_held(unsigned threadId);
++void update_lockset(unsigned threadId, locksetidx_t lockset);
++
++void set_ignore(unsigned threadId, bool val);
++bool ignore_on(unsigned threadId);
++
++#endif
+diff -urpN bochs-2.1.1.orig/taint/lockset.h.bak checkbochs-2.1.1/taint/lockset.h.bak
+diff -urpN bochs-2.1.1.orig/taint/main.c checkbochs-2.1.1/taint/main.c
+--- bochs-2.1.1.orig/taint/main.c	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/main.c	2005-06-16 18:14:07.000000000 -0700
+@@ -0,0 +1,32 @@
++#include "lockset.h"
++
++int main() {
++    int i1, i2, i3, i12, i21, i31, i32, i123, i312, i321, i312_2, i321m2, i312m2;
++    int i312i123, i312i21, i312i1, i32i1;
++
++    i1 = add_lock(0,1);
++    i2 = add_lock(0,2);
++    i3 = add_lock(0,3);
++    i12 = add_lock(i1,2);
++    i21 = add_lock(i2,1);
++    i21 = add_lock(i2,1);
++    i31 = add_lock(i3,1);
++    i32 = add_lock(i3,2);
++    i123 = add_lock(i12,3);
++    i312 = add_lock(i31,2);
++    i321 = add_lock(i32,1);
++    i321m2 = remove_lock(i321,2);
++    i312m2 = remove_lock(i312,2);
++    i312i123 = intersect_locksets(i312,i321);
++    i312i123 = intersect_locksets(i312,i321);
++    i312i123 = intersect_locksets(i312,i321);
++    i312i21 = intersect_locksets(i312,i21);
++    i312i1 = intersect_locksets(i312,i1);
++    i312i1 = intersect_locksets(i312,i1);
++    i312i1 = intersect_locksets(i312,i1);
++    i32i1 = intersect_locksets(i32,i1);
++    i32i1 = intersect_locksets(i32,i1);
++
++    printf("i12 = %d, i21 = %d, i123=%d, i312=%d, i321=%d, i321m2=%d, i312m2=%d.\n",i12,i21,i123,i312,i321,i321m2,i312m2);
++    printf("i312i123 = %d, i312i21 = %d, i312i1=%d, i32i1=%d.\n",i312i123,i312i21,i312i1,i32i1);
++}
+diff -urpN bochs-2.1.1.orig/taint/memory.cc checkbochs-2.1.1/taint/memory.cc
+--- bochs-2.1.1.orig/taint/memory.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/memory.cc	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,360 @@
++
++#include "bochs.h"
++#define LOG_THIS BX_MEM_THIS
++
++
++  void BX_CPP_AttrRegparmN(3)
++BX_MEM_C::readPhysicalTaintPage(BX_CPU_C *cpu, Bit32u addr, unsigned len, void *data)
++{
++  Bit32u *data_ptr;
++  Bit32u a20addr;
++
++  a20addr = A20ADDR(addr);
++  assert(len==1);
++  *(Bit32u *)data = 0x0;	//initialize, so that if we are unable to read mem, we return 0
++
++  if ( (a20addr + len) <= BX_MEM_THIS len ) {
++    // all of data is within limits of physical memory
++    if ( (a20addr & 0xfff80000) != 0x00080000 ) {
++      if (len == 4) {
++#ifdef __i386__
++        *(Bit32u *)data = taint_vector[a20addr];
++        *((Bit32u *)data+1) = taint_vector[a20addr+1];
++        *((Bit32u *)data+2) = taint_vector[a20addr+2];
++        *((Bit32u *)data+3) = taint_vector[a20addr+3];
++#else
++	printf("Not yet supported for big endian host platforms.\n");
++	assert(0);
++#endif
++        return;
++        }
++      if (len == 2) {
++#ifdef __i386__
++        *(Bit32u *)data = taint_vector[a20addr];
++        *((Bit32u *)data+1) = taint_vector[a20addr+1];
++#else
++	printf("Not yet supported for big endian host platforms.\n");
++	assert(0);
++#endif
++	/*
++	if (*(Bit16u *)data && g_instruction_display_count>0) {
++		printf("%s %d: tainted dword read from addr %x. data=%x.\n",__func__,__LINE__,addr,*(Bit16u*)data);
++		g_instruction_display_count = 512;
++	}
++	*/
++        return;
++        }
++      if (len == 1) {
++#ifdef __i386__
++        *(Bit32u *)data = taint_vector[a20addr];
++#else
++	printf("Not yet supported for big endian host platforms.\n");
++	assert(0);
++#endif
++        return;
++        }
++      // len == 3 case can just fall thru to special cases handling
++      }
++
++
++#ifdef BX_LITTLE_ENDIAN
++    data_ptr = (Bit32u *) data;
++#else // BX_BIG_ENDIAN
++    data_ptr = (Bit32u *) data + (len - 1);
++#endif
++
++
++
++read_one:
++    if ( (a20addr & 0xfff80000) != 0x00080000 ) {
++      // addr *not* in range 00080000 .. 000FFFFF
++      *data_ptr = taint_vector[a20addr];
++inc_one:
++      if (len == 1) return;
++      len--;
++      a20addr++;
++#ifdef BX_LITTLE_ENDIAN
++      data_ptr++;
++#else // BX_BIG_ENDIAN
++      data_ptr--;
++#endif
++      goto read_one;
++      }
++
++    // addr in range 00080000 .. 000FFFFF
++#if BX_PCI_SUPPORT == 0
++    if ((a20addr <= 0x0009ffff) || (a20addr >= 0x000c0000) ) {
++      // regular memory 80000 .. 9FFFF, C0000 .. F0000
++      *data_ptr = taint_vector[a20addr];
++      goto inc_one;
++      }
++    return; //assert(0);
++    // VGA memory A0000 .. BFFFF
++    //*data_ptr = DEV_vga_mem_read(a20addr);
++    //BX_DBG_UCMEM_REPORT(a20addr, 1, BX_READ, *data_ptr); // obsolete
++    //goto inc_one;
++#else   // #if BX_PCI_SUPPORT == 0
++    if (a20addr <= 0x0009ffff) {
++      *data_ptr = taint_vector[a20addr];
++      goto inc_one;
++      }
++    if (a20addr <= 0x000BFFFF) {
++      assert(0);
++      // VGA memory A0000 .. BFFFF
++      //*data_ptr = DEV_vga_mem_read(a20addr);
++      //BX_DBG_UCMEM_REPORT(a20addr, 1, BX_READ, *data_ptr);
++      //goto inc_one;
++      }
++
++    // a20addr in C0000 .. FFFFF
++    if (!bx_options.Oi440FXSupport->get ()) {
++      *data_ptr = taint_vector[a20addr];
++      goto inc_one;
++    }
++    else assert(0);
++    goto inc_one;
++#endif  // #if BX_PCI_SUPPORT == 0
++    }
++  else {
++    // some or all of data is outside limits of physical memory
++    unsigned i;
++
++#ifdef BX_LITTLE_ENDIAN
++    data_ptr = (Bit32u *) data;
++#else // BX_BIG_ENDIAN
++    data_ptr = (Bit32u *) data + (len - 1);
++#endif
++
++#if BX_SUPPORT_VBE
++    // Check VBE LFB support
++    if ((a20addr >= VBE_DISPI_LFB_PHYSICAL_ADDRESS) &&
++        (a20addr <  (VBE_DISPI_LFB_PHYSICAL_ADDRESS +  VBE_DISPI_TOTAL_VIDEO_MEMORY_BYTES)))
++    {
++      assert(0);
++      return;
++    }
++#endif
++
++#if BX_SUPPORT_APIC
++    //assert(0);
++    return;
++#endif
++    for (i = 0; i < len; i++) {
++#if BX_PCI_SUPPORT == 0
++      if (a20addr < BX_MEM_THIS len)
++        *data_ptr = taint_vector[a20addr];
++      else
++        *data_ptr = 0xffffffff;
++#else   // BX_PCI_SUPPORT == 0
++      if (a20addr < BX_MEM_THIS len) {
++        if ((a20addr >= 0x000C0000) && (a20addr <= 0x000FFFFF)) {
++          if (!bx_options.Oi440FXSupport->get ())
++            *data_ptr = taint_vector[a20addr];
++          else {
++            switch (DEV_pci_rd_memtype(a20addr & 0xFC000)) {
++              case 0x0:   // Read from ROM
++                *data_ptr = taint_vector[a20addr];
++                //BX_INFO(("Reading from ROM %08x, Data %02x ", (unsigned) a20addr, *data_ptr));
++                break;
++
++              case 0x1:   // Read from Shadow RAM
++		assert(0);
++                break;
++              default:
++                BX_PANIC(("readPhysicalPage: default case"));
++              } // Switch
++            }
++          }
++        else {
++          *data_ptr = taint_vector[a20addr];
++          BX_INFO(("Reading from Norm %08x, Data %02x  ", (unsigned) a20addr, *data_ptr));
++          }
++        }
++      else 
++        *data_ptr = 0xffffffff;
++#endif  // BX_PCI_SUPPORT == 0
++      addr++;
++      a20addr = (addr);
++#ifdef BX_LITTLE_ENDIAN
++      data_ptr++;
++#else // BX_BIG_ENDIAN
++      data_ptr--;
++#endif
++      }
++    return;
++    }
++}
++
++  void BX_CPP_AttrRegparmN(3)
++BX_MEM_C::writePhysicalTaintPage(BX_CPU_C *cpu, Bit32u addr, unsigned len, void *data)
++{
++  Bit32u *data_ptr;
++  Bit32u a20addr;
++
++  assert(len==1);
++
++  a20addr = A20ADDR(addr);
++
++  // Note: accesses should always be contained within a single page now.
++
++  //if (*(Bit8u *)data!=0xff && *(Bit8u *)data!=0) assert(0);
++  //if (*(Bit8u *)data==0xff) assert(0);
++
++  if ( a20addr <= BX_MEM_THIS len ) {
++
++    //LOG_MEM_TAINT(cpu,addr,len,&taint_vector[a20addr],data,true);
++
++    // all of data is within limits of physical memory
++    if ( (a20addr & 0xfff80000) != 0x00080000 ) {
++      if (len == 4) {
++#ifdef __i386__
++        taint_vector[a20addr]  = *(Bit32u*)data;
++        taint_vector[a20addr+1]  = *((Bit32u*)data+1);
++        taint_vector[a20addr+2]  = *((Bit32u*)data+2);
++        taint_vector[a20addr+3]  = *((Bit32u*)data+3);
++#else
++	printf("Not yet supported for big endian host platforms.\n");
++	assert(0);
++#endif
++        return;
++        }
++      if (len == 2) {
++#ifdef __i386__
++        taint_vector[a20addr]  = *(Bit32u*)data;
++        taint_vector[a20addr+1]  = *((Bit32u*)data+1);
++#else
++	printf("Not yet supported for big endian host platforms.\n");
++	assert(0);
++#endif
++        return;
++        }
++      if (len == 1) {
++#ifdef __i386__
++        taint_vector[a20addr]  = *(Bit32u*)data;
++#else
++	printf("Not yet supported for big endian host platforms.\n");
++	assert(0);
++#endif
++        return;
++        }
++      // len == other, just fall thru to special cases handling
++      }
++
++#ifdef BX_LITTLE_ENDIAN
++  data_ptr = (Bit32u *) data;
++#else // BX_BIG_ENDIAN
++  data_ptr = (Bit32u *) data + (len - 1);
++#endif
++
++write_one:
++    if ( (a20addr & 0xfff80000) != 0x00080000 ) {
++      // addr *not* in range 00080000 .. 000FFFFF
++      taint_vector[a20addr] = *data_ptr;
++inc_one:
++      if (len == 1) return;
++      len--;
++      a20addr++;
++#ifdef BX_LITTLE_ENDIAN
++      data_ptr++;
++#else // BX_BIG_ENDIAN
++      data_ptr--;
++#endif
++      goto write_one;
++      }
++
++    // addr in range 00080000 .. 000FFFFF
++
++    if (a20addr <= 0x0009ffff) {
++      // regular memory 80000 .. 9FFFF
++      taint_vector[a20addr] = *data_ptr;
++      goto inc_one;
++      }
++    if (a20addr <= 0x000bffff) {
++      // VGA memory A0000 .. BFFFF
++      return; //assert(0);
++      //DEV_vga_mem_write(a20addr, *data_ptr);
++      //BX_DBG_DIRTY_PAGE(a20addr >> 12);
++      //BX_DBG_UCMEM_REPORT(a20addr, 1, BX_WRITE, *data_ptr); // obsolete
++      goto inc_one;
++      }
++    // adapter ROM     C0000 .. DFFFF
++    // ROM BIOS memory E0000 .. FFFFF
++    // (ignore write)
++    //BX_INFO(("ROM lock %08x: len=%u",
++    //  (unsigned) a20addr, (unsigned) len));
++#if BX_PCI_SUPPORT == 0
++#if BX_SHADOW_RAM
++    // Write it since its in shadow RAM
++    taint_vector[a20addr] = *data_ptr;
++#else
++    // ignore write to ROM
++#endif
++#else
++    // Write Based on 440fx Programming
++    if (bx_options.Oi440FXSupport->get () &&
++        ((a20addr >= 0xC0000) && (a20addr <= 0xFFFFF))) {
++      switch (DEV_pci_wr_memtype(a20addr & 0xFC000)) {
++        case 0x1:   // Writes to ShadowRAM
++	  assert(0);
++//        BX_INFO(("Writing to ShadowRAM %08x, len %u ! ", (unsigned) a20addr, (unsigned) len));
++          shadow[a20addr - 0xc0000] = *data_ptr;
++          BX_DBG_DIRTY_PAGE(a20addr >> 12);
++          goto inc_one;
++
++        case 0x0:   // Writes to ROM, Inhibit
++	  assert(0);
++          //BX_DEBUG(("Write to ROM ignored: address %08x, data %02x", (unsigned) a20addr, *data_ptr));
++          goto inc_one;
++        default:
++          BX_PANIC(("writePhysicalPage: default case"));
++          goto inc_one;
++        }
++      }
++#endif
++    goto inc_one;
++    }
++
++  else {
++    // some or all of data is outside limits of physical memory
++    unsigned i;
++
++#ifdef BX_LITTLE_ENDIAN
++  data_ptr = (Bit32u *) data;
++#else // BX_BIG_ENDIAN
++  data_ptr = (Bit32u *) data + (len - 1);
++#endif
++
++
++#if BX_SUPPORT_VBE
++    // Check VBE LFB support
++    
++    if ((a20addr >= VBE_DISPI_LFB_PHYSICAL_ADDRESS) &&
++        (a20addr <  (VBE_DISPI_LFB_PHYSICAL_ADDRESS +  VBE_DISPI_TOTAL_VIDEO_MEMORY_BYTES)))
++    {
++      assert(0);
++      return;
++    }
++    
++#endif    
++ 
++
++#if BX_SUPPORT_APIC
++    //assert(0);
++    return;
++#endif
++    for (i = 0; i < len; i++) {
++      if (a20addr < BX_MEM_THIS len) {
++        taint_vector[a20addr] = *data_ptr;
++        }
++      // otherwise ignore byte, since it overruns memory
++      addr++;
++      a20addr = (addr);
++#ifdef BX_LITTLE_ENDIAN
++      data_ptr++;
++#else // BX_BIG_ENDIAN
++      data_ptr--;
++#endif
++      }
++    return;
++    }
++}
+diff -urpN bochs-2.1.1.orig/taint/memory.cc.bak checkbochs-2.1.1/taint/memory.cc.bak
+diff -urpN bochs-2.1.1.orig/taint/mydebug.h checkbochs-2.1.1/taint/mydebug.h
+--- bochs-2.1.1.orig/taint/mydebug.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/mydebug.h	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,28 @@
++#ifndef __MYDEBUG_H
++#define __MYDEBUG_H
++
++#define ACCESS_LINEAR 0
++#define L1 0
++#define LOCKS 0
++#define CHECKBOCHS 1
++#define WRN 1
++#define ERR 1
++
++void checkbochs_log (const char *fmt, ...) ;
++
++#define DBG(l,x) if (l) {						\
++	checkbochs_log x;							\
++	/*bx_dbg_disassemble_current(-1,0);*/				\
++}
++
++#define PANIC(...) do {				\
++	printf("PANIC at %s:%d in %s(): ",__FILE__,__LINE__,__func__);   \
++	BX_CPU(0)->panic(__VA_ARGS__);		\
++} while(0)
++
++#define ASSERT(CONDITION)					\
++	if (CONDITION) { } else {				\
++		PANIC ("assertion `%s' failed.", #CONDITION);	\
++	}
++
++#endif
+diff -urpN bochs-2.1.1.orig/taint/mydebug.h.bak checkbochs-2.1.1/taint/mydebug.h.bak
+diff -urpN bochs-2.1.1.orig/taint/paging.cc checkbochs-2.1.1/taint/paging.cc
+--- bochs-2.1.1.orig/taint/paging.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/paging.cc	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,241 @@
++#define NEED_CPU_REG_SHORTCUTS 1
++#include "bochs.h"
++#define LOG_THIS BX_CPU_THIS_PTR
++
++#include "taint/globals.h"
++#include "taint/mydebug.h"
++#include "taint/lockset.h"
++
++#if BX_USE_CPU_SMF
++#define this (BX_CPU(0))
++#endif
++
++
++#if BX_SUPPORT_PAGING
++
++#define InstrTLB_Stats()
++#define InstrTLB_Increment(v)
++
++// ==============================================================
++
++
++// Translate a linear address to a physical address, for
++// a data access (D)
++
++  Bit32s BX_CPP_AttrRegparmN(3)
++BX_CPU_C::taint_dtranslate_linear(bx_address laddr, unsigned pl, unsigned rw)
++{
++  bx_address   lpf;
++  Bit32u   ppf, poffset, TLB_index, error_code, paddress;
++  Bit32u   pde, pde_addr;
++  bx_bool  isWrite;
++  Bit32u   accessBits, combined_access;
++  unsigned priv_index;
++
++  // CR4.PAE==0 (and MSR.LMA==0)
++
++  lpf       = laddr & 0xfffff000; // linear page frame
++  poffset   = laddr & 0x00000fff; // physical offset
++  TLB_index = BX_TLB_INDEX_OF(lpf);
++
++
++  //isWrite = (rw>=BX_WRITE); // write or r-m-w
++  isWrite = 0; // sorav: allow write accesses even if you have only read permissions on the address
++
++  if (BX_CPU_THIS_PTR TLB.entry[TLB_index].lpf == BX_TLB_LPF_VALUE(lpf)) {
++    paddress   = BX_CPU_THIS_PTR TLB.entry[TLB_index].ppf | poffset;
++    accessBits = BX_CPU_THIS_PTR TLB.entry[TLB_index].accessBits;
++    if (accessBits & (1 << ((isWrite<<1) | pl)) ) {
++      return(paddress);
++      }
++
++    // The current access does not have permission according to the info
++    // in our TLB cache entry.  Re-walk the page tables, in case there is
++    // updated information in the memory image, and let the long path code
++    // generate an exception if one is warranted.
++    }
++
++  return(-1); //return -1 for failure
++}
++
++
++// Translate a linear address to a physical address, for
++// an instruction fetch access (I)
++
++  Bit32u BX_CPP_AttrRegparmN(2)
++BX_CPU_C::taint_itranslate_linear(bx_address laddr, unsigned pl)
++{
++  //assign_type(type8,generic_type_executed_code8);
++
++  ////Bit32u pAddr = dtranslate_linear_type(laddr, pl, BX_READ);
++  //printf("Assigning a codebyte.\n");
++  //access_linear_type(laddr,1,pl,BX_WRITE,type8);
++  //typestats_t stats;
++  //stats.print(BX_CPU_THIS_PTR mem->type_vector,BX_CPU_THIS_PTR mem->len);
++  exit(0);
++}
++
++
++  int BX_CPP_AttrRegparmN(3)
++BX_CPU_C::access_linear_taint(bx_address laddr, unsigned length, unsigned pl,
++    unsigned rw, void *taint_value)
++{
++  Bit32u pageOffset;
++  unsigned xlate_rw;
++  int try_access;
++
++  assert(length==1);
++  ASSERT(rw==BX_READ || get_value(*(Bit32u*)taint_value)<2 || get_state(*(Bit32u*)taint_value));
++  if (rw==BX_RW) {
++    xlate_rw = BX_RW;
++    rw = BX_READ;
++  }
++  else {
++    xlate_rw = rw;
++  }
++
++  pageOffset = laddr & 0x00000fff;
++
++  if (BX_CPU_THIS_PTR cr0.pg) {
++    /* check for reference across multiple pages */
++    if ( (pageOffset + length) <= 4096 ) {
++      // Access within single page.
++      try_access = taint_dtranslate_linear(laddr, pl, xlate_rw);
++      if (try_access==-1) return 0;
++      BX_CPU_THIS_PTR address_xlation.taint_paddress1 = try_access;
++      BX_CPU_THIS_PTR address_xlation.taint_pages     = 1;
++
++      if (rw == BX_READ) {
++        BX_INSTR_LIN_READ(BX_CPU_ID, laddr, BX_CPU_THIS_PTR address_xlation.taint_paddress1, length);
++        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1, length, taint_value);
++        }
++      else {
++        BX_INSTR_LIN_WRITE(BX_CPU_ID, laddr, BX_CPU_THIS_PTR address_xlation.taint_paddress1, length);
++        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1, length, taint_value);
++        }
++      //if (rw==BX_WRITE) BX_CPU_THIS_PTR address_xlation.taint_write_paddress1 = BX_CPU_THIS_PTR address_xlation.taint_paddress1;
++      }
++    else {
++      try_access = taint_dtranslate_linear(laddr, pl, xlate_rw);
++      if (try_access==-1) return 0;
++      // access across 2 pages
++      BX_CPU_THIS_PTR address_xlation.taint_paddress1 = try_access;
++      BX_CPU_THIS_PTR address_xlation.taint_len1 = 4096 - pageOffset;
++      BX_CPU_THIS_PTR address_xlation.taint_len2 = length -
++          BX_CPU_THIS_PTR address_xlation.taint_len1;
++      BX_CPU_THIS_PTR address_xlation.taint_pages     = 2;
++      try_access = taint_dtranslate_linear(laddr + BX_CPU_THIS_PTR address_xlation.taint_len1, pl, xlate_rw);
++      if (try_access==-1) return 0;
++      BX_CPU_THIS_PTR address_xlation.taint_paddress2 = try_access;
++
++#ifdef BX_LITTLE_ENDIAN
++      if (rw == BX_READ) {
++        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++                             BX_CPU_THIS_PTR address_xlation.taint_len1, taint_value);
++        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++                             BX_CPU_THIS_PTR address_xlation.taint_len2,
++                             ((Bit32u*)taint_value) + BX_CPU_THIS_PTR address_xlation.taint_len1);
++        }
++      else {
++        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++                              BX_CPU_THIS_PTR address_xlation.taint_len1, taint_value);
++        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++                              BX_CPU_THIS_PTR address_xlation.taint_len2,
++                              ((Bit32u*)taint_value) + BX_CPU_THIS_PTR address_xlation.taint_len1);
++        }
++
++#else // BX_BIG_ENDIAN
++      if (rw == BX_READ) {
++        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++                             BX_CPU_THIS_PTR address_xlation.taint_len1,
++                             ((Bit32u*)taint_value) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
++        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++                             BX_CPU_THIS_PTR address_xlation.taint_len2, taint_value);
++        }
++      else {
++        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++                              BX_CPU_THIS_PTR address_xlation.taint_len1,
++                              ((Bit32u*)taint_value) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
++        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++                              BX_CPU_THIS_PTR address_xlation.taint_len2, taint_value);
++        }
++#endif
++
++      //if (rw==BX_WRITE) BX_CPU_THIS_PTR address_xlation.taint_write_paddress1 = BX_CPU_THIS_PTR address_xlation.taint_paddress1;
++      }
++    }
++
++  else {
++    // Paging off.
++    if ( (pageOffset + length) <= 4096 ) {
++      // Access within single page.
++      BX_CPU_THIS_PTR address_xlation.taint_paddress1 = laddr;
++      BX_CPU_THIS_PTR address_xlation.taint_pages     = 1;
++      if (rw == BX_READ) {
++
++        // Let access fall through to the following for this iteration.
++        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this, laddr, length, taint_value);
++        }
++      else { // Write
++        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this, laddr, length, taint_value);
++        }
++      }
++    else {
++      // Access spans two pages.
++      BX_CPU_THIS_PTR address_xlation.taint_paddress1 = laddr;
++      BX_CPU_THIS_PTR address_xlation.taint_len1 = 4096 - pageOffset;
++      BX_CPU_THIS_PTR address_xlation.taint_len2 = length -
++          BX_CPU_THIS_PTR address_xlation.taint_len1;
++      BX_CPU_THIS_PTR address_xlation.taint_pages     = 2;
++      BX_CPU_THIS_PTR address_xlation.taint_paddress2 = laddr +
++          BX_CPU_THIS_PTR address_xlation.taint_len1;
++
++#ifdef BX_LITTLE_ENDIAN
++      if (rw == BX_READ) {
++        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++            BX_CPU_THIS_PTR address_xlation.taint_len1, taint_value);
++        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++            BX_CPU_THIS_PTR address_xlation.taint_len2,
++            ((Bit32u*)taint_value) + BX_CPU_THIS_PTR address_xlation.taint_len1);
++        }
++      else {
++        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++            BX_CPU_THIS_PTR address_xlation.taint_len1, taint_value);
++        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++            BX_CPU_THIS_PTR address_xlation.taint_len2,
++            ((Bit32u*)taint_value) + BX_CPU_THIS_PTR address_xlation.taint_len1);
++        }
++
++#else // BX_BIG_ENDIAN
++      if (rw == BX_READ) {
++        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++            BX_CPU_THIS_PTR address_xlation.taint_len1,
++            ((Bit32u*)taint_value) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
++        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++            BX_CPU_THIS_PTR address_xlation.taint_len2, taint_value);
++        }
++      else {
++        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++            BX_CPU_THIS_PTR address_xlation.taint_len1,
++            ((Bit32u*)taint_value) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
++        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++            BX_CPU_THIS_PTR address_xlation.taint_len2, taint_value);
++        }
++#endif
++      }
++    //if (rw==BX_WRITE) BX_CPU_THIS_PTR address_xlation.taint_write_paddress1 = BX_CPU_THIS_PTR address_xlation.taint_paddress1;
++    }
++    return 1;
++}
++
++#endif
+diff -urpN bochs-2.1.1.orig/taint/paging.cc.bak checkbochs-2.1.1/taint/paging.cc.bak
+diff -urpN bochs-2.1.1.orig/taint/silent_access.cc checkbochs-2.1.1/taint/silent_access.cc
+--- bochs-2.1.1.orig/taint/silent_access.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/silent_access.cc	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,210 @@
++#define NEED_CPU_REG_SHORTCUTS 1
++#include "bochs.h"
++#define LOG_THIS BX_CPU_THIS_PTR
++
++#if BX_SUPPORT_X86_64
++#define IsLongMode() (BX_CPU_THIS_PTR cpu_mode == BX_MODE_LONG_64)
++#define LPFOf(laddr) ((laddr) & BX_CONST64(0xfffffffffffff000))
++#define BX_CANONICAL_BITS     48
++#define IsCanonical(offset)   ((Bit64u)((((Bit64s)(offset)) >> (BX_CANONICAL_BITS-1)) + 1) < 2)
++
++//#define BX_CANONICAL_LO       BX_CONST64(0xffff800000000000)
++//#define BX_CANONICAL_HI       BX_CONST64(0x0000800000000000)
++//#define IsCanonical(offset)   ((Bit64u)(offset-BX_CANONICAL_LO) < (Bit64u)(BX_CANONICAL_HI-BX_CANONICAL_LO))
++
++#else
++#define IsLongMode() (0)
++#define LPFOf(laddr) ((laddr) & 0xfffff000)
++#define IsCanonical(offset) (0)
++#endif
++
++
++  int BX_CPP_AttrRegparmN(3)
++BX_CPU_C::read_virtual_checks_silent(bx_segment_reg_t *seg, bx_address offset,
++                              unsigned length)
++{
++  Bit32u upper_limit;
++
++  if (protected_mode()) {
++    if (seg->cache.valid==0) {
++      BX_ERROR(("seg = %s", BX_CPU_THIS_PTR strseg(seg)));
++      BX_ERROR(("seg->selector.value = %04x", (unsigned) seg->selector.value));
++      //exception(BX_GP_EXCEPTION, 0, 0);
++      return 0;
++      }
++
++    if (seg->cache.p == 0) { /* not present */
++          BX_INFO(("read_virtual_checks(): segment not present"));
++      //exception(int_number(seg), 0, 0);
++      return 0;
++      }
++
++    switch (seg->cache.type) {
++      case 0: case 1: /* read only */
++      case 10: case 11: /* execute/read */
++      case 14: case 15: /* execute/read-only, conforming */
++        if (offset > (seg->cache.u.segment.limit_scaled - length + 1)
++            || (length-1 > seg->cache.u.segment.limit_scaled)) {
++                  BX_INFO(("read_virtual_checks(): write beyond limit"));
++          //exception(int_number(seg), 0, 0);
++          return 0;
++          }
++        if (seg->cache.u.segment.limit_scaled >= 7) {
++          // Mark cache as being OK type for succeeding writes.  See notes for
++          // write checks; similar code.
++          seg->cache.valid |= SegAccessROK;
++          }
++        break;
++
++      case 2: case 3: /* read/write */
++        if (offset > (seg->cache.u.segment.limit_scaled - length + 1)
++            || (length-1 > seg->cache.u.segment.limit_scaled)) {
++                  BX_INFO(("read_virtual_checks(): write beyond limit"));
++          //exception(int_number(seg), 0, 0);
++          return 0;
++          }
++        if (seg->cache.u.segment.limit_scaled >= 7) {
++          // Mark cache as being OK type for succeeding writes.  See notes for
++          // write checks; similar code.
++          seg->cache.valid |= SegAccessROK;
++          }
++        break;
++
++      case 4: case 5: /* read only, expand down */
++        if (seg->cache.u.segment.d_b)
++          upper_limit = 0xffffffff;
++        else
++          upper_limit = 0x0000ffff;
++        if ((offset <= seg->cache.u.segment.limit_scaled) ||
++             (offset > upper_limit) ||
++             ((upper_limit - offset) < (length - 1))) {
++                  BX_INFO(("read_virtual_checks(): write beyond limit"));
++          //exception(int_number(seg), 0, 0);
++          return 0;
++          }
++        break;
++
++      case 6: case 7: /* read write, expand down */
++        if (seg->cache.u.segment.d_b)
++          upper_limit = 0xffffffff;
++        else
++          upper_limit = 0x0000ffff;
++        if ((offset <= seg->cache.u.segment.limit_scaled) ||
++             (offset > upper_limit) ||
++             ((upper_limit - offset) < (length - 1))) {
++                  BX_INFO(("read_virtual_checks(): write beyond limit"));
++          //exception(int_number(seg), 0, 0);
++          return 0;
++          }
++        break;
++
++      case 8: case 9: /* execute only */
++      case 12: case 13: /* execute only, conforming */
++        /* can't read or write an execute-only segment */
++                BX_INFO(("read_virtual_checks(): execute only"));
++        //exception(int_number(seg), 0, 0);
++        return 0;
++        break;
++      }
++    return 1;
++    }
++
++  else { /* real mode */
++    if (offset > (seg->cache.u.segment.limit_scaled - length + 1)
++        || (length-1 > seg->cache.u.segment.limit_scaled)) {
++      //BX_ERROR(("read_virtual_checks() SEG EXCEPTION:  %x:%x + %x",
++      //  (unsigned) seg->selector.value, (unsigned) offset, (unsigned) length));
++      if (seg == & BX_CPU_THIS_PTR sregs[2]) {
++      	//exception(BX_SS_EXCEPTION, 0, 0);
++	return 0;
++      } else {
++        //exception(BX_GP_EXCEPTION, 0, 0);
++	return 0;
++      }
++      }
++    if (seg->cache.u.segment.limit_scaled >= 7) {
++      // Mark cache as being OK type for succeeding writes.  See notes for
++      // write checks; similar code.
++      seg->cache.valid |= SegAccessROK;
++      }
++    return 1;
++    }
++}
++
++  int BX_CPP_AttrRegparmN(3)
++BX_CPU_C::read_virtual_byte_silent(unsigned s, bx_address offset, Bit8u *data)
++{
++  bx_address laddr;
++  bx_segment_reg_t *seg;
++  int ret = 1;
++
++  seg = &BX_CPU_THIS_PTR sregs[s];
++  if (seg->cache.valid & SegAccessROK) {
++    if ((IsLongMode() && IsCanonical(offset))
++     || (offset <= seg->cache.u.segment.limit_scaled)) {
++      unsigned pl;
++accessOK:
++      laddr = seg->cache.u.segment.base + offset;
++      BX_INSTR_MEM_DATA(BX_CPU_ID, laddr, 1, BX_READ);
++      pl = (CPL==3);
++
++      ret = access_linear_silent(laddr, 1, pl, BX_READ, (void *) data);
++      return ret;
++      }
++    }
++  ret = read_virtual_checks_silent(seg, offset, 1); //if exception would be raised return 0
++  if (!ret) return 0;
++  goto accessOK;
++}
++
++  int BX_CPP_AttrRegparmN(3)
++BX_CPU_C::read_virtual_word_silent(unsigned s, bx_address offset, Bit16u *data)
++{
++  bx_address laddr;
++  bx_segment_reg_t *seg;
++  int ret;
++
++  seg = &BX_CPU_THIS_PTR sregs[s];
++  if (seg->cache.valid & SegAccessROK) {
++    if ((IsLongMode() && IsCanonical(offset))
++     || (offset < seg->cache.u.segment.limit_scaled)) {
++      unsigned pl;
++accessOK:
++      laddr = seg->cache.u.segment.base + offset;
++      BX_INSTR_MEM_DATA(BX_CPU_ID, laddr, 2, BX_READ);
++      pl = (CPL==3);
++
++      ret = access_linear_silent(laddr, 2, pl, BX_READ, (void *) data);
++      return ret;
++      }
++    }
++  ret = read_virtual_checks_silent(seg, offset, 2);
++  if (!ret) return 0;
++  goto accessOK;
++}
++
++  int BX_CPP_AttrRegparmN(3)
++BX_CPU_C::read_virtual_dword_silent(unsigned s, bx_address offset, Bit32u *data)
++{
++  bx_address laddr;
++  bx_segment_reg_t *seg;
++  int ret;
++
++  seg = &BX_CPU_THIS_PTR sregs[s];
++  if (seg->cache.valid & SegAccessROK) {
++    if ((IsLongMode() && IsCanonical(offset))
++     || (offset < (seg->cache.u.segment.limit_scaled-2))) {
++      unsigned pl;
++accessOK:
++      laddr = seg->cache.u.segment.base + offset;
++      BX_INSTR_MEM_DATA(BX_CPU_ID, laddr, 4, BX_READ);
++      pl = (CPL==3);
++
++      ret = access_linear_silent(laddr, 4, pl, BX_READ, (void *) data);
++      return ret;
++      }
++    }
++  ret = read_virtual_checks_silent(seg, offset, 4);
++  if (!ret) return 0;
++  goto accessOK;
++}
+diff -urpN bochs-2.1.1.orig/taint/silent_access.cc.bak checkbochs-2.1.1/taint/silent_access.cc.bak
+diff -urpN bochs-2.1.1.orig/taint/silent_paging.cc checkbochs-2.1.1/taint/silent_paging.cc
+--- bochs-2.1.1.orig/taint/silent_paging.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/silent_paging.cc	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,175 @@
++#define NEED_CPU_REG_SHORTCUTS 1
++#include "bochs.h"
++#define LOG_THIS BX_CPU_THIS_PTR
++
++#if BX_USE_CPU_SMF
++#define this (BX_CPU(0))
++#endif
++
++
++#if BX_SUPPORT_PAGING
++
++#define InstrTLB_Stats()
++#define InstrTLB_Increment(v)
++
++// ==============================================================
++
++
++  int BX_CPP_AttrRegparmN(3)
++BX_CPU_C::access_linear_silent(bx_address laddr, unsigned length, unsigned pl,
++    unsigned rw, void *data)
++{
++  Bit32u pageOffset;
++  unsigned xlate_rw;
++
++  assert(rw==BX_READ);
++  if (rw==BX_RW) {
++    xlate_rw = BX_RW;
++    rw = BX_READ;
++  }
++  else {
++    xlate_rw = rw;
++  }
++
++  pageOffset = laddr & 0x00000fff;
++
++  if (BX_CPU_THIS_PTR cr0.pg) {
++    /* check for reference across multiple pages */
++    if ( (pageOffset + length) <= 4096 ) {
++      // Access within single page.
++      BX_CPU_THIS_PTR address_xlation.taint_paddress1 =
++          taint_dtranslate_linear(laddr, pl, xlate_rw);
++      BX_CPU_THIS_PTR address_xlation.taint_pages     = 1;
++
++      if (rw == BX_READ) {
++        BX_INSTR_LIN_READ(BX_CPU_ID, laddr, BX_CPU_THIS_PTR address_xlation.taint_paddress1, length);
++        BX_CPU_THIS_PTR mem->readPhysicalPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1, length, data );
++        }
++      else {
++        BX_INSTR_LIN_WRITE(BX_CPU_ID, laddr, BX_CPU_THIS_PTR address_xlation.taint_paddress1, length);
++        BX_CPU_THIS_PTR mem->writePhysicalPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1, length, data);
++        }
++      //if (rw==BX_WRITE) BX_CPU_THIS_PTR address_xlation.taint_write_paddress1 = BX_CPU_THIS_PTR address_xlation.taint_paddress1;
++      }
++    else {
++      // access across 2 pages
++      BX_CPU_THIS_PTR address_xlation.taint_paddress1 =
++          taint_dtranslate_linear(laddr, pl, xlate_rw);
++      BX_CPU_THIS_PTR address_xlation.taint_len1 = 4096 - pageOffset;
++      BX_CPU_THIS_PTR address_xlation.taint_len2 = length -
++          BX_CPU_THIS_PTR address_xlation.taint_len1;
++      BX_CPU_THIS_PTR address_xlation.taint_pages     = 2;
++      BX_CPU_THIS_PTR address_xlation.taint_paddress2 =
++          taint_dtranslate_linear(laddr + BX_CPU_THIS_PTR address_xlation.taint_len1,
++                            pl, xlate_rw);
++
++#ifdef BX_LITTLE_ENDIAN
++      if (rw == BX_READ) {
++        BX_CPU_THIS_PTR mem->readPhysicalPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++                             BX_CPU_THIS_PTR address_xlation.taint_len1, data);
++        BX_CPU_THIS_PTR mem->readPhysicalPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++                             BX_CPU_THIS_PTR address_xlation.taint_len2,
++                             ((Bit32u*)data) + BX_CPU_THIS_PTR address_xlation.taint_len1);
++        }
++      else {
++        BX_CPU_THIS_PTR mem->writePhysicalPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++                              BX_CPU_THIS_PTR address_xlation.taint_len1, data);
++        BX_CPU_THIS_PTR mem->writePhysicalPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++                              BX_CPU_THIS_PTR address_xlation.taint_len2,
++                              ((Bit32u*)data) + BX_CPU_THIS_PTR address_xlation.taint_len1);
++        }
++
++#else // BX_BIG_ENDIAN
++      if (rw == BX_READ) {
++        BX_CPU_THIS_PTR mem->readPhysicalPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++                             BX_CPU_THIS_PTR address_xlation.taint_len1,
++                             ((Bit32u*)data) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
++        BX_CPU_THIS_PTR mem->readPhysicalPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++                             BX_CPU_THIS_PTR address_xlation.taint_len2, data);
++        }
++      else {
++        BX_CPU_THIS_PTR mem->writePhysicalPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++                              BX_CPU_THIS_PTR address_xlation.taint_len1,
++                              ((Bit32u*)data) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
++        BX_CPU_THIS_PTR mem->writePhysicalPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++                              BX_CPU_THIS_PTR address_xlation.taint_len2, data);
++        }
++#endif
++
++      //if (rw==BX_WRITE) BX_CPU_THIS_PTR address_xlation.taint_write_paddress1 = BX_CPU_THIS_PTR address_xlation.taint_paddress1;
++      }
++    }
++
++  else {
++    // Paging off.
++    if ( (pageOffset + length) <= 4096 ) {
++      // Access within single page.
++      BX_CPU_THIS_PTR address_xlation.taint_paddress1 = laddr;
++      BX_CPU_THIS_PTR address_xlation.taint_pages     = 1;
++      if (rw == BX_READ) {
++
++        // Let access fall through to the following for this iteration.
++        BX_CPU_THIS_PTR mem->readPhysicalPage(this, laddr, length, data);
++        }
++      else { // Write
++        BX_CPU_THIS_PTR mem->writePhysicalPage(this, laddr, length, data);
++        }
++      }
++    else {
++      // Access spans two pages.
++      BX_CPU_THIS_PTR address_xlation.taint_paddress1 = laddr;
++      BX_CPU_THIS_PTR address_xlation.taint_len1 = 4096 - pageOffset;
++      BX_CPU_THIS_PTR address_xlation.taint_len2 = length -
++          BX_CPU_THIS_PTR address_xlation.taint_len1;
++      BX_CPU_THIS_PTR address_xlation.taint_pages     = 2;
++      BX_CPU_THIS_PTR address_xlation.taint_paddress2 = laddr +
++          BX_CPU_THIS_PTR address_xlation.taint_len1;
++
++#ifdef BX_LITTLE_ENDIAN
++      if (rw == BX_READ) {
++        BX_CPU_THIS_PTR mem->readPhysicalPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++            BX_CPU_THIS_PTR address_xlation.taint_len1, data);
++        BX_CPU_THIS_PTR mem->readPhysicalPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++            BX_CPU_THIS_PTR address_xlation.taint_len2,
++            ((Bit32u*)data) + BX_CPU_THIS_PTR address_xlation.taint_len1);
++        }
++      else {
++        BX_CPU_THIS_PTR mem->writePhysicalPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++            BX_CPU_THIS_PTR address_xlation.taint_len1, data);
++        BX_CPU_THIS_PTR mem->writePhysicalPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++            BX_CPU_THIS_PTR address_xlation.taint_len2,
++            ((Bit32u*)data) + BX_CPU_THIS_PTR address_xlation.taint_len1);
++        }
++
++#else // BX_BIG_ENDIAN
++      if (rw == BX_READ) {
++        BX_CPU_THIS_PTR mem->readPhysicalPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++            BX_CPU_THIS_PTR address_xlation.taint_len1,
++            ((Bit32u*)data) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
++        BX_CPU_THIS_PTR mem->readPhysicalPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++            BX_CPU_THIS_PTR address_xlation.taint_len2, data);
++        }
++      else {
++        BX_CPU_THIS_PTR mem->writePhysicalPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
++            BX_CPU_THIS_PTR address_xlation.taint_len1,
++            ((Bit32u*)data) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
++        BX_CPU_THIS_PTR mem->writePhysicalPage(this,
++            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
++            BX_CPU_THIS_PTR address_xlation.taint_len2, data);
++        }
++#endif
++      }
++    //if (rw==BX_WRITE) BX_CPU_THIS_PTR address_xlation.taint_write_paddress1 = BX_CPU_THIS_PTR address_xlation.taint_paddress1;
++    }
++}
++
++#endif
+diff -urpN bochs-2.1.1.orig/taint/silent_paging.cc.bak checkbochs-2.1.1/taint/silent_paging.cc.bak
+diff -urpN bochs-2.1.1.orig/taint/taint_type.cc checkbochs-2.1.1/taint/taint_type.cc
+--- bochs-2.1.1.orig/taint/taint_type.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/taint_type.cc	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,13 @@
++#define NEED_CPU_REG_SHORTCUTS 1
++#include "bochs.h"
++#define LOG_THIS BX_CPU_THIS_PTR
++
++#include "taint/taint_type.h"
++#include "taint/globals.h"
++
++void assign_taint_functions(char *type) {
++    if (!strcmp(type,"none")) return;
++    if (!strcmp(type,"eraser")) {
++	//g_access_linear_fptr = &(BX_CPU_C::eraser_access_linear);
++    }
++}
+diff -urpN bochs-2.1.1.orig/taint/taint_type.cc.bak checkbochs-2.1.1/taint/taint_type.cc.bak
+diff -urpN bochs-2.1.1.orig/taint/taint_type.h checkbochs-2.1.1/taint/taint_type.h
+--- bochs-2.1.1.orig/taint/taint_type.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/taint_type.h	2005-06-29 11:19:16.000000000 -0700
+@@ -0,0 +1,8 @@
++#ifndef __TAINT_TYPE_H
++#define __TAINT_TYPE_H
++
++#define ERASER_ID 0
++
++void assign_taint_functions(char *taint_type);
++
++#endif
+diff -urpN bochs-2.1.1.orig/taint/taint_type.h.bak checkbochs-2.1.1/taint/taint_type.h.bak
