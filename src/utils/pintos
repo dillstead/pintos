@@ -19,7 +19,7 @@ our (@puts);			# Files to copy into the VM.
 our (@gets);			# Files to copy out of the VM.
 our ($as_ref);			# Reference to last addition to @gets or @puts.
 our (@kernel_args);		# Arguments to pass to kernel.
-our (%disks) = (OS => {FILENAME => 'os.dsk'},		# Disks to give VM.
+our (%disks) = (OS => {DEF_FN => 'os.dsk'},		# Disks to give VM.
 		FS => {DEF_FN => 'fs.dsk'},
 		SCRATCH => {DEF_FN => 'scratch.dsk'},
 		SWAP => {DEF_FN => 'swap.dsk'});
@@ -193,9 +193,13 @@ sub set_as {
 sub find_disks {
     for my $disk (values %disks) {
 	# If there's no assigned file name but the default file exists,
-	# assign the default file.
-	$disk->{FILENAME} = $disk->{DEF_FN}
-	  if !defined ($disk->{FILENAME}) && -e $disk->{DEF_FN};
+	# try to assign a default file name.
+	if (!defined ($disk->{FILENAME})) {
+	    for my $try_fn ($disk->{DEF_FN}, "build/" . $disk->{DEF_FN}) {
+		$disk->{FILENAME} = $try_fn, last
+		  if -e $try_fn;
+	    }
+	}
 
 	# If there's no file name, we're done.
 	next if !defined ($disk->{FILENAME});
@@ -220,6 +224,7 @@ sub find_disks {
     }
 
     # Warn about (potentially) missing disks.
+    die "Cannot find OS disk\n" if !defined $disks{OS}{FILENAME};
     if (my ($project) = `pwd` =~ /\b(threads|userprog|vm|filesys)\b/) {
 	if ((grep ($project eq $_, qw (userprog vm filesys)))
 	    && !defined ($disks{FS}{FILENAME})) {
