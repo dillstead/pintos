@@ -30,6 +30,7 @@
 
 /* Alternate Status Register bits. */
 #define STA_BSY 0x80            /* Busy. */
+#define STA_DRDY 0x40           /* Device Ready. */
 #define STA_DRQ 0x08            /* Data Request. */
 
 /* Control Register bits. */
@@ -331,15 +332,18 @@ static bool
 check_device_type (struct disk *d) 
 {
   struct channel *c = d->channel;
-  uint8_t error, lbam, lbah;
+  uint8_t error, lbam, lbah, status;
 
   select_device (d);
 
   error = inb (reg_error (c));
   lbam = inb (reg_lbam (c));
   lbah = inb (reg_lbah (c));
+  status = inb (reg_status (c));
 
-  if (error != 1 && (error != 0x81 || d->dev_no == 1)) 
+  if ((error != 1 && (error != 0x81 || d->dev_no == 1))
+      || (status & STA_DRDY) == 0
+      || (status & STA_BSY) != 0)
     {
       d->is_ata = false;
       return error != 0x81;      
