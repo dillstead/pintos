@@ -9,7 +9,7 @@ include ../Make.vars
 include ../../tests/Make.tests
 
 # Compiler and assembler options.
-os.dsk: SYSINCDIRS += $(SRCDIR)/lib/kernel
+os.dsk: CPPFLAGS += -isystem $(SRCDIR)/lib/kernel
 
 # Core kernel.
 threads_SRC  = threads/init.c		# Main program.

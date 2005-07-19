@@ -2,7 +2,7 @@
 
 include $(SRCDIR)/Make.config
 
-$(PROGS): SYSINCDIRS += $(SRCDIR)/lib/user
+$(PROGS): CPPFLAGS += -isystem $(SRCDIR)/lib/user
 
 # Linker flags.
 $(PROGS): LDFLAGS = -nostdlib -static -Wl,-T,$(LDSCRIPT)
