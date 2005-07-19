@@ -111,7 +111,7 @@ intr_init (void)
   /* Load IDT register.
      See [IA32-v2a] "LIDT" and [IA32-v3] 5.10. */
   idtr_operand = make_idtr_operand (sizeof idt - 1, idt);
-  asm volatile ("lidt %0" :: "m" (idtr_operand));
+  asm volatile ("lidt [%0]" :: "r" (&idtr_operand));
 
   /* Initialize intr_names. */
   for (i = 0; i < INTR_CNT; i++)
