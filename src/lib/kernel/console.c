@@ -52,13 +52,6 @@ console_init (void)
   lock_init (&console_lock);
 }
 
-/* Prints console statistics. */
-void
-console_print_stats (void) 
-{
-  printf ("Console: %lld characters output\n", write_cnt);
-}
-
 /* Acquires the console lock. */
 static void
 acquire_console (void) 
@@ -91,6 +84,15 @@ static bool
 console_locked_by_current_thread (void) 
 {
   return intr_context () || lock_held_by_current_thread (&console_lock);
+}
+
+/* Prints console statistics. */
+void
+console_print_stats (void) 
+{
+  acquire_console ();
+  printf ("Console: %lld characters output\n", write_cnt);
+  release_console ();
 }
 
 /* The standard vprintf() function,
