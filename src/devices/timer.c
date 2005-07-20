@@ -123,7 +123,7 @@ timer_nsleep (int64_t ns)
 void
 timer_print_stats (void) 
 {
-  printf ("Timer: %"PRId64" ticks\n", ticks);
+  printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
 
 /* Timer interrupt handler. */
