@@ -125,7 +125,7 @@ every time a write is made off the end of the file.  Your file system
 must allow this.
 
 There should be no predetermined limit on the size of a file, except
-that a disk cannot exceed the size of the disk (minus metadata).  This
+that a file cannot exceed the size of the disk (minus metadata).  This
 also applies to the root directory file, which should now be allowed
 to expand beyond its initial limit of 16 files.
 
