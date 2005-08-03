@@ -3,14 +3,19 @@
 # Written by Sorav Bansal <sbansal@stanford.edu>.
 # Modified by Ben Pfaff <blp@cs.stanford.edu>.
 
+use strict;
+use warnings;
+
+use Getopt::Long qw(:config require_order bundling);
+use Cwd qw(realpath);
+
 our $CSCOPE = $ENV{CSCOPE} || "cscope";
 our $invoke_cscope = 0;
 our $nth = 1;
 our $checkbochs_log = "checkbochs.log";
 our $btrace_file = "btrace";
 our $kernel_o;
-
-use Getopt::Long qw(:config require_order bundling);
+my $phys_base = "0xc0000000";
 
 sub usage {
     my ($exitcode) = @_;
@@ -19,103 +24,134 @@ checkbochs-trace, to interpret logs generated using 'pintos --checkbochs'
 Usage: checkbochs [OPTION...]
 Options:
   --log=LOG        Log file to read is LOG (default: checkbochs.log)
-  --output=OUT     File to write in cscope format is OUT (default: btrace)
   --object=OBJECT  Kernel object file (default: build/kernel.o or kernel.o)
-  --cscope         Invoke cscope on backtraces written to OUT
-  -n, -nth=N       Print a backtrace for the Nth warning (default: 1)
+  --phys-base=ADDR Value of PHYS_BASE (default: 0xc0000000)
+  -n, --nth=N      Print a backtrace for the Nth warning (default: 1)
   -h, --help       Print this help message
 EOF
     exit $exitcode;
 }
 
 GetOptions ("log=s" => \$checkbochs_log,
-	    "output=s" => \$btrace_file,
 	    "object=s" => \$kernel_o,
 	    "n|nth=i" => \$nth,
-	    "cscope" => sub { $invoke_cscope = 1; },
+	    "phys-base=s" => \$phys_base,
 	    "h|help" => sub { usage (0); }
 	   )
   or exit 1;
+our ($PHYS_BASE) = hex ($phys_base);
 
-open (LOG, "<", $checkbochs_log) or die "$checkbochs_log: open: $!\n";
-our ($done, $loc);
-our ($count) = 0;
-while (<LOG>) {
-    if (/Warning on location (.*), backtrace:/) {
-	$count++;
-	$loc = $1 if $count == $nth;
+# Find kernel.o.
+if (!defined $kernel_o) {
+    if (-e 'kernel.o') {
+	$kernel_o = 'kernel.o';
+    } elsif (-e 'build/kernel.o') {
+	$kernel_o = 'build/kernel.o';
+    } else {
+	print "can't find kernel.o or build/kernel.o\n";
+	return;
     }
+} elsif (! -e $kernel_o) {
+    print "$kernel_o: stat: $!\n";
+    return;
 }
-close LOG;
 
+# Allow Emacs' compile-mode to sync up with our directory.
+my ($build_dir) = realpath ($kernel_o);
+$build_dir =~ s%/[^/]+$%%;
+print "checkbochs-trace: Entering directory `$build_dir'\n\n";
+
+# Count race conditions.
+my ($count) = read_log ();
 if ($count == 0) {
-    print "No potential race conditions detected\n";
+    print "No potential race conditions detected.\n";
     exit 0;
 } elsif ($nth > $count) {
-    print "Only $count potential race conditions detected\n";
+    print "Only $count potential race conditions detected.\n";
     exit 0;
 } else {
-    print "$count potential race conditions detected\n";
+    print "$count potential race conditions detected.\n";
 }
-
-my ($name) = lookup_symbol (hex ($loc));
-print "Potential race condition $nth on data at $loc";
-print " ($name)" if defined $name;
 print "\n";
 
-print "Writing backtraces to $btrace_file\n";
+# Get our race condition.
+my ($bts, $min_loc, $max_loc) = read_log ($nth);
 
-$btnum = 0;
-open (LOG, "<", $checkbochs_log) or die "$checkbochs_log: open: $!\n";
-open (OUT, ">", $btrace_file) or die "$btrace_file: create: $!\n";
-while (<LOG>) {
-    if (my ($op, $bt) = /^(.*) location $loc.*backtrace: (.*)$/) {
-	if ($op =~ /Thread (\S+): Warning on/) {
-	    $op = "Thread $1: Potential race";
-	} else {
-	    $op = "Thread $op";
-	}
-	open (BT, "backtrace kernel.o $bt |" );
-	while (<BT>) {
-	    chomp;
-	    my ($addr, $func, $fn, $ln)
-	      = /^([a-f0-9]+): (\S+) \(([^:]+):([^\)]+)\)/
-		or next;
-	    $fn =~ s%^(\.\./)+%%;
-	    print OUT "$fn $func $ln $op\n";
-	    $op = '.';
-	}
-	close BT;
-	$btnum++;
+# Find out what threads are involved.
+our (%threads);
+$threads{hex $_} = 1 foreach $bts =~ /thread ([0-9a-f]+)/gi;
+
+print "Information about potential race #$nth.\n";
+my $name = lookup_symbol (hex ($min_loc));
+my $byte_cnt = hex ($max_loc) - hex ($min_loc) + 1;
+print "Potential race condition on data in ", $byte_cnt, " byte";
+print "s" if $byte_cnt != 1;
+print " at $min_loc";
+print " ($name)" if defined $name;
+print ".\n\n";
+
+my (@lockset);
+my ($btnum) = 0;
+foreach (split ("\n", $bts)) {
+    my ($s1, $s2, $thread, $eips, $locks) =
+      /^([A-Z]+)(?:->([A-Z]+))?: thread ([^,]+), backtrace([^,]*), locks([^,]*)/;
+
+    my (%state_map) = ('V' => 'Virgin',
+		       'E' => 'Exclusive',
+		       'S' => 'Shared',
+		       'SM' => 'Shared+Modified');
+    if (defined $s2) {
+	print "$state_map{$s1} -> $state_map{$s2} ";
+    } else {
+	print "Reduced lockset in $state_map{$s1} ";
     }
-}
-close OUT;
-close LOG;
+    print "in thread $thread.\n";
 
-exec ("$CSCOPE -R -F$btrace_file") if $invoke_cscope;
+    my (@locks) = sort {$a <=> $b} map (hex ($_), split (' ', $locks));
+    print_lockset ("Locks held", "none", @locks);
+
+    if ($s1 ne 'V') {
+	if ($btnum++ == 0) {
+	    @lockset = @locks;
+	    print_lockset ("Lockset", "empty", @lockset);
+	} else {
+	    my (@old_lockset) = @lockset;
+	    @lockset = intersect (\@lockset, \@locks);
+	    if (@old_lockset != @lockset || @lockset == 0) {
+		print_lockset ("Lockset", "empty", @lockset);
+	    } else {
+		print "Lockset unchanged.\n";
+	    }
+	}
+    }
+
+    my ($btline) = 0;
+    open (BT, "backtrace kernel.o $eips |" );
+    while (<BT>) {
+	chomp;
+	my ($addr, $func, $fn, $ln)
+	  = /^([a-f0-9]+): (\S+) \(([^:]+):([^\)]+)\)/
+	    or next;
+	print "$fn:$ln: ";
+	if ($btline++ == 0) {
+	    print "occurred here in $func() at 0x$addr...\n";
+	} else {
+	    print "...called from $func() at 0x$addr\n";
+	}
+    }
+    close BT;
+    print "\n";
+}
+
+print "checkbochs-trace: Leaving directory `$build_dir'\n";
 
 sub lookup_symbol {
-    my ($address) = 0;
+    my ($address) = @_;
 
     # Find nm.
     my ($nm) = search_path ("i386-elf-nm") || search_path ("nm");
     if (!$nm) {
 	print "neither `i386-elf-nm' nor `nm' in PATH\n";
-	return;
-    }
-
-    # Find kernel.o.
-    if (!defined $kernel_o) {
-	if (-e 'kernel.o') {
-	    $kernel_o = 'kernel.o';
-	} elsif (-e 'build/kernel.o') {
-	    $kernel_o = 'build/kernel.o';
-	} else {
-	    print "can't find kernel.o or build/kernel.o\n";
-	    return;
-	}
-    } elsif (! -e $kernel_o) {
-	print "$kernel_o: stat: $!\n";
 	return;
     }
 
@@ -126,7 +162,7 @@ sub lookup_symbol {
     }
     while (<NM>) {
 	my ($h_start, $h_length, $type, $name)
-	  = /^([a-f0-9]+) ([a-f0-9]+) \S (\S+)$/ or next;
+	  = /^([a-f0-9]+) ([a-f0-9]+) (\S) (\S+)$/ or next;
 	my ($start) = hex ($h_start);
 	my ($length) = hex ($h_length);
 	next if $address < $start || $address >= $start + $length;
@@ -135,6 +171,18 @@ sub lookup_symbol {
 	return $name;
     }
     close (NM);
+
+    # Check whether the address is in a thread struct.
+    if ($address >= $PHYS_BASE && $address < $PHYS_BASE + 64 * 1024 * 1024) {
+	my ($page) = ($address - $PHYS_BASE) >> 12;
+	if (defined $threads{$page}) {
+	    my ($pg_ofs) = $address & 0xfff;
+	    return sprintf ("in thread %x %s", $page,
+			    $pg_ofs >= 0x800 ? "stack" : "data");
+	}
+    }
+
+    return;
 }
 
 sub search_path {
@@ -144,4 +192,68 @@ sub search_path {
 	return $file if -e $file;
     }
     return undef;
+}
+
+sub read_log {
+    my ($nth) = @_;
+
+    open (LOG, "<", $checkbochs_log) or die "$checkbochs_log: open: $!\n";
+    my ($min_loc, $max_loc);
+    my ($count) = 0;
+    my ($bts) = '';
+    my ($last_bts) = '';
+    while (<LOG>) {
+	if (my ($loc) = /^Warning on location (.*):$/) {
+	    $bts = '';
+	    while (<LOG>) {
+		last if /^$/;
+		$bts .= $_;
+	    }
+	    if ($bts ne $last_bts || hex ($loc) != hex ($min_loc) + 1) {
+		last if defined ($nth) && $nth == $count;
+		$min_loc = $max_loc = $loc;
+		$last_bts = $bts;
+		$count++;
+	    } else {
+		$max_loc = $loc;
+	    }
+	}
+    }
+    close LOG;
+
+    return ($last_bts, $min_loc, $max_loc) if defined ($nth) && $nth == $count;
+    return ($count);
+}
+
+sub intersect {
+    my ($set1, $set2) = @_;
+    my (%set);
+    $set{$_}++ foreach @$set1;
+    $set{$_}++ foreach @$set2;
+    my (@out);
+    $set{$_} == 2 && push (@out, $_) foreach keys %set;
+    return sort {$a <=> $b} @out;
+}
+
+sub print_lockset {
+    my ($name, $empty, @locks) = @_;
+    print "$name:";
+    if (@locks) {
+	my ($if) = 0;
+	my ($lock_pfx) = 0;
+	foreach my $lock (@locks) {
+	    if ($lock == 0xffff0001) {
+		$if = 1;
+	    } elsif ($lock == 0xffff0002) {
+		$lock_pfx = 1;
+	    } else {
+		printf " %x", $lock;
+	    }
+	}
+	print " (interrupts disabled)" if $if;
+	print " (LOCK prefix)" if $lock_pfx;
+	print ".\n";
+    } else {
+	print " $empty.\n";
+    }
 }
