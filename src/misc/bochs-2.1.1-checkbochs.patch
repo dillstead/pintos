@@ -1,11 +1,6 @@
-This patch provides Eraser-like lock set checking for Bochs.
-See the Pintos documentation for more information.
-
-This patch is provided by Sorav Bansal <sbansal@cs.stanford.edu>.
-
-diff -urpN bochs-2.1.1.orig/Makefile.in checkbochs-2.1.1/Makefile.in
---- bochs-2.1.1.orig/Makefile.in	2004-02-11 14:28:02.000000000 -0800
-+++ checkbochs-2.1.1/Makefile.in	2005-06-29 10:59:56.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/Makefile.in checkbochs-2.1.1/Makefile.in
+--- bochs-2.1.1/Makefile.in	2004-02-11 14:28:02.000000000 -0800
++++ checkbochs-2.1.1/Makefile.in	2005-07-02 17:25:47.000000000 -0700
 @@ -177,11 +177,11 @@ all: @PRIMARY_TARGET@ @PLUGIN_TARGET@ bx
  @EXTERNAL_DEPENDENCY@
  
@@ -75,9 +70,9 @@ diff -urpN bochs-2.1.1.orig/Makefile.in checkbochs-2.1.1/Makefile.in
  	cd doc/docbook @COMMAND_SEPARATOR@
  	$(MAKE) dist-clean
  	@CD_UP_TWO@
-diff -urpN bochs-2.1.1.orig/bochs.h checkbochs-2.1.1/bochs.h
---- bochs-2.1.1.orig/bochs.h	2004-02-11 14:28:03.000000000 -0800
-+++ checkbochs-2.1.1/bochs.h	2005-06-29 10:59:53.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/bochs.h checkbochs-2.1.1/bochs.h
+--- bochs-2.1.1/bochs.h	2005-07-02 17:23:03.000000000 -0700
++++ checkbochs-2.1.1/bochs.h	2005-07-02 17:25:47.000000000 -0700
 @@ -671,6 +671,7 @@ typedef struct BOCHSAPI {
    bx_gdbstub_t      gdbstub;
    bx_param_enum_c *Osel_config;
@@ -86,40 +81,69 @@ diff -urpN bochs-2.1.1.orig/bochs.h checkbochs-2.1.1/bochs.h
    } bx_options_t;
  
  BOCHSAPI extern bx_options_t bx_options;
-diff -urpN bochs-2.1.1.orig/configure checkbochs-2.1.1/configure
---- bochs-2.1.1.orig/configure	2004-02-11 14:28:40.000000000 -0800
-+++ checkbochs-2.1.1/configure	2005-06-29 10:59:53.000000000 -0700
-@@ -36189,7 +36189,7 @@ echo "${ECHO_T}no" >&6
+diff -X ignore -urpNb bochs-2.1.1/configure.in checkbochs-2.1.1/configure.in
+--- bochs-2.1.1/configure.in	2004-02-11 14:28:40.000000000 -0800
++++ checkbochs-2.1.1/configure.in	2005-07-19 15:51:35.000000000 -0700
+@@ -2244,6 +2244,11 @@ if test "$with_rfb" = yes; then
+   fi
  fi
  
- 
--                                                                                                                                                                          ac_config_files="$ac_config_files Makefile iodev/Makefile bx_debug/Makefile bios/Makefile cpu/Makefile memory/Makefile gui/Makefile disasm/Makefile ${INSTRUMENT_DIR}/Makefile misc/Makefile fpu/Makefile doc/docbook/Makefile build/linux/bochs-dlx bxversion.h build/macosx/Info.plist build/win32/nsis/Makefile build/win32/nsis/bochs.nsi"
-+                                                                                                                                                                          ac_config_files="$ac_config_files Makefile iodev/Makefile bx_debug/Makefile bios/Makefile cpu/Makefile memory/Makefile gui/Makefile disasm/Makefile ${INSTRUMENT_DIR}/Makefile misc/Makefile fpu/Makefile taint/Makefile doc/docbook/Makefile build/linux/bochs-dlx bxversion.h build/macosx/Info.plist build/win32/nsis/Makefile build/win32/nsis/bochs.nsi"
- cat >confcache <<\_ACEOF
- # This file is a shell script that caches the results of configure
- # tests run on this system so they can be shared between configure
-@@ -36724,6 +36724,7 @@ do
-   "${INSTRUMENT_DIR}/Makefile" ) CONFIG_FILES="$CONFIG_FILES ${INSTRUMENT_DIR}/Makefile" ;;
-   "misc/Makefile" ) CONFIG_FILES="$CONFIG_FILES misc/Makefile" ;;
-   "fpu/Makefile" ) CONFIG_FILES="$CONFIG_FILES fpu/Makefile" ;;
-+  "taint/Makefile" ) CONFIG_FILES="$CONFIG_FILES taint/Makefile" ;;
-   "doc/docbook/Makefile" ) CONFIG_FILES="$CONFIG_FILES doc/docbook/Makefile" ;;
-   "build/linux/bochs-dlx" ) CONFIG_FILES="$CONFIG_FILES build/linux/bochs-dlx" ;;
-   "bxversion.h" ) CONFIG_FILES="$CONFIG_FILES bxversion.h" ;;
-diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
---- bochs-2.1.1.orig/cpu/cpu.cc	2004-02-11 14:28:51.000000000 -0800
-+++ checkbochs-2.1.1/cpu/cpu.cc	2005-06-29 10:59:54.000000000 -0700
-@@ -30,6 +30,9 @@
++AC_CHECK_LIB(gdbm, gdbm_open, , [dnl
++echo 'Error: checkbochs requires libgdbm'
++exit 1
++])
++
+ # The ACX_PTHREAD function was written by 
+ # Steven G. Johnson <stevenj@alum.mit.edu> and 
+ # Alejandro Forero Cuervo <bachue@bachue.com> 
+@@ -2516,4 +2521,5 @@ AC_OUTPUT(Makefile iodev/Makefile bx_deb
+ 	 fpu/Makefile doc/docbook/Makefile \
+ 	 build/linux/bochs-dlx \
+ 	 bxversion.h build/macosx/Info.plist \
+-	 build/win32/nsis/Makefile build/win32/nsis/bochs.nsi)
++	 build/win32/nsis/Makefile build/win32/nsis/bochs.nsi \
++	 taint/Makefile)
+diff -X ignore -urpNb bochs-2.1.1/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
+--- bochs-2.1.1/cpu/cpu.cc	2004-02-11 14:28:51.000000000 -0800
++++ checkbochs-2.1.1/cpu/cpu.cc	2005-07-19 14:47:38.000000000 -0700
+@@ -30,6 +30,10 @@
  #include "bochs.h"
  #define LOG_THIS BX_CPU_THIS_PTR
  
 +#include "taint/globals.h"
 +#include "taint/mydebug.h"
++#include "taint/lockset.h"
 +
  #if BX_USE_CPU_SMF
  #define this (BX_CPU(0))
  #endif
-@@ -111,7 +114,9 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
+@@ -104,6 +108,25 @@ extern void REGISTER_IADDR(bx_addr addr)
+ #endif
+ 
+ 
++static void
++clear_stack_taints(void) 
++{
++    BX_CPU_C *cpu = BX_CPU(0);
++
++    Bit32u old_esp = cpu->prev_esp;
++    Bit32u new_esp = ESP;
++    if (old_esp >= new_esp
++        || (old_esp & 0xfffff000) != (new_esp & 0xfffff000))
++        return;
++
++    Bit32u start = old_esp - PHYS_BASE;
++    Bit32u length = new_esp - old_esp;
++    if (start > cpu->mem->len || start + length > cpu->mem->len)
++        return;
++    memset (cpu->mem->taint_vector + start, 0,
++            sizeof *cpu->mem->taint_vector * length);
++}
++
+   void
+ BX_CPU_C::cpu_loop(Bit32s max_instr_count)
+ {
+@@ -111,7 +134,9 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
    bxInstruction_c iStorage BX_CPP_AlignN(32);
    bxInstruction_c *i = &iStorage;
  
@@ -130,7 +154,7 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
  
  #if BX_DEBUGGER
    BX_CPU_THIS_PTR break_point = 0;
-@@ -209,6 +214,10 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
+@@ -209,6 +234,10 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
      BxExecutePtr_tR resolveModRM = i->ResolveModrm; // Get as soon as possible for speculation.
  
      execute = i->execute; // fetch as soon as possible for speculation.
@@ -141,7 +165,7 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
      if (resolveModRM) {
        BX_CPU_CALL_METHODR(resolveModRM, (i));
      }
-@@ -281,6 +290,10 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
+@@ -281,6 +310,10 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
      }
  #endif
      execute = i->execute; // fetch as soon as possible for speculation.
@@ -152,15 +176,16 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
      if (resolveModRM) {
        BX_CPU_CALL_METHODR(resolveModRM, (i));
        }
-@@ -303,6 +316,7 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
+@@ -303,6 +336,8 @@ BX_CPU_C::cpu_loop(Bit32s max_instr_coun
        BX_INSTR_BEFORE_EXECUTION(BX_CPU_ID);
        RIP += i->ilen();
        BX_CPU_CALL_METHOD(execute, (i));
 +      BX_CPU_CALL_METHOD(taint_execute, (i));
++      clear_stack_taints ();
        BX_CPU_THIS_PTR prev_eip = RIP; // commit new EIP
        BX_CPU_THIS_PTR prev_esp = RSP; // commit new ESP
        BX_INSTR_AFTER_EXECUTION(BX_CPU_ID);
-@@ -323,6 +337,7 @@ repeat_loop:
+@@ -323,6 +358,7 @@ repeat_loop:
          if (i->as64L()) {
            if (RCX != 0) {
              BX_CPU_CALL_METHOD(execute, (i));
@@ -168,7 +193,7 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
              RCX --;
              }
            if ((i->repUsedValue()==3) && (get_ZF()==0)) goto repeat_done;
-@@ -335,6 +350,7 @@ repeat_loop:
+@@ -335,6 +371,7 @@ repeat_loop:
          if (i->as32L()) {
            if (ECX != 0) {
              BX_CPU_CALL_METHOD(execute, (i));
@@ -176,7 +201,7 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
              ECX --;
              }
            if ((i->repUsedValue()==3) && (get_ZF()==0)) goto repeat_done;
-@@ -345,6 +361,7 @@ repeat_loop:
+@@ -345,6 +382,7 @@ repeat_loop:
          else {
            if (CX != 0) {
              BX_CPU_CALL_METHOD(execute, (i));
@@ -184,7 +209,7 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
              CX --;
              }
            if ((i->repUsedValue()==3) && (get_ZF()==0)) goto repeat_done;
-@@ -358,6 +375,7 @@ repeat_loop:
+@@ -358,6 +396,7 @@ repeat_loop:
          if (i->as64L()) {
            if (RCX != 0) {
              BX_CPU_CALL_METHOD(execute, (i));
@@ -192,7 +217,7 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
              RCX --;
              }
            if (RCX == 0) goto repeat_done;
-@@ -368,6 +386,7 @@ repeat_loop:
+@@ -368,6 +407,7 @@ repeat_loop:
          if (i->as32L()) {
            if (ECX != 0) {
              BX_CPU_CALL_METHOD(execute, (i));
@@ -200,7 +225,7 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
              ECX --;
              }
            if (ECX == 0) goto repeat_done;
-@@ -376,6 +395,7 @@ repeat_loop:
+@@ -376,6 +416,7 @@ repeat_loop:
          else { // 16bit addrsize
            if (CX != 0) {
              BX_CPU_CALL_METHOD(execute, (i));
@@ -208,7 +233,23 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
              CX --;
              }
            if (CX == 0) goto repeat_done;
-@@ -865,6 +885,17 @@ BX_CPU_THIS_PTR eipPageWindowSize = 0; /
+@@ -405,6 +446,7 @@ repeat_not_done:
+ 
+ repeat_done:
+       RIP += i->ilen();
++      clear_stack_taints ();
+       BX_CPU_THIS_PTR prev_eip = RIP; // commit new EIP
+       BX_CPU_THIS_PTR prev_esp = RSP; // commit new ESP
+       BX_INSTR_REPEAT_ITERATION(BX_CPU_ID);
+@@ -617,6 +659,7 @@ BX_CPU_C::handleAsyncEvent(void)
+     // the new EIP/ESP values.  But here, we call interrupt() much like
+     // it was a sofware interrupt instruction, and need to effect the
+     // commit here.  This code mirrors similar code above.
++    clear_stack_taints ();
+     BX_CPU_THIS_PTR prev_eip = RIP; // commit new RIP
+     BX_CPU_THIS_PTR prev_esp = RSP; // commit new RSP
+     BX_CPU_THIS_PTR EXT = 0;
+@@ -865,6 +908,17 @@ BX_CPU_THIS_PTR eipPageWindowSize = 0; /
                    BX_CPU_THIS_PTR sregs[BX_SEG_REG_CS].cache.u.segment.d_b);
  }
  
@@ -226,9 +267,9 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.cc checkbochs-2.1.1/cpu/cpu.cc
  
  #if BX_EXTERNAL_DEBUGGER
  
-diff -urpN bochs-2.1.1.orig/cpu/cpu.h checkbochs-2.1.1/cpu/cpu.h
---- bochs-2.1.1.orig/cpu/cpu.h	2004-02-11 14:28:51.000000000 -0800
-+++ checkbochs-2.1.1/cpu/cpu.h	2005-06-29 10:59:54.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/cpu/cpu.h checkbochs-2.1.1/cpu/cpu.h
+--- bochs-2.1.1/cpu/cpu.h	2004-02-11 14:28:51.000000000 -0800
++++ checkbochs-2.1.1/cpu/cpu.h	2005-07-19 12:24:02.000000000 -0700
 @@ -739,9 +739,11 @@ public:
  #if BX_USE_CPU_SMF
    void (*ResolveModrm)(bxInstruction_c *) BX_CPP_AttrRegparmN(1);
@@ -272,7 +313,7 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.h checkbochs-2.1.1/cpu/cpu.h
  #if BX_SUPPORT_X86_64
    // data upper 32 bits - not used any longer
    //Bit32s daddr_upper;    // upper bits must be canonical  (-virtmax --> + virtmax)
-@@ -2952,6 +2969,33 @@ union {
+@@ -2952,6 +2969,35 @@ union {
  #if BX_SUPPORT_APIC
    bx_local_apic_c local_apic;
  #endif
@@ -282,31 +323,33 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.h checkbochs-2.1.1/cpu/cpu.h
 +  BX_SMF Bit32u thread_current(void) ;
 +  BX_SMF Bit32s BX_CPP_AttrRegparmN(3) BX_CPU_C::taint_dtranslate_linear(bx_address laddr, unsigned pl, unsigned rw);
 +  BX_SMF Bit32u BX_CPP_AttrRegparmN(2) BX_CPU_C::taint_itranslate_linear(bx_address laddr, unsigned pl);
-+  BX_SMF int BX_CPP_AttrRegparmN(3) BX_CPU_C::access_linear_taint(bx_address laddr, unsigned length, unsigned pl, unsigned rw, void *taint_value);
++  BX_SMF struct lockset *BX_CPU_C::access_linear_taint(bx_address laddr);
 +//SHADOW STATE FUNCTIONS
 +  BX_SMF void TT_TaintSaveRegs(bxInstruction_c *i);
 +  BX_SMF void TT_TaintRestoreRegs(bxInstruction_c *i);
 +  BX_SMF void TT_Lock(bxInstruction_c *i);
 +  BX_SMF void TT_Unlock(bxInstruction_c *i);
 +  BX_SMF void TT_CommonOps(bxInstruction_c *i);
-+                                                                                                                                                                                                     
++
 +  BX_SMF int read_virtual_checks_silent(bx_segment_reg_t *seg, bx_address offset, unsigned length) BX_CPP_AttrRegparmN(3);
 +  BX_SMF int read_virtual_byte_silent(unsigned s, bx_address offset, Bit8u *data);
 +  BX_SMF int read_virtual_word_silent(unsigned s, bx_address offset, Bit16u *data);
 +  BX_SMF int read_virtual_dword_silent(unsigned s, bx_address offset, Bit32u *data);
 +  BX_SMF int access_linear_silent(bx_address laddr, unsigned length, unsigned pl, unsigned rw, void *data);
-+                                                                                                                                                                                                     
++
 +  BX_SMF char *backtrace(char *s);
++  BX_SMF void backtrace_eips(Bit32u *eips, int n);
 +  BX_SMF Bit32u callingEIP(void);
-+                                                                                                                                                                                                     
++
 +  BX_SMF void eraser_access_linear(bx_address laddr, unsigned len, unsigned pl, unsigned rw, void *data);
-+                                                                                                                                                                                                     
++
 +  BX_SMF void eraser_init_globals (void) ;
++  BX_SMF void eraser_done_globals (void) ;
 +
    };
  
  
-@@ -3299,6 +3343,7 @@ IMPLEMENT_EFLAG_ACCESSOR   (TF,  8)
+@@ -3299,6 +3345,7 @@ IMPLEMENT_EFLAG_ACCESSOR   (TF,  8)
  #define BxGroup14         BxGroupN
  #define BxGroup15         BxGroupN
  #define BxGroup16         BxGroupN
@@ -314,9 +357,9 @@ diff -urpN bochs-2.1.1.orig/cpu/cpu.h checkbochs-2.1.1/cpu/cpu.h
  
  #if BX_DEBUGGER
  typedef enum _show_flags {
-diff -urpN bochs-2.1.1.orig/cpu/cpuid.cc checkbochs-2.1.1/cpu/cpuid.cc
---- bochs-2.1.1.orig/cpu/cpuid.cc	2003-12-31 09:35:43.000000000 -0800
-+++ checkbochs-2.1.1/cpu/cpuid.cc	2005-06-29 10:59:54.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/cpu/cpuid.cc checkbochs-2.1.1/cpu/cpuid.cc
+--- bochs-2.1.1/cpu/cpuid.cc	2003-12-31 09:35:43.000000000 -0800
++++ checkbochs-2.1.1/cpu/cpuid.cc	2005-07-02 17:25:48.000000000 -0700
 @@ -251,6 +251,12 @@ void BX_CPU_C::CPUID(bxInstruction_c *i)
        RDX = get_std_cpuid_features ();
        break;
@@ -330,9 +373,18 @@ diff -urpN bochs-2.1.1.orig/cpu/cpuid.cc checkbochs-2.1.1/cpu/cpuid.cc
  #if 0
  #if BX_CPU_LEVEL >= 6
      case 2:
-diff -urpN bochs-2.1.1.orig/cpu/fetchdecode.cc checkbochs-2.1.1/cpu/fetchdecode.cc
---- bochs-2.1.1.orig/cpu/fetchdecode.cc	2003-12-28 10:19:41.000000000 -0800
-+++ checkbochs-2.1.1/cpu/fetchdecode.cc	2005-06-29 10:59:54.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/cpu/debugstuff.cc checkbochs-2.1.1/cpu/debugstuff.cc
+--- bochs-2.1.1/cpu/debugstuff.cc	2003-12-24 12:32:59.000000000 -0800
++++ checkbochs-2.1.1/cpu/debugstuff.cc	2005-07-18 21:40:23.000000000 -0700
+@@ -1023,4 +1023,5 @@ BX_CPU_C::atexit(void)
+     BX_CPU_THIS_PTR sregs[BX_SEG_REG_SS].cache.u.segment.d_b ? 32 : 16));
+ 
+   debug(BX_CPU_THIS_PTR prev_eip);
++  eraser_done_globals();
+ }
+diff -X ignore -urpNb bochs-2.1.1/cpu/fetchdecode.cc checkbochs-2.1.1/cpu/fetchdecode.cc
+--- bochs-2.1.1/cpu/fetchdecode.cc	2003-12-28 10:19:41.000000000 -0800
++++ checkbochs-2.1.1/cpu/fetchdecode.cc	2005-07-02 17:25:48.000000000 -0700
 @@ -29,6 +29,8 @@
  #include "bochs.h"
  #define LOG_THIS BX_CPU_THIS_PTR
@@ -387,7 +439,7 @@ diff -urpN bochs-2.1.1.orig/cpu/fetchdecode.cc checkbochs-2.1.1/cpu/fetchdecode.
  #if BX_SUPPORT_X86_64
    /* 0F 05 */  { 0, &BX_CPU_C::SYSCALL },
  #else
-@@ -1564,6 +1580,8 @@ BX_CPU_C::fetchDecode(Bit8u *iptr, bxIns
+@@ -1564,6 +1579,8 @@ BX_CPU_C::fetchDecode(Bit8u *iptr, bxIns
                    /*os64*/       0,  /*as64*/     0,
                    /*extend8bit*/ 0,  /*repUsed*/  0);
  
@@ -396,7 +448,7 @@ diff -urpN bochs-2.1.1.orig/cpu/fetchdecode.cc checkbochs-2.1.1/cpu/fetchdecode.
    sse_prefix = SSE_PREFIX_NONE;
    
  fetch_b1:
-@@ -1669,6 +1687,7 @@ another_byte:
+@@ -1669,6 +1686,7 @@ another_byte:
          case 0xf0: // LOCK:
            BX_INSTR_PREFIX_LOCK(BX_CPU_ID);
            lock = 1;
@@ -404,7 +456,7 @@ diff -urpN bochs-2.1.1.orig/cpu/fetchdecode.cc checkbochs-2.1.1/cpu/fetchdecode.
            if (ilen < remain) {
              ilen++;
              goto fetch_b1;
-@@ -1883,6 +1902,7 @@ modrm_done:
+@@ -1883,6 +1901,7 @@ modrm_done:
      }
  
      instruction->execute = OpcodeInfoPtr->ExecutePtr;
@@ -412,7 +464,7 @@ diff -urpN bochs-2.1.1.orig/cpu/fetchdecode.cc checkbochs-2.1.1/cpu/fetchdecode.
      instruction->setRepAttr(attr & (BxRepeatable | BxRepeatableZF));
    }
    else {
-@@ -1891,6 +1911,7 @@ modrm_done:
+@@ -1891,6 +1910,7 @@ modrm_done:
      // the if() above after fetching the 2nd byte, so this path is
      // taken in all cases if a modrm byte is NOT required.
      instruction->execute = BxOpcodeInfo[b1+offset].ExecutePtr;
@@ -420,9 +472,9 @@ diff -urpN bochs-2.1.1.orig/cpu/fetchdecode.cc checkbochs-2.1.1/cpu/fetchdecode.
      instruction->IxForm.opcodeReg = b1 & 7;
    }
  
-diff -urpN bochs-2.1.1.orig/cpu/paging.cc checkbochs-2.1.1/cpu/paging.cc
---- bochs-2.1.1.orig/cpu/paging.cc	2003-12-30 14:12:45.000000000 -0800
-+++ checkbochs-2.1.1/cpu/paging.cc	2005-06-29 10:59:54.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/cpu/paging.cc checkbochs-2.1.1/cpu/paging.cc
+--- bochs-2.1.1/cpu/paging.cc	2003-12-30 14:12:45.000000000 -0800
++++ checkbochs-2.1.1/cpu/paging.cc	2005-07-02 17:25:48.000000000 -0700
 @@ -38,6 +38,8 @@
  #include "bochs.h"
  #define LOG_THIS BX_CPU_THIS_PTR
@@ -473,11 +525,9 @@ diff -urpN bochs-2.1.1.orig/cpu/paging.cc checkbochs-2.1.1/cpu/paging.cc
      return;
      }
  
-diff -urpN bochs-2.1.1.orig/gdbstub.cc checkbochs-2.1.1/gdbstub.cc
-diff -urpN bochs-2.1.1.orig/gdbstub.cc.rej checkbochs-2.1.1/gdbstub.cc.rej
-diff -urpN bochs-2.1.1.orig/gui/Makefile.in checkbochs-2.1.1/gui/Makefile.in
---- bochs-2.1.1.orig/gui/Makefile.in	2003-11-28 07:07:28.000000000 -0800
-+++ checkbochs-2.1.1/gui/Makefile.in	2005-06-29 10:13:21.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/gui/Makefile.in checkbochs-2.1.1/gui/Makefile.in
+--- bochs-2.1.1/gui/Makefile.in	2003-11-28 07:07:28.000000000 -0800
++++ checkbochs-2.1.1/gui/Makefile.in	2005-07-02 17:25:48.000000000 -0700
 @@ -44,7 +44,7 @@ SHELL = /bin/sh
  @SET_MAKE@
  
@@ -487,9 +537,9 @@ diff -urpN bochs-2.1.1.orig/gui/Makefile.in checkbochs-2.1.1/gui/Makefile.in
  LOCAL_CXXFLAGS =
  LDFLAGS = @LDFLAGS@
  LIBS = @LIBS@
-diff -urpN bochs-2.1.1.orig/gui/siminterface.h checkbochs-2.1.1/gui/siminterface.h
---- bochs-2.1.1.orig/gui/siminterface.h	2004-02-11 14:28:52.000000000 -0800
-+++ checkbochs-2.1.1/gui/siminterface.h	2005-06-29 10:59:55.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/gui/siminterface.h checkbochs-2.1.1/gui/siminterface.h
+--- bochs-2.1.1/gui/siminterface.h	2004-02-11 14:28:52.000000000 -0800
++++ checkbochs-2.1.1/gui/siminterface.h	2005-07-02 17:25:48.000000000 -0700
 @@ -464,6 +464,7 @@ typedef enum {
  #endif
    BXP_SEL_CONFIG_INTERFACE,
@@ -498,13 +548,21 @@ diff -urpN bochs-2.1.1.orig/gui/siminterface.h checkbochs-2.1.1/gui/siminterface
    BXP_THIS_IS_THE_LAST    // used to determine length of list
  } bx_id;
  
-diff -urpN bochs-2.1.1.orig/iodev/pit82c54.cc checkbochs-2.1.1/iodev/pit82c54.cc
-diff -urpN bochs-2.1.1.orig/iodev/pit82c54.cc~ checkbochs-2.1.1/iodev/pit82c54.cc~
-diff -urpN bochs-2.1.1.orig/iodev/serial.cc checkbochs-2.1.1/iodev/serial.cc
-diff -urpN bochs-2.1.1.orig/iodev/serial.cc.rej checkbochs-2.1.1/iodev/serial.cc.rej
-diff -urpN bochs-2.1.1.orig/main.cc checkbochs-2.1.1/main.cc
---- bochs-2.1.1.orig/main.cc	2004-02-11 14:28:41.000000000 -0800
-+++ checkbochs-2.1.1/main.cc	2005-06-29 11:29:46.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/iodev/vmware3.h checkbochs-2.1.1/iodev/vmware3.h
+--- bochs-2.1.1/iodev/vmware3.h	2004-02-11 14:28:54.000000000 -0800
++++ checkbochs-2.1.1/iodev/vmware3.h	2005-07-19 12:23:26.000000000 -0700
+@@ -75,7 +75,7 @@ class vmware3_image_t : public device_im
+           Bit32u   vmware_version;
+           Bit8u    PAD3[364];
+       } COW_Header
+-#if !defined(_MSC_VER)
++#if 0 && !defined(_MSC_VER)
+         GCC_ATTRIBUTE((packed))
+ #endif
+       ;
+diff -X ignore -urpNb bochs-2.1.1/main.cc checkbochs-2.1.1/main.cc
+--- bochs-2.1.1/main.cc	2005-07-02 17:23:03.000000000 -0700
++++ checkbochs-2.1.1/main.cc	2005-07-03 11:01:28.000000000 -0700
 @@ -28,6 +28,10 @@
  #include <assert.h>
  #include "state_file.h"
@@ -516,15 +574,15 @@ diff -urpN bochs-2.1.1.orig/main.cc checkbochs-2.1.1/main.cc
  #ifdef HAVE_LOCALE_H
  #include <locale.h>
  #endif
-@@ -1768,6 +1773,7 @@ int bxmain () {
-   if (setjmp (context) == 0) {
+@@ -1770,6 +1774,7 @@ int bxmain () {
      SIM->set_quit_context (&context);
      if (bx_init_main (bx_startup_flags.argc, bx_startup_flags.argv) < 0) 
-+    BX_CPU(0)->eraser_init_globals() ;
        return 0;
++    BX_CPU(0)->eraser_init_globals() ;
      // read a param to decide which config interface to start.
      // If one exists, start it.  If not, just begin.
-@@ -2309,6 +2322,18 @@ bx_begin_simulation (int argc, char *arg
+     bx_param_enum_c *ci_param = SIM->get_param_enum (BXP_SEL_CONFIG_INTERFACE);
+@@ -2317,6 +2322,18 @@ bx_begin_simulation (int argc, char *arg
    SIM->set_init_done (1);
  
    // update headerbar buttons since drive status can change during init
@@ -543,7 +601,7 @@ diff -urpN bochs-2.1.1.orig/main.cc checkbochs-2.1.1/main.cc
    bx_gui->update_drive_status_buttons ();
  
    // The set handler for mouse_enabled does not actually update the gui
-@@ -2507,7 +2532,7 @@ bx_init_hardware()
+@@ -2515,7 +2532,7 @@ bx_init_hardware()
  #if !BX_DEBUGGER
    signal(SIGINT, bx_signal_handler);
  #endif
@@ -552,7 +610,7 @@ diff -urpN bochs-2.1.1.orig/main.cc checkbochs-2.1.1/main.cc
  #if BX_SHOW_IPS
  #ifndef __MINGW32__
    signal(SIGALRM, bx_signal_handler);
-@@ -3971,6 +3996,20 @@ parse_line_formatted(char *context, int 
+@@ -3979,6 +3996,20 @@ parse_line_formatted(char *context, int 
      if (!bx_options.Osel_config->set_by_name (params[1]))
        PARSE_ERR(("%s: config_interface '%s' not available", context, params[1]));
      }
@@ -573,10 +631,9 @@ diff -urpN bochs-2.1.1.orig/main.cc checkbochs-2.1.1/main.cc
    else if (!strcmp(params[0], "display_library")) {
      if (num_params != 2) {
        PARSE_ERR(("%s: display_library directive: wrong # args.", context));
-diff -urpN bochs-2.1.1.orig/main.cc~ checkbochs-2.1.1/main.cc~
-diff -urpN bochs-2.1.1.orig/memory/memory.h checkbochs-2.1.1/memory/memory.h
---- bochs-2.1.1.orig/memory/memory.h	2004-02-11 14:28:54.000000000 -0800
-+++ checkbochs-2.1.1/memory/memory.h	2005-06-29 10:59:56.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/memory/memory.h checkbochs-2.1.1/memory/memory.h
+--- bochs-2.1.1/memory/memory.h	2004-02-11 14:28:54.000000000 -0800
++++ checkbochs-2.1.1/memory/memory.h	2005-07-02 17:25:48.000000000 -0700
 @@ -45,6 +45,10 @@ class BOCHSAPI BX_MEM_C : public logfunc
  public:
    Bit8u   *actual_vector;
@@ -601,9 +658,9 @@ diff -urpN bochs-2.1.1.orig/memory/memory.h checkbochs-2.1.1/memory/memory.h
    };
  
  #if BX_PROVIDE_CPU_MEMORY==1
-diff -urpN bochs-2.1.1.orig/memory/misc_mem.cc checkbochs-2.1.1/memory/misc_mem.cc
---- bochs-2.1.1.orig/memory/misc_mem.cc	2004-02-11 14:28:54.000000000 -0800
-+++ checkbochs-2.1.1/memory/misc_mem.cc	2005-06-29 10:59:56.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/memory/misc_mem.cc checkbochs-2.1.1/memory/misc_mem.cc
+--- bochs-2.1.1/memory/misc_mem.cc	2004-02-11 14:28:54.000000000 -0800
++++ checkbochs-2.1.1/memory/misc_mem.cc	2005-07-02 17:25:48.000000000 -0700
 @@ -54,7 +54,9 @@ BX_MEM_C::BX_MEM_C(void)
    settype(MEMLOG);
  
@@ -644,7 +701,7 @@ diff -urpN bochs-2.1.1.orig/memory/misc_mem.cc checkbochs-2.1.1/memory/misc_mem.
  }
  #endif
  
-@@ -136,6 +150,7 @@ BX_MEM_C::init_memory(int memsize)
+@@ -136,6 +149,7 @@ BX_MEM_C::init_memory(int memsize)
  
    if (BX_MEM_THIS vector == NULL) {
      // memory not already allocated, do now...
@@ -652,9 +709,9 @@ diff -urpN bochs-2.1.1.orig/memory/misc_mem.cc checkbochs-2.1.1/memory/misc_mem.
      alloc_vector_aligned (memsize, BX_MEM_VECTOR_ALIGN);
      BX_MEM_THIS len    = memsize;
      BX_MEM_THIS megabytes = memsize / (1024*1024);
-diff -urpN bochs-2.1.1.orig/taint/Makefile.in checkbochs-2.1.1/taint/Makefile.in
---- bochs-2.1.1.orig/taint/Makefile.in	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/Makefile.in	2005-06-29 11:14:31.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/Makefile.in checkbochs-2.1.1/taint/Makefile.in
+--- bochs-2.1.1/taint/Makefile.in	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/Makefile.in	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,184 @@
 +.SUFFIXES: .cc
 +
@@ -840,10 +897,10 @@ diff -urpN bochs-2.1.1.orig/taint/Makefile.in checkbochs-2.1.1/taint/Makefile.in
 +hash.o: hash.h hash.cc
 +
 +list.o: list.h list.cc
-diff -urpN bochs-2.1.1.orig/taint/common.cc checkbochs-2.1.1/taint/common.cc
---- bochs-2.1.1.orig/taint/common.cc	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/common.cc	2005-06-29 11:19:16.000000000 -0700
-@@ -0,0 +1,146 @@
+diff -X ignore -urpNb bochs-2.1.1/taint/common.cc checkbochs-2.1.1/taint/common.cc
+--- bochs-2.1.1/taint/common.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/common.cc	2005-07-19 15:33:53.000000000 -0700
+@@ -0,0 +1,185 @@
 +#define NEED_CPU_REG_SHORTCUTS 1
 +#include "bochs.h"
 +#define LOG_THIS BX_CPU_THIS_PTR
@@ -940,13 +997,9 @@ diff -urpN bochs-2.1.1.orig/taint/common.cc checkbochs-2.1.1/taint/common.cc
 +    unsigned kernelPL = 0;
 +    Bit32u pid;
 +    if (CPL==kernelPL) {
-+	//pid = (ESP & 0xffffe000);
-+	pid = ((ESP-1) & ~PGMASK);	//subtract 1 so that we do not get incorrect pid, if stack is empty
++	pid = ((ESP-1) - 0xc0000000) >> 12;
 +    } else {
-+	/*Bit32u esp;
-+	Bit16u ss;
-+	get_SS_ESP_from_TSS(kernelPL,&ss,&esp);
-+	pid = esp;*/
++        pid = 0;
 +    }
 +    return pid;
 +}
@@ -967,6 +1020,49 @@ diff -urpN bochs-2.1.1.orig/taint/common.cc checkbochs-2.1.1/taint/common.cc
 +	stackdepth++;
 +    }
 +    return s;
++}
++
++static Bit32u
++read_dword(Bit32u laddr) 
++{
++    Bit32u paddr = laddr - PHYS_BASE;
++    if (paddr <= BX_MEM(0)->len - 4) {
++        Bit32u tmp;
++        ReadHostDWordFromLittleEndian(BX_MEM(0)->vector + paddr, tmp);
++        return tmp;
++    } else {
++        return 0;
++    }
++}
++
++static void
++read_2_dwords(Bit32u laddr, Bit32u *dst0, Bit32u *dst1) 
++{
++    Bit32u paddr = laddr - PHYS_BASE;
++    if (paddr <= BX_MEM(0)->len - 8) {
++        ReadHostDWordFromLittleEndian(BX_MEM(0)->vector + paddr, *dst0);
++        ReadHostDWordFromLittleEndian(BX_MEM(0)->vector + paddr + 4, *dst1);
++    } else {
++        *dst0 = 0;
++        *dst1 = 0;
++    }
++}
++
++void BX_CPU_C::backtrace_eips(Bit32u *eips, int n)  {
++    Bit32u ebp, eip;
++    *eips++ = EIP;
++    ebp = EBP;
++    while (ebp>0xc0000000 && --n > 0) {
++        read_2_dwords(ebp, &ebp, &eip);
++/* 
++        eip = read_dword (ebp+4);
++        ebp = read_dword (ebp);
++*/
++        *eips++ = eip;
++    }
++    while (--n > 0) {
++        *eips++ = 0;
++    }
 +}
 +
 +Bit32u BX_CPU_C::callingEIP(void) {
@@ -990,11 +1086,10 @@ diff -urpN bochs-2.1.1.orig/taint/common.cc checkbochs-2.1.1/taint/common.cc
 +	vfprintf (g_logfp, fmt, ap) ;
 +	va_end (ap) ;
 +}
-diff -urpN bochs-2.1.1.orig/taint/common.cc.bak checkbochs-2.1.1/taint/common.cc.bak
-diff -urpN bochs-2.1.1.orig/taint/eraser.cc checkbochs-2.1.1/taint/eraser.cc
---- bochs-2.1.1.orig/taint/eraser.cc	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/eraser.cc	2005-06-29 11:19:16.000000000 -0700
-@@ -0,0 +1,240 @@
+diff -X ignore -urpNb bochs-2.1.1/taint/eraser.cc checkbochs-2.1.1/taint/eraser.cc
+--- bochs-2.1.1/taint/eraser.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/eraser.cc	2005-07-19 21:10:55.000000000 -0700
+@@ -0,0 +1,375 @@
 +#define NEED_CPU_REG_SHORTCUTS 1
 +#include "bochs.h"
 +#define LOG_THIS BX_CPU_THIS_PTR
@@ -1003,8 +1098,7 @@ diff -urpN bochs-2.1.1.orig/taint/eraser.cc checkbochs-2.1.1/taint/eraser.cc
 +#define this (BX_CPU(0))
 +#endif
 +
-+#define PHYS_BASE	0xc0000000
-+
++#include <gdbm.h>
 +#include "mydebug.h"
 +#include "taint_type.h"
 +#include "lockset.h"
@@ -1012,6 +1106,104 @@ diff -urpN bochs-2.1.1.orig/taint/eraser.cc checkbochs-2.1.1/taint/eraser.cc
 +#include "eraser.h"
 +#include "globals.h"
 +#include "mydebug.h"
++
++/* Backtrace database file name. */
++char btdb_fn[] = "/tmp/eraserXXXXXX";
++
++/* Backtrace database. */
++GDBM_FILE btdb;
++
++struct backtrace_key {
++    Bit32u laddr;
++    unsigned seq;
++};
++
++struct backtrace {
++    char type[8];
++    Bit32u thread;              /* Thread ID. */
++    Bit32u eips[16];            /* Backtrace EIPs. */
++    Bit32u locks[16];           /* Locks held. */
++};
++
++static void
++get_key(Bit32u address, unsigned seq, struct backtrace_key *key)
++{
++    key->laddr = address;
++    key->seq = seq;
++}
++
++static datum
++mk_datum(void *block, size_t length) 
++{
++    datum d;
++    d.dptr = (char *) block;
++    d.dsize = length;
++    return d;
++}
++
++static void
++record_backtrace(const char *type, Bit32u laddr) 
++{
++    lockset &tv = *BX_CPU(0)->access_linear_taint(laddr);
++    struct backtrace_key key;
++    struct backtrace bt;
++
++    /* Fill in backtrace struct. */
++    strncpy(bt.type, type, sizeof bt.type);
++    bt.type[sizeof bt.type - 1] = '\0';
++    bt.thread = BX_CPU(0)->thread_current();
++    BX_CPU(0)->backtrace_eips(bt.eips, sizeof bt.eips / sizeof *bt.eips);
++    lockset_dump(cur_held(bt.thread),
++                 bt.locks, sizeof bt.locks / sizeof *bt.locks);
++
++    /* Store backtrace struct. */
++    get_key(laddr, tv.seq, &key);
++    if (gdbm_store(btdb, mk_datum(&key, sizeof key), mk_datum(&bt, sizeof bt),
++                   GDBM_REPLACE) != 0) {
++        DBG(ERR, ("gdbm_store failed"));
++        exit(1);
++    }
++
++    /* Increment sequence number. */
++    tv.seq++;
++}
++
++static void
++dump_backtrace(Bit32u laddr, unsigned seq)
++{
++    struct backtrace_key key;
++    struct backtrace *bt;
++    datum content;
++
++    /* Fetch backtrace. */
++    get_key(laddr, seq, &key);
++    content = gdbm_fetch(btdb, mk_datum(&key, sizeof key));
++    if (content.dptr == NULL) {
++        abort();
++    }
++    bt = (backtrace *) content.dptr;
++
++    /* Dump. */
++    fprintf(g_logfp, "%s: thread %x, backtrace", bt->type, bt->thread);
++    for (unsigned i = 0; i < sizeof bt->eips / sizeof *bt->eips; i++) {
++        if (bt->eips[i] == 0)
++            break;
++        fprintf(g_logfp, " %x", bt->eips[i]); 
++    }
++    fprintf(g_logfp, ", locks");
++    for (unsigned i = 0; i < sizeof bt->locks / sizeof *bt->locks; i++) {
++        if (bt->locks[i] == 0)
++            break;
++        fprintf(g_logfp, " %x", bt->locks[i]);
++    }
++    fprintf(g_logfp, "\n");
++
++    free(bt);
++}
++
++    
++    
++
 +
 +void breakme() {}
 +
@@ -1096,86 +1288,95 @@ diff -urpN bochs-2.1.1.orig/taint/eraser.cc checkbochs-2.1.1/taint/eraser.cc
 +    //update_lockset(myid,lset);
 +}
 +
-+void BX_CPU_C::eraser_access_linear(bx_address laddr, unsigned len, unsigned pl, unsigned rw, void *notused) {
-+    Bit32u myid = (BX_CPU_THIS_PTR thread_current())&0x3fffffff;
-+    Bit32u taintval[4], origval;
-+    int i, try_access;
-+    if (ignore_on(myid)) return;
-+    if (laddr + len <= PHYS_BASE) return ;
-+    if (laddr < PHYS_BASE) {
-+    	len -= (PHYS_BASE-laddr) ;
-+    	laddr = PHYS_BASE ;
-+    }
-+    DBG (ACCESS_LINEAR, ("%s() %d: entry. laddr=%x, len=%x, rw=%x\n",__func__,__LINE__,laddr,len,rw)) ;
-+    if (!BX_CPU_THIS_PTR get_IF()) {
-+    	eraser_lock(INTERRUPT_LOCK); //acquire a dummy lock for disabled interrupts
-+	assert(cur_held(myid)!=0);
-+    }
-+    if (BX_CPU_THIS_PTR curInstruction->isLocked()) {
-+        DBG(LOCKS,("acquiring HW_PREFIX_LOCK. laddr=%x, len=%d.\n",laddr,len));
-+    	eraser_lock(HW_PREFIX_LOCK); //acquire a dummy lock for h/w prefix "LOCK"
-+	assert(cur_held(myid)!=0);
-+    }
++void BX_CPU_C::eraser_access_linear(bx_address laddr, unsigned len, unsigned pl, unsigned rw, void *notused)
++{
++    Bit32u tid = BX_CPU_THIS_PTR thread_current ();
++    if (ignore_on (tid))
++        return;
 +
-+    for (i=0;i<len;i++) {
-+        //taintval[i] = 0x0;
-+	try_access = access_linear_taint(laddr+i,1,pl,BX_READ,&taintval[i]);
-+	ASSERT(try_access);
-+	origval = taintval[i];
-+	if (get_state(taintval[i])==VIRGIN) {
++    // Acquire a dummy lock for disabled interrupts.
++    if (!BX_CPU_THIS_PTR get_IF())
++    	eraser_lock(INTERRUPT_LOCK);
++
++    // Acquire a dummy lock for h/w prefix "LOCK".
++    if (BX_CPU_THIS_PTR curInstruction->isLocked())
++    	eraser_lock(HW_PREFIX_LOCK);
++
++    for (; len-- > 0; laddr++) {
++        lockset *tvp = access_linear_taint(laddr);
++        if (tvp == NULL)
++            continue;
++        lockset &tv = *tvp;
++        lockset orig_tv = tv;
++
++        switch (tv.state) {
++        case S_VIRGIN:
 +	    if (rw==BX_WRITE || rw==BX_RW) {
-+		taintval[i] = set_state(taintval[i], EXCLUSIVE);
-+		taintval[i] = set_value(taintval[i], myid);
-+		DBG(CHECKBOCHS,("%x: Virgin->Exclusive(%x) location %x.if=%x. backtrace: %s\n",myid,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),backtrace(btstr)));
++                tv.state = S_EXCLUSIVE;
++                tv.seq = 0;
++                tv.value = tid;
++                record_backtrace("V->E", laddr);
 +	    } else {
-+		WRN_UNINIT(laddr) ;
++		//WRN_UNINIT(laddr) ;
 +	    }
-+	}
-+	else if (get_state(taintval[i])==EXCLUSIVE) {
-+	    if (get_value(taintval[i])!=myid) {
-+		taintval[i] =  set_value(taintval[i],cur_held(myid));
++            break;
++
++        case S_EXCLUSIVE:
++	    if (tv.value == tid) {
++                // Still exclusive to same thread.
++            } else {
++		tv.value = cur_held (tid);
 +		if (rw==BX_WRITE || rw==BX_RW) {
-+		    taintval[i] = set_state(taintval[i],SHARED_MOD);
-+		    DBG(CHECKBOCHS,("%x: Ex(%x)->SM(%x) location %x from exclusive to shared-mod state. if=%x, cur_held=%d. backtrace: %s\n",myid,origval,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),cur_held(myid),backtrace(btstr)));
++		    tv.state = S_SH_MOD;
++                    record_backtrace("E->SM", laddr);
 +		} else {
-+		    taintval[i] = set_state(taintval[i],SHARED);
-+		    DBG(CHECKBOCHS,("%x: Ex(%x)->Shared(%x) location %x from exclusive to shared-mod state. if=%x, cur_held=%d. backtrace: %s\n",myid,origval,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),cur_held(myid),backtrace(btstr)));
++                    tv.state = S_SHARED;
++                    record_backtrace("E->S", laddr);
 +		}
 +	    }
-+	}
-+	else if (get_state(taintval[i])==SHARED) {
-+	    taintval[i] = set_value(taintval[i],intersect_locksets(get_value(taintval[i]),cur_held(myid)));
-+	    if (rw==BX_WRITE || rw==BX_RW) {
-+		taintval[i] = set_state(taintval[i],SHARED_MOD);
-+		DBG(CHECKBOCHS,("%x: Shared(%x)->SM(%x) location %x from shared to shared-mod state. if=%x, cur_held=%d. backtrace: %s\n",myid,origval,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),cur_held(myid),backtrace(btstr)));
-+	    } else
-+	    if (origval!=taintval[i]) {
-+		DBG(CHECKBOCHS,("%x: Shared(%x)->Shared(%x) location %x from shared to shared-mod state. if=%x, cur_held=%d. backtrace: %s\n",myid,origval,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),cur_held(myid),backtrace(btstr)));
-+	    }
-+	}
-+	else if (get_state(taintval[i])==SHARED_MOD) {
-+	    taintval[i] = set_value(taintval[i],intersect_locksets(get_value(taintval[i]),cur_held(myid)));
-+	    if (origval!=taintval[i]) {
-+		DBG(CHECKBOCHS,("%x: SM(%x)->SM(%x) location %x from exclusive to shared-mod state. if=%x, cur_held=%d. backtrace: %s\n",myid,origval,taintval[i],laddr+i,BX_CPU_THIS_PTR get_IF(),cur_held(myid),backtrace(btstr)));
-+	    }
-+	}
++            break;
 +
-+	/* Update the taintval in shadow memory */
-+	if (origval!=taintval[i]) {
-+	    try_access = access_linear_taint(laddr+i,1,pl,BX_WRITE,
-+	    				     &taintval[i]);
-+	    ASSERT(try_access);
++        case S_SHARED:
++            tv.value = intersect_locksets (tv.value, cur_held (tid));
++	    if (rw==BX_WRITE || rw==BX_RW) {
++		tv.state = S_SH_MOD;
++                record_backtrace("S->SM", laddr);
++	    } else if (tv.value != orig_tv.value) {
++                record_backtrace("S", laddr);
++	    }
++            break;
++
++        case S_SH_MOD:
++            tv.value = intersect_locksets (tv.value, cur_held (tid));
++            if (tv.value != orig_tv.value) {
++                record_backtrace("SM", laddr);
++	    }
 +	}
 +
 +	/* Warn if needed */
-+	if (get_state(taintval[i])==SHARED_MOD && get_value(taintval[i])==LOCKSET_EMPTY) WRN_ERASER(myid,laddr+i,taintval[i]);
-+    }
-+    if (!BX_CPU_THIS_PTR get_IF()) eraser_unlock(INTERRUPT_LOCK); //release the lock that I had earlier acquired (to avoid duplicates)
++	if (tv.state == S_SH_MOD
++            && tv.value == LOCKSET_EMPTY
++            && !already_warned(laddr)) {
++            warn(laddr);
++            
++            unsigned v_e_seq;
++            
++            fprintf(g_logfp, "Warning on location %x:\n", laddr);
 +
-+    if (BX_CPU_THIS_PTR curInstruction->isLocked()) {
-+        DBG(LOCKS,("releasing HW_PREFIX_LOCK. laddr=%x, len=%d.\n",laddr,len));
-+	eraser_unlock(HW_PREFIX_LOCK);
++            for (unsigned i = 0; i < tv.seq; i++)
++                dump_backtrace(laddr, i);
++
++            fprintf(g_logfp, "\n");
++        }
 +    }
++
++    // Release interrupt lock. 
++    if (!BX_CPU_THIS_PTR get_IF())
++        eraser_unlock(INTERRUPT_LOCK);
++
++    // Release LOCK prefix lock.
++    if (BX_CPU_THIS_PTR curInstruction->isLocked())
++	eraser_unlock(HW_PREFIX_LOCK);
 +}
 +
 +void BX_CPU_C::TT_CommonOps(bxInstruction_c *i) {
@@ -1205,12 +1406,12 @@ diff -urpN bochs-2.1.1.orig/taint/eraser.cc checkbochs-2.1.1/taint/eraser.cc
 +	DBG(L1,("setting ignore off for thread %x. backtrace: %s\n",myid,backtrace(btstr)));
 +    }
 +    else if (EAX==REUSE_OP) {
-+        Bit32u taintval = 0;
 +	int pl = 0;	//kernel privileges
 +	DBG(L1,("%x: reusing location %x (%d). ESP=%x\n",myid,EDX,ECX,ESP));
 +	for (int i=0;i<ECX;i++) {
-+	    int ret = access_linear_taint(EDX+i,1,pl,BX_WRITE,&taintval);
-+	    if (ret==0) DBG(L1,("reuse on location %x failed.\n",EDX+i));
++            lockset *tv = access_linear_taint(EDX+i);
++            if (tv != NULL)
++                tv->state = S_VIRGIN;
 +	}
 +    } else if (EAX==DBG_MARK_OP) {
 +        Bit32u taintval = 0;
@@ -1234,11 +1435,39 @@ diff -urpN bochs-2.1.1.orig/taint/eraser.cc checkbochs-2.1.1/taint/eraser.cc
 +    if (g_logfp==NULL) {
 +	DBG (ERR, ("%s(): Error opening checkbochs log %s for writing.\n",__func__,g_logfn)) ;
 +    }
++
++    /* Create temporary file and set name into btdb_fn. */
++    int old_umask = umask(0077);
++    int fd = mkstemp(btdb_fn);
++    if (fd < 0) {
++        DBG(ERR, ("mkstemp: Couldn't create temp file: %s.\n", strerror(errno)));
++        exit(1);
++    }
++    umask(old_umask);
++    close(fd);
++    
++    /* Create database. */
++    btdb = gdbm_open(btdb_fn, 0, GDBM_NEWDB | GDBM_NOLOCK, 0600, NULL);
++    if (btdb == NULL) {
++        DBG(ERR, ("gdbm_open: Couldn't create backtrace database: %s.\n",
++                  gdbm_strerror(gdbm_errno)));
++        exit(1);
++    }
++    unlink(btdb_fn);
 +}
-diff -urpN bochs-2.1.1.orig/taint/eraser.cc.bak checkbochs-2.1.1/taint/eraser.cc.bak
-diff -urpN bochs-2.1.1.orig/taint/eraser.h checkbochs-2.1.1/taint/eraser.h
---- bochs-2.1.1.orig/taint/eraser.h	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/eraser.h	2005-06-29 11:19:16.000000000 -0700
++
++void BX_CPU_C::eraser_done_globals(void) 
++{
++    if (global_startup_ignore) {
++        fprintf(g_logfp,
++                "WARNING: Eraser never enabled.  Did you really apply "
++                "pintos/src/misc/checkbochs.patch?\n");
++    }
++}
++
+diff -X ignore -urpNb bochs-2.1.1/taint/eraser.h checkbochs-2.1.1/taint/eraser.h
+--- bochs-2.1.1/taint/eraser.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/eraser.h	2005-07-19 13:59:02.000000000 -0700
 @@ -0,0 +1,37 @@
 +#ifndef __ERASER_H
 +#define __ERASER_H
@@ -1273,14 +1502,13 @@ diff -urpN bochs-2.1.1.orig/taint/eraser.h checkbochs-2.1.1/taint/eraser.h
 +    } \
 +} while (0);
 +
-+#define INTERRUPT_LOCK 0x1234
-+#define HW_PREFIX_LOCK 0x2345
++#define INTERRUPT_LOCK 0xffff0001
++#define HW_PREFIX_LOCK 0xffff0002
 +
 +#endif
-diff -urpN bochs-2.1.1.orig/taint/eraser.h.bak checkbochs-2.1.1/taint/eraser.h.bak
-diff -urpN bochs-2.1.1.orig/taint/globals.cc checkbochs-2.1.1/taint/globals.cc
---- bochs-2.1.1.orig/taint/globals.cc	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/globals.cc	2005-06-29 11:19:16.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/globals.cc checkbochs-2.1.1/taint/globals.cc
+--- bochs-2.1.1/taint/globals.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/globals.cc	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,13 @@
 +#define NEED_CPU_REG_SHORTCUTS 1
 +#include "bochs.h"
@@ -1295,13 +1523,14 @@ diff -urpN bochs-2.1.1.orig/taint/globals.cc checkbochs-2.1.1/taint/globals.cc
 +bool global_startup_ignore = true ;
 +FILE *g_logfp = NULL ;
 +char g_logfn [128] = "checkbochs.log" ;
-diff -urpN bochs-2.1.1.orig/taint/globals.cc.bak checkbochs-2.1.1/taint/globals.cc.bak
-diff -urpN bochs-2.1.1.orig/taint/globals.h checkbochs-2.1.1/taint/globals.h
---- bochs-2.1.1.orig/taint/globals.h	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/globals.h	2005-06-29 11:19:16.000000000 -0700
-@@ -0,0 +1,15 @@
+diff -X ignore -urpNb bochs-2.1.1/taint/globals.h checkbochs-2.1.1/taint/globals.h
+--- bochs-2.1.1/taint/globals.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/globals.h	2005-07-19 12:09:53.000000000 -0700
+@@ -0,0 +1,17 @@
 +#ifndef __GLOBALS_H
 +#define __GLOBALS_H
++
++#define PHYS_BASE	0xc0000000
 +
 +#define MAX_STRLEN 128
 +
@@ -1315,10 +1544,9 @@ diff -urpN bochs-2.1.1.orig/taint/globals.h checkbochs-2.1.1/taint/globals.h
 +extern char g_logfn[128] ;
 +
 +#endif
-diff -urpN bochs-2.1.1.orig/taint/globals.h.bak checkbochs-2.1.1/taint/globals.h.bak
-diff -urpN bochs-2.1.1.orig/taint/hash.cc checkbochs-2.1.1/taint/hash.cc
---- bochs-2.1.1.orig/taint/hash.cc	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/hash.cc	2005-06-29 11:19:16.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/hash.cc checkbochs-2.1.1/taint/hash.cc
+--- bochs-2.1.1/taint/hash.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/hash.cc	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,353 @@
 +#include <stdlib.h>
 +#include <stdio.h>
@@ -1673,10 +1901,9 @@ diff -urpN bochs-2.1.1.orig/taint/hash.cc checkbochs-2.1.1/taint/hash.cc
 +  list_remove (e);
 +}
 +
-diff -urpN bochs-2.1.1.orig/taint/hash.cc.bak checkbochs-2.1.1/taint/hash.cc.bak
-diff -urpN bochs-2.1.1.orig/taint/hash.h checkbochs-2.1.1/taint/hash.h
---- bochs-2.1.1.orig/taint/hash.h	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/hash.h	2005-06-29 11:19:16.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/hash.h checkbochs-2.1.1/taint/hash.h
+--- bochs-2.1.1/taint/hash.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/hash.h	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,92 @@
 +#ifndef __HASH_H
 +#define __HASH_H
@@ -1770,10 +1997,9 @@ diff -urpN bochs-2.1.1.orig/taint/hash.h checkbochs-2.1.1/taint/hash.h
 +unsigned hash_int (int);
 +
 +#endif /* lib/kernel/hash.h */
-diff -urpN bochs-2.1.1.orig/taint/hash.h.bak checkbochs-2.1.1/taint/hash.h.bak
-diff -urpN bochs-2.1.1.orig/taint/list.cc checkbochs-2.1.1/taint/list.cc
---- bochs-2.1.1.orig/taint/list.cc	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/list.cc	2005-06-29 11:19:16.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/list.cc checkbochs-2.1.1/taint/list.cc
+--- bochs-2.1.1/taint/list.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/list.cc	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,471 @@
 +#include <stdlib.h>
 +#include <assert.h>
@@ -2246,10 +2472,9 @@ diff -urpN bochs-2.1.1.orig/taint/list.cc checkbochs-2.1.1/taint/list.cc
 +    }
 +  return min;
 +}
-diff -urpN bochs-2.1.1.orig/taint/list.cc.bak checkbochs-2.1.1/taint/list.cc.bak
-diff -urpN bochs-2.1.1.orig/taint/list.h checkbochs-2.1.1/taint/list.h
---- bochs-2.1.1.orig/taint/list.h	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/list.h	2005-06-29 11:19:16.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/list.h checkbochs-2.1.1/taint/list.h
+--- bochs-2.1.1/taint/list.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/list.h	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,171 @@
 +#ifndef __LIB_KERNEL_LIST_H
 +#define __LIB_KERNEL_LIST_H
@@ -2422,11 +2647,10 @@ diff -urpN bochs-2.1.1.orig/taint/list.h checkbochs-2.1.1/taint/list.h
 +inline bool
 +is_head (list_elem *elem);
 +#endif /* lib/kernel/list.h */
-diff -urpN bochs-2.1.1.orig/taint/list.h.bak checkbochs-2.1.1/taint/list.h.bak
-diff -urpN bochs-2.1.1.orig/taint/lockset.cc checkbochs-2.1.1/taint/lockset.cc
---- bochs-2.1.1.orig/taint/lockset.cc	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/lockset.cc	2005-06-29 11:19:16.000000000 -0700
-@@ -0,0 +1,635 @@
+diff -X ignore -urpNb bochs-2.1.1/taint/lockset.cc checkbochs-2.1.1/taint/lockset.cc
+--- bochs-2.1.1/taint/lockset.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/lockset.cc	2005-07-19 22:38:45.000000000 -0700
+@@ -0,0 +1,647 @@
 +#include <stdio.h>
 +#include <stdlib.h>
 +#include <assert.h>
@@ -2938,6 +3162,18 @@ diff -urpN bochs-2.1.1.orig/taint/lockset.cc checkbochs-2.1.1/taint/lockset.cc
 +    return ret_index;
 +}
 +
++void lockset_dump(locksetidx_t idx, Bit32u *locks, int cnt) 
++{
++    lockvector_t *vec = index_table[idx];
++    while (vec != NULL && cnt-- > 0) {
++        *locks++ = vec->lockaddress;
++        vec = vec->next;
++    }
++    while (cnt-- > 0) {
++        *locks++ = 0;
++    }
++}
++
 +typedef struct locks_held {
 +    unsigned threadId;
 +    locksetidx_t locks_held;
@@ -3062,26 +3298,27 @@ diff -urpN bochs-2.1.1.orig/taint/lockset.cc checkbochs-2.1.1/taint/lockset.cc
 +    }
 +    return false;
 +}
-diff -urpN bochs-2.1.1.orig/taint/lockset.cc.bak checkbochs-2.1.1/taint/lockset.cc.bak
-diff -urpN bochs-2.1.1.orig/taint/lockset.h checkbochs-2.1.1/taint/lockset.h
---- bochs-2.1.1.orig/taint/lockset.h	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/lockset.h	2005-06-29 11:19:16.000000000 -0700
-@@ -0,0 +1,32 @@
+diff -X ignore -urpNb bochs-2.1.1/taint/lockset.h checkbochs-2.1.1/taint/lockset.h
+--- bochs-2.1.1/taint/lockset.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/lockset.h	2005-07-19 13:40:21.000000000 -0700
+@@ -0,0 +1,35 @@
 +#ifndef __LOCKSET_H
 +#define __LOCKSET_H
 +
 +#define LOCKSET_EMPTY 0
 +
-+#define VIRGIN 0x0
-+#define EXCLUSIVE	0x40000000
-+#define SHARED		0x80000000
-+#define SHARED_MOD	0xc0000000
++/* States. */
++#define S_VIRGIN        0
++#define S_EXCLUSIVE     1
++#define S_SHARED        2
++#define S_SH_MOD        3
 +
-+#define get_state(x) (x&0xc0000000)
-+#define set_state(x,s) ((x&0x3fffffff)|s)
-+
-+#define get_value(x) (x&0x3fffffff)
-+#define set_value(x,v) ((x&0xc0000000)|(v&0x3fffffff))
++struct lockset 
++  {
++    unsigned int state : 2;
++    unsigned int seq : 10;
++    unsigned int value : 20;
++  };
 +
 +typedef unsigned int address_t;
 +typedef unsigned long locksetidx_t;
@@ -3091,6 +3328,7 @@ diff -urpN bochs-2.1.1.orig/taint/lockset.h checkbochs-2.1.1/taint/lockset.h
 +locksetidx_t remove_lock(locksetidx_t index, address_t newlock);
 +locksetidx_t intersect_locksets(locksetidx_t index1, locksetidx_t index2);
 +bool belongs(locksetidx_t index, address_t lock);
++void lockset_dump(locksetidx_t, Bit32u locks[], int cnt);
 +
 +locksetidx_t cur_held(unsigned threadId);
 +void update_lockset(unsigned threadId, locksetidx_t lockset);
@@ -3099,10 +3337,9 @@ diff -urpN bochs-2.1.1.orig/taint/lockset.h checkbochs-2.1.1/taint/lockset.h
 +bool ignore_on(unsigned threadId);
 +
 +#endif
-diff -urpN bochs-2.1.1.orig/taint/lockset.h.bak checkbochs-2.1.1/taint/lockset.h.bak
-diff -urpN bochs-2.1.1.orig/taint/main.c checkbochs-2.1.1/taint/main.c
---- bochs-2.1.1.orig/taint/main.c	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/main.c	2005-06-16 18:14:07.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/main.c checkbochs-2.1.1/taint/main.c
+--- bochs-2.1.1/taint/main.c	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/main.c	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,32 @@
 +#include "lockset.h"
 +
@@ -3136,9 +3373,9 @@ diff -urpN bochs-2.1.1.orig/taint/main.c checkbochs-2.1.1/taint/main.c
 +    printf("i12 = %d, i21 = %d, i123=%d, i312=%d, i321=%d, i321m2=%d, i312m2=%d.\n",i12,i21,i123,i312,i321,i321m2,i312m2);
 +    printf("i312i123 = %d, i312i21 = %d, i312i1=%d, i32i1=%d.\n",i312i123,i312i21,i312i1,i32i1);
 +}
-diff -urpN bochs-2.1.1.orig/taint/memory.cc checkbochs-2.1.1/taint/memory.cc
---- bochs-2.1.1.orig/taint/memory.cc	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/memory.cc	2005-06-29 11:19:16.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/memory.cc checkbochs-2.1.1/taint/memory.cc
+--- bochs-2.1.1/taint/memory.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/memory.cc	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,360 @@
 +
 +#include "bochs.h"
@@ -3500,10 +3737,9 @@ diff -urpN bochs-2.1.1.orig/taint/memory.cc checkbochs-2.1.1/taint/memory.cc
 +    return;
 +    }
 +}
-diff -urpN bochs-2.1.1.orig/taint/memory.cc.bak checkbochs-2.1.1/taint/memory.cc.bak
-diff -urpN bochs-2.1.1.orig/taint/mydebug.h checkbochs-2.1.1/taint/mydebug.h
---- bochs-2.1.1.orig/taint/mydebug.h	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/mydebug.h	2005-06-29 11:19:16.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/mydebug.h checkbochs-2.1.1/taint/mydebug.h
+--- bochs-2.1.1/taint/mydebug.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/mydebug.h	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,28 @@
 +#ifndef __MYDEBUG_H
 +#define __MYDEBUG_H
@@ -3533,11 +3769,10 @@ diff -urpN bochs-2.1.1.orig/taint/mydebug.h checkbochs-2.1.1/taint/mydebug.h
 +	}
 +
 +#endif
-diff -urpN bochs-2.1.1.orig/taint/mydebug.h.bak checkbochs-2.1.1/taint/mydebug.h.bak
-diff -urpN bochs-2.1.1.orig/taint/paging.cc checkbochs-2.1.1/taint/paging.cc
---- bochs-2.1.1.orig/taint/paging.cc	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/paging.cc	2005-06-29 11:19:16.000000000 -0700
-@@ -0,0 +1,241 @@
+diff -X ignore -urpNb bochs-2.1.1/taint/paging.cc checkbochs-2.1.1/taint/paging.cc
+--- bochs-2.1.1/taint/paging.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/paging.cc	2005-07-19 14:40:31.000000000 -0700
+@@ -0,0 +1,90 @@
 +#define NEED_CPU_REG_SHORTCUTS 1
 +#include "bochs.h"
 +#define LOG_THIS BX_CPU_THIS_PTR
@@ -3616,173 +3851,21 @@ diff -urpN bochs-2.1.1.orig/taint/paging.cc checkbochs-2.1.1/taint/paging.cc
 +}
 +
 +
-+  int BX_CPP_AttrRegparmN(3)
-+BX_CPU_C::access_linear_taint(bx_address laddr, unsigned length, unsigned pl,
-+    unsigned rw, void *taint_value)
++lockset *
++BX_CPU_C::access_linear_taint(bx_address laddr)
 +{
-+  Bit32u pageOffset;
-+  unsigned xlate_rw;
-+  int try_access;
++    if (!BX_CPU_THIS_PTR cr0.pg)
++        return NULL;
 +
-+  assert(length==1);
-+  ASSERT(rw==BX_READ || get_value(*(Bit32u*)taint_value)<2 || get_state(*(Bit32u*)taint_value));
-+  if (rw==BX_RW) {
-+    xlate_rw = BX_RW;
-+    rw = BX_READ;
-+  }
-+  else {
-+    xlate_rw = rw;
-+  }
-+
-+  pageOffset = laddr & 0x00000fff;
-+
-+  if (BX_CPU_THIS_PTR cr0.pg) {
-+    /* check for reference across multiple pages */
-+    if ( (pageOffset + length) <= 4096 ) {
-+      // Access within single page.
-+      try_access = taint_dtranslate_linear(laddr, pl, xlate_rw);
-+      if (try_access==-1) return 0;
-+      BX_CPU_THIS_PTR address_xlation.taint_paddress1 = try_access;
-+      BX_CPU_THIS_PTR address_xlation.taint_pages     = 1;
-+
-+      if (rw == BX_READ) {
-+        BX_INSTR_LIN_READ(BX_CPU_ID, laddr, BX_CPU_THIS_PTR address_xlation.taint_paddress1, length);
-+        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this,
-+            BX_CPU_THIS_PTR address_xlation.taint_paddress1, length, taint_value);
-+        }
-+      else {
-+        BX_INSTR_LIN_WRITE(BX_CPU_ID, laddr, BX_CPU_THIS_PTR address_xlation.taint_paddress1, length);
-+        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this,
-+            BX_CPU_THIS_PTR address_xlation.taint_paddress1, length, taint_value);
-+        }
-+      //if (rw==BX_WRITE) BX_CPU_THIS_PTR address_xlation.taint_write_paddress1 = BX_CPU_THIS_PTR address_xlation.taint_paddress1;
-+      }
-+    else {
-+      try_access = taint_dtranslate_linear(laddr, pl, xlate_rw);
-+      if (try_access==-1) return 0;
-+      // access across 2 pages
-+      BX_CPU_THIS_PTR address_xlation.taint_paddress1 = try_access;
-+      BX_CPU_THIS_PTR address_xlation.taint_len1 = 4096 - pageOffset;
-+      BX_CPU_THIS_PTR address_xlation.taint_len2 = length -
-+          BX_CPU_THIS_PTR address_xlation.taint_len1;
-+      BX_CPU_THIS_PTR address_xlation.taint_pages     = 2;
-+      try_access = taint_dtranslate_linear(laddr + BX_CPU_THIS_PTR address_xlation.taint_len1, pl, xlate_rw);
-+      if (try_access==-1) return 0;
-+      BX_CPU_THIS_PTR address_xlation.taint_paddress2 = try_access;
-+
-+#ifdef BX_LITTLE_ENDIAN
-+      if (rw == BX_READ) {
-+        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
-+                             BX_CPU_THIS_PTR address_xlation.taint_len1, taint_value);
-+        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
-+                             BX_CPU_THIS_PTR address_xlation.taint_len2,
-+                             ((Bit32u*)taint_value) + BX_CPU_THIS_PTR address_xlation.taint_len1);
-+        }
-+      else {
-+        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
-+                              BX_CPU_THIS_PTR address_xlation.taint_len1, taint_value);
-+        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
-+                              BX_CPU_THIS_PTR address_xlation.taint_len2,
-+                              ((Bit32u*)taint_value) + BX_CPU_THIS_PTR address_xlation.taint_len1);
-+        }
-+
-+#else // BX_BIG_ENDIAN
-+      if (rw == BX_READ) {
-+        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
-+                             BX_CPU_THIS_PTR address_xlation.taint_len1,
-+                             ((Bit32u*)taint_value) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
-+        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
-+                             BX_CPU_THIS_PTR address_xlation.taint_len2, taint_value);
-+        }
-+      else {
-+        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress1,
-+                              BX_CPU_THIS_PTR address_xlation.taint_len1,
-+                              ((Bit32u*)taint_value) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
-+        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this, BX_CPU_THIS_PTR address_xlation.taint_paddress2,
-+                              BX_CPU_THIS_PTR address_xlation.taint_len2, taint_value);
-+        }
-+#endif
-+
-+      //if (rw==BX_WRITE) BX_CPU_THIS_PTR address_xlation.taint_write_paddress1 = BX_CPU_THIS_PTR address_xlation.taint_paddress1;
-+      }
-+    }
-+
-+  else {
-+    // Paging off.
-+    if ( (pageOffset + length) <= 4096 ) {
-+      // Access within single page.
-+      BX_CPU_THIS_PTR address_xlation.taint_paddress1 = laddr;
-+      BX_CPU_THIS_PTR address_xlation.taint_pages     = 1;
-+      if (rw == BX_READ) {
-+
-+        // Let access fall through to the following for this iteration.
-+        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this, laddr, length, taint_value);
-+        }
-+      else { // Write
-+        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this, laddr, length, taint_value);
-+        }
-+      }
-+    else {
-+      // Access spans two pages.
-+      BX_CPU_THIS_PTR address_xlation.taint_paddress1 = laddr;
-+      BX_CPU_THIS_PTR address_xlation.taint_len1 = 4096 - pageOffset;
-+      BX_CPU_THIS_PTR address_xlation.taint_len2 = length -
-+          BX_CPU_THIS_PTR address_xlation.taint_len1;
-+      BX_CPU_THIS_PTR address_xlation.taint_pages     = 2;
-+      BX_CPU_THIS_PTR address_xlation.taint_paddress2 = laddr +
-+          BX_CPU_THIS_PTR address_xlation.taint_len1;
-+
-+#ifdef BX_LITTLE_ENDIAN
-+      if (rw == BX_READ) {
-+        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this,
-+            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
-+            BX_CPU_THIS_PTR address_xlation.taint_len1, taint_value);
-+        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this,
-+            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
-+            BX_CPU_THIS_PTR address_xlation.taint_len2,
-+            ((Bit32u*)taint_value) + BX_CPU_THIS_PTR address_xlation.taint_len1);
-+        }
-+      else {
-+        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this,
-+            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
-+            BX_CPU_THIS_PTR address_xlation.taint_len1, taint_value);
-+        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this,
-+            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
-+            BX_CPU_THIS_PTR address_xlation.taint_len2,
-+            ((Bit32u*)taint_value) + BX_CPU_THIS_PTR address_xlation.taint_len1);
-+        }
-+
-+#else // BX_BIG_ENDIAN
-+      if (rw == BX_READ) {
-+        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this,
-+            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
-+            BX_CPU_THIS_PTR address_xlation.taint_len1,
-+            ((Bit32u*)taint_value) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
-+        BX_CPU_THIS_PTR mem->readPhysicalTaintPage(this,
-+            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
-+            BX_CPU_THIS_PTR address_xlation.taint_len2, taint_value);
-+        }
-+      else {
-+        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this,
-+            BX_CPU_THIS_PTR address_xlation.taint_paddress1,
-+            BX_CPU_THIS_PTR address_xlation.taint_len1,
-+            ((Bit32u*)taint_value) + (length - BX_CPU_THIS_PTR address_xlation.taint_len1));
-+        BX_CPU_THIS_PTR mem->writePhysicalTaintPage(this,
-+            BX_CPU_THIS_PTR address_xlation.taint_paddress2,
-+            BX_CPU_THIS_PTR address_xlation.taint_len2, taint_value);
-+        }
-+#endif
-+      }
-+    //if (rw==BX_WRITE) BX_CPU_THIS_PTR address_xlation.taint_write_paddress1 = BX_CPU_THIS_PTR address_xlation.taint_paddress1;
-+    }
-+    return 1;
++    BX_MEM_C *m = BX_CPU_THIS_PTR mem;
++    Bit32u paddr = laddr - PHYS_BASE;
++    return paddr < m->len ? (lockset *) &m->taint_vector[paddr] : NULL;
 +}
 +
 +#endif
-diff -urpN bochs-2.1.1.orig/taint/paging.cc.bak checkbochs-2.1.1/taint/paging.cc.bak
-diff -urpN bochs-2.1.1.orig/taint/silent_access.cc checkbochs-2.1.1/taint/silent_access.cc
---- bochs-2.1.1.orig/taint/silent_access.cc	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/silent_access.cc	2005-06-29 11:19:16.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/silent_access.cc checkbochs-2.1.1/taint/silent_access.cc
+--- bochs-2.1.1/taint/silent_access.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/silent_access.cc	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,210 @@
 +#define NEED_CPU_REG_SHORTCUTS 1
 +#include "bochs.h"
@@ -3994,10 +4077,9 @@ diff -urpN bochs-2.1.1.orig/taint/silent_access.cc checkbochs-2.1.1/taint/silent
 +  if (!ret) return 0;
 +  goto accessOK;
 +}
-diff -urpN bochs-2.1.1.orig/taint/silent_access.cc.bak checkbochs-2.1.1/taint/silent_access.cc.bak
-diff -urpN bochs-2.1.1.orig/taint/silent_paging.cc checkbochs-2.1.1/taint/silent_paging.cc
---- bochs-2.1.1.orig/taint/silent_paging.cc	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/silent_paging.cc	2005-06-29 11:19:16.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/silent_paging.cc checkbochs-2.1.1/taint/silent_paging.cc
+--- bochs-2.1.1/taint/silent_paging.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/silent_paging.cc	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,175 @@
 +#define NEED_CPU_REG_SHORTCUTS 1
 +#include "bochs.h"
@@ -4174,10 +4256,9 @@ diff -urpN bochs-2.1.1.orig/taint/silent_paging.cc checkbochs-2.1.1/taint/silent
 +}
 +
 +#endif
-diff -urpN bochs-2.1.1.orig/taint/silent_paging.cc.bak checkbochs-2.1.1/taint/silent_paging.cc.bak
-diff -urpN bochs-2.1.1.orig/taint/taint_type.cc checkbochs-2.1.1/taint/taint_type.cc
---- bochs-2.1.1.orig/taint/taint_type.cc	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/taint_type.cc	2005-06-29 11:19:16.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/taint_type.cc checkbochs-2.1.1/taint/taint_type.cc
+--- bochs-2.1.1/taint/taint_type.cc	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/taint_type.cc	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,13 @@
 +#define NEED_CPU_REG_SHORTCUTS 1
 +#include "bochs.h"
@@ -4192,10 +4273,9 @@ diff -urpN bochs-2.1.1.orig/taint/taint_type.cc checkbochs-2.1.1/taint/taint_typ
 +	//g_access_linear_fptr = &(BX_CPU_C::eraser_access_linear);
 +    }
 +}
-diff -urpN bochs-2.1.1.orig/taint/taint_type.cc.bak checkbochs-2.1.1/taint/taint_type.cc.bak
-diff -urpN bochs-2.1.1.orig/taint/taint_type.h checkbochs-2.1.1/taint/taint_type.h
---- bochs-2.1.1.orig/taint/taint_type.h	1969-12-31 16:00:00.000000000 -0800
-+++ checkbochs-2.1.1/taint/taint_type.h	2005-06-29 11:19:16.000000000 -0700
+diff -X ignore -urpNb bochs-2.1.1/taint/taint_type.h checkbochs-2.1.1/taint/taint_type.h
+--- bochs-2.1.1/taint/taint_type.h	1969-12-31 16:00:00.000000000 -0800
++++ checkbochs-2.1.1/taint/taint_type.h	2005-07-02 17:25:48.000000000 -0700
 @@ -0,0 +1,8 @@
 +#ifndef __TAINT_TYPE_H
 +#define __TAINT_TYPE_H
@@ -4205,4 +4285,3 @@ diff -urpN bochs-2.1.1.orig/taint/taint_type.h checkbochs-2.1.1/taint/taint_type
 +void assign_taint_functions(char *taint_type);
 +
 +#endif
-diff -urpN bochs-2.1.1.orig/taint/taint_type.h.bak checkbochs-2.1.1/taint/taint_type.h.bak

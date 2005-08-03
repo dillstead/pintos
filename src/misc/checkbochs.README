@@ -1,0 +1,7 @@
+The patch in checkbochs.patch must be applied to Pintos before
+Checkbochs will be useful.  To apply it, `cd' to pintos/src and type
+	patch -p2 < misc/checkbochs.patch
+
+Checkbochs and this patch were written by Sorav Bansal
+<sbansal@stanford.edu>.  They have been modified by Ben Pfaff
+<blp@cs.stanford.edu>.

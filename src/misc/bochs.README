@@ -16,6 +16,8 @@ are provided:
 
 	bochs-2.1.1-checkbochs.patch:
 		Implements Eraser-like lock checking support.
+		(This patch is provided by Sorav Bansal, with
+		modifications by Ben Pfaff.)
 
 On Solaris, we recommend applying all the patches for use with Pintos.
 On other host OSes, do not apply the Solaris patch.
@@ -46,14 +48,18 @@ Bourne shell, and that PATCHDIR is set to the directory that contains
 the Bochs patches.
 
 # Setup.
+PATCHDIR=$HOME/cs140/eraser/src/misc
 PREFIX="/usr/class/cs140/`uname -m`"
 BINDIR=$PREFIX/bin
 CFGOPTS="--with-x --with-x11 --with-term --with-nogui --prefix=$PREFIX"
 
 # Fetch sources.
-wget http://easynews.dl.sourceforge.net/sourceforge/bochs/bochs-2.1.1.tar.gz
+if test ! -e bochs-2.1.1.tar.gz; then
+	wget http://easynews.dl.sourceforge.net/sourceforge/bochs/bochs-2.1.1.tar.gz
+fi
 
 # Apply patches.
+rm -rf bochs-2.1.1 checkbochs-2.1.1
 tar xzf bochs-2.1.1.tar.gz
 (cd bochs-2.1.1 && patch -p1 < $PATCHDIR/bochs-2.1.1-tty-stdout.patch)
 (cd bochs-2.1.1 && patch -p1 < $PATCHDIR/bochs-2.1.1-jitter.patch)
@@ -65,22 +71,21 @@ cp -pR bochs-2.1.1 checkbochs-2.1.1
 (cd checkbochs-2.1.1 && patch -p1 < $PATCHDIR/bochs-2.1.1-checkbochs.patch)
 
 # Build and install Bochs variants.
-(cd bochs-2.1.1 && rm -rf plain && mkdir plain && cd plain && 
+(cd bochs-2.1.1 && rm -rf _plain && mkdir _plain && cd _plain && 
  ../configure $CFGOPTS && make && make install)
-(cd bochs-2.1.1 && rm -rf with-gdb mkdir with-gdb && cd with-gdb && 
- ../configure --enable-gdb-stub $CFGOPTS && 
- make && cp bochs $BINDIR/bochs-gdb)
-(cd bochs-2.1.1 && rm -rf with-dbg && mkdir with-dbg && cd with-dbg && 
- ../configure --enable-debugger $CFGOPTS &&
- make && cp bochs $BINDIR/bochs-dbg)
+(cd bochs-2.1.1 && rm -rf _gdb && mkdir _gdb && cd _gdb && 
+ ../configure --enable-gdb-stub $CFGOPTS && make && cp bochs $BINDIR/bochs-gdb)
+(cd bochs-2.1.1 && rm -rf _dbg && mkdir _dbg && cd _dbg && 
+ ../configure --enable-debugger $CFGOPTS && make && cp bochs $BINDIR/bochs-dbg)
 
 # Build and install Checkbochs variants.
-(cd checkbochs-2.1.1 && rm -rf plain && mkdir plain && cd plain &&
+(cd checkbochs-2.1.1 && autoconf)
+(cd checkbochs-2.1.1 && rm -rf _plain && mkdir _plain && cd _plain &&
  ../configure $CFGOPTS && make && cp bochs $BINDIR/checkbochs)
-(cd checkbochs-2.1.1 && rm -rf with-gdb && mkdir with-gdb && cd with-gdb && 
- ../configure --enable-gdb-stub $CFGOPTS && 
+(cd checkbochs-2.1.1 && rm -rf _gdb && mkdir _gdb && cd _gdb && 
+ ../configure --enable-gdb-stub $CFGOPTS &&
  make && cp bochs $BINDIR/checkbochs-gdb)
-(cd checkbochs-2.1.1 && rm -rf with-dbg && mkdir with-dbg && cd with-dbg && 
+(cd checkbochs-2.1.1 && rm -rf _dbg && mkdir _dbg && cd _dbg && 
  ../configure --enable-debugger $CFGOPTS &&
  make && cp bochs $BINDIR/checkbochs-dbg)
 

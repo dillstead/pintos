@@ -1,10 +1,3 @@
-This patch must be applied to Pintos before Checkbochs may be usefully
-applied to it.  To apply it, `cd' to pintos/src and type
-	patch -p2 < misc/checkbochs.patch
-
-Written by Sorav Bansal <sbansal@stanford.edu>.
-Modified by Ben Pfaff <blp@cs.stanford.edu>.
-
 diff -X ignore -urpN pintos.orig/src/lib/debug.h pintos.eraser/src/lib/debug.h
 --- pintos.orig/src/lib/debug.h	2005-06-18 20:20:49.000000000 -0700
 +++ pintos.eraser/src/lib/debug.h	2005-06-29 22:38:01.000000000 -0700
