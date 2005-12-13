@@ -190,7 +190,7 @@ strstr (const char *haystack, const char *needle)
     {
       size_t i;
 
-      for (i = 0; i < haystack_len - needle_len; i++)
+      for (i = 0; i <= haystack_len - needle_len; i++)
         if (!memcmp (haystack + i, needle, needle_len))
           return (char *) haystack + i;
     }
