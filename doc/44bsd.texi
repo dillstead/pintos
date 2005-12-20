@@ -272,31 +272,33 @@ difficult, but many students do not know how to do it.  This
 section explains the basics.
 
 The fundamental idea is to treat the rightmost bits of an integer as
-representing a fraction.  For example, we can designate the lowest 10
+representing a fraction.  For example, we can designate the lowest 14
 bits of a signed 32-bit integer as fractional bits, so that an integer
-@var{x} represents the real number
+@m{x} represents the real number
 @iftex
-@m{x/2^{10}}.
+@m{x/2^{14}}.
 @end iftex
 @ifnottex
-@m{x/(2**10)}, where ** represents exponentiation.
+@m{x/(2**14)}, where ** represents exponentiation.
 @end ifnottex
-This is called a 21.10 fixed-point number representation, because there
-are 21 bits before the decimal point, 10 bits after it, and one sign
+This is called a 17.14 fixed-point number representation, because there
+are 17 bits before the decimal point, 14 bits after it, and one sign
 bit.@footnote{Because we are working in binary, the ``decimal'' point
 might more correctly be called the ``binary'' point, but the meaning
-should be clear.} A number in 21.10 format represents, at maximum, a
-value of @am{(2^{31} - 1) / 2^{10} \approx, (2**31 - 1)/(2**10) =
-approx.} 2,097,151.999.
+should be clear.} A number in 17.14 format represents, at maximum, a
+value of @am{(2^{31} - 1) / 2^{14} \approx, (2**31 - 1)/(2**14) =
+approx.} 131,071.999.
 
 Suppose that we are using a @m{p.q} fixed-point format, and let @am{f =
 2^q, f = 2**q}.  By the definition above, we can convert an integer or
 real number into @m{p.q} format by multiplying with @m{f}.  For example,
-in 21.10 format the fraction 59/60 used in the calculation of
-@var{load_avg}, above, is @am{(59/60)2^{10}, 59/60*(2**10)} = 1,007
+in 17.14 format the fraction 59/60 used in the calculation of
+@var{load_avg}, above, is @am{(59/60)2^{14}, 59/60*(2**14)} = 16,111
 (rounded to nearest).  To convert a fixed-point value back to an
 integer, divide by @m{f}.  (The normal @samp{/} operator in C rounds
-down.  To round to nearest, add @m{f / 2} before dividing.)
+toward zero, that is, it rounds positive numbers down and negative
+numbers up.  To round to nearest, add @m{f / 2} to a positive number, or
+subtract it from a negative number, before dividing.)
 
 Many operations on fixed-point numbers are straightforward.  Let
 @code{x} and @code{y} be fixed-point numbers, and let @code{n} be an
@@ -308,19 +310,19 @@ quotient, @code{x / n}.
 Multiplying two fixed-point values has two complications.  First, the
 decimal point of the result is @m{q} bits too far to the left.  Consider
 that @am{(59/60)(59/60), (59/60)*(59/60)} should be slightly less than
-1, but @tm{1,007\times 1,007}@nm{1,007*1,007} = 1,014,049 is much
-greater than @am{2^{10},2**10} = 1,024.  Shifting @m{q} bits right, we
-get @tm{1,014,049/2^{10}}@nm{1,014,049/(2**10)} = 990, or about 0.97,
+1, but @tm{16,111\times 16,111}@nm{16,111*16,111} = 259,564,321 is much
+greater than @am{2^{14},2**14} = 16,384.  Shifting @m{q} bits right, we
+get @tm{259,564,321/2^{14}}@nm{259,564,321/(2**14)} = 15,842, or about 0.97,
 the correct answer.  Second, the multiplication can overflow even though
-the answer is representable.  For example, 128 in 21.10 format is
-@am{128 \times 2^{10}, 128*(2**10)} = 131,072 and its square @am{128^2,
-128**2} = 16,384 is well within the 21.10 range, but @tm{131,072^2 =
-2^{34}}@nm{131,072**2 = 2**34}, greater than the maximum signed 32-bit
+the answer is representable.  For example, 64 in 17.14 format is
+@am{64 \times 2^{14}, 64*(2**14)} = 1,048,576 and its square @am{64^2,
+64**2} = 4,096 is well within the 17.14 range, but @tm{1,048,576^2 =
+2^{40}}@nm{1,048,576**2 = 2**40}, greater than the maximum signed 32-bit
 integer value @am{2^{31} - 1, 2**31 - 1}.  An easy solution is to do the
 multiplication as a 64-bit operation.  The product of @code{x} and
 @code{y} is then @code{((int64_t) x) * y / f}.
 
-Dividing two fixed-point values has the opposite complications.  The
+Dividing two fixed-point values has opposite issues.  The
 decimal point will be too far to the right, which we fix by shifting the
 dividend @m{q} bits to the left before the division.  The left shift
 discards the top @m{q} bits of the dividend, which we can again fix by
