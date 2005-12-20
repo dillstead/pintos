@@ -568,11 +568,15 @@ waits for @var{B}, then @var{A} waits for @var{C}), and so on.
 @deftypefn {System Call} bool create (const char *@var{file}, unsigned @var{initial_size})
 Creates a new file called @var{file} initially @var{initial_size} bytes
 in size.  Returns true if successful, false otherwise.
+
+Consider implementing this function in terms of @func{filesys_create}.
 @end deftypefn
 
 @deftypefn {System Call} bool remove (const char *@var{file})
 Deletes the file called @var{file}.  Returns true if successful, false
 otherwise.
+
+Consider implementing this function in terms of @func{filesys_remove}.
 @end deftypefn
 
 @deftypefn {System Call} int open (const char *@var{file})
@@ -585,10 +589,14 @@ File descriptors numbered 0 and 1 are reserved for the console: fd 0
 is standard input (@code{stdin}), fd 1 is standard output
 (@code{stdout}).  These special file descriptors are valid as system
 call arguments only as explicitly described below.
+
+Consider implementing this function in terms of @func{filesys_open}.
 @end deftypefn
 
 @deftypefn {System Call} int filesize (int @var{fd})
 Returns the size, in bytes, of the file open as @var{fd}.
+
+Consider implementing this function in terms of @func{file_length}.
 @end deftypefn
 
 @deftypefn {System Call} int read (int @var{fd}, void *@var{buffer}, unsigned @var{size})
@@ -597,6 +605,8 @@ Reads @var{size} bytes from the file open as @var{fd} into
 file), or -1 if the file could not be read (due to a condition other
 than end of file).  Fd 0 reads from the keyboard using
 @func{kbd_getc}.
+
+Consider implementing this function in terms of @func{file_read}.
 @end deftypefn
 
 @deftypefn {System Call} int write (int @var{fd}, const void *@var{buffer}, unsigned @var{size})
@@ -604,11 +614,18 @@ Writes @var{size} bytes from @var{buffer} to the open file @var{fd}.
 Returns the number of bytes actually written, or -1 if the file could
 not be written.
 
+Writing past end-of-file would normally extend the file, but file growth
+is not implemented by the basic file system.  The expected behavior is
+to write as many bytes as possible up to end-of-file and return the
+actual number written, or -1 if no bytes could be written at all.
+
 Fd 1 writes to the console.  Your code to write to the console should
 write all of @var{buffer} in one call to @func{putbuf}, at least as
 long as @var{size} is not bigger than a few hundred bytes.  Otherwise,
 lines of text output by different processes may end up interleaved on
 the console, confusing both human readers and our grading scripts.
+
+Consider implementing this function in terms of @func{file_write}.
 @end deftypefn
 
 @deftypefn {System Call} void seek (int @var{fd}, unsigned @var{position})
@@ -623,15 +640,21 @@ have a fixed length until project 4 is complete, so writes past end of
 file will return an error.)  These semantics are implemented in the
 file system and do not require any special effort in system call
 implementation.
+
+Consider implementing this function in terms of @func{file_seek}.
 @end deftypefn
 
 @deftypefn {System Call} unsigned tell (int @var{fd})
 Returns the position of the next byte to be read or written in open
 file @var{fd}, expressed in bytes from the beginning of the file.
+
+Consider implementing this function in terms of @func{file_tell}.
 @end deftypefn
 
 @deftypefn {System Call} void close (int @var{fd})
 Closes file descriptor @var{fd}.
+
+Consider implementing this function in terms of @func{file_close}.
 @end deftypefn
 
 The file defines other syscalls.  Ignore them for now.  You will
