@@ -1,7 +1,5 @@
 # -*- makefile -*-
 
-include $(SRCDIR)/Make.config
-
 $(PROGS): CPPFLAGS += -I$(SRCDIR)/lib/user -I.
 
 # Linker flags.

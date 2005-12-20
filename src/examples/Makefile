@@ -24,4 +24,5 @@ lineup_SRC = lineup.c
 matmult_SRC = matmult.c
 recursor_SRC = recursor.c
 
+include $(SRCDIR)/Make.config
 include $(SRCDIR)/Makefile.userprog
