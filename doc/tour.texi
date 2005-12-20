@@ -468,13 +468,13 @@ Before any of these functions call @func{schedule}, they disable
 interrupts (or ensure that they are already disabled) and then change
 the running thread's state to something other than running.
 
-The actual @func{schedule} implementation is simple.  It records the
+@func{schedule} is simple but tricky.  It records the
 current thread in local variable @var{cur}, determines the next thread
 to run as local variable @var{next} (by calling
 @func{next_thread_to_run}), and then calls @func{switch_threads} to do
 the actual thread switch.  The thread we switched to was also running
 inside @func{switch_threads}, as are all the threads not currently
-running in Pintos, so the new thread now returns out of
+running, so the new thread now returns out of
 @func{switch_threads}, returning the previously running thread.
 
 @func{switch_threads} is an assembly language routine in
