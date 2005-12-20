@@ -16,8 +16,8 @@ relevant parts below.
 
 You can build project 2 on top of your project 1 submission or you can
 start with a fresh copy.  No code from project 1 is required for this
-assignment.  The ``alarm clock'' functionality may be useful in later
-projects, but it is not strictly required.
+assignment.  The ``alarm clock'' functionality may be useful in
+projects 3 and 4, but it is not strictly required.
 
 @menu
 * Project 2 Background::        
