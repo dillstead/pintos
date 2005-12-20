@@ -462,8 +462,8 @@ holds, then both @var{M} and @var{L} should be boosted to @var{H}'s
 priority.
 
 You must implement priority donation for locks.  You need not
-implement priority donation for semaphores or condition variables,
-but you are welcome to do so.  You do need to implement
+implement priority donation for semaphores or condition variables
+(but you are welcome to do so).  You do need to implement
 priority scheduling in all cases.
 
 Finally, implement the following functions that allow a thread to
@@ -479,6 +479,9 @@ current thread no longer has the highest priority, yields.
 Returns the current thread's priority.  In the presence of priority
 donation, returns the higher (donated) priority.
 @end deftypefun
+
+You need not provide any interface to allow a thread to directly modify
+other threads' priorities.
 
 The priority scheduler is not used in any later project.
 
@@ -626,7 +629,7 @@ list.
 Yes.  As long as there is a single highest-priority thread, it continues
 running until it blocks or finishes, even if it calls
 @func{thread_yield}.
-If there are multiple threads have the same highest priority,
+If multiple threads have the same highest priority,
 @func{thread_yield} should switch among them in ``round robin'' order.
 
 @item What happens to the priority of a donating thread?
@@ -651,6 +654,12 @@ running thread, the correct behavior is to immediately yield the
 processor.  It is not acceptable to wait for the next timer interrupt.
 The highest priority thread should run as soon as it is runnable,
 preempting whatever thread is currently running.
+
+@item How does @func{thread_set_priority} affect a thread receiving donations?
+
+It should do something sensible, but no particular behavior is
+required.  None of the test cases call @func{thread_set_priority} from a
+thread while it is receiving a priority donation.
 
 @item Calling @func{printf} in @func{sema_up} or @func{sema_down} reboots!
 
