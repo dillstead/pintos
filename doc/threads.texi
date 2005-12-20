@@ -499,7 +499,7 @@ have the priority scheduler working, except possibly for priority
 donation, before you start work on the advanced scheduler.
 
 You must write your code so that we can choose a scheduling algorithm
-policy at Pintos startup time.  By default, the round-robin scheduler
+policy at Pintos startup time.  By default, the priority scheduler
 must be active, but we must be able to choose the 4.4@acronym{BSD}
 scheduler
 with the @option{-mlfqs} kernel option.  Passing this
@@ -511,6 +511,8 @@ directly control their own priorities.  The @var{priority} argument to
 @func{thread_create} should be ignored, as well as any calls to
 @func{thread_set_priority}, and @func{thread_get_priority} should return
 the thread's current priority as set by the scheduler.
+
+The 4.4@acronym{BSD} scheduler does not implement priority donation.
 
 The advanced scheduler is not used in any later project.
 
