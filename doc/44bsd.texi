@@ -58,11 +58,14 @@ occur before any ordinary kernel thread has a chance to run, so that
 there is no chance that a kernel thread could see a newly increased
 @func{timer_ticks} value but old scheduler data values.
 
+The 4.4@acronym{BSD} scheduler does not include priority donation.
+
 @menu
 * Thread Niceness::             
 * Calculating Priority::        
 * Calculating recent_cpu::      
 * Calculating load_avg::        
+* 4.4BSD Scheduler Summary::    
 * Fixed-Point Real Arithmetic::  
 @end menu
 
@@ -225,9 +228,35 @@ Returns 100 times the current system load average, rounded to the
 nearest integer.
 @end deftypefun
 
-@menu
-* Fixed-Point Real Arithmetic::  
-@end menu
+@node 4.4BSD Scheduler Summary
+@section Summary
+
+This section summarizes the calculations required to implement the
+scheduler.  It is not a complete description of scheduler requirements.
+
+Every thread has a @var{nice} value between -20 and 20 directly under
+its control.  Each thread also has a priority, between 0
+(@code{PRI_MIN}) through 63 (@code{PRI_MAX}), which is recalculated
+using the following formula whenever the value of either term changes:
+
+@center @t{@var{priority} = (@var{recent_cpu} / 4) + (@var{nice} * 2)}.
+
+@var{recent_cpu} measures the amount of CPU time a thread has received
+``recently.''  On each timer tick, the running thread's @var{recent_cpu}
+is incremented by 1.  Once per second, every thread's @var{recent_cpu}
+is updated this way:
+
+@center @t{@var{recent_cpu} = (2*@var{load_avg})/(2*@var{load_avg} + 1) * @var{recent_cpu} + @var{nice}}.
+
+@var{load_avg} estimates the average number of threads ready to run over
+the past minute.  It is initialized to 0 at boot and recalculated once
+per second as follows:
+
+@center @t{@var{load_avg} = (59/60)*@var{load_avg} + (1/60)*@var{ready_threads}}.
+
+@noindent where @var{ready_threads} is the number of threads that are
+either running or ready to run at time of update (not including the idle
+thread).
 
 @node Fixed-Point Real Arithmetic
 @section Fixed-Point Real Arithmetic
