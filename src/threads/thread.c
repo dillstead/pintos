@@ -96,7 +96,8 @@ thread_start (void)
   intr_enable ();
 }
 
-/* Called by the timer interrupt handler at each timer tick. */
+/* Called by the timer interrupt handler at each timer tick.
+   Thus, this function runs in an external interrupt context. */
 void
 thread_tick (void) 
 {
