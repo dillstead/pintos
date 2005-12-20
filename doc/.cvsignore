@@ -9,13 +9,14 @@
 *.toc
 *.tp
 *.vr
-mlfqs1.png
-mlfqs2.png
 mlfqs1.pdf
+mlfqs1.png
 mlfqs2.pdf
-projects.html
+mlfqs2.png
 pintos.html
 pintos.pdf
 pintos.ps
+pintos.text
 pintos_*.html
+projects.html
 sample.tmpl.texi
