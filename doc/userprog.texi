@@ -1045,8 +1045,9 @@ Thus, when the system call handler @func{syscall_handler} gets control,
 the system call number is in the 32-bit word at the caller's stack
 pointer, the first argument is in the 32-bit word at the next higher
 address, and so on.  The caller's stack pointer is accessible to
-@func{syscall_handler} as the @samp{esp} member of the @code{struct
-intr_frame} passed to it.
+@func{syscall_handler} as the @samp{esp} member of the
+@struct{intr_frame} passed to it.  (@struct{intr_frame} is on the kernel
+stack.)
 
 The 80@var{x}86 convention for function return values is to place them
 in the @code{EAX} register.  System calls that return a value can do
