@@ -314,6 +314,7 @@ a bug in the original Pintos code.  The first and second
 are quite likely, and you should seriously consider both.  We hope
 that the third is less likely, but it is also possible.
 
+@anchor{Debugging User Programs}
 You can also use @command{gdb} to debug a user program running under
 Pintos.  Start by issuing this @command{gdb} command to load the
 program's symbol table:

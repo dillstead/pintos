@@ -638,15 +638,15 @@ The file defines other syscalls.  Ignore them for now.  You will
 implement some of them in project 3 and the rest in project 4, so be
 sure to design your system with extensibility in mind.
 
-To implement syscalls, you need to provide ways to copy data
-from user virtual address space into the kernel and vice versa.
+To implement syscalls, you need to provide ways to read and write data
+in user virtual address space.
 You need this ability before you can
 even obtain the system call number, because the system call number is
 on the user's stack in the user's virtual address space.
 This can be a bit tricky: what if the user provides an invalid
 pointer, a pointer into kernel memory, or a block
 partially in one of those regions?  You should handle these cases by
-terminating the user process.    We recommend
+terminating the user process.  We recommend
 writing and testing this code before implementing any other system
 call functionality.
 
@@ -782,6 +782,10 @@ user program C library does not have a @func{malloc} implementation.
 @item How do I compile new user programs?
 
 Modify @file{src/examples/Makefile}, then run @command{make}.
+
+@item Can I run user programs under a debugger?
+
+Yes, with some limitations.  @xref{Debugging User Programs}.
 
 @item What's the difference between @code{tid_t} and @code{pid_t}?
 
