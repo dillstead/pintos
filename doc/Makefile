@@ -10,6 +10,9 @@ pintos.html: $(TEXIS) texi2html
 pintos.info: $(TEXIS)
 	makeinfo $<
 
+pintos.text: $(TEXIS)
+	makeinfo --plaintext -o $@ $<
+
 pintos.dvi: $(TEXIS)
 	texi2dvi $< -o $@
 
