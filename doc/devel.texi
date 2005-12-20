@@ -49,6 +49,7 @@ home page}.
 @menu
 * Setting Up CVS::              
 * Using CVS::                   
+* CVS Locking::                 
 @end menu
 
 @node Setting Up CVS
