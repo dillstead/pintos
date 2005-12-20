@@ -76,7 +76,14 @@ members access to it.  We will assume that the repository will be in a
 directory called @file{cvs} in the keeper's home directory.  First
 create this directory with @samp{mkdir $HOME/cvs}, then give group
 members access to it with @samp{fs setacl -dir $HOME/cvs -acl
-@var{keeper}:pintos-cvs rlidwk}.
+@var{keeper}:pintos-cvs write}.  Group members also need to be able to
+look up the @file{cvs} directory in the keeper's home directory, which
+can be enabled via @samp{fs setacl -dir $HOME -acl
+@var{keeper}:pintos-cvs l} (that's letter ``ell,'' not digit
+``one.'').@footnote{This command will allow group members to list the
+files in your home directory, but not read or write them.  It should not
+create a security risk unless the names of files in your home directory
+are secret.}
 
 Now initialize the repository.
 To initialize the repository, execute @samp{cvs -d $HOME/cvs init}.
@@ -89,6 +96,19 @@ Otherwise, to import the base Pintos source tree, @samp{cd} to
 @samp{pintos}).  After changing the current directory, execute this
 command:
 @example
+cvs -d $HOME/cvs import -m "Imported sources" pintos foobar start
+@end example
+
+Here is a summary of the commands you have now executed:
+
+@example
+pts creategroup @var{keeper}:pintos-cvs
+pts adduser -user @var{username} -group @var{keeper}:pintos-cvs
+mkdir $HOME/cvs
+fs setacl -dir $HOME/cvs -acl @var{keeper}:pintos-cvs write
+fs setacl -dir $HOME -acl @var{keeper}:pintos-cvs l
+cvs -d $HOME/cvs init
+cd /usr/class/cs140/pintos/pintos
 cvs -d $HOME/cvs import -m "Imported sources" pintos foobar start
 @end example
 
