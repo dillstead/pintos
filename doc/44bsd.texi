@@ -190,6 +190,11 @@ multiple of a second, that is, when @code{timer_ticks () % TIMER_FREQ ==
 The value of @var{recent_cpu} can be negative for a thread with a
 negative @var{nice} value.  Do not clamp negative @var{recent_cpu} to 0.
 
+You may need to think about the order of calculations in this formula.
+We recommend computing the coefficient of @var{recent_cpu} first, then
+multiplying.  Some students have reported that multiplying
+@var{load_avg} by @var{recent_cpu} directly can cause overflow.
+
 You must implement @func{thread_get_recent_cpu}, for which there is a
 skeleton in @file{threads/thread.c}.
 
