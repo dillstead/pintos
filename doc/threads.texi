@@ -328,9 +328,14 @@ timer ticks or input events.  Turning off interrupts also increases the
 interrupt handling latency, which can make a machine feel sluggish if
 taken too far.
 
+You may need to add or modify code where interrupts are already
+disabled, such as in @func{sema_up} or @func{sema_down}.  You should
+still try to keep this code as short as you can.
+
 Disabling interrupts can be useful for debugging, if you want to make
 sure that a section of code is not interrupted.  You should remove
-debugging code before turning in your project.
+debugging code before turning in your project.  (Don't just comment it
+out, because that can make the code difficult to read.)
 
 There should be no busy waiting in your submission.  A tight loop that
 calls @func{thread_yield} is one form of busy waiting.
