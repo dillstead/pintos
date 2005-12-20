@@ -250,6 +250,12 @@ gdb kernel.o
 target remote localhost:1234
 @end example
 
+(If the @command{target remote} command fails, then make sure that both
+@command{gdb} and @command{pintos} are running on the same machine by
+running @command{hostname} in each terminal.  If the names printed
+differ, then you need to open a new terminal for @command{gdb} on the
+machine running @command{pintos}.)
+
 Now @command{gdb} is connected to the simulator over a local
 network connection.  You can now issue any normal @command{gdb}
 commands.  If you issue the @samp{c} command, the simulated BIOS will take
