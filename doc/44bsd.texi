@@ -165,7 +165,8 @@ From the opposite direction, @math{f(t)} decays to weight @math{w} at
 The initial value of @var{recent_cpu} is 0 in the first thread
 created, or the parent's value in other new threads.  Each time a timer
 interrupt occurs, @var{recent_cpu} is incremented by 1 for the running
-thread only.  In addition, once per second the value of @var{recent_cpu}
+thread only, unless the idle thread is running.  In addition, once per
+second the value of @var{recent_cpu}
 is recalculated for every thread (whether running, ready, or blocked),
 using this formula:
 
