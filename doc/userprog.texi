@@ -36,11 +36,12 @@ full access to privileged parts of the system.  Once we start running
 user programs on top of the operating system, this is no longer true.
 This project deals with consequences of the change.
 
-We allow more than one user program to run at a time.  User
-programs are written and compiled to work under the illusion that they
-have the entire machine.  This means that when you load and
-run multiple processes at a time, you must manage memory, scheduling,
-and other state correctly to maintain this illusion.
+We allow more than one process to run at a time.  Each process has one
+thread (multithreaded processes are not supported).  User programs are
+written under the illusion that they have the entire machine.  This
+means that when you load and run multiple processes at a time, you must
+manage memory, scheduling, and other state correctly to maintain this
+illusion.
 
 In the previous project, we compiled our test code directly into your
 kernel, so we had to require certain specific function interfaces within
