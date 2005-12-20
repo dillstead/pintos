@@ -4,6 +4,6 @@
 void
 test_main (void) 
 {
-  asm volatile ("mov %esp, 0x20101234; int 0x30");
+  asm volatile ("movl $0x20101234, %esp; int $0x30");
   fail ("should have exited with -1");
 }

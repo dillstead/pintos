@@ -12,43 +12,41 @@
 #### restore the registers.  As part of switching stacks we record the
 #### current stack pointer in CUR's thread structure.
 
-.intel_syntax noprefix
-
 .globl switch_threads
 .func switch_threads
 switch_threads:
 	# Save caller's register state.
 	#
-	# Note that the SVR4 ABI allows us to destroy eax, ecx, edx,
-	# but requires us to preserve ebx, ebp, esi, edi.  See
+	# Note that the SVR4 ABI allows us to destroy %eax, %ecx, %edx,
+	# but requires us to preserve %ebx, %ebp, %esi, %edi.  See
 	# [SysV-ABI-386] pages 3-11 and 3-12 for details.
 	#
 	# This stack frame must match the one set up by thread_create().
-	push ebx
-	push ebp
-	push esi
-	push edi
+	pushl %ebx
+	pushl %ebp
+	pushl %esi
+	pushl %edi
 
 	# Get offsetof (struct thread, stack).
 .globl thread_stack_ofs
-	mov edx, thread_stack_ofs
+	mov thread_stack_ofs, %edx
 
 	# Save current stack pointer to old thread's stack, if any.
-	mov eax, SWITCH_CUR[esp]
-	test eax, eax
+	movl SWITCH_CUR(%esp), %eax
+	test %eax, %eax
 	jz 1f
-	mov [eax + edx], esp
+	movl %esp, (%eax,%edx,1)
 1:
 
 	# Restore stack pointer from new thread's stack.
-	mov ecx, SWITCH_NEXT[esp]
-	mov esp, [ecx + edx]
+	movl SWITCH_NEXT(%esp), %ecx
+	movl (%ecx,%edx,1), %esp
 
 	# Restore caller's register state.
-	pop edi
-	pop esi
-	pop ebp
-	pop ebx
+	popl %edi
+	popl %esi
+	popl %ebp
+	popl %ebx
         ret
 .endfunc
 
@@ -56,13 +54,13 @@ switch_threads:
 .func switch_entry
 switch_entry:
 	# Discard switch_threads() arguments.
-	add esp, 8
+	addl $8, %esp
 
 	# Call schedule_tail(prev).
-	push eax
+	pushl %eax
 .globl schedule_tail
 	call schedule_tail
-	add esp, 4
+	addl $4, %esp
 
 	# Start thread proper.
 	ret

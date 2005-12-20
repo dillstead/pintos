@@ -9,5 +9,5 @@ test_main (void)
 {
   /* Read from an address 4,096 bytes below the stack pointer.
      Must kill the program. */
-  asm volatile ("mov %eax, [%esp - 4096]");
+  asm volatile ("movl -4096(%esp), %eax");
 }

@@ -5,7 +5,7 @@
 void
 test_main (void) 
 {
-  asm volatile ("mov %%esp, 0xbffffffc; mov [dword ptr %%esp], %0; int 0x30"
+  asm volatile ("movl $0xbffffffc, %%esp; movl %0, (%%esp); int $0x30"
                 :: "i" (SYS_exit));
   fail ("should have called exit(-1)");
 }

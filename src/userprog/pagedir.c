@@ -223,7 +223,7 @@ pagedir_activate (uint32_t *pd)
      aka PDBR (page directory base register).  This activates our
      new page tables immediately.  See [IA32-v2a] "MOV--Move
      to/from Control Registers" and [IA32-v3] 3.7.5. */
-  asm volatile ("mov %%cr3, %0" :: "r" (vtop (pd)));
+  asm volatile ("movl %0, %%cr3" :: "r" (vtop (pd)));
 }
 
 /* Returns the currently active page directory. */
@@ -235,7 +235,7 @@ active_pd (void)
      See [IA32-v2a] "MOV--Move to/from Control Registers" and
      [IA32-v3] 3.7.5. */
   uintptr_t pd;
-  asm volatile ("mov %0, %%cr3" : "=r" (pd));
+  asm volatile ("movl %%cr3, %0" : "=r" (pd));
   return ptov (pd);
 }
 

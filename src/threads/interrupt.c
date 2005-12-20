@@ -54,7 +54,7 @@ intr_get_level (void)
   /* Push the flags register on the processor stack, then pop the
      value off the stack into `flags'.  See [IA32-v2b] "PUSHF"
      and "POP" and [IA32-v3] 5.8.1. */
-  asm volatile ("pushf; pop %0" : "=g" (flags));
+  asm volatile ("pushfl; popl %0" : "=g" (flags));
 
   return flags & FLAG_IF ? INTR_ON : INTR_OFF;
 }
@@ -380,7 +380,7 @@ intr_dump_frame (const struct intr_frame *f)
      See [IA32-v2a] "MOV--Move to/from Control Registers" and
      [IA32-v3] 5.14 "Interrupt 14--Page Fault Exception
      (#PF)". */
-  asm ("mov %0, %%cr2" : "=r" (cr2));
+  asm ("movl %%cr2, %0" : "=r" (cr2));
 
   printf ("Interrupt %#04x (%s) at eip=%p\n",
           f->vec_no, intr_names[f->vec_no], f->eip);

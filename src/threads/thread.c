@@ -376,7 +376,7 @@ running_thread (void)
      down to the start of a page.  Because `struct thread' is
      always at the beginning of a page and the stack pointer is
      somewhere in the middle, this locates the curent thread. */
-  asm ("mov %0, %%esp" : "=g" (esp));
+  asm ("mov %%esp, %0" : "=g" (esp));
   return pg_round_down (esp);
 }
 

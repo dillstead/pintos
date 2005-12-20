@@ -71,7 +71,7 @@ execute_thread (void *filename_)
      arguments on the stack in the form of a `struct intr_frame',
      we just point the stack pointer (%esp) to our stack frame
      and jump to it. */
-  asm ("mov %%esp, %0; jmp intr_exit" :: "g" (&if_));
+  asm ("movl %0, %%esp; jmp intr_exit" :: "g" (&if_));
   NOT_REACHED ();
 }
 

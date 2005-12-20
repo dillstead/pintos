@@ -3,45 +3,45 @@
 
 /* Invokes syscall NUMBER, passing no arguments, and returns the
    return value as an `int'. */
-#define syscall0(NUMBER)                                \
-        ({                                              \
-          int retval;                                   \
-          asm volatile                                  \
-            ("push %[number]; int 0x30; add %%esp, 4"   \
-               : "=a" (retval)                          \
-               : [number] "i" (NUMBER)                  \
-               : "memory");                             \
-          retval;                                       \
+#define syscall0(NUMBER)                                        \
+        ({                                                      \
+          int retval;                                           \
+          asm volatile                                          \
+            ("pushl %[number]; int $0x30; addl $4, %%esp"       \
+               : "=a" (retval)                                  \
+               : [number] "i" (NUMBER)                          \
+               : "memory");                                     \
+          retval;                                               \
         })
 
 /* Invokes syscall NUMBER, passing argument ARG0, and returns the
    return value as an `int'. */
-#define syscall1(NUMBER, ARG0)                                          \
-        ({                                                              \
-          int retval;                                                   \
-          asm volatile                                                  \
-            ("push %[arg0]; push %[number]; int 0x30; add %%esp, 8"     \
-               : "=a" (retval)                                          \
-               : [number] "i" (NUMBER),                                 \
-                 [arg0] "g" (ARG0)                                      \
-               : "memory");                                             \
-          retval;                                                       \
+#define syscall1(NUMBER, ARG0)                                           \
+        ({                                                               \
+          int retval;                                                    \
+          asm volatile                                                   \
+            ("pushl %[arg0]; pushl %[number]; int $0x30; addl $8, %%esp" \
+               : "=a" (retval)                                           \
+               : [number] "i" (NUMBER),                                  \
+                 [arg0] "g" (ARG0)                                       \
+               : "memory");                                              \
+          retval;                                                        \
         })
 
 /* Invokes syscall NUMBER, passing arguments ARG0 and ARG1, and
    returns the return value as an `int'. */
-#define syscall2(NUMBER, ARG0, ARG1)                    \
-        ({                                              \
-          int retval;                                   \
-          asm volatile                                  \
-            ("push %[arg1]; push %[arg0]; "             \
-             "push %[number]; int 0x30; add %%esp, 12"  \
-               : "=a" (retval)                          \
-               : [number] "i" (NUMBER),                 \
-                 [arg0] "g" (ARG0),                     \
-                 [arg1] "g" (ARG1)                      \
-               : "memory");                             \
-          retval;                                       \
+#define syscall2(NUMBER, ARG0, ARG1)                            \
+        ({                                                      \
+          int retval;                                           \
+          asm volatile                                          \
+            ("pushl %[arg1]; pushl %[arg0]; "                   \
+             "pushl %[number]; int $0x30; addl $12, %%esp"      \
+               : "=a" (retval)                                  \
+               : [number] "i" (NUMBER),                         \
+                 [arg0] "g" (ARG0),                             \
+                 [arg1] "g" (ARG1)                              \
+               : "memory");                                     \
+          retval;                                               \
         })
 
 /* Invokes syscall NUMBER, passing arguments ARG0, ARG1, and
@@ -50,8 +50,8 @@
         ({                                                      \
           int retval;                                           \
           asm volatile                                          \
-            ("push %[arg2]; push %[arg1]; push %[arg0]; "       \
-             "push %[number]; int 0x30; add %%esp, 16"          \
+            ("pushl %[arg2]; pushl %[arg1]; pushl %[arg0]; "    \
+             "pushl %[number]; int $0x30; addl $16, %%esp"      \
                : "=a" (retval)                                  \
                : [number] "i" (NUMBER),                         \
                  [arg0] "g" (ARG0),                             \
