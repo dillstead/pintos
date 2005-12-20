@@ -121,9 +121,14 @@ hand, and you should definitely not modify them yourself.
 @subsection Using CVS
 
 To use CVS, start by check out a working copy of the contents of the
-CVS repository into a directory named @file{@var{dir}}, execute
+CVS repository into a directory named @file{@var{dir}}.  To do so, execute
 @samp{cvs -d ~@var{keeper}/cvs checkout -d @var{dir} pintos}, where
 @var{keeper} is the CVS keeper's Leland username.
+
+(If this fails due to some kind of permission problem, then run
+@command{aklog} and try again.  If it still doesn't work, log out and
+back in.  If that still doesn't fix the problem, the CVS repository may
+not be initialized properly.)
 
 At this point, you can modify any of the files in the working copy.
 You can see the changes you've made with @samp{cvs diff -u}.  If you
