@@ -119,9 +119,15 @@ Alternatively, it could be that the @file{kernel.o} you passed to
 the backtrace.
 
 Sometimes backtraces can be confusing without implying corruption.
-Compiler optimizations can cause surprising behavior.  For example, when
-a function has called another function as its final action (a @dfn{tail
-call}), the calling function may not appear in a backtrace at all.
+Compiler optimizations can cause surprising behavior.  When a function
+has called another function as its final action (a @dfn{tail call}), the
+calling function may not appear in a backtrace at all.  Similarly, when
+function A calls another function B that never returns, the compiler may
+optimize such that an unrelated function C appears in the backtrace
+instead of A.  Function C is simply the function that happens to be in
+memory just after A.  In the threads project, this is commonly seen in
+backtraces for test failures; see @ref{The pass function fails, ,
+@func{pass} Fails}), for more information.
 
 @menu
 * Backtrace Example::           
