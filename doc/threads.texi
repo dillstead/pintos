@@ -721,6 +721,8 @@ scheduler at the same time.
 @item Can I use one queue instead of 64 queues?
 
 Yes, that's fine.  It's easiest to describe the algorithm in terms of 64
-separate queues, but that may not be the best implementation.  If you
-use a single queue, it should probably be sorted.
+separate queues, but that doesn't mean you have to implement it that
+way.
+
+If you use a single queue, it should probably be sorted.
 @end table
