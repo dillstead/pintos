@@ -464,7 +464,8 @@ multiple donations, in which multiple priorities are donated to a single
 thread.  You must also handle nested donation: if @var{H} is waiting on
 a lock that @var{M} holds and @var{M} is waiting on a lock that @var{L}
 holds, then both @var{M} and @var{L} should be boosted to @var{H}'s
-priority.
+priority.  If necessary, you may impose a reasonable limit on depth of
+nested priority donation, such as 8 levels.
 
 You must implement priority donation for locks.  You need not
 implement priority donation for semaphores or condition variables
@@ -496,14 +497,15 @@ The priority scheduler is not used in any later project.
 Implement a multilevel feedback queue scheduler similar to the
 4.4@acronym{BSD} scheduler to
 reduce the average response time for running jobs on your system.
-@xref{4.4BSD Scheduler}, for a detailed description of
-the MLFQS requirements.
+@xref{4.4BSD Scheduler}, for detailed requirements.
 
-The advanced scheduler builds on the priority scheduler.  You should
-have the priority scheduler working, except possibly for priority
-donation, before you start work on the advanced scheduler.
+Like the priority scheduler, the advanced scheduler chooses the thread
+to run based on priorities.  However, the advanced scheduler does not do
+priority donation.  Thus, we recommend that you have the priority
+scheduler working, except possibly for priority donation, before you
+start work on the advanced scheduler.
 
-You must write your code so that we can choose a scheduling algorithm
+You must write your code to allow us to choose a scheduling algorithm
 policy at Pintos startup time.  By default, the priority scheduler
 must be active, but we must be able to choose the 4.4@acronym{BSD}
 scheduler
@@ -516,8 +518,6 @@ directly control their own priorities.  The @var{priority} argument to
 @func{thread_create} should be ignored, as well as any calls to
 @func{thread_set_priority}, and @func{thread_get_priority} should return
 the thread's current priority as set by the scheduler.
-
-The 4.4@acronym{BSD} scheduler does not implement priority donation.
 
 The advanced scheduler is not used in any later project.
 
@@ -585,8 +585,12 @@ to cause many of the tests to fail.
 There are @code{TIME_SLICE} ticks per time slice.  This macro is
 declared in @file{threads/thread.c}.  The default is 4 ticks.
 
-We don't recommend changing this values, because any changes are likely
+We don't recommend changing this value, because any changes are likely
 to cause many of the tests to fail.
+
+@item How do I run the tests?
+
+@xref{Testing}.
 @end table
 
 @menu
