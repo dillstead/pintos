@@ -60,6 +60,7 @@ while (<A2L>) {
     my ($function, $line);
     chomp ($function = $_);
     chomp ($line = <A2L>);
+    $line = "..." . substr ($line, -25) if length ($line) > 28;
     print shift (@ARGV), ": $function ($line)\n";
 }
 close (A2L);
