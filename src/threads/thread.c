@@ -329,10 +329,24 @@ thread_get_recent_cpu (void)
   return 0;
 }
 
-/* Idle thread.  Executes when no other thread is ready to run. */
+/* Idle thread.  Executes when no other thread is ready to run.
+
+   The idle thread is initially put on the ready list by
+   thread_start().  It will be scheduled once initially, at which
+   point it initializes idle_thread and immediately blocks.
+   After that, the idle thread never appears in the ready list.
+   It is returned by next_thread_to_run() as a special case when
+   the ready list is empty. */
 static void
 idle (void *aux UNUSED) 
 {
+  /* Initialize idle_thread.
+
+     Until we run for the first time, idle_thread remains a null
+     pointer.  That's okay because we know that, at that point,
+     the ready list has at least one element (the idle thread),
+     so next_thread_to_run() will not attempt to return the idle
+     thread. */
   idle_thread = thread_current ();
 
   for (;;) 
