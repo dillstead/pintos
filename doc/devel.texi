@@ -188,6 +188,28 @@ ago}.
 For more information, visit the @uref{https://www.cvshome.org/, , CVS
 home page}.
 
+@node CVS Locking
+@subsection CVS Locking
+
+You might occasionally see a message like this while using CVS:
+
+@example
+waiting for blp's lock in /afs/ir/users/b/l/blp/cvs
+@end example
+
+This normally means that more than one user is accessing the repository
+at the same time.  CVS should automatically retry after 30 seconds, at
+which time the operation should normally be able to continue.
+
+If you encounter a long wait for a lock, of more than a minute or so, it
+may indicate that a CVS command did not complete properly and failed to
+remove its locks.  If you think that this is the case, ask the user in
+question about it.  If it appears that an operation did go awry, then
+you (or the named user) can delete files whose names start with
+@file{#cvs.rfl}, @file{#cvs.wfl}, or @file{#cvs.lock} in the directory
+mentioned in the message.  Doing so should allow your operation to
+proceed.  Do not delete or modify other files.
+
 @node SourceForge
 @section SourceForge
 
