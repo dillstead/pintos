@@ -210,7 +210,7 @@ hash_bytes (const void *buf_, size_t size)
 unsigned
 hash_string (const char *s_) 
 {
-  const unsigned char *s = s_;
+  const unsigned char *s = (const unsigned char *) s_;
   unsigned hash;
 
   ASSERT (s != NULL);
