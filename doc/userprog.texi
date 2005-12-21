@@ -21,6 +21,7 @@ projects 3 and 4, but it is not strictly required.
 
 @menu
 * Project 2 Background::        
+* Project 2 Suggested Order of Implementation::  
 * Project 2 Requirements::      
 * Project 2 FAQ::               
 * 80x86 Calling Convention::    
@@ -436,6 +437,57 @@ verified to be below @code{PHYS_BASE}.  They also assume that you've
 modified @func{page_fault} so that a page fault in the kernel causes
 @code{eax} to be set to 0 and its former value copied into @code{eip}.
 
+@node Project 2 Suggested Order of Implementation
+@section Suggested Order of Implementation
+
+We suggest first implementing the following, which can happen in
+parallel:
+
+@itemize
+@item
+Argument passing (@pxref{Argument Passing}).  Every user programs will
+page fault immediately until argument passing is implemented.
+
+For now, you may simply wish to change
+@example
+*esp = PHYS_BASE;
+@end example
+@noindent to
+@example
+*esp = PHYS_BASE - 12;
+@end example
+in @func{setup_stack}.  That will work for any test program that doesn't
+examine its arguments, although its name will be printed as
+@code{(null)}.
+
+@item
+User memory access (@pxref{Accessing User Memory}).  All system calls
+need to read user memory.  Few system calls need to write to user
+memory.
+
+@item
+System call infrastructure (@pxref{System Calls}).  Implement enough
+code to read the system call number from the user stack and dispatch to
+a handler based on it.
+
+@item
+The @code{exit} system call.  Every user program that finishes in the
+normal way calls @code{exit}.  Even a program that returns from
+@func{main} calls @code{exit} indirectly (see @func{_start} in
+@file{lib/user/entry.c}).
+
+@item
+The @code{write} system call for writing to fd 1, the system console.
+All of our test programs write to the console (the user process version
+of @func{printf} is implemented this way), so they will all malfunction
+until @code{write} is available.
+@end itemize
+
+After the above are implemented, user processes should work minimally.
+At the very least, they can write to the console and exit correctly.
+You can then refine your implementation so that some of the tests start
+to pass.
+
 @node Project 2 Requirements
 @section Requirements
 
@@ -490,7 +542,9 @@ Within a command line, multiple spaces are equivalent to a single space,
 so that @code{process_execute("grep foo bar")} is equivalent to our
 original example.  You can impose a reasonable limit on the length of
 the command line arguments.  For example, you could limit the arguments
-to those that will fit in a single page (4 kB).
+to those that will fit in a single page (4 kB).  (There is an unrelated
+limit of 128 bytes on command-line arguments that the @command{pintos}
+utility can pass to the kernel.)
 
 You can parse argument strings any way you like.  If you're lost,
 look at @func{strtok_r}, prototyped in @file{lib/string.h} and
@@ -510,15 +564,15 @@ terminating the process.  It will need to retrieve the system call
 number, then any system call arguments, and carry appropriate actions.
 
 Implement the following system calls.  The prototypes listed are those
-seen by a user program that includes @file{lib/user/syscall.h}.  System
-call numbers for each system call are defined in
+seen by a user program that includes @file{lib/user/syscall.h}.  (This
+header and all other files in @file{lib/user} are for use by user
+programs only.)  System call numbers for each system call are defined in
 @file{lib/syscall-nr.h}:
 
 @deftypefn {System Call} void halt (void)
 Terminates Pintos by calling @func{power_off} (declared in
-@file{threads/init.h}).  Note that this should be seldom used, since
-then you lose some information about possible deadlock situations,
-etc.
+@file{threads/init.h}).  This should be seldom used, because you lose
+some information about possible deadlock situations, etc.
 @end deftypefn
 
 @deftypefn {System Call} void exit (int @var{status})
