@@ -10,17 +10,15 @@
 /* Keyboard data register port. */
 #define DATA_REG 0x60
 
-/* Shift state bits. */
-#define LSHIFT  0x01            /* Left Shift. */
-#define RSHIFT  0x02            /* Right Shift. */
-#define LALT    0x04            /* Left Alt. */
-#define RALT    0x08            /* Right Alt. */
-#define LCTRL   0x10            /* Left Ctrl. */
-#define RCTRL   0x20            /* Right Ctrl. */
-#define CAPS    0x40            /* Caps Lock. */
+/* Current state of shift keys.
+   True if depressed, false otherwise. */
+static bool left_shift, right_shift;    /* Left and right Shift keys. */
+static bool left_alt, right_alt;        /* Left and right Alt keys. */
+static bool left_ctrl, right_ctrl;      /* Left and right Ctl keys. */
 
-/* Current shift state. */
-static unsigned shift_state;
+/* Status of Caps Lock.
+   True when on, false when off. */
+static bool caps_lock;
 
 /* Keyboard buffer. */
 static struct intq buffer;
@@ -115,10 +113,9 @@ static void
 keyboard_interrupt (struct intr_frame *args UNUSED) 
 {
   /* Status of shift keys. */
-  bool shift = (shift_state & (LSHIFT | RSHIFT)) != 0;
-  bool alt = (shift_state & (LALT | RALT)) != 0;
-  bool ctrl = (shift_state & (LCTRL | RCTRL)) != 0;
-  bool caps = (shift_state & CAPS) != 0;
+  bool shift = left_shift || right_shift;
+  bool alt = left_alt || right_alt;
+  bool ctrl = left_ctrl || right_ctrl;
 
   /* Keyboard scancode. */
   unsigned code;
@@ -144,7 +141,7 @@ keyboard_interrupt (struct intr_frame *args UNUSED)
     {
       /* Caps Lock. */
       if (!release)
-        shift_state ^= CAPS; 
+        caps_lock = !caps_lock;
     }
   else if (map_key (invariant_keymap, code, &c)
            || (!shift && map_key (unshifted_keymap, code, &c))
@@ -160,7 +157,7 @@ keyboard_interrupt (struct intr_frame *args UNUSED)
               /* A is 0x41, Ctrl+A is 0x01, etc. */
               c -= 0x40; 
             }
-          else if (shift == caps)
+          else if (shift == caps_lock)
             c = tolower (c);
 
           /* Handle Alt by setting the high bit.
@@ -179,29 +176,32 @@ keyboard_interrupt (struct intr_frame *args UNUSED)
     }
   else
     {
-      /* Table of shift keys.
-         Maps a keycode into a shift_state bit. */
-      static const unsigned shift_keys[][2] = 
+      /* Maps a keycode into a shift state variable. */
+      struct shift_key 
         {
-          {  0x2a, LSHIFT},
-          {  0x36, RSHIFT},
-          {  0x38, LALT},
-          {0xe038, RALT},
-          {  0x1d, LCTRL},
-          {0xe01d, RCTRL},
-          {0, 0},
+          unsigned scancode;
+          bool *state_var;
+        };
+
+      /* Table of shift keys. */
+      static const struct shift_key shift_keys[] = 
+        {
+          {  0x2a, &left_shift},
+          {  0x36, &right_shift},
+          {  0x38, &left_alt},
+          {0xe038, &right_alt},
+          {  0x1d, &left_ctrl},
+          {0xe01d, &right_ctrl},
+          {0,      NULL},
         };
   
-      const unsigned (*key)[2];
+      const struct shift_key *key;
 
       /* Scan the table. */
-      for (key = shift_keys; (*key)[0] != 0; key++) 
-        if ((*key)[0] == code)
+      for (key = shift_keys; key->scancode != 0; key++) 
+        if (key->scancode == code)
           {
-            if (release)
-              shift_state &= ~(*key)[1];
-            else
-              shift_state |= (*key)[1];
+            *key->state_var = !release;
             break;
           }
     }
