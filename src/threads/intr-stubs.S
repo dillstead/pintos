@@ -74,19 +74,19 @@ intr_exit:
 
    Most of the stubs do this:
 
-        1. Push EBP on the stack (frame_pointer in `struct intr_frame').
+        1. Push %ebp on the stack (frame_pointer in `struct intr_frame').
 
         2. Push 0 on the stack (error_code).
 
         3. Push the interrupt number on the stack (vec_no).
 
    The CPU pushes an extra "error code" on the stack for a few
-   interrupts.  Because we want EBP to be where the error code
+   interrupts.  Because we want %ebp to be where the error code
    is, we follow a different path:
 
         1. Push a duplicate copy of the error code on the stack.
 
-        2. Replace the original copy of the error code by EBP.
+        2. Replace the original copy of the error code by %ebp.
 
         3. Push the interrupt number on the stack. */
 
@@ -97,13 +97,13 @@ intr_stubs:
 /* This implements steps 1 and 2, described above, in the common
    case where we just push a 0 error code. */
 #define zero                                    \
-	pushl %ebp;                               \
+	pushl %ebp;                             \
 	pushl $0
 
 /* This implements steps 1 and 2, described above, in the case
    where the CPU already pushed an error code. */
 #define REAL                                    \
-        pushl (%esp);                   \
+        pushl (%esp);                           \
         movl %ebp, 4(%esp)
 
 /* Emits a stub for interrupt vector NUMBER.
