@@ -381,15 +381,85 @@ We will judge your design based on the design document and the source
 code that you submit.  We will read your entire design document and much
 of your source code.  
 
+Don't forget that the design document is 50% of your project grade.  It
+is better to spend one or two hours writing a good design document than
+it is to spend that time getting the last 5% of the points for tests and
+then trying to rush through writing the design document in the last 15
+minutes.
+
+@menu
+* Design Document::             
+* Source Code::                 
+@end menu
+
+@node Design Document
+@subsubsection Design Document
+
 We provide a design document template for each project.  For each
 significant part of a project, the template asks questions in four
-areas: data structures, algorithms, synchronization, and rationale.  An
-incomplete design document or one that strays from the template without
-good reason may be penalized.  Incorrect capitalization, punctuation,
-spelling, or grammar can also cost points.  @xref{Project
-Documentation}, for a sample design document for a fictitious project.
+areas: 
 
-Design quality will also be judged based on your source code.  We will
+@table @strong
+@item Data Structures
+
+The instructions for this section are always the same:
+
+@quotation
+Copy here the declaration of each new or changed @code{struct} or
+@code{struct} member, global or static variable, @code{typedef}, or
+enumeration.  Identify the purpose of each in 25 words or less.
+@end quotation
+
+The first part is mechanical.  Just copy new or modified declarations
+into the design document, to highlight for us the actual changes to data
+structures.  Each declaration should include the comment that should
+accompany it in the source code (see below).
+
+We also ask for a very brief description of the purpose of each new or
+changed data structure.  The limit of 25 words or less is a guideline
+intended to save your time and avoid duplication with later areas.
+
+@item Algorithms
+
+This is where you tell us how your code works, through questions that
+probe your understanding of your code.  We might not be able to easily
+figure it out from the code, because many creative solutions exist for
+most OS problems.  Help us out a little.
+
+Your answers should be at a level below the high level description of
+requirements given in the assignment.  We have read the assignment too,
+so it is unnecessary to repeat or rephrase what is stated there.  On the
+other hand, your answers should be at a level above the low level of the
+code itself.  Don't give a line-by-line run-down of what your code does.
+Instead, use your answers to explain how your code works to implement
+the requirements.
+
+@item Synchronization
+
+An operating system kernel is a complex, multithreaded program, in which
+synchronizing multiple threads can be difficult.  This section asks
+about how you chose to synchronize this particular type of activity.
+
+@item Rationale
+
+Whereas the other sections primarily ask ``what'' and ``how,'' the
+rationale section concentrates on ``why.''  This is where we ask you to
+justify some design decisions, by explaining why the choices you made
+are better than alternatives.  You may be able to state these in terms
+of time and space complexity, which can be made as rough or informal
+arguments (formal language or proofs are unnecessary).
+@end table
+
+An incomplete, evasive, or non-responsive design document or one that
+strays from the template without good reason may be penalized.
+Incorrect capitalization, punctuation, spelling, or grammar can also
+cost points.  @xref{Project Documentation}, for a sample design document
+for a fictitious project.
+
+@node Source Code
+@subsubsection Source Code
+
+Your design will also be judged by looking at your source code.  We will
 typically look at the differences between the original Pintos source
 tree and your submission, based on the output of a command like
 @code{diff -urpb pintos.orig pintos.submitted}.  We will try to match up your
@@ -397,7 +467,7 @@ description of the design with the code submitted.  Important
 discrepancies between the description and the actual code will be
 penalized, as will be any bugs we find by spot checks.
 
-The most important aspects of design quality are those that specifically
+The most important aspects of source code design are those that specifically
 relate to the operating system issues at stake in the project.  For
 example, the organization of an inode is an important part of file
 system design, so in the file system project a poorly designed inode
@@ -413,14 +483,17 @@ convenient functions for sorting and finding minimums and maximums).
 Pintos is written in a consistent style.  Make your additions and
 modifications in existing Pintos source files blend in, not stick out.
 In new source files, adopt the existing Pintos style by preference, but
-make the self-consistent at the very least.  Use horizontal and vertical
-white space to make code readable.  Add a comment to every structure,
-structure member, global or static variable, and function definition.
-Update existing comments as you modify code.  Don't comment out or use
-the preprocessor to ignore blocks of code.  Use assertions to document
-key invariants.  Decompose code into functions for clarity.  Code that
-is difficult to understand because it violates these or other ``common
-sense'' software engineering practices will be penalized.
+make your code self-consistent at the very least.  There should not be a
+patchwork of different styles that makes it obvious that three different
+people wrote the code.  Use horizontal and vertical white space to make
+code readable.  Add a brief comment on every structure, structure
+member, global or static variable, and function definition.  Update
+existing comments as you modify code.  Don't comment out or use the
+preprocessor to ignore blocks of code (instead, remove it entirely).
+Use assertions to document key invariants.  Decompose code into
+functions for clarity.  Code that is difficult to understand because it
+violates these or other ``common sense'' software engineering practices
+will be penalized.
 
 In the end, remember your audience.  Code is written primarily to be
 read by humans.  It has to be acceptable to the compiler too, but the
