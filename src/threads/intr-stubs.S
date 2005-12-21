@@ -1,6 +1,5 @@
 #include "threads/loader.h"
 
-	.intel_syntax noprefix
         .text
 
 /* Main interrupt entry point.
@@ -19,24 +18,24 @@
 .func intr_entry
 intr_entry:
 	/* Save caller's registers. */
-	push ds
-	push es
-	push fs
-	push gs
-	pusha
+	pushl %ds
+	pushl %es
+	pushl %fs
+	pushl %gs
+	pushal
         
 	/* Set up kernel environment. */
 	cld			/* String instructions go upward. */
-	mov eax, SEL_KDSEG	/* Initialize segment registers. */
-	mov ds, eax
-	mov es, eax
-	lea ebp, [esp + 56]	/* Set up frame pointer. */
+	mov $SEL_KDSEG, %eax	/* Initialize segment registers. */
+	mov %eax, %ds
+	mov %eax, %es
+	leal 56(%esp), %ebp	/* Set up frame pointer. */
 
 	/* Call interrupt handler. */
-	push esp
+	pushl %esp
 .globl intr_handler
 	call intr_handler
-	add esp, 4
+	addl $4, %esp
 .endfunc
 
 /* Interrupt exit.
@@ -51,15 +50,15 @@ intr_entry:
 .func intr_exit
 intr_exit:
         /* Restore caller's registers. */
-	popa
-	pop gs
-	pop fs
-	pop es
-	pop ds
+	popal
+	popl %gs
+	popl %fs
+	popl %es
+	popl %ds
 
         /* Discard `struct intr_frame' vec_no, error_code,
            frame_pointer members. */
-	add esp, 12
+	addl $12, %esp
 
         /* Return to caller. */
 	iret
@@ -98,14 +97,14 @@ intr_stubs:
 /* This implements steps 1 and 2, described above, in the common
    case where we just push a 0 error code. */
 #define zero                                    \
-	push ebp;                               \
-	push 0
+	pushl %ebp;                               \
+	pushl $0
 
 /* This implements steps 1 and 2, described above, in the case
    where the CPU already pushed an error code. */
 #define REAL                                    \
-        push dword ptr [esp];                   \
-        mov [esp + 4], ebp
+        pushl (%esp);                   \
+        movl %ebp, 4(%esp)
 
 /* Emits a stub for interrupt vector NUMBER.
    TYPE is `zero', for the case where we push a 0 error code,
@@ -116,7 +115,7 @@ intr_stubs:
 .func intr##NUMBER##_stub;			\
 intr##NUMBER##_stub:                            \
 	TYPE;                                   \
-	push 0x##NUMBER;                        \
+	push $0x##NUMBER;                       \
         jmp intr_entry;                         \
 .endfunc;					\
                                                 \
