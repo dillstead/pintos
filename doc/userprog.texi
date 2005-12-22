@@ -481,6 +481,12 @@ The @code{write} system call for writing to fd 1, the system console.
 All of our test programs write to the console (the user process version
 of @func{printf} is implemented this way), so they will all malfunction
 until @code{write} is available.
+
+@item
+For now, change @func{process_wait} to an infinite loop (one that waits
+forever).  The provided implementation returns immediately, so Pintos
+will power off before any processes actually get to run.  You will
+eventually need to provide a correct implementation.
 @end itemize
 
 After the above are implemented, user processes should work minimally.
