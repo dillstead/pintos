@@ -665,7 +665,8 @@ Reads @var{size} bytes from the file open as @var{fd} into
 @var{buffer}.  Returns the number of bytes actually read (0 at end of
 file), or -1 if the file could not be read (due to a condition other
 than end of file).  Fd 0 reads from the keyboard using
-@func{kbd_getc}.
+@func{kbd_getc}.  (Keyboard input will not work if you pass the
+@option{-v} option to @command{pintos}.)
 
 Consider implementing this function in terms of @func{file_read}.
 @end deftypefn
