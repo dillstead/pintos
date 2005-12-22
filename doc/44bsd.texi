@@ -160,7 +160,7 @@ weight of @math{a} at time @math{t+1}, @am{a^2, a**2} at time
 @math{f(t)} has a weight of approximately @math{1/e} at time @math{t+k},
 approximately @am{1/e^2, 1/e**2} at time @am{t+2k, t+2*k}, and so on.
 From the opposite direction, @math{f(t)} decays to weight @math{w} at
-@am{t = \log_aw, t = ln(w)/ln(a)}.
+time @am{t + \log_aw, t + ln(w)/ln(a)}.
 
 The initial value of @var{recent_cpu} is 0 in the first thread
 created, or the parent's value in other new threads.  Each time a timer
