@@ -683,7 +683,8 @@ actual number written, or -1 if no bytes could be written at all.
 
 Fd 1 writes to the console.  Your code to write to the console should
 write all of @var{buffer} in one call to @func{putbuf}, at least as
-long as @var{size} is not bigger than a few hundred bytes.  Otherwise,
+long as @var{size} is not bigger than a few hundred bytes.  (It is
+reasonable to break up larger buffers.)  Otherwise,
 lines of text output by different processes may end up interleaved on
 the console, confusing both human readers and our grading scripts.
 
