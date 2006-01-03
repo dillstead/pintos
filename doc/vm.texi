@@ -521,6 +521,8 @@ If the file's length is not a multiple of @code{PGSIZE}, then some
 bytes in the final mapped page ``stick out'' beyond the end of the
 file.  Set these bytes to zero when the page is faulted in from disk,
 and discard them when the page is written back to disk.
+A partial page need not be lazily loaded, as in the case of a partial
+page in an executable (@pxref{Lazy Loading}).
 
 If successful, this function returns a ``mapping ID'' that
 uniquely identifies the mapping within the process.  On failure,
