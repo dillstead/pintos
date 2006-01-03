@@ -45,13 +45,6 @@ uint32_t *base_page_dir;
    If true, use multi-level feedback queue scheduler. */
 bool enable_mlfqs;
 
-#ifdef VM
-/* -rndpg:
-   If false (default), use LRU page replacement policy.
-   If true, use random page replacement policy. */
-bool enable_random_paging;
-#endif
-
 #ifdef FILESYS
 /* -f: Format the filesystem? */
 static bool format_filesys;
@@ -258,10 +251,6 @@ parse_options (char **argv)
       else if (!strcmp (name, "-ul"))
         user_page_limit = atoi (value);
 #endif
-#ifdef VM
-      else if (!strcmp (name, "-rndpg"))
-        enable_random_paging = true;
-#endif
       else
         PANIC ("unknown option `%s' (use -h for help)", name);
 
@@ -366,9 +355,6 @@ usage (void)
           "  -mlfqs             Use multi-level feedback queue scheduler.\n"
 #ifdef USERPROG
           "  -ul=COUNT          Limit user memory to COUNT pages.\n"
-#endif
-#ifdef VM
-          "  -rndpg             Use random page replacement policy.\n"
 #endif
           );
   power_off ();

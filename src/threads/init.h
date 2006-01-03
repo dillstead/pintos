@@ -17,13 +17,6 @@ extern uint32_t *base_page_dir;
    If true, use multi-level feedback queue scheduler. */
 extern bool enable_mlfqs;
 
-#ifdef VM
-/* -o random-paging:
-   If false (default), use LRU page replacement policy.
-   If true, use random page replacement policy. */
-extern bool enable_random_paging;
-#endif
-
 /* -q: Power off when kernel tasks complete? */
 extern bool power_off_when_done;
 
