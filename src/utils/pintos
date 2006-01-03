@@ -212,10 +212,8 @@ sub find_disks {
 	    my ($mb) = $disk->{FILENAME};
 	    undef $disk->{FILENAME};
 
-	    my ($cylinder) = 1024 * 504;
-	    my ($bytes) = $mb * ($cylinder * 2);
-	    $bytes = int (($bytes + $cylinder - 1) / $cylinder) * $cylinder;
-	    extend_disk ($disk, $bytes);
+	    my ($cyl_size) = 512 * 16 * 63;
+	    extend_disk ($disk, ceil ($mb * 2) * $cyl_size);
 	} else {
 	    # The file must exist and have nonzero size.
 	    -e $disk->{FILENAME} or die "$disk->{FILENAME}: stat: $!\n";
@@ -425,9 +423,10 @@ EOF
 # line for attaching it to $device.
 sub print_bochs_disk_line {
     my ($device, $iface) = @_;
-    my ($file) = $disks_by_iface[$iface]{FILENAME};
+    my ($disk) = $disks_by_iface[$iface];
+    my ($file) = $disk->{FILENAME};
     if (defined $file) {
-	my (%geom) = disk_geometry ($file);
+	my (%geom) = disk_geometry ($disk);
 	print BOCHSRC "$device: type=disk, path=$file, mode=flat, ";
 	print BOCHSRC "cylinders=$geom{C}, heads=$geom{H}, spt=$geom{S}, ";
 	print BOCHSRC "translation=none\n";
@@ -487,7 +486,8 @@ serial0.fileName = "pintos.out"
 EOF
 
     for (my ($i) = 0; $i < 4; $i++) {
-	my ($dsk) = $disks_by_iface[$i]{FILENAME};
+	my ($disk) = $disks_by_iface[$i];
+	my ($dsk) = $disk->{FILENAME};
 	next if !defined $dsk;
 
 	my ($pln) = $dsk;
@@ -502,7 +502,7 @@ $device.deviceType = "plainDisk"
 $device.fileName = "$pln"
 EOF
 
-	my (%geom) = disk_geometry ($dsk);
+	my (%geom) = disk_geometry ($disk);
 	open (PLN, ">", $pln) or die "$pln: create: $!\n";
 	print PLN <<EOF;
 DRIVETYPE	ide
@@ -580,12 +580,14 @@ sub extend_disk {
 # Examines $file and returns a valid IDE disk geometry for it, as a
 # hash.
 sub disk_geometry {
-    my ($file) = @_;
+    my ($disk) = @_;
+    my ($file) = $disk->{FILENAME};
     my ($size) = -s $file;
     die "$file: stat: $!\n" if !defined $size;
     die "$file: size not a multiple of 512 bytes\n" if $size % 512;
-    my ($cylinders) = int ($size / (512 * 16 * 63));
-    $cylinders++ if $size % (512 * 16 * 63);
+    my ($cyl_size) = 512 * 16 * 63;
+    my ($cylinders) = ceil ($size / $cyl_size);
+    extend_disk ($disk, $cylinders * $cyl_size) if $size % $cyl_size;
 
     return (CAPACITY => $size / 512,
 	    C => $cylinders,
