@@ -556,6 +556,11 @@ implicitly or explicitly, all pages written to by the process are
 written back to the file, and pages not written must not be.  The pages
 are then removed from the process's list of virtual pages.
 
+Closing or removing a file does not unmap any of its mappings.  Once
+created, a mapping is valid until @code{munmap} is called or the process
+exits, following the Unix convention.  @xref{Removing an Open File}, for
+more information.
+
 If two or more processes map the same file, there is no requirement that
 they see consistent data.  Unix handles this by making the two mappings
 share the same physical page, but the @code{mmap} system call also has
@@ -696,14 +701,4 @@ munmap (map);
 
 The @command{mcp} program in @file{src/examples} shows how to copy a
 file using memory-mapped I/O.
-
-@item What happens if a user removes a @code{mmap}'d file?
-
-The mapping should remain valid, following the Unix convention.
-@xref{Removing an Open File}, for more information.
-
-@item If a user closes a mapped file, should it be automatically unmapped?
-
-No.  Once created the mapping is valid until @code{munmap} is called
-or the process exits.
 @end table
