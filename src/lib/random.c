@@ -73,7 +73,9 @@ random_bytes (void *buf_, size_t size)
     }
 }
 
-/* Returns a pseudo-random unsigned long. */
+/* Returns a pseudo-random unsigned long.
+   Use random_ulong() % n to obtain a random number in the range
+   0...n (exclusive). */
 unsigned long
 random_ulong (void) 
 {
