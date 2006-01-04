@@ -778,7 +778,8 @@ hurt even now.
 You can use @func{file_deny_write} to prevent writes to an open file.
 Calling @func{file_allow_write} on the file will re-enable them (unless
 the file is denied writes by another opener).  Closing a file will also
-re-enable writes.
+re-enable writes.  Thus, to deny writes to process's executable, you
+must keep it open as long as the process is still running.
 
 @node Project 2 FAQ
 @section FAQ
