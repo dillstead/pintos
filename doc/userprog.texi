@@ -251,7 +251,8 @@ programs.  The @file{Makefile} in this directory
 compiles the provided examples, and you can edit it
 compile your own programs as well.
 
-Pintos loads @dfn{ELF} executables.  ELF is a file format used by Linux,
+Pintos can load @dfn{ELF} executables with the loader provided for you
+in @file{userprog/process.c}.  ELF is a file format used by Linux,
 Solaris, and many other operating systems for object files,
 shared libraries, and executables.  You can actually use any compiler
 and linker that output 80@var{x}86 ELF executables to produce programs
