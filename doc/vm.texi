@@ -483,8 +483,7 @@ allocate additional pages as necessary.
 
 Allocate additional pages only if they ``appear'' to be stack accesses.
 Devise a heuristic that attempts to distinguish stack accesses from
-other accesses.  You can retrieve the user program's current stack
-pointer from the @struct{intr_frame}'s @code{esp} member.
+other accesses.
 
 User programs are buggy if they write to the stack below the stack
 pointer, because typical real OSes may interrupt a process at any time
@@ -499,6 +498,20 @@ fault 4 bytes below the stack pointer.  (Otherwise, @code{PUSH} would
 not be restartable in a straightforward fashion.)  Similarly, the
 @code{PUSHA} instruction pushes 32 bytes at once, so it can fault 32
 bytes below the stack pointer.
+
+You will need to be able to obtain the current value of the user
+program's stack pointer.  Within a system call or a page fault generated
+by a user program, you can retrieve it from @code{esp} member of the
+@struct{intr_frame} passed to @func{syscall_handler} or
+@func{page_fault}, respectively.  If you verify user pointers before
+accessing them (@pxref{Accessing User Memory}), these are the only cases
+you need to handle.  On the other hand, if you depend on page faults to
+detect invalid memory access, you will need to handle another case,
+where a page fault occurs in the kernel.  Reading @code{esp} out of the
+@struct{intr_frame} passed to @func{page_fault} in that case will obtain
+the kernel stack pointer, not the user stack pointer.  You will need to
+arrange another way, e.g.@: by saving @code{esp} into @struct{thread} on
+the initial transition from user to kernel mode.
 
 You may impose some absolute limit on stack size, as do most OSes.
 Some OSes make the limit user-adjustable, e.g.@: with the
