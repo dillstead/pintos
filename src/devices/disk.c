@@ -183,7 +183,7 @@ disk_print_stats (void)
    slave, respectively--within the channel numbered CHAN_NO.
 
    Pintos uses disks this way:
-        0:0 - operating system kernel
+        0:0 - boot loader, command line args, and operating system kernel
         0:1 - file system
         1:0 - scratch
         1:1 - swap
@@ -213,7 +213,9 @@ disk_size (struct disk *d)
 }
 
 /* Reads sector SEC_NO from disk D into BUFFER, which must have
-   room for DISK_SECTOR_SIZE bytes. */
+   room for DISK_SECTOR_SIZE bytes.
+   Internally synchronizes accesses to disks, so external
+   per-disk locking is unneeded. */
 void
 disk_read (struct disk *d, disk_sector_t sec_no, void *buffer) 
 {
@@ -236,7 +238,9 @@ disk_read (struct disk *d, disk_sector_t sec_no, void *buffer)
 
 /* Write sector SEC_NO to disk D from BUFFER, which must contain
    DISK_SECTOR_SIZE bytes.  Returns after the disk has
-   acknowledged receiving the data. */
+   acknowledged receiving the data.
+   Internally synchronizes accesses to disks, so external
+   per-disk locking is unneeded. */
 void
 disk_write (struct disk *d, disk_sector_t sec_no, const void *buffer)
 {
