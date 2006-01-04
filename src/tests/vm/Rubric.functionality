@@ -1,6 +1,7 @@
 Functionality of virtual memory subsystem:
 - Test page table.
-6	pt-grow-stack
+4	pt-grow-stack
+2	pt-grow-stk-sc
 6	pt-big-stk-obj
 6	pt-grow-pusha
 

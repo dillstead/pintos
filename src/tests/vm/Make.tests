@@ -4,11 +4,11 @@ PINTOSFLAGS += --swap-disk=4
 
 tests/vm_TESTS = $(addprefix tests/vm/,pt-grow-stack pt-grow-pusha	\
 pt-grow-bad pt-big-stk-obj pt-bad-addr pt-bad-read pt-write-code	\
-pt-write-code2 page-linear page-parallel page-merge-seq page-merge-par	\
-page-shuffle mmap-read mmap-close mmap-unmap mmap-overlap mmap-twice	\
-mmap-write mmap-exit mmap-shuffle mmap-bad-fd mmap-clean mmap-inherit	\
-mmap-misalign mmap-null mmap-over-code mmap-over-data mmap-over-stk	\
-mmap-remove mmap-zero)
+pt-write-code2 pt-grow-stk-sc page-linear page-parallel page-merge-seq	\
+page-merge-par page-shuffle mmap-read mmap-close mmap-unmap		\
+mmap-overlap mmap-twice mmap-write mmap-exit mmap-shuffle mmap-bad-fd	\
+mmap-clean mmap-inherit mmap-misalign mmap-null mmap-over-code		\
+mmap-over-data mmap-over-stk mmap-remove mmap-zero)
 
 tests/vm_PROGS = $(tests/vm_TESTS) $(addprefix tests/vm/,child-linear	\
 child-sort child-mm-wrt child-inherit)
@@ -24,6 +24,7 @@ tests/vm/pt-bad-addr_SRC = tests/vm/pt-bad-addr.c tests/lib.c tests/main.c
 tests/vm/pt-bad-read_SRC = tests/vm/pt-bad-read.c tests/lib.c tests/main.c
 tests/vm/pt-write-code_SRC = tests/vm/pt-write-code.c tests/lib.c tests/main.c
 tests/vm/pt-write-code2_SRC = tests/vm/pt-write-code-2.c tests/lib.c tests/main.c
+tests/vm/pt-grow-stk-sc_SRC = tests/vm/pt-grow-stk-sc.c tests/lib.c tests/main.c
 tests/vm/page-linear_SRC = tests/vm/page-linear.c tests/arc4.c	\
 tests/lib.c tests/main.c
 tests/vm/page-parallel_SRC = tests/vm/page-parallel.c tests/lib.c tests/main.c
