@@ -213,6 +213,9 @@ could check and update the accessed and dirty bits for both addresses.
 Alternatively, the kernel could avoid the problem by only accessing user
 data through the user virtual address.
 
+Other aliases should only arise if you implement sharing, as extra
+credit (@pxref{VM Extra Credit}), or as bugs elsewhere in your code.
+
 @deftypefun bool pagedir_is_dirty (uint32_t *@var{pd}, const void *@var{vpage})
 @deftypefunx bool pagedir_is_accessed (uint32_t *@var{pd}, const void *@var{vpage})
 Returns true if page directory @var{pd} contains a page table entry for
@@ -607,6 +610,7 @@ summary of project 2.
 Yes.
 
 @item What extra credit is available?
+@anchor{VM Extra Credit}
 
 You may implement sharing: when multiple processes are created that use
 the same executable file, share read-only pages among those processes
