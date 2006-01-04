@@ -114,7 +114,7 @@ kill (struct intr_frame *f)
 
    At entry, the address that faulted is in CR2 (Control Register
    2) and information about the fault, formatted as described in
-   the PF_* macros above, is in F's error_code member.  The
+   the PF_* macros in exception.h, is in F's error_code member.  The
    example code here shows how to parse that information.  You
    can find more information about both of these in the
    description of "Interrupt 14--Page Fault Exception (#PF)" in
