@@ -501,8 +501,9 @@ not be restartable in a straightforward fashion.)  Similarly, the
 bytes below the stack pointer.
 
 You may impose some absolute limit on stack size, as do most OSes.
-(Some OSes make the limit user-adjustable, e.g.@: with the
-@command{ulimit} command on many Unix systems.)
+Some OSes make the limit user-adjustable, e.g.@: with the
+@command{ulimit} command on many Unix systems.  On many GNU/Linux systems,
+the default limit is 8 MB.
 
 The first stack page need not be allocated lazily.  You can initialize
 it with the command line arguments at load time, with no need to wait
