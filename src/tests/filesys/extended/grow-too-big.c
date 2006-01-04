@@ -14,7 +14,8 @@ test_main (void)
   CHECK ((fd = open (filename)) > 1, "open \"%s\"", filename);
   msg ("seek \"%s\"", filename);
   seek (fd, UINT_MAX);
-  CHECK (write (fd, &zero, 1) > 0, "write \"%s\"", filename);
+  msg ("write \"%s\"", filename);
+  write (fd, &zero, 1);
   msg ("close \"%s\"", filename);
   close (fd);
 }
