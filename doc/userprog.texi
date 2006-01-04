@@ -19,6 +19,12 @@ start with a fresh copy.  No code from project 1 is required for this
 assignment.  The ``alarm clock'' functionality may be useful in
 projects 3 and 4, but it is not strictly required.
 
+You might find it useful to go back and reread how to run the tests
+(@pxref{Testing}).  In particular, the tests for project 2 and later
+projects will probably run faster if you use the qemu emulator, e.g.@:
+via @code{make check PINTOSOPTS='--qemu'}.  The qemu emulator is
+available only on the Linux machines.
+
 @menu
 * Project 2 Background::        
 * Project 2 Suggested Order of Implementation::  
@@ -222,9 +228,10 @@ pintos -p ../../examples/echo -a echo -- -f -q run 'echo x'
 
 If you don't want to keep the file system disk around for later use or
 inspection, you can even combine all four steps into a single command.
-The @code{--fs-disk=2} option creates a temporary disk just for the
-duration of the @command{pintos} run.  The Pintos automatic test suite
-makes extensive use of this syntax:
+The @code{--fs-disk=@var{n}} option creates a temporary disk
+approximately @var{n} megabytes in size just for the duration of the
+@command{pintos} run.  The Pintos automatic test suite makes extensive
+use of this syntax:
 
 @example
 pintos --fs-disk=2 -p ../../examples/echo -a echo -- -f -q run 'echo x'
