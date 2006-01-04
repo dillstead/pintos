@@ -386,8 +386,12 @@ setup_stack (void **esp)
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
-   virtual address KPAGE to the page table.  Fails if UPAGE is
-   already mapped or if memory allocation fails. */
+   virtual address KPAGE to the page table.
+   UPAGE must not already be mapped.
+   KPAGE should probably be a page obtained from the user pool
+   with palloc_get_page().
+   Returns true on success, false if UPAGE is already mapped or
+   if memory allocation fails. */
 static bool
 install_page (void *upage, void *kpage)
 {
