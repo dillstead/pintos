@@ -479,7 +479,7 @@ script, so the code you turn in must properly handle all cases.
 Implement stack growth.  In project 2, the stack was a single page at
 the top of the user virtual address space, and programs were limited to
 that much stack.  Now, if the stack grows past its current size,
-allocate additional page as necessary.
+allocate additional pages as necessary.
 
 Allocate additional pages only if they ``appear'' to be stack accesses.
 Devise a heuristic that attempts to distinguish stack accesses from
