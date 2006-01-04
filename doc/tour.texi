@@ -6,12 +6,18 @@ entire code base, but you'll only be using Pintos one part at a time,
 so you may find that you want to read each part as you work on the
 corresponding project.
 
-Hint: try using ``tags'' to follow along with references to function
+(Actually, the tour is currently incomplete.  It fully covers only the
+threads project.)
+
+We recommend using ``tags'' to follow along with references to function
 and variable names (@pxref{Tags}).
 
 @menu
 * Pintos Loading::              
 * Threads Tour::                
+* User Programs Tour::          
+* Virtual Memory Tour::         
+* File Systems Tour::           
 @end menu
 
 @node Pintos Loading
@@ -1272,3 +1278,442 @@ When a block is freed, all of its bytes are cleared to @t{0xcc}, as
 a debugging aid (@pxref{Debugging Tips}).
 
 The block allocator may not be called from interrupt context.
+
+@node User Programs Tour
+@section User Programs Project
+
+The tour for this project has not yet been written.
+
+@node Virtual Memory Tour
+@section Virtual Memory Project
+
+The tour for this project is under construction.
+
+@menu
+* Hash Table::                  
+@end menu
+
+@node Hash Table
+@subsection Hash Table
+
+Most implementations of the virtual memory project use a hash table to
+translate virtual page frames to physical page frames.  It is possible
+to do this translation without adding a new data structure, by modifying
+the code in @file{userprog/pagedir.c}.  However, if you do that you'll
+need to carefully study and understand section 3.7 in @bibref{IA32-v3},
+and in practice it is probably easier to add a new data structure.  You
+may find other uses for hash tables as well.
+
+Pintos provides a hash table data structure in @file{lib/kernel/hash.c}.
+To use it you will need to manually include its header file,
+@file{lib/kernel/hash.h}, with @code{#include <hash.h>}.  Intentionally,
+no code provided with Pintos uses the hash table, which means that you
+are free to use it as is, modify its implementation for your own
+purposes, or ignore it, as you wish.
+
+@menu
+* Hash Data Types::             
+* Basic Hash Functions::        
+* Hash Search Functions::       
+* Hash Iteration Functions::    
+* Hash Table Example::          
+* Hash Auxiliary Data::         
+* Hash Synchronization::        
+@end menu
+
+@node Hash Data Types
+@subsubsection Data Types
+
+A hash table is represented by @struct{hash}.
+
+@deftp {Type} {@struct{hash}}
+Represents an entire hash table.  The actual members of @struct{hash}
+are ``opaque.''  That is, code that uses a hash table should not access
+@struct{hash} members directly, nor should it need to.  Instead, use
+hash table functions and macros.
+@end deftp
+
+The hash table operates on elements of type @struct{hash_elem}.  
+
+@deftp {Type} {@struct{hash_elem}}
+Embed a @struct{hash_elem} member in the structure you want to include
+in a hash table.  Like @struct{hash}, @struct{hash_elem} is opaque.
+All functions for operating on hash table elements actually take and
+return pointers to @struct{hash_elem}, not pointers to your hash table's
+real element type.
+@end deftp
+
+You will often need to obtain a @struct{hash_elem}
+given a real element of the hash table, and vice versa.  Given
+a real element of the hash table, obtaining a pointer to its
+@struct{hash_elem} is trivial: take the address of the
+@struct{hash_elem} member.  Use the @code{hash_entry()} macro to go the
+other direction.
+
+@deftypefn {Macro} {@var{type} *} hash_entry (struct hash_elem *@var{elem}, @var{type}, @var{member})
+Returns a pointer to the structure that @var{elem}, a pointer to a
+@struct{hash_elem}, is embedded within.  You must provide @var{type},
+the name of the structure that @var{elem} is inside, and @var{member},
+the name of the member in @var{type} that @var{elem} points to.
+
+For example, suppose @code{h} is a @code{struct hash_elem *} variable
+that points to a @struct{thread} member (of type @struct{hash_elem})
+named @code{h_elem}.  Then, @code{hash_entry (h, struct thread, h_elem)}
+yields the address of the @struct{thread} that @code{h} points within.
+@end deftypefn
+
+Each hash table element must contain a key, that is, data that
+identifies and distinguishes elements in the hash table.  Every element
+in a hash table at a given time must have a unique key.  (Elements may
+also contain non-key data that need not be unique.)  While an element is
+in a hash table, its key data must not be changed.  For each hash table,
+you must write two functions that act on keys: a hash function and a
+comparison function.  These functions must match the following
+prototypes:
+
+@deftp {Type} {unsigned hash_hash_func (const struct hash_elem *@var{element}, void *@var{aux})}
+Returns a hash of @var{element}'s data, as a value anywhere in the range
+of @code{unsigned int}.  The hash of an element should be a
+pseudo-random function of the element's key.  It must not depend on
+non-key data in the element or on any non-constant data other than the
+key.  Pintos provides the following functions as a suitable basis for
+hash functions.
+
+@deftypefun unsigned hash_bytes (const void *@var{buf}, size_t *@var{size})
+Returns a hash of the @var{size} bytes starting at @var{buf}.  The
+implementation is the general-purpose
+@uref{http://en.wikipedia.org/wiki/Fowler_Noll_Vo_hash, Fowler-Noll-Vo
+hash} for 32-bit words.
+@end deftypefun
+
+@deftypefun unsigned hash_string (const char *@var{s})
+Returns a hash of null-terminated string @var{s}.
+@end deftypefun
+
+@deftypefun unsigned hash_int (int @var{i}) 
+Returns a hash of integer @var{i}.
+@end deftypefun
+
+If your key is a single piece of data of an appropriate type, it is
+sensible for your hash function to directly return the output of one of
+these functions.  For multiple pieces of data, you may wish to combine
+the output of more than one call to them using, e.g., the @samp{^}
+operator.  Finally, you may entirely ignore these functions and write
+your own hash function from scratch, but remember that your goal is to
+build an operating system kernel, not to design a hash function.
+
+@xref{Hash Auxiliary Data}, for an explanation of @var{aux}.
+@end deftp
+
+@deftp {Type} {bool hash_less_func (const struct hash_elem *@var{a}, const struct hash_elem *@var{b}, void *@var{aux})}
+Compares the keys stored in elements @var{a} and @var{b}.  Returns
+true if @var{a} is less than @var{b}, false if @var{a} is greater than
+or equal to @var{b}.
+
+If two elements compare equal, then they must hash to equal values.
+
+@xref{Hash Auxiliary Data}, for an explanation of @var{aux}.
+@end deftp
+
+A few functions that act on hashes accept a pointer to a third kind of
+function as an argument:
+
+@deftp {Type} {void hash_action_func (struct hash_elem *@var{element}, void *@var{aux})}
+Performs some kind of action, chosen by the caller, on @var{element}.
+
+@xref{Hash Auxiliary Data}, for an explanation of @var{aux}.
+@end deftp
+
+@node Basic Hash Functions
+@subsubsection Basic Functions
+
+These functions create and destroy hash tables and obtain basic
+information about their contents.
+
+@deftypefun bool hash_init (struct hash *@var{hash}, hash_hash_func *@var{hash_func}, hash_less_func *@var{less_func}, void *@var{aux})
+Initializes @var{hash} as a hash table using @var{hash_func} as hash
+function, @var{less_func} as comparison function, and @var{aux} as
+auxiliary data.
+Returns true if successful, false on failure.  @func{hash_init} calls
+@func{malloc} and fails if memory cannot be allocated.
+
+@xref{Hash Auxiliary Data}, for an explanation of @var{aux}, which is
+most often a null pointer.
+@end deftypefun
+
+@deftypefun void hash_clear (struct hash *@var{hash}, hash_action_func *@var{action})
+Removes all the elements from @var{hash}, which must have been
+previously initialized with @func{hash_init}.
+
+If @var{action} is non-null, then it is called once for each element in
+the hash table, which gives the caller an opportunity to deallocate any
+memory or other resources used by the element.  For example, if the hash
+table elements are dynamically allocated using @func{malloc}, then
+@var{action} could @func{free} the element.  This is safe because
+@func{hash_clear} will not access the memory in a given hash element
+after calling @var{action} on it.  However, @var{action} must not call
+any function that may modify the hash table, such as @func{hash_insert}
+or @func{hash_delete}.
+@end deftypefun
+
+@deftypefun void hash_destroy (struct hash *@var{hash}, hash_action_func *@var{action})
+If @var{action} is non-null, calls it for each element in the hash, with
+the same semantics as a call to @func{hash_clear}.  Then, frees the
+memory held by @var{hash}.  Afterward, @var{hash} must not be passed to
+any hash table function, absent an intervening call to @func{hash_init}.
+@end deftypefun
+
+@deftypefun size_t hash_size (struct hash *@var{hash})
+Returns the number of elements currently stored in @var{hash}.
+@end deftypefun
+
+@deftypefun bool hash_empty (struct hash *@var{hash})
+Returns true if @var{hash} currently contains no elements,
+false if @var{hash} contains at least one element.
+@end deftypefun
+
+@node Hash Search Functions
+@subsubsection Search Functions
+
+Each of these functions searches a hash table for an element that
+compares equal to one provided.  Based on the success of the search,
+they perform some action, such as inserting a new element into the hash
+table, or simply return the result of the search.
+
+@deftypefun {struct hash_elem *} hash_insert (struct hash *@var{hash}, struct hash_elem *@var{element})
+Searches @var{hash} for an element equal to @var{element}.  If none is
+found, inserts @var{element} into @var{hash} and returns a null pointer.
+If the table already contains an element equal to @var{element}, returns
+the existing element without modifying @var{hash}.
+@end deftypefun
+
+@deftypefun {struct hash_elem *} hash_replace (struct hash *@var{hash}, struct hash_elem *@var{element})
+Inserts @var{element} into @var{hash}.  Any element equal to
+@var{element} already in @var{hash} is removed.  Returns the element
+removed, or a null pointer if @var{hash} did not contain an element
+equal to @var{element}.
+
+The caller is responsible for deallocating any resources associated with
+the element returned, as appropriate.  For example, if the hash table
+elements are dynamically allocated using @func{malloc}, then the caller
+must @func{free} the element after it is no longer needed.
+@end deftypefun
+
+The element passed to the following functions is only used for hashing
+and comparison purposes.  It is never actually inserted into the hash
+table.  Thus, only the key data in the element need be initialized, and
+other data in the element will not be used.  It often makes sense to
+declare an instance of the element type as a local variable, initialize
+the key data, and then pass the address of its @struct{hash_elem} to
+@func{hash_find} or @func{hash_delete}.  @xref{Hash Table Example}, for
+an example.  (Large structures should not be
+allocated as local variables.  @xref{struct thread}, for more
+information.)
+
+@deftypefun {struct hash_elem *} hash_find (struct hash *@var{hash}, struct hash_elem *@var{element})
+Searches @var{hash} for an element equal to @var{element}.  Returns the
+element found, if any, or a null pointer otherwise.
+@end deftypefun
+
+@deftypefun {struct hash_elem *} hash_delete (struct hash *@var{hash}, struct hash_elem *@var{element})
+Searches @var{hash} for an element equal to @var{element}.  If one is
+found, it is removed from @var{hash} and returned.  Otherwise, a null
+pointer is returned and @var{hash} is unchanged.
+
+The caller is responsible for deallocating any resources associated with
+the element returned, as appropriate.  For example, if the hash table
+elements are dynamically allocated using @func{malloc}, then the caller
+must @func{free} the element after it is no longer needed.
+@end deftypefun
+
+@node Hash Iteration Functions
+@subsubsection Iteration Functions
+
+These functions allow iterating through the elements in a hash table.
+Two interfaces are supplied.  The first requires writing and supplying a
+@var{hash_action_func} to act on each element (@pxref{Hash Data Types}).
+
+@deftypefun void hash_apply (struct hash *@var{hash}, hash_action_func *@var{action})
+Calls @var{action} once for each element in @var{hash}, in arbitrary
+order.  @var{action} must not call any function that may modify the hash
+table, such as @func{hash_insert} or @func{hash_delete}.  @var{action}
+must not modify key data in elements, although it may modify any other
+data.
+@end deftypefun
+
+The second interface is based on an ``iterator'' data type.
+Idiomatically, iterators are used as follows:
+
+@example
+struct hash_iterator i;
+
+hash_first (&i, h);
+while (hash_next (&i))
+  @{
+    struct foo *f = hash_entry (hash_cur (&i), struct foo, elem);
+    @r{@dots{}do something with @i{f}@dots{}}
+  @}
+@end example
+
+@deftp {Type} {@struct{hash_iterator}}
+Represents a position within a hash table.  Calling any function that
+may modify a hash table, such as @func{hash_insert} or
+@func{hash_delete}, invalidates all iterators within that hash table.
+
+Like @struct{hash} and @struct{hash_elem}, @struct{hash_elem} is opaque.
+@end deftp
+
+@deftypefun void hash_first (struct hash_iterator *@var{iterator}, struct hash *@var{hash})
+Initializes @var{iterator} to just before the first element in
+@var{hash}.
+@end deftypefun
+
+@deftypefun {struct hash_elem *} hash_next (struct hash_iterator *@var{iterator})
+Advances @var{iterator} to the next element in @var{hash}, and returns
+that element.  Returns a null pointer if no elements remain.  After
+@func{hash_next} returns null for @var{iterator}, calling it again
+yields undefined behavior.
+@end deftypefun
+
+@deftypefun {struct hash_elem *} hash_cur (struct hash_iterator *@var{iterator})
+Returns the value most recently returned by @func{hash_next} for
+@var{iterator}.  Yields undefined behavior after @func{hash_first} has
+been called on @var{iterator} but before @func{hash_next} has been
+called for the first time.
+@end deftypefun
+
+@node Hash Table Example
+@subsubsection Hash Table Example
+
+Suppose you have a structure, called @struct{page}, that you
+want to put into a hash table.  First, define @struct{page} to include a
+@struct{hash_elem} member:
+
+@example
+struct page
+  @{
+    struct hash_elem hash_elem; /* @r{Hash table element.} */
+    void *addr;                 /* @r{Virtual address.} */
+    /* @r{@dots{}other members@dots{}} */
+  @};
+@end example
+
+We write a hash function and a comparison function using @var{addr} as
+the key.  A pointer can be hashed based on its bytes, and the @samp{<}
+operator works fine for comparing pointers:
+
+@example
+/* @r{Returns a hash value for page @var{p}.} */
+unsigned
+page_hash (const struct hash_elem *p_, void *aux UNUSED) 
+@{
+  const struct page *p = hash_entry (p_, struct page, hash_elem);
+  return hash_bytes (&p->addr, sizeof p->addr);
+@}
+
+/* @r{Returns true if page @var{a} precedes page @var{b}.} */
+bool
+page_less (const struct hash_elem *a_, const struct hash_elem *b_,
+           void *aux UNUSED) 
+@{
+  const struct page *a = hash_entry (a_, struct page, hash_elem);
+  const struct page *b = hash_entry (b_, struct page, hash_elem);
+  
+  return a->addr < b->addr;
+@}
+@end example
+
+@noindent
+(The use of @code{UNUSED} in these functions' prototypes suppresses a
+warning that @var{aux} is unused.  @xref{Function and Parameter
+Attributes}, for information about @code{UNUSED}.  @xref{Hash Auxiliary
+Data}, for an explanation of @var{aux}.)
+
+Then, we can create a hash table like this:
+
+@example
+struct hash pages;
+
+hash_init (&pages, page_hash, page_less, NULL);
+@end example
+
+Now we can manipulate the hash table we've created.  If @code{@var{p}}
+is a pointer to a @struct{page}, we can insert it into the hash table
+with:
+
+@example
+hash_insert (&pages, &p->hash_elem);
+@end example
+
+@noindent If there's a chance that @var{pages} might already contain a
+page with the same @var{addr}, then we should check @func{hash_insert}'s
+return value.
+
+To search for an element in the hash table, use @func{hash_find}.  This
+takes a little setup, because @func{hash_find} takes an element to
+compare against.  Here's a function that will find and return a page
+based on a virtual address, assuming that @var{pages} is defined at file
+scope:
+
+@example
+/* @r{Returns the page containing the given virtual @var{address},
+   or a null pointer if no such page exists.} */
+struct page *
+page_lookup (const void *address) 
+@{
+  struct page p;
+  struct hash_elem *e;
+
+  p.addr = address;
+  e = hash_find (&pages, &p.hash_elem);
+  return e != NULL ? hash_entry (e, struct page, hash_elem) : NULL;
+@}
+@end example
+
+@noindent
+@struct{page} is allocated as a local variable here on the assumption
+that it is fairly small.  Large structures should not be allocated as
+local variables.  @xref{struct thread}, for more information.
+
+A similar function could delete a page by address using
+@func{hash_delete}.
+
+@node Hash Auxiliary Data
+@subsubsection Auxiliary Data
+
+In simple cases like the example above, there's no need for the
+@var{aux} parameters.  In these cases, just pass a null pointer to
+@func{hash_init} for @var{aux} and ignore the values passed to the hash
+function and comparison functions.  (You'll get a compiler warning if
+you don't use the @var{aux} parameter, but you can turn that off with
+the @code{UNUSED} macro, as shown in the example, or you can just ignore
+it.)
+
+@var{aux} is useful when you have some property of the data in the
+hash table that's both constant and needed for hashing or comparisons,
+but which is not stored in the data items themselves.  For example, if
+the items in a hash table contain fixed-length strings, but the items
+themselves don't indicate what that fixed length is, you could pass
+the length as an @var{aux} parameter.
+
+@node Hash Synchronization
+@subsubsection Synchronization
+
+The hash table does not do any internal synchronization.  It is the
+caller's responsibility to synchronize calls to hash table functions.
+In general, any number of functions that examine but do not modify the
+hash table, such as @func{hash_find} or @func{hash_next}, may execute
+simultaneously.  However, these function cannot safely execute at the
+same time as any function that may modify a given hash table, such as
+@func{hash_insert} or @func{hash_delete}, nor may more than one function
+that can modify a given hash table execute safely at once.
+
+It is also the caller's responsibility to synchronize access to data in
+hash table elements.  How to synchronize access to this data depends on
+how it is designed and organized, as with any other data structure.
+
+@node File Systems Tour
+@section File Systems Project
+
+The tour for this project has not yet been written.
+

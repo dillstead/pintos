@@ -310,8 +310,8 @@ tasks:
 @itemize @bullet
 @item
 Some way of translating in software from virtual page frames to
-physical page frames.  Consider using a hash table (@pxref{Hash
-Table}).
+physical page frames.  Pintos provides a hash table that you may find
+useful for this purpose (@pxref{Hash Table}).
 
 It is possible to do this translation without adding a new data
 structure, by modifying the code in @file{userprog/pagedir.c}.  However,
@@ -600,100 +600,6 @@ summary of project 2.
 @item Do we need a working HW 2 to implement HW 3?
 
 Yes.
-
-@item How do I use the hash table provided in @file{lib/kernel/hash.c}?
-@anchor{Hash Table}
-
-First, you need to add a @struct{hash_elem} as a member of the
-object that the hash table will contain.  Each @struct{hash_elem} allows
-the object to a member of at most one hash table at a given time.  All
-the hash table functions that deal with hash table items actually use
-the address of a @struct{hash_elem}.  You can convert a pointer to a
-@struct{hash_elem} member into a pointer to the structure in which
-member is embedded using the @code{hash_entry} macro.
-
-Second, you need to decide on a key type.  The key should be something
-that is unique for each object, because a given hash table may not
-contain two objects with equal keys.  Then you need to write two
-functions.  The first is a @dfn{hash function} that converts a key
-into an integer.  Some sample hash functions that you can use or just
-examine are given in @file{lib/kernel/hash.c}.  The second needed
-function is a @dfn{comparison function} that compares a pair of objects
-and returns
-true if the first is less than the second.  These two functions have
-to be compatible with the prototypes for @code{hash_hash_func} and
-@code{hash_less_func} in @file{lib/kernel/hash.h}.
-
-Here's a quick example.  Suppose you want to put @struct{thread}s
-in a hash table.  First, add a @struct{hash_elem} to the thread
-structure by adding a line to its definition:
-
-@example
-struct hash_elem h_elem;     /* Hash table element. */
-@end example
-
-We'll choose the @code{tid} member in @struct{thread} as the key,
-and write a hash function and a comparison function:
-
-@example
-/* Returns a hash for E. */
-unsigned
-thread_hash (const struct hash_elem *e, void *aux UNUSED)
-@{
-  struct thread *t = hash_entry (e, struct thread, h_elem);
-  return hash_int (t->tid);
-@}
-
-/* Returns true if A's tid is less than B's tid. */
-bool
-thread_less (const struct hash_elem *a_,
-             const struct hash_elem *b_,
-             void *aux UNUSED)
-@{
-  struct thread *a = hash_entry (a_, struct thread, h_elem);
-  struct thread *b = hash_entry (b_, struct thread, h_elem);
-  return a->tid < b->tid;
-@}
-@end example
-
-Then we can create a hash table like this:
-
-@example
-struct hash threads;
-
-hash_init (&threads, thread_hash, thread_less, NULL);
-@end example
-
-Finally, if @code{@var{t}} is a pointer to a @struct{thread},
-then we can insert it into the hash table with:
-
-@example
-hash_insert (&threads, &@var{t}->h_elem);
-@end example
-
-The CS109 and CS161 textbooks have chapters on hash tables.
-
-@item Why do the hash table functions have @var{aux} parameters?
-
-In simple cases you won't have any need for the @var{aux} parameters.
-In these cases you can just pass a null pointer to @func{hash_init}
-for @var{aux} and ignore the values passed to the hash function and
-comparison functions.  (You'll get a compiler warning if you don't use
-the @var{aux} parameter, but you can turn that off with the
-@code{UNUSED} macro, as shown above, or you can just ignore it.)
-
-@var{aux} is useful when you have some property of the data in the
-hash table that's both constant and needed for hashing or comparisons,
-but which is not stored in the data items themselves.  For example, if
-the items in a hash table contain fixed-length strings, but the items
-themselves don't indicate what that fixed length is, you could pass
-the length as an @var{aux} parameter.
-
-@item Can we change the hash table implementation?
-
-You are welcome to modify it.  It is not used by any of the code we
-provided, so modifying it won't affect any code but yours.  Do
-whatever it takes to make it work the way you want.
 
 @item What extra credit is available?
 

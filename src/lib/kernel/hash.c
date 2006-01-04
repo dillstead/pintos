@@ -27,28 +27,60 @@ hash_init (struct hash *h,
 
   if (h->buckets != NULL) 
     {
-      hash_clear (h);
+      hash_clear (h, NULL);
       return true;
     }
   else
     return false;
 }
 
-/* Removes all the elements from H. */
+/* Removes all the elements from H.
+   
+   If DESTRUCTOR is non-null, then it is called for each element
+   in the hash.  DESTRUCTOR may, if appropriate, deallocate the
+   memory used by the hash element.  However, modifying hash
+   table H while hash_clear() is running, using any of the
+   functions hash_clear(), hash_destroy(), hash_insert(),
+   hash_replace(), or hash_delete(), yields undefined behavior,
+   whether done in DESTRUCTOR or elsewhere. */
 void
-hash_clear (struct hash *h) 
+hash_clear (struct hash *h, hash_action_func *destructor) 
 {
   size_t i;
-      
+
   for (i = 0; i < h->bucket_cnt; i++) 
-    list_init (&h->buckets[i]);
+    {
+      struct list *bucket = &h->buckets[i];
+
+      if (destructor != NULL) 
+        while (!list_empty (bucket)) 
+          {
+            struct list_elem *list_elem = list_pop_front (bucket);
+            struct hash_elem *hash_elem = list_elem_to_hash_elem (list_elem);
+            destructor (hash_elem, h->aux);
+          }
+
+      list_init (bucket); 
+    }    
+
   h->elem_cnt = 0;
 }
 
-/* Destroys hash table H. */
+/* Destroys hash table H.
+
+   If DESTRUCTOR is non-null, then it is first called for each
+   element in the hash.  DESTRUCTOR may, if appropriate,
+   deallocate the memory used by the hash element.  However,
+   modifying hash table H while hash_clear() is running, using
+   any of the functions hash_clear(), hash_destroy(),
+   hash_insert(), hash_replace(), or hash_delete(), yields
+   undefined behavior, whether done in DESTRUCTOR or
+   elsewhere. */
 void
-hash_destroy (struct hash *h) 
+hash_destroy (struct hash *h, hash_action_func *destructor) 
 {
+  if (destructor != NULL)
+    hash_clear (h, destructor);
   free (h->buckets);
 }
 
@@ -97,7 +129,11 @@ hash_find (struct hash *h, struct hash_elem *e)
 
 /* Finds, removes, and returns an element equal to E in hash
    table H.  Returns a null pointer if no equal element existed
-   in the table. */
+   in the table.
+
+   If the elements of the hash table are dynamically allocated,
+   or own resources that are, then it is the caller's
+   responsibility to deallocate them. */
 struct hash_elem *
 hash_delete (struct hash *h, struct hash_elem *e)
 {
@@ -108,6 +144,32 @@ hash_delete (struct hash *h, struct hash_elem *e)
       rehash (h); 
     }
   return found;
+}
+
+/* Calls ACTION for each element in hash table H in arbitrary
+   order. 
+   Modifying hash table H while hash_apply() is running, using
+   any of the functions hash_clear(), hash_destroy(),
+   hash_insert(), hash_replace(), or hash_delete(), yields
+   undefined behavior, whether done from ACTION or elsewhere. */
+void
+hash_apply (struct hash *h, hash_action_func *action) 
+{
+  size_t i;
+  
+  ASSERT (action != NULL);
+
+  for (i = 0; i < h->bucket_cnt; i++) 
+    {
+      struct list *bucket = &h->buckets[i];
+      struct list_elem *elem, *next;
+
+      for (elem = list_begin (bucket); elem != list_end (bucket); elem = next) 
+        {
+          next = list_next (elem);
+          action (list_elem_to_hash_elem (elem), h->aux);
+        }
+    }
 }
 
 /* Initializes I for iterating hash table H.
@@ -123,9 +185,10 @@ hash_delete (struct hash *h, struct hash_elem *e)
           ...do something with f...
         }
 
-   NOTE: Modifying a hash table during iteration invalidates all
-   iterators.
-*/
+   Modifying hash table H during iteration, using any of the
+   functions hash_clear(), hash_destroy(), hash_insert(),
+   hash_replace(), or hash_delete(), invalidates all
+   iterators. */
 void
 hash_first (struct hash_iterator *i, struct hash *h) 
 {
@@ -141,7 +204,9 @@ hash_first (struct hash_iterator *i, struct hash *h)
    it.  Returns a null pointer if no elements are left.  Elements
    are returned in arbitrary order.
 
-   NOTE: Modifying a hash table during iteration invalidates all
+   Modifying a hash table H during iteration, using any of the
+   functions hash_clear(), hash_destroy(), hash_insert(),
+   hash_replace(), or hash_delete(), invalidates all
    iterators. */
 struct hash_elem *
 hash_next (struct hash_iterator *i)
