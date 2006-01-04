@@ -531,6 +531,12 @@ Here's a summary of our reference solution, produced by the
 @command{diffstat} program.  The final row gives total lines inserted
 and deleted; a changed line counts as both an insertion and a deletion.
 
+The reference solution represents just one possible solution.  Many
+other solutions are also possible and many of those differ greatly from
+the reference solution.  Some excellent solutions may not modify all the
+files modified by the reference solution, and some may modify files not
+modified by the reference solution.
+
 @verbatim
  devices/timer.c       |   42 +++++-
  threads/fixed-point.h |  120 ++++++++++++++++++
