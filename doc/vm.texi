@@ -648,6 +648,12 @@ you like, but it should be the underlying mechanism.
 Also, you can use the @option{-u} option to @command{pintos} to limit
 the size of the user pool, which makes it easy to test your VM
 implementation with various user memory sizes.
+
+@item Data pages might need swap space.  Can I swap them out at process load?
+
+No.  Reading data pages from the executable and writing them to swap
+immediately at program startup is not demand paging.  You need to demand
+page everything (except partial pages).
 @end table
 
 @node Memory Mapped File FAQ
