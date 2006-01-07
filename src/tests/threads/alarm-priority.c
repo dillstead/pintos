@@ -1,3 +1,6 @@
+/* Checks that when the alarm clock wakes up threads, the
+   higher-priority threads run first. */
+
 #include <stdio.h>
 #include "tests/threads/tests.h"
 #include "threads/init.h"

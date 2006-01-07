@@ -1,4 +1,5 @@
-/* Problem 1-3: Priority Scheduling tests.
+/* Creates several threads all at the same priority and ensures
+   that they consistently run in the same round-robin order.
 
    Based on a test originally submitted for Stanford's CS 140 in
    winter 1999 by by Matt Franklin

@@ -1,4 +1,10 @@
-/* Based on a test originally submitted for Stanford's CS 140 in
+/* Low-priority main thread L acquires lock A.  Medium-priority
+   thread M then acquires lock B then blocks on acquiring lock A.
+   High-priority thread H then blocks on acquiring lock B.  Thus,
+   thread H donates its priority to M, which in turn donates it
+   to thread L.
+   
+   Based on a test originally submitted for Stanford's CS 140 in
    winter 1999 by Matt Franklin <startled@leland.stanford.edu>,
    Greg Hutchins <gmh@leland.stanford.edu>, Yu Ping Hu
    <yph@cs.stanford.edu>.  Modified by arens. */

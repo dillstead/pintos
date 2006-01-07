@@ -1,4 +1,10 @@
-/* Based on a test originally submitted for Stanford's CS 140 in
+/* The main thread acquires locks A and B, then it creates two
+   higher-priority threads.  Each of these threads blocks
+   acquiring one of the locks and thus donate their priority to
+   the main thread.  The main thread releases the locks in turn
+   and relinquishes its donated priorities.
+   
+   Based on a test originally submitted for Stanford's CS 140 in
    winter 1999 by Matt Franklin <startled@leland.stanford.edu>,
    Greg Hutchins <gmh@leland.stanford.edu>, Yu Ping Hu
    <yph@cs.stanford.edu>.  Modified by arens. */

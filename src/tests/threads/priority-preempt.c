@@ -1,4 +1,4 @@
-/* Problem 1-3: Priority Scheduling tests.
+/* Ensures that a high-priority thread really preempts.
 
    Based on a test originally submitted for Stanford's CS 140 in
    winter 1999 by by Matt Franklin

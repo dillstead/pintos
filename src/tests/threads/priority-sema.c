@@ -1,3 +1,6 @@
+/* Tests that the highest-priority thread waiting on a semaphore
+   is the first to wake up. */
+
 #include <stdio.h>
 #include "tests/threads/tests.h"
 #include "threads/init.h"

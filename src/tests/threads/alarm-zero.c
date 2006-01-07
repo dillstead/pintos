@@ -1,6 +1,4 @@
-/* Problem 1-1: Alarm Clock tests.
-
-   Tests timer_sleep(0).  Only requirement is that it not crash. */
+/* Tests timer_sleep(0), which should return immediately. */
 
 #include <stdio.h>
 #include "tests/threads/tests.h"

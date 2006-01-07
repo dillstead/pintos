@@ -1,6 +1,4 @@
-/* Problem 1-1: Alarm Clock tests.
-
-   Creates N threads, each of which sleeps a different, fixed
+/* Creates N threads, each of which sleeps a different, fixed
    duration, M times.  Records the wake-up order and verifies
    that it is valid. */
 
