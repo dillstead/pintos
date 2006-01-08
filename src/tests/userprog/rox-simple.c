@@ -1,3 +1,6 @@
+/* Ensure that the executable of a running process cannot be
+   modified. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

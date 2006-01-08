@@ -1,3 +1,6 @@
+/* Try a 0-byte write, which should return 0 without writing
+   anything. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

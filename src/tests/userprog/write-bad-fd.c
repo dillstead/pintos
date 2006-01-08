@@ -1,3 +1,7 @@
+/* Tries to write to an invalid fd,
+   which must either fail silently or terminate the process with
+   exit code -1. */
+
 #include <limits.h>
 #include <syscall.h>
 #include "tests/main.h"

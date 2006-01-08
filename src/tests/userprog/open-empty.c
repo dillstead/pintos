@@ -1,3 +1,5 @@
+/* Tries to open a file with the empty string as its name. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

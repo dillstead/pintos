@@ -1,3 +1,6 @@
+/* Tries to create a file with a name that is much too long,
+   which must fail. */
+
 #include <string.h>
 #include <syscall.h>
 #include "tests/lib.h"

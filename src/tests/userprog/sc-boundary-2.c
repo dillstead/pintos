@@ -1,3 +1,7 @@
+/* Invokes a system call with one byte of the system call's
+   argument on a separate page from the rest of the bytes.  This
+   must work. */
+
 #include <syscall-nr.h>
 #include "tests/userprog/boundary.h"
 #include "tests/lib.h"

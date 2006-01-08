@@ -1,3 +1,5 @@
+/* Tries to open a nonexistent file. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

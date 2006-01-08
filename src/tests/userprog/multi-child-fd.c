@@ -1,3 +1,8 @@
+/* Opens a file and then runs a subprocess that tries to close
+   the file.  (Pintos does not have inheritance of file handles,
+   so this must fail.)  The parent process then attempts to use
+   the file handle, which must succeed. */
+
 #include <stdio.h>
 #include <syscall.h>
 #include "tests/userprog/sample.inc"

@@ -1,3 +1,5 @@
+/* Tests argument passing to child processes. */
+
 #include <syscall.h>
 #include "tests/main.h"
 

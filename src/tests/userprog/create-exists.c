@@ -1,3 +1,6 @@
+/* Verifies that trying to create a file under a name that
+   already exists will fail. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

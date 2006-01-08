@@ -1,3 +1,7 @@
+/* Invokes a system call with the stack pointer (%esp) set to a
+   bad address.  The process must be terminated with -1 exit
+   code. */
+
 #include "tests/lib.h"
 #include "tests/main.h"
 

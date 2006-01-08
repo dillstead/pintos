@@ -1,3 +1,6 @@
+/* Writes data spanning two pages in virtual address space,
+   which must succeed. */
+
 #include <string.h>
 #include <syscall.h>
 #include "tests/userprog/boundary.h"

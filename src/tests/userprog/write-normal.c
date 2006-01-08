@@ -1,3 +1,5 @@
+/* Try writing a file in the most normal way. */
+
 #include <syscall.h>
 #include "tests/userprog/sample.inc"
 #include "tests/lib.h"

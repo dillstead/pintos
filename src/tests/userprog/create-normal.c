@@ -1,3 +1,5 @@
+/* Creates an ordinary empty file. */
+
 #include "tests/lib.h"
 #include "tests/main.h"
 

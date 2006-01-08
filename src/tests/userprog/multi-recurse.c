@@ -1,3 +1,6 @@
+/* Executes itself recursively to the depth indicated by the
+   first command-line argument. */
+
 #include <debug.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -10,8 +13,6 @@ int
 main (int argc UNUSED, char *argv[]) 
 {
   int n = atoi (argv[1]);
-  if (n == 0)
-    n = atoi (argv[0]);
 
   msg ("begin %d", n);
   if (n != 0) 

@@ -1,3 +1,5 @@
+/* Executes and waits for multiple child processes. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

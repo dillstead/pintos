@@ -1,3 +1,7 @@
+/* Utility function for tests that try to break system calls by
+   passing them data that crosses from one virtual page to
+   another. */
+
 #include <inttypes.h>
 #include <round.h>
 #include <string.h>
