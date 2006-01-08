@@ -1,3 +1,8 @@
+/* Recursively executes itself until the child fails to execute.
+   We expect that at least 15 copies can run.
+   We also require that, if a process doesn't actually get to
+   start, exec() must return -1, not a valid PID. */
+
 #include <debug.h>
 #include <stdio.h>
 #include <stdlib.h>
