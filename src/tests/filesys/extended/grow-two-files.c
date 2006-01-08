@@ -1,3 +1,6 @@
+/* Grows two files in parallel and checks that their contents are
+   correct. */
+
 #include <random.h>
 #include <syscall.h>
 #include "tests/lib.h"

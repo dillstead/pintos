@@ -1,3 +1,7 @@
+/* Grows a file from 0 bytes to 2,134 bytes, 37 bytes at a time,
+   and checks that the file's size is reported correctly at each
+   step. */
+
 #include <syscall.h>
 #include "tests/filesys/seq-test.h"
 #include "tests/lib.h"

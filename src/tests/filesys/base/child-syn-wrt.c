@@ -1,3 +1,7 @@
+/* Child process for syn-read test.
+   Writes into part of a test file.  Other processes will be
+   writing into other parts at the same time. */
+
 #include <random.h>
 #include <stdlib.h>
 #include <syscall.h>

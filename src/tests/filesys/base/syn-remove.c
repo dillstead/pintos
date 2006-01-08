@@ -1,3 +1,6 @@
+/* Verifies that a deleted file may still be written to and read
+   from. */
+
 #include <random.h>
 #include <string.h>
 #include <syscall.h>

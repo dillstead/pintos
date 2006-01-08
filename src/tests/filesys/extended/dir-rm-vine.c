@@ -1,3 +1,7 @@
+/* Creates a "vine" of directories /0/1/2/3/4/5/6/7/8/9
+   and changes directory into each of them,
+   then remove them. */
+
 #include <string.h>
 #include <syscall.h>
 #include "tests/lib.h"

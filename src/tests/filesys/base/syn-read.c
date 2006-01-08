@@ -1,3 +1,7 @@
+/* Spawns 10 child processes, all of which read from the same
+   file and make sure that the contents are what they should
+   be. */
+
 #include <random.h>
 #include <stdio.h>
 #include <syscall.h>

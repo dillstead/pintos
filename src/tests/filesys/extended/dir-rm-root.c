@@ -1,3 +1,6 @@
+/* Try to remove the root directory.
+   This must return failure. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

@@ -1,3 +1,8 @@
+/* Tries to remove the current directory.
+   This is allowed to succeed or fail.
+   Then creates a file in the root to make sure that we haven't
+   corrupted any directory state. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

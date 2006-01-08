@@ -1,3 +1,6 @@
+/* Tries to create a file with the same name as an existing
+   directory, which must return failure. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

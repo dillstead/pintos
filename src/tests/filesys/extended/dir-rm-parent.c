@@ -1,3 +1,7 @@
+/* Tries to remove the change of parents of the current
+   directory.
+   This can succeed or fail as long as it doesn't crash. 8/
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

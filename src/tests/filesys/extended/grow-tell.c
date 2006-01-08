@@ -1,3 +1,6 @@
+/* Checks that growing a file updates the file position
+   correctly. */
+
 #include <syscall.h>
 #include "tests/filesys/seq-test.h"
 #include "tests/lib.h"

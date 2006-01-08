@@ -1,3 +1,6 @@
+/* Grows a file in chunks while subprocesses read the growing
+   file. */
+
 #include <random.h>
 #include <syscall.h>
 #include "tests/filesys/extended/syn-rw.h"

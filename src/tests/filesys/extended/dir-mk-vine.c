@@ -1,3 +1,8 @@
+/* Creates a "vine" of directories /0/1/2/3/4/5/6/7/8/9
+   and changes directory into each of them,
+   then creates a test file in the bottommost
+   and verifies that it can be opened by absolute name. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

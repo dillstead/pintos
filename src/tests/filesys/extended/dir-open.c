@@ -1,3 +1,7 @@
+/* Tries to open a directory.
+   This is allowed to succeed or fail,
+   but if it succeeds then attempts to write to it must fail. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

@@ -1,3 +1,6 @@
+/* Checks that trying to grow a file beyond the capacity of the
+   file system behaves reasonably (does not crash). */
+
 #include <limits.h>
 #include <syscall.h>
 #include "tests/lib.h"

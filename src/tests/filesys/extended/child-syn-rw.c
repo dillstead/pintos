@@ -1,3 +1,12 @@
+/* Child process for syn-rw.
+   Reads from a file created by our parent process, which is
+   growing it.  We loop until we've read the whole file
+   successfully.  Many iterations through the loop will return 0
+   bytes, because the file has not grown in the meantime.  That
+   is, we are "busy waiting" for the file to grow.
+   (This test could be improved by adding a "yield" system call
+   and calling yield whenever we receive a 0-byte read.) */
+
 #include <random.h>
 #include <stdlib.h>
 #include <syscall.h>

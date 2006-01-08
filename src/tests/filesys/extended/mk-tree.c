@@ -1,3 +1,5 @@
+/* Library function for creating a tree of directories. */
+
 #include <stdio.h>
 #include <syscall.h>
 #include "tests/filesys/extended/mk-tree.h"
