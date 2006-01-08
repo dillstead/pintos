@@ -1,3 +1,6 @@
+/* Encrypts, then decrypts, 1 MB of memory and verifies that the
+   values are as they should be. */
+
 #include <string.h>
 #include "tests/arc4.h"
 #include "tests/lib.h"

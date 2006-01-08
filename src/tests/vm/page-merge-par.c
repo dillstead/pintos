@@ -1,3 +1,8 @@
+/* Generates about 1 MB of random data that is then divided into
+   16 chunks.  A separate subprocess sorts each chunk; the
+   subprocesses run in parallel.  Then we merge the chunks and
+   verify that the result is what it should be. */
+
 #include <stdio.h>
 #include <syscall.h>
 #include "tests/arc4.h"

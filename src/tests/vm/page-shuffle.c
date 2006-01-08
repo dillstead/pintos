@@ -1,3 +1,6 @@
+/* Shuffles a 128 kB data buffer 10 times, printing the checksum
+   after each time. */
+
 #include <stdbool.h>
 #include "tests/arc4.h"
 #include "tests/cksum.h"

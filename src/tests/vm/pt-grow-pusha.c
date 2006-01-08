@@ -1,3 +1,7 @@
+/* Expand the stack by 32 bytes all at once using the PUSHA
+   instruction.
+   This must succeed. */
+
 #include <string.h>
 #include "tests/arc4.h"
 #include "tests/cksum.h"

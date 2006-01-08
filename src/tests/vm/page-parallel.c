@@ -1,3 +1,5 @@
+/* Runs 3 child-linear processes at once. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

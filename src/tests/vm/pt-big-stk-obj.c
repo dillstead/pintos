@@ -1,3 +1,6 @@
+/* Allocates and writes to a 64 kB object on the stack.
+   This must succeed. */
+
 #include <string.h>
 #include "tests/arc4.h"
 #include "tests/cksum.h"

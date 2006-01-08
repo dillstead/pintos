@@ -1,3 +1,6 @@
+/* Demonstrate that the stack can grow.
+   This must succeed. */
+
 #include <string.h>
 #include "tests/arc4.h"
 #include "tests/cksum.h"
