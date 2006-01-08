@@ -1,3 +1,6 @@
+/* Maps and unmaps a file and verifies that the mapped region is
+   inaccessible afterward. */
+
 #include <syscall.h>
 #include "tests/vm/sample.inc"
 #include "tests/lib.h"

@@ -1,3 +1,5 @@
+/* Verifies that mapping over the code segment is disallowed. */
+
 #include <stdint.h>
 #include <round.h>
 #include <syscall.h>

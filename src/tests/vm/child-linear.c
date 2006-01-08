@@ -1,3 +1,7 @@
+/* Child process of page-parallel.
+   Encrypts 128 kB of zeros, then decrypts it, and ensures that
+   the zeros are back. */
+
 #include <string.h>
 #include "tests/arc4.h"
 #include "tests/lib.h"

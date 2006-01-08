@@ -1,3 +1,6 @@
+/* Executes child-mm-wrt and verifies that the writes that should
+   have occurred really did. */
+
 #include <syscall.h>
 #include "tests/vm/sample.inc"
 #include "tests/lib.h"

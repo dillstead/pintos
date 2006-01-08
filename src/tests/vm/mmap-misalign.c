@@ -1,3 +1,5 @@
+/* Verifies that misaligned memory mappings are disallowed. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

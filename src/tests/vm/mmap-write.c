@@ -1,3 +1,7 @@
+/* Writes to a file through a mapping, and unmaps the file,
+   then reads the data in the file back using the read system
+   call to verify. */
+
 #include <string.h>
 #include <syscall.h>
 #include "tests/vm/sample.inc"

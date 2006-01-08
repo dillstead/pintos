@@ -1,3 +1,6 @@
+/* Maps the same file into memory twice and verifies that the
+   same data is readable in both. */
+
 #include <string.h>
 #include <syscall.h>
 #include "tests/vm/sample.inc"

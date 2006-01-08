@@ -1,3 +1,6 @@
+/* Deletes and closes file that is mapped into memory
+   and verifies that it can still be read through the mapping. */
+
 #include <string.h>
 #include <syscall.h>
 #include "tests/vm/sample.inc"

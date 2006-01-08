@@ -1,3 +1,6 @@
+/* Verifies that mmap'd regions are only written back on munmap
+   if the data was actually modified in memory. */
+
 #include <string.h>
 #include <syscall.h>
 #include "tests/vm/sample.inc"

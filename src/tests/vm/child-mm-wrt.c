@@ -1,3 +1,8 @@
+/* Child process of mmap-exit.
+   Mmaps a file and writes to it via the mmap'ing, then exits
+   without calling munmap.  The data in the mapped region must be
+   written out at program termination. */
+
 #include <string.h>
 #include <syscall.h>
 #include "tests/vm/sample.inc"

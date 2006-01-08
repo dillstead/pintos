@@ -1,3 +1,5 @@
+/* Verifies that overlapping memory mappings are disallowed. */
+
 #include <syscall.h>
 #include "tests/vm/sample.inc"
 #include "tests/lib.h"

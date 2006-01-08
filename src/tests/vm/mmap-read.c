@@ -1,3 +1,5 @@
+/* Uses a memory mapping to read a file. */
+
 #include <string.h>
 #include <syscall.h>
 #include "tests/vm/sample.inc"

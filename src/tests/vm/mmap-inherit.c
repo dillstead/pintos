@@ -1,3 +1,6 @@
+/* Maps a file into memory and runs child-inherit to verify that
+   mappings are not inherited. */
+
 #include <string.h>
 #include <syscall.h>
 #include "tests/vm/sample.inc"

@@ -1,3 +1,5 @@
+/* Verifies that memory mappings at address 0 are disallowed. */
+
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"

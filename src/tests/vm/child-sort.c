@@ -1,3 +1,7 @@
+/* Reads a 128 kB file and "sorts" the bytes in it, using
+   counting sort.  The sorted data is written back to the same
+   file in-place. */
+
 #include <debug.h>
 #include <syscall.h>
 #include "tests/lib.h"

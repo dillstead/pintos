@@ -1,3 +1,6 @@
+/* Creates a 128 kB file and repeatedly shuffles data in it
+   through a memory mapping. */
+
 #include <stdio.h>
 #include <string.h>
 #include <syscall.h>
