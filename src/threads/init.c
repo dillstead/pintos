@@ -253,7 +253,6 @@ parse_options (char **argv)
 #endif
       else
         PANIC ("unknown option `%s' (use -h for help)", name);
-
     }
   
   return argv;
