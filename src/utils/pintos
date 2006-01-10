@@ -380,6 +380,7 @@ boot: c
 ips: 1000000
 megs: $mem
 log: bochsout.txt
+panic: action=fatal
 EOF
     print BOCHSRC "clock: sync=", $realtime ? 'realtime' : 'none', "time0=0\n";
     print_bochs_disk_line ("ata0-master", 0);
