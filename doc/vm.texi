@@ -625,7 +625,7 @@ modified by the reference solution.
  17 files changed, 1532 insertions(+), 104 deletions(-)
 @end verbatim
 
-@item Do we need a working HW 2 to implement HW 3?
+@item Do we need a working Project 2 to implement Project 3?
 
 Yes.
 

@@ -264,7 +264,7 @@ using @option{-h}, e.g.@: @code{pintos -h}.
 @node Debugging versus Testing
 @subsection Debugging versus Testing
 
-When you're debugging code, it's useful to be able to be able to run a
+When you're debugging code, it's useful to be able to run a
 program twice and have it do exactly the same thing.  On second and
 later runs, you can make new observations without having to discard or
 verify your old observations.  This property is called

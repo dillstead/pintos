@@ -392,7 +392,7 @@ thread statistics and triggers the scheduler when a time slice expires.
 Called during Pintos shutdown to print thread statistics.
 @end deftypefun
 
-@deftypefun void thread_create (const char *@var{name}, int @var{priority}, thread_func *@var{func}, void *@var{aux})
+@deftypefun tid_t thread_create (const char *@var{name}, int @var{priority}, thread_func *@var{func}, void *@var{aux})
 Creates and starts a new thread named @var{name} with the given
 @var{priority}, returning the new thread's tid.  The thread executes
 @var{func}, passing @var{aux} as the function's single argument.
@@ -1050,7 +1050,7 @@ kernel threads.  Thus, they do need to synchronize with other threads
 on shared data and other resources (@pxref{Synchronization}).
 
 @deftypefun void intr_register_int (uint8_t @var{vec}, int @var{dpl}, enum intr_level @var{level}, intr_handler_func *@var{handler}, const char *@var{name})
-Registers @var{func} to be called when internal interrupt numbered
+Registers @var{handler} to be called when internal interrupt numbered
 @var{vec} is triggered.  Names the interrupt @var{name} for debugging
 purposes.
 
@@ -1071,8 +1071,8 @@ starting with project 2).
 
 Whereas an internal interrupt runs in the context of the thread that
 caused it, external interrupts do not have any predictable context.
-They are asynchronous, so it can be invoked at any time that
-interrupts have not been enabled.  We say that an external interrupt
+They are asynchronous, so they can be invoked at any time that
+interrupts have not been disabled.  We say that an external interrupt
 runs in an ``interrupt context.''
 
 In an external interrupt, the @struct{intr_frame} passed to the
