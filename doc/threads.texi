@@ -681,8 +681,8 @@ If multiple threads have the same highest priority,
 
 Priority donation only changes the priority of the donee
 thread.  The donor thread's priority is unchanged.  
-Priority donation is not additive: if thread @var{A} (with priority 5) donates
-to thread @var{B} (with priority 3), then @var{B}'s new priority is 5, not 8.
+Priority donation is not additive: if thread @var{A} (with priority 3) donates
+to thread @var{B} (with priority 5), then @var{B}'s new priority is 3, not 8.
 
 @item Can a thread's priority change while it is on the ready queue?
 
