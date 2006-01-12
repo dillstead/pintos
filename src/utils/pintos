@@ -677,10 +677,11 @@ sub xsystem {
 # relay_signal($pid, $signal)
 #
 # Relays $signal to $pid and then reinvokes it for us with the default
-# handler.
+# handler.  Also cleans up temporary files.
 sub relay_signal {
     my ($pid, $signal) = @_;
     kill $signal, $pid;
+    File::Temp::cleanup();
     $SIG{$signal} = 'DEFAULT';
     kill $signal, getpid ();
 }
