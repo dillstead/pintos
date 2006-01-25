@@ -220,7 +220,39 @@ list_push_back (struct list *list, struct list_elem *elem)
 }
 
 /* Removes ELEM from its list and returns the element that
-   followed it.  Undefined behavior if ELEM is not in a list.  */
+   followed it.  Undefined behavior if ELEM is not in a list.
+
+   It's not safe to treat ELEM as an element in a list after
+   removing it.  In particular, using list_next() or list_prev()
+   on ELEM after removal yields undefined behavior.  This means
+   that a naive loop to remove the elements in a list will fail:
+
+   ** DON'T DO THIS **
+   for (e = list_begin (&list); e != list_end (&list); e = list_next (&list))
+     {
+       ...do something with e...
+       list_remove (e);
+     }
+   ** DON'T DO THIS **
+
+   Here is one correct way to iterate and remove elements from a
+   list:
+
+   for (e = list_begin (&list); e != list_end (&list); e = list_remove (e))
+     {
+       ...do something with e...
+     }
+
+   If you need to free() elements of the list then you need to be
+   more conservative.  Here's an alternate strategy that works
+   even in that case:
+
+   while (!list_empty (&list))
+     {
+       struct list_elem *e = list_pop_front (&list);
+       ...do something with e...
+     }
+*/
 struct list_elem *
 list_remove (struct list_elem *elem)
 {
