@@ -511,7 +511,8 @@ must be active, but we must be able to choose the 4.4@acronym{BSD}
 scheduler
 with the @option{-mlfqs} kernel option.  Passing this
 option sets @code{enable_mlfqs}, declared in @file{threads/init.h}, to
-true.
+true, when the options are parsed by @func{parse_options}, which happens
+through midway through @func{main}.
 
 When the 4.4@acronym{BSD} scheduler is enabled, threads no longer
 directly control their own priorities.  The @var{priority} argument to
