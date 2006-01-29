@@ -142,7 +142,8 @@ vtop (const void *vaddr)
 
 /* Page directories and page tables.
 
-   For more information see [IA32-v3] pages 3-23 to 3-28.
+   For more information see [IA32-v3a] 3.7.6 "Page-Directory and
+   Page-Table Entries".
 
    PDEs and PTEs share a common format:
 

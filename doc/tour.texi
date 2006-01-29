@@ -41,8 +41,8 @@ the rest of Pintos into memory, and then jumping to its start.  It's
 not important to understand exactly what the loader does, but if
 you're interested, read on.  You should probably read along with the
 loader's source.  You should also understand the basics of the
-80@var{x}86 architecture as described by chapter 3 of
-@bibref{IA32-v1}.
+80@var{x}86 architecture as described by chapter 3, ``Basic Execution
+Environment,'' of @bibref{IA32-v1}.
 
 Because the PC BIOS loads the loader, the loader has to play by the
 BIOS's rules.  In particular, the BIOS only loads 512 bytes (one disk
@@ -934,9 +934,10 @@ external interrupts, to a point.  The following section describes this
 common infrastructure, and sections after that give the specifics of
 external and internal interrupts.
 
-If you haven't already read chapter 3 in @bibref{IA32-v1}, it is
-recommended that you do so now.  You might also want to skim chapter 5
-in @bibref{IA32-v3}.
+If you haven't already read chapter 3, ``Basic Execution Environment,''
+in @bibref{IA32-v1}, it is recommended that you do so now.  You might
+also want to skim chapter 5, ``Interrupt and Exception Handling,'' in
+@bibref{IA32-v3a}.
 
 @menu
 * Interrupt Infrastructure::    
@@ -1300,9 +1301,10 @@ Most implementations of the virtual memory project use a hash table to
 translate virtual page frames to physical page frames.  It is possible
 to do this translation without adding a new data structure, by modifying
 the code in @file{userprog/pagedir.c}.  However, if you do that you'll
-need to carefully study and understand section 3.7 in @bibref{IA32-v3},
-and in practice it is probably easier to add a new data structure.  You
-may find other uses for hash tables as well.
+need to carefully study and understand section 3.7, ``Page Translation
+Using 32-Bit Physical Addressing,'' in @bibref{IA32-v3a}, and in practice
+it is probably easier to add a new data structure.  You may find other
+uses for hash tables as well.
 
 Pintos provides a hash table data structure in @file{lib/kernel/hash.c}.
 To use it you will need to manually include its header file,

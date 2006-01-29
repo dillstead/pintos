@@ -14,7 +14,9 @@
 #define INTR_CNT 256
 
 /* The Interrupt Descriptor Table (IDT).  The format is fixed by
-   the CPU.  See [IA32-v3] sections 5.10, 5.11, 5.12.1.2. */
+   the CPU.  See [IA32-v3a] sections 5.10 "Interrupt Descriptor
+   Table (IDT)", 5.11 "IDT Descriptors", 5.12.1.2 "Flag Usage By
+   Exception- or Interrupt-Handler Procedure". */
 static uint64_t idt[INTR_CNT];
 
 /* Interrupt handler functions for each interrupt. */
@@ -53,7 +55,8 @@ intr_get_level (void)
 
   /* Push the flags register on the processor stack, then pop the
      value off the stack into `flags'.  See [IA32-v2b] "PUSHF"
-     and "POP" and [IA32-v3] 5.8.1. */
+     and "POP" and [IA32-v3a] 5.8.1 "Masking Maskable Hardware
+     Interrupts". */
   asm volatile ("pushfl; popl %0" : "=g" (flags));
 
   return flags & FLAG_IF ? INTR_ON : INTR_OFF;
@@ -75,7 +78,9 @@ intr_enable (void)
   ASSERT (!intr_context ());
 
   /* Enable interrupts by setting the interrupt flag.
-     See [IA32-v2b] "STI" and [IA32-v3] 5.8.1. */
+
+     See [IA32-v2b] "STI" and [IA32-v3a] 5.8.1 "Masking Maskable
+     Hardware Interrupts". */
   asm volatile ("sti");
 
   return old_level;
@@ -88,7 +93,8 @@ intr_disable (void)
   enum intr_level old_level = intr_get_level ();
 
   /* Disable interrupts by clearing the interrupt flag.
-     See [IA32-v2b] "CLI" and [IA32-v3] 5.8.1. */
+     See [IA32-v2b] "CLI" and [IA32-v3a] 5.8.1 "Masking Maskable
+     Hardware Interrupts". */
   asm volatile ("cli");
 
   return old_level;
@@ -109,7 +115,8 @@ intr_init (void)
     idt[i] = make_intr_gate (intr_stubs[i], 0);
 
   /* Load IDT register.
-     See [IA32-v2a] "LIDT" and [IA32-v3] 5.10. */
+     See [IA32-v2a] "LIDT" and [IA32-v3a] 5.10 "Interrupt
+     Descriptor Table (IDT)". */
   idtr_operand = make_idtr_operand (sizeof idt - 1, idt);
   asm volatile ("lidt %0" :: "m" (idtr_operand));
 
@@ -175,7 +182,9 @@ intr_register_ext (uint8_t vec_no, intr_handler_func *handler,
    user mode to invoke the interrupts and DPL==0 prevents such
    invocation.  Faults and exceptions that occur in user mode
    still cause interrupts with DPL==0 to be invoked.  See
-   [IA32-v3] sections 4.5 and 4.8.1.1 for further discussion. */
+   [IA32-v3a] sections 4.5 "Privilege Levels" and 4.8.1.1
+   "Accessing Nonconforming Code Segments" for further
+   discussion. */
 void
 intr_register_int (uint8_t vec_no, int dpl, enum intr_level level,
                    intr_handler_func *handler, const char *name)
@@ -266,13 +275,15 @@ pic_end_of_interrupt (int irq)
    or lower-numbered ring.  In practice, DPL==3 allows user mode
    to call into the gate and DPL==0 prevents such calls.  Faults
    and exceptions that occur in user mode still cause gates with
-   DPL==0 to be invoked.  See [IA32-v3] sections 4.5 and 4.8.1.1
+   DPL==0 to be invoked.  See [IA32-v3a] sections 4.5 "Privilege
+   Levels" and 4.8.1.1 "Accessing Nonconforming Code Segments"
    for further discussion.
 
    TYPE must be either 14 (for an interrupt gate) or 15 (for a
    trap gate).  The difference is that entering an interrupt gate
    disables interrupts, but entering a trap gate does not.  See
-   [IA32-v3] section 5.12.1.2 for discussion. */
+   [IA32-v3a] section 5.12.1.2 "Flag Usage By Exception- or
+   Interrupt-Handler Procedure" for discussion. */
 static uint64_t
 make_gate (void (*function) (void), int dpl, int type)
 {
@@ -378,7 +389,7 @@ intr_dump_frame (const struct intr_frame *f)
   /* Store current value of CR2 into `cr2'.
      CR2 is the linear address of the last page fault.
      See [IA32-v2a] "MOV--Move to/from Control Registers" and
-     [IA32-v3] 5.14 "Interrupt 14--Page Fault Exception
+     [IA32-v3a] 5.14 "Interrupt 14--Page Fault Exception
      (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (cr2));
 

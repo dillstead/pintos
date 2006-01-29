@@ -24,8 +24,8 @@ static void page_fault (struct intr_frame *);
    way as other exceptions, but this will need to change to
    implement virtual memory.
 
-   Refer to [IA32-v3] section 5.14 for a description of each of
-   these exceptions. */
+   Refer to [IA32-v3a] section 5.15 "Exception and Interrupt
+   Reference" for a description of each of these exceptions. */
 void
 exception_init (void) 
 {
@@ -118,7 +118,7 @@ kill (struct intr_frame *f)
    example code here shows how to parse that information.  You
    can find more information about both of these in the
    description of "Interrupt 14--Page Fault Exception (#PF)" in
-   [IA32-v3] section 5.14, which is pages 5-46 to 5-49. */
+   [IA32-v3a] section 5.15 "Exception and Interrupt Reference". */
 static void
 page_fault (struct intr_frame *f) 
 {
@@ -132,7 +132,7 @@ page_fault (struct intr_frame *f)
      data.  It is not necessarily the address of the instruction
      that caused the fault (that's f->eip).
      See [IA32-v2a] "MOV--Move to/from Control Registers" and
-     [IA32-v3] 5.14 "Interrupt 14--Page Fault Exception
+     [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception
      (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
 

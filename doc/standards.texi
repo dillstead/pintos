@@ -44,7 +44,7 @@ Please limit C source file lines to at most 79 characters long.
 
 Pintos comments sometimes refer to external standards or
 specifications by writing a name inside square brackets, like this:
-@code{[IA32-v3]}.  These names refer to the reference names used in
+@code{[IA32-v3a]}.  These names refer to the reference names used in
 this documentation (@pxref{References}).
 
 If you remove existing Pintos code, please delete it from your source

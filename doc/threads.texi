@@ -185,8 +185,8 @@ project 3.  For now, you can ignore it.
 
 @item flags.h
 Macros that define a few bits in the 80@var{x}86 ``flags'' register.
-Probably of no interest.  See @bibref{IA32-v1}, section 3.4.3, for more
-information.
+Probably of no interest.  See @bibref{IA32-v1}, section 3.4.3, ``EFLAGS
+Register,'' for more information.
 @end table
 
 @menu

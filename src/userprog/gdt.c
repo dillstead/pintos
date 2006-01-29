@@ -20,7 +20,8 @@
    stack switching on interrupts.
 
    For more information on the GDT as used here, refer to
-   [IA32-v3] sections 3.2 through 3.5. */
+   [IA32-v3a] 3.2 "Using Segments" through 3.5 "System Descriptor
+   Types". */
 static uint64_t gdt[SEL_CNT];
 
 /* GDT helpers. */
@@ -44,7 +45,9 @@ gdt_init (void)
   gdt[SEL_UDSEG / sizeof *gdt] = make_data_desc (3);
   gdt[SEL_TSS / sizeof *gdt] = make_tss_desc (tss_get ());
 
-  /* Load GDTR, TR.  See [IA32-v3] 2.4.1, 2.4.4, 6.2.3.  */
+  /* Load GDTR, TR.  See [IA32-v3a] 2.4.1 "Global Descriptor
+     Table Register (GDTR)", 2.4.4 "Task Register (TR)", and
+     6.2.4 "Task Register".  */
   gdtr_operand = make_gdtr_operand (sizeof gdt - 1, gdt);
   asm volatile ("lgdt %0" :: "m" (gdtr_operand));
   asm volatile ("ltr %w0" :: "r" (SEL_TSS));
@@ -74,7 +77,7 @@ enum seg_granularity
    it can be used in rings numbered DPL or lower.  In practice,
    DPL==3 means that user processes can use the segment and
    DPL==0 means that only the kernel can use the segment.  See
-   [IA32-v3] section 4.5 for further discussion. */
+   [IA32-v3a] 4.5 "Privilege Levels" for further discussion. */
 static uint64_t
 make_seg_desc (uint32_t base,
                uint32_t limit,
@@ -126,7 +129,7 @@ make_data_desc (int dpl)
 /* Returns a descriptor for an "available" 32-bit Task-State
    Segment with its base at the given linear address, a limit of
    0x67 bytes (the size of a 32-bit TSS), and a DPL of 0.
-   See [IA32-v3] 6.2.2. */
+   See [IA32-v3a] 6.2.2 "TSS Descriptor". */
 static uint64_t
 make_tss_desc (void *laddr)
 {

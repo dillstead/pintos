@@ -138,7 +138,9 @@ start:
 
 # Add PDEs to point to PTEs for the first 64 MB of RAM.
 # Also add identical PDEs starting at LOADER_PHYS_BASE.
-# See [IA32-v3] section 3.7.6 for a description of the bits in %eax.
+# See [IA32-v3a] section 3.7.6 "Page-Directory and Page-Table Entries"
+# for a description of the bits in %eax.
+	
 
 	movl $0x11007, %eax
 	movl $0x11, %ecx
@@ -150,7 +152,8 @@ start:
 	loop 1b
 
 # Set up one-to-map linear to physical map for the first 64 MB of RAM.
-# See [IA32-v3] section 3.7.6 for a description of the bits in %eax.
+# See [IA32-v3a] section 3.7.6 "Page-Directory and Page-Table Entries"
+# for a description of the bits in %eax.
 
 	movw $0x1100, %ax
 	movw %ax, %es

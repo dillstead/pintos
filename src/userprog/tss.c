@@ -43,9 +43,10 @@
        stack pointer to point to the new thread's kernel stack.
        (The call is in schedule_tail() in thread.c.)
 
-   See [IA32-v3] 6.2.1 for a description of the TSS and 5.12.1
-   for a description of when and how stack switching occurs
-   during an interrupt. */
+   See [IA32-v3a] 6.2.1 "Task-State Segment (TSS)" for a
+   description of the TSS.  See [IA32-v3a] 5.12.1 "Exception- or
+   Interrupt-Handler Procedures" for a description of when and
+   how stack switching occurs during an interrupt. */
 struct tss
   {
     uint16_t back_link, :16;

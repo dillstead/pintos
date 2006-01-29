@@ -365,7 +365,8 @@ idle (void *aux UNUSED)
          one to occur, wasting as much as one clock tick worth of
          time.
 
-         See [IA32-v2a] "HLT", [IA32-v2b] "STI", and [IA32-v3] 7.7. */
+         See [IA32-v2a] "HLT", [IA32-v2b] "STI", and [IA32-v3a]
+         7.11.1 "HLT Instruction". */
       asm ("sti; hlt");
     }
 }

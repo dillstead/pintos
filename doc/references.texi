@@ -16,28 +16,30 @@
 @section Hardware References
 
 @bibdfn{IA32-v1}
-@uref{ftp://download.intel.com/design/Pentium4/manuals/25366515.pdf, ,
 IA-32 Intel Architecture Software Developer's Manual Volume 1: Basic
-Architecture}.  Basic 80@var{x}86 architecture and programming
-environment.
+Architecture.  Basic 80@var{x}86 architecture and programming
+environment.  Available via @uref{developer.intel.com}.  Section numbers
+in this document refer to revision 18.
 
-@bibdfn{IA32-v2a}
-@uref{ftp://download.intel.com/design/Pentium4/manuals/25366615.pdf, ,
-IA-32 Intel Architecture Software Developer's Manual Volume 2A:
-Instruction Set Reference A-M}.  80@var{x}86 instructions whose names
-begin with A through M.
+@bibdfn{IA32-v2a} 
+IA-32 Intel Architecture Software Developer's Manual
+Volume 2A: Instruction Set Reference A-M.  80@var{x}86 instructions
+whose names begin with A through M.  Available via
+@uref{developer.intel.com}.  Section numbers in this document refer to
+revision 18.
 
 @bibdfn{IA32-v2b}
-@uref{ftp://download.intel.com/design/Pentium4/manuals/25366715.pdf, ,
 IA-32 Intel Architecture Software Developer's Manual Volume 2B:
-Instruction Set Reference N-Z}.  80@var{x}86 instructions whose names
-begin with N through Z.
+Instruction Set Reference N-Z.  80@var{x}86 instructions whose names
+begin with N through Z.  Available via @uref{developer.intel.com}.
+Section numbers in this document refer to revision 18.
 
-@bibdfn{IA32-v3}
-@uref{ftp://download.intel.com/design/Pentium4/manuals/25366815.pdf, ,
-IA-32 Intel Architecture Software Developer's Manual Volume 3: System
-Programming Guide}.  Operating system support, including segmentation,
-paging, tasks, interrupt and exception handling.
+@bibdfn{IA32-v3a}
+IA-32 Intel Architecture Software Developer's Manual Volume 3A: System
+Programming Guide.  Operating system support, including segmentation,
+paging, tasks, interrupt and exception handling.  Available via
+@uref{developer.intel.com}.  Section numbers in this document refer to
+revision 18.
 
 @bibdfn{FreeVGA}
 @uref{specs/freevga/home.htm, , FreeVGA Project}.  Documents the VGA video
