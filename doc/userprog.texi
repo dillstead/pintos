@@ -468,6 +468,11 @@ in @func{setup_stack}.  That will work for any test program that doesn't
 examine its arguments, although its name will be printed as
 @code{(null)}.
 
+Until you implement argument passing, you should only run programs
+without passing command-line arguments.  Attempting to pass arguments to
+a program will include those arguments in the name of the program, which
+will probably fail.
+
 @item
 User memory access (@pxref{Accessing User Memory}).  All system calls
 need to read user memory.  Few system calls need to write to user
