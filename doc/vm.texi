@@ -670,7 +670,7 @@ kernel functions need to obtain memory.
 You can layer some other allocator on top of @func{palloc_get_page} if
 you like, but it should be the underlying mechanism.
 
-Also, you can use the @option{-u} option to @command{pintos} to limit
+Also, you can use the @option{-ul} option to @command{pintos} to limit
 the size of the user pool, which makes it easy to test your VM
 implementation with various user memory sizes.
 
