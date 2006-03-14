@@ -1,4 +1,4 @@
-TESTS = threads p1 userprog p2 vm p3 filesys p4
+TESTS = threads p1 userprog p2 vm p3 filesys p4 
 
 PATH := $(shell pwd)/../src/utils:$(PATH)
 
