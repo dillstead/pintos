@@ -7,6 +7,7 @@ use File::Temp 'tempfile';
 use Getopt::Long qw(:config bundling);
 
 # Command-line options.
+our ($start_time) = time ();
 our ($sim);			# Simulator: bochs, qemu, or gsx.
 our ($debug) = "none";		# Debugger: none, monitor, or gdb.
 our ($mem) = 4;			# Physical RAM in MB.
@@ -111,7 +112,8 @@ Display options: (default is both VGA and serial)
 Timing options: (Bochs only)
   -j SEED                  Randomize timer interrupts
   -r, --realtime           Use realistic, not reproducible, timings
-  -T, --timeout=N          Time out and kill Pintos after N seconds
+  -T, --timeout=N          Kill Pintos after N seconds CPU time or N*load_avg
+                           seconds wall-clock time (whichever comes first)
 Configuration options:
   -m, --mem=N              Give Pintos N MB physical RAM (default: 4)
 File system commands (for `run' command):
@@ -660,16 +662,22 @@ sub xsystem {
 	die "fork: $!\n";
     } elsif (!$pid) {
 	# Running in child process.
-	exec (@_);
-	exit (1);
+	exec_setitimer (@_);
     } else {
 	# Running in parent process.
 	local $SIG{ALRM} = sub { timeout ($pid); };
 	local $SIG{INT} = sub { relay_signal ($pid, "INT"); };
 	local $SIG{TERM} = sub { relay_signal ($pid, "TERM"); };
-	alarm ($timeout) if defined ($timeout);
+	alarm ($timeout * get_load_average () + 1) if defined ($timeout);
 	waitpid ($pid, 0);
 	alarm (0);
+
+	if (WIFSIGNALED ($?) && WTERMSIG ($?) == SIGVTALRM ()) {
+	    seek (STDOUT, 0, 2);
+	    print "\nTIMEOUT after $timeout seconds of host CPU time\n";
+	    exit 0;
+	}
+
 	return $?;
     }
 }
@@ -695,8 +703,45 @@ sub timeout {
     waitpid ($pid, 0);
     seek (STDOUT, 0, 2);
     my ($load_avg) = `uptime` =~ /(load average:.*)$/i;
-    print "\nTIMEOUT after $timeout seconds";
+    print "\nTIMEOUT after ", time () - $start_time,
+      " seconds of wall-clock time";
     print  " - $load_avg" if defined $load_avg;
     print "\n";
     exit 0;
+}
+
+# Returns the system load average over the last minute.
+# If the load average is less than 1.0 or cannot be determined, returns 1.0.
+sub get_load_average {
+    my ($avg) = `uptime` =~ /load average:\s*([^,]+),/;
+    return $avg >= 1.0 ? $avg : 1.0;
+}
+
+# Calls setitimer to set a timeout, then execs what was passed to us.
+sub exec_setitimer {
+    if (defined $timeout) {
+	if ($ ge 5.8.0) {
+	    eval "
+              use Time::HiRes qw(setitimer ITIMER_VIRTUAL);
+              setitimer (ITIMER_VIRTUAL, $timeout, 0);
+            ";
+	} else {
+	    { exec ("setitimer-helper", $timeout, @_); };
+	    exit 1 if !$!{ENOENT};
+	    print STDERR "warning: setitimer-helper is not installed, so ",
+	      "CPU time limit will not be enforced\n";
+	}
+    }
+    exec (@_);
+    exit (1);
+}
+
+sub SIGVTALRM {
+    use Config;
+    my $i = 0;
+    foreach my $name (split(' ', $Config{sig_name})) {
+	return $i if $name eq 'VTALRM';
+	$i++;
+    }
+    return 0;
 }

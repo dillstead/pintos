@@ -1,0 +1,6 @@
+If your version of Perl predates 5.8.0, then you will need to compile
+setitimer-helper (with `make') and install it in PATH, if you want the
+"pintos" script's timeout support (with -T) to properly limit the
+child's CPU time.  Otherwise, it is unneeded.
+
+- Ben
