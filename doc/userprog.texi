@@ -453,7 +453,7 @@ parallel:
 
 @itemize
 @item
-Argument passing (@pxref{Argument Passing}).  Every user programs will
+Argument passing (@pxref{Argument Passing}).  Every user program will
 page fault immediately until argument passing is implemented.
 
 For now, you may simply wish to change
