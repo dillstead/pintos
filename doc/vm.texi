@@ -713,7 +713,7 @@ with the file mapped into your address space, you can directly address
 it like so:
 
 @example
-write (addr, 64, STDOUT_FILENO);
+write (STDOUT_FILENO, addr, 64);
 @end example
 
 Similarly, if you wanted to replace the first byte of the file,
