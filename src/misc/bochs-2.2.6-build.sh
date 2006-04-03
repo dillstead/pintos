@@ -25,9 +25,11 @@ mkdir plain &&
 	cd plain && 
 	../configure $CFGOPTS --enable-gdb-stub && 
 	make && 
-	make install
+	make install &&
+	cd ..
 mkdir with-dbg &&
 	cd with-dbg &&
 	../configure --enable-debugger $CFGOPTS &&
 	make &&
-	cp bochs $DSTDIR/bin/bochs-dbg
+	cp bochs $DSTDIR/bin/bochs-dbg &&
+	cd ..
