@@ -364,26 +364,20 @@ sub run_vm {
 # Runs Bochs.
 sub run_bochs {
     # Select Bochs binary based on the chosen debugger.
-    my ($bin);
-    if ($debug eq 'none') {
-	$bin = 'bochs';
-    } elsif ($debug eq 'monitor') {
-	$bin = 'bochs-dbg';
-    } elsif ($debug eq 'gdb') {
-	$bin = 'bochs-gdb';
-    }
+    my ($bin) = $debug eq 'monitor' ? 'bochs-dbg' : 'bochs';
 
     # Write bochsrc.txt configuration file.
     open (BOCHSRC, ">", "bochsrc.txt") or die "bochsrc.txt: create: $!\n";
     print BOCHSRC <<EOF;
 romimage: file=\$BXSHARE/BIOS-bochs-latest, address=0xf0000
-vgaromimage: \$BXSHARE/VGABIOS-lgpl-latest
-boot: c
-ips: 1000000
+vgaromimage: file=\$BXSHARE/VGABIOS-lgpl-latest
+boot: disk
+cpu: ips=1000000
 megs: $mem
 log: bochsout.txt
 panic: action=fatal
 EOF
+    print BOCHSRC "gdbstub: enabled=1\n" if $debug eq 'gdb';
     print BOCHSRC "clock: sync=", $realtime ? 'realtime' : 'none', "time0=0\n";
     print_bochs_disk_line ("ata0-master", 0);
     print_bochs_disk_line ("ata0-slave", 1);
@@ -395,7 +389,8 @@ EOF
 	print_bochs_disk_line ("ata1-slave", 3);
     }
     if ($vga ne 'terminal') {
-	print BOCHSRC "com1: enabled=1, dev=/dev/stdout\n" if $serial_out;
+	print BOCHSRC "com1: enabled=1, mode=file, dev=/dev/stdout\n"
+	  if $serial_out;
 	print BOCHSRC "display_library: nogui\n" if $vga eq 'none';
     } else {
 	print BOCHSRC "display_library: term\n";

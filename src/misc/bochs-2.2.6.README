@@ -1,0 +1,23 @@
+This version of Pintos is designed for use with Bochs 2.2.6.  A few
+patches for this version of Bochs are included:
+
+    bochs-2.2.6-big-endian.patch
+
+	Makes the gdb stubs work on big-endian systems such as
+	Solaris/Sparc, by doing proper byteswapping.  It should be
+	harmless elsewhere.
+
+    bochs-2.2.6-jitter.patch
+
+	Adds the `jitter' feature described in the project documentation,
+	in which timer interrupts are delivered at random intervals.
+
+To apply all the patches, cd into the Bochs directory, then type
+	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-big-endian.patch
+	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-jitter.patch
+You will have to supply the proper $PINTOSDIR, of course.  You can use
+patch's --dry-run option if you want to test whether the patches would
+apply cleanly before trying to apply them.
+
+Sample commands to build and install Bochs for Pintos are supplied in
+bochs-2.2.6-build.sh.
