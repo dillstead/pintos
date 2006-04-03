@@ -49,3 +49,13 @@ diff -urp bochs-2.2.6/main.cc bochs-2.2.6.orig/main.cc
      else if (!strcmp ("-f", argv[arg])) {
        if (++arg >= argc) BX_PANIC(("-f must be followed by a filename"));
        else bochsrc_filename = argv[arg];
+diff -up /home/blp/cs140/bochs-2.2.6/bochs.h\~ /home/blp/cs140/bochs-2.2.6/bochs.h
+--- bochs-2.2.6/bochs.h.orig	2006-01-28 08:16:02.000000000 -0800
++++ bochs-2.2.6/bochs.h	2006-04-03 14:03:54.000000000 -0700
+@@ -698,4 +698,6 @@ int bx_init_hardware ();
+ 
+ #endif
+ 
++extern int jitter;
++
+ #endif  /* BX_BOCHS_H */
