@@ -127,7 +127,7 @@ optimize such that an unrelated function C appears in the backtrace
 instead of A.  Function C is simply the function that happens to be in
 memory just after A.  In the threads project, this is commonly seen in
 backtraces for test failures; see @ref{The pass function fails, ,
-@func{pass} Fails}), for more information.
+@func{pass} Fails}, for more information.
 
 @menu
 * Backtrace Example::           
