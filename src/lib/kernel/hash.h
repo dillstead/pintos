@@ -3,6 +3,9 @@
 
 /* Hash table.
 
+   This data structure is thoroughly documented in the Tour of
+   Pintos for Project 3.
+
    This is a standard hash table with chaining.  To locate an
    element in the table, we compute a hash function over the
    element's data and use that as an index into an array of
@@ -15,10 +18,7 @@
    conversion from a struct hash_elem back to a structure object
    that contains it.  This is the same technique used in the
    linked list implementation.  Refer to lib/kernel/list.h for a
-   detailed explanation.
-
-   The FAQ for the VM project contains a detailed example of how
-   to use the hash table. */
+   detailed explanation. */
 
 #include <stdbool.h>
 #include <stddef.h>

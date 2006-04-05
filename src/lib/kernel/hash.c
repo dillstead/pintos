@@ -1,3 +1,10 @@
+/* Hash table.
+
+   This data structure is thoroughly documented in the Tour of
+   Pintos for Project 3.
+
+   See hash.h for basic information. */
+
 #include "hash.h"
 #include "../debug.h"
 #include "threads/malloc.h"
