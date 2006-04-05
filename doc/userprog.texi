@@ -442,8 +442,8 @@ static inline bool put_user (uint8_t *udst, uint8_t byte) {
 
 Each of these functions assumes that the user address has already been
 verified to be below @code{PHYS_BASE}.  They also assume that you've
-modified @func{page_fault} so that a page fault in the kernel causes
-@code{eax} to be set to 0 and its former value copied into @code{eip}.
+modified @func{page_fault} so that a page fault in the kernel merely sets
+@code{eax} to 0 and copies its former value into @code{eip}.
 
 @node Project 2 Suggested Order of Implementation
 @section Suggested Order of Implementation
