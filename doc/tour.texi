@@ -1283,12 +1283,12 @@ The block allocator may not be called from interrupt context.
 @node User Programs Tour
 @section User Programs Project
 
-The tour for this project has not yet been written.
+No tour for this project is available.
 
 @node Virtual Memory Tour
 @section Virtual Memory Project
 
-The tour for this project is under construction.
+Only some parts of the tour for this project are available.
 
 @menu
 * Hash Table::                  
@@ -1717,5 +1717,4 @@ how it is designed and organized, as with any other data structure.
 @node File Systems Tour
 @section File Systems Project
 
-The tour for this project has not yet been written.
-
+No tour for this project is available.
