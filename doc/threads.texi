@@ -547,6 +547,8 @@ modified by the reference solution.
  5 files changed, 440 insertions(+), 29 deletions(-)
 @end verbatim
 
+@file{fixed-point.h} is a new file added by the reference solution.
+
 @item How do I update the @file{Makefile}s when I add a new source file?
 
 @anchor{Adding Source Files}
