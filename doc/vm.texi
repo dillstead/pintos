@@ -420,11 +420,10 @@ Bits}) to implement an approximation to LRU.  Your algorithm should
 perform at least as well as the ``second chance'' or ``clock''
 algorithm.
 
-Your design should allow for parallelism.  Multiple processes should
-be able to process page faults at once.  If one page fault require
+Your design should allow for parallelism.  If one page fault requires
 I/O, in the meantime processes that do not fault should continue
-executing and other page faults that do not require I/O should be able to
-complete.  These criteria require some synchronization effort.
+executing and other page faults that do not require I/O should be able
+to complete.  These criteria require some synchronization effort.
 
 @node Lazy Loading
 @subsection Lazy Loading
