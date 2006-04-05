@@ -656,8 +656,7 @@ Consider implementing this function in terms of @func{filesys_remove}.
 @deftypefn {System Call} int open (const char *@var{file})
 Opens the file called @var{file}.  Returns a nonnegative integer handle
 called a ``file descriptor'' (fd), or -1 if the file could not be
-opened.  All open files associated with a process should be closed
-when the process exits or is terminated.
+opened.  
 
 File descriptors numbered 0 and 1 are reserved for the console: fd 0
 is standard input (@code{stdin}), fd 1 is standard output
@@ -732,7 +731,9 @@ Consider implementing this function in terms of @func{file_tell}.
 @end deftypefn
 
 @deftypefn {System Call} void close (int @var{fd})
-Closes file descriptor @var{fd}.
+Closes file descriptor @var{fd}.  
+Exiting or terminating a process implicitly closes all its open file
+descriptors, as if by calling this function for each one.
 
 Consider implementing this function in terms of @func{file_close}.
 @end deftypefn
