@@ -7,7 +7,7 @@
 #include "threads/synch.h"
 
 static void vprintf_helper (char, void *);
-static void putchar_unlocked (uint8_t c);
+static void putchar_have_lock (uint8_t c);
 
 /* The console lock.
    Both the vga and serial layers do their own locking, so it's
@@ -31,7 +31,7 @@ static struct lock console_lock;
    intr_handler()       - timer interrupt
    intr_set_level()
    serial_putc()
-   putchar_unlocked()
+   putchar_have_lock()
    putbuf()
    sys_write()          - one process writing to the console
    syscall_handler()
@@ -115,8 +115,8 @@ puts (const char *s)
 {
   acquire_console ();
   while (*s != '\0')
-    putchar_unlocked (*s++);
-  putchar_unlocked ('\n');
+    putchar_have_lock (*s++);
+  putchar_have_lock ('\n');
   release_console ();
 
   return 0;
@@ -128,7 +128,7 @@ putbuf (const char *buffer, size_t n)
 {
   acquire_console ();
   while (n-- > 0)
-    putchar_unlocked (*buffer++);
+    putchar_have_lock (*buffer++);
   release_console ();
 }
 
@@ -137,7 +137,7 @@ int
 putchar (int c) 
 {
   acquire_console ();
-  putchar_unlocked (c);
+  putchar_have_lock (c);
   release_console ();
   
   return c;
@@ -149,14 +149,14 @@ vprintf_helper (char c, void *char_cnt_)
 {
   int *char_cnt = char_cnt_;
   (*char_cnt)++;
-  putchar_unlocked (c);
+  putchar_have_lock (c);
 }
 
 /* Writes C to the vga display and serial port.
    The caller has already acquired the console lock if
    appropriate. */
 static void
-putchar_unlocked (uint8_t c) 
+putchar_have_lock (uint8_t c) 
 {
   ASSERT (console_locked_by_current_thread ());
   write_cnt++;
