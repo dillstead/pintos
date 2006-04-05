@@ -170,9 +170,9 @@ The backtrace output would then look something like this:
 0x8048ac8: ?? (??:0)
 @end example
 
-(You will probably not get the same results if you run the command above
-on your own kernel binary, because the source code you compiled from is
-different from the source code that panicked.)
+(You will probably not see exactly the same addresses if you run the
+command above on your own kernel binary, because the source code you
+compiled and the compiler you used are probably different.)
 
 The first line in the backtrace refers to @func{debug_panic}, the
 function that implements kernel panics.  Because backtraces commonly
