@@ -132,8 +132,13 @@ the focus of this project is not on the file system code, so we have
 provided a simple file system in the @file{filesys} directory.  You
 will want to look over the @file{filesys.h} and @file{file.h}
 interfaces to understand how to use the file system, and especially
-its many limitations.  @strong{You should not modify the file system
-code for this project.}  Proper use of the file system routines now
+its many limitations.
+
+There is no need to modify the file system code for this project, and so
+we recommend that you do not.  Working on the file system is likely to
+distract you from this project's focus.
+
+Proper use of the file system routines now
 will make life much easier for project 4, when you improve the file
 system implementation.  Until then, you will have to put up with the
 following limitations:
@@ -141,7 +146,7 @@ following limitations:
 @itemize @bullet
 @item
 No synchronization.  Concurrent accesses will interfere with one
-another.  You should use a global lock to ensure that only one process at a
+another.  You should use a lock to ensure that only one process at a
 time is executing file system code.
 
 @item
