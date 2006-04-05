@@ -107,7 +107,8 @@ palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
   return pages;
 }
 
-/* Obtains and returns a single free page.
+/* Obtains a single free page and returns its kernel virtual
+   address.
    If PAL_USER is set, the page is obtained from the user pool,
    otherwise from the kernel pool.  If PAL_ZERO is set in FLAGS,
    then the page is filled with zeros.  If no pages are
