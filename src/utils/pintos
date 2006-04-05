@@ -85,6 +85,9 @@ sub parse_command_line {
     $sim = "bochs" if !defined $sim;
     $debug = "none" if !defined $debug;
     $vga = "window" if !defined $vga;
+
+    print "warning: -T or --timeout should not be used with --$debug\n"
+      if defined ($timeout) && $debug ne 'none';
 }
 
 # usage($exitcode).
