@@ -661,8 +661,12 @@ when the process exits or is terminated.
 
 File descriptors numbered 0 and 1 are reserved for the console: fd 0
 is standard input (@code{stdin}), fd 1 is standard output
-(@code{stdout}).  These special file descriptors are valid as system
-call arguments only as explicitly described below.
+(@code{stdout}).  The @code{open} system call will never return either
+of these file descriptors, which are valid as system call arguments only
+as explicitly described below.
+
+Each process has an independent set of file descriptors.  File
+descriptors are not inherited by child processes.
 
 Consider implementing this function in terms of @func{filesys_open}.
 @end deftypefn
