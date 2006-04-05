@@ -316,12 +316,12 @@ Some way of translating in software from virtual page frames to
 physical page frames.  Pintos provides a hash table that you may find
 useful for this purpose (@pxref{Hash Table}).
 
-It is possible to do this translation without adding a new data
-structure, by modifying the code in @file{userprog/pagedir.c}.  However,
-if you do that you'll need to carefully study and understand section
-3.7, ``Page Translation Using 32-Bit Physical Addressing,'' in
-@bibref{IA32-v3a}, and in practice it is probably easier to add a new
-data structure.
+You don't strictly need a new data structure for this.  You could
+instead modify the code in @file{userprog/pagedir.c}.  If you do that
+you'll need to thoroughly understand how 80@var{x}86 page tables work
+by, e.g.,@: studying section 3.7, ``Page Translation Using 32-Bit
+Physical Addressing,'' in @bibref{IA32-v3a}.  In practice, most groups
+use a separate data structure.
 
 @item
 Some way of finding a page on disk (in a file or in swap) if it is not
