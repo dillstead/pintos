@@ -1400,6 +1400,7 @@ If your key is a single piece of data of an appropriate type, it is
 sensible for your hash function to directly return the output of one of
 these functions.  For multiple pieces of data, you may wish to combine
 the output of more than one call to them using, e.g., the @samp{^}
+(exclusive or)
 operator.  Finally, you may entirely ignore these functions and write
 your own hash function from scratch, but remember that your goal is to
 build an operating system kernel, not to design a hash function.
