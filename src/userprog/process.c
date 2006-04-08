@@ -333,7 +333,9 @@ load_segment (struct file *file, const struct Elf32_Phdr *phdr)
     return false; 
 
   /* Load the segment page-by-page into memory. */
-  filesz_left = phdr->p_filesz + (phdr->p_vaddr & PGMASK);
+  filesz_left = phdr->p_filesz;
+  if (filesz_left > 0)
+    filesz_left += phdr->p_vaddr & PGMASK;
   file_seek (file, ROUND_DOWN (phdr->p_offset, PGSIZE));
   for (upage = start; upage < (uint8_t *) end; upage += PGSIZE) 
     {
