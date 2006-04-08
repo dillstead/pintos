@@ -17,6 +17,7 @@ cd bochs-2.2.6
 cat $PINTOSDIR/src/misc/bochs-2.2.6-ms-extensions.patch | patch -p1
 cat $PINTOSDIR/src/misc/bochs-2.2.6-big-endian.patch | patch -p1
 cat $PINTOSDIR/src/misc/bochs-2.2.6-jitter.patch | patch -p1
+cat $PINTOSDIR/src/misc/bochs-2.2.6-triple-fault.patch | patch -p1
 if test "`uname -s`" = "SunOS"; then
     cat $PINTOSDIR/src/misc/bochs-2.2.6-solaris.patch | patch -p1
 fi

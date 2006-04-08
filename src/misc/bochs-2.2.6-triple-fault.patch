@@ -1,0 +1,30 @@
+--- bochs-2.2.6.orig/cpu/exception.cc 2006-01-25 14:20:00.000000000 -0800
++++ bochs-2.2.6/cpu/exception.cc 2006-04-08 13:01:18.000000000 -0700
+@@ -841,6 +841,12 @@ void BX_CPU_C::exception(unsigned vector
+ 
+   BX_CPU_THIS_PTR errorno++;
+   if (BX_CPU_THIS_PTR errorno >= 3) {
++#if BX_GDBSTUB
++    if (bx_dbg.gdbstub_enabled) {
++        fprintf(stderr, "Triple fault: stopping for gdb\n");
++        longjmp(BX_CPU_THIS_PTR jmp_buf_env, 1);
++    }
++#endif
+ #if BX_RESET_ON_TRIPLE_FAULT
+     BX_ERROR(("exception(): 3rd (%d) exception with no resolution, shutdown status is %02xh, resetting", vector, DEV_cmos_get_reg(0x0f)));
+     debug(BX_CPU_THIS_PTR prev_eip);
+@@ -860,6 +866,12 @@ void BX_CPU_C::exception(unsigned vector
+ 
+   /* if 1st was a double fault (software INT?), then shutdown */
+   if ( (BX_CPU_THIS_PTR errorno==2) && (BX_CPU_THIS_PTR curr_exception[0]==BX_ET_DOUBLE_FAULT) ) {
++#if BX_GDBSTUB
++    if (bx_dbg.gdbstub_enabled) {
++        fprintf(stderr, "Triple fault: stopping for gdb\n");
++        longjmp(BX_CPU_THIS_PTR jmp_buf_env, 1);
++    }
++#endif
+ #if BX_RESET_ON_TRIPLE_FAULT
+     BX_INFO(("exception(): triple fault encountered, shutdown status is %02xh, resetting", DEV_cmos_get_reg(0x0f)));
+     debug(BX_CPU_THIS_PTR prev_eip);
+
+Diff finished at Sat Apr  8 13:07:40

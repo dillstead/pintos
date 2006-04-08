@@ -12,6 +12,11 @@ patches for this version of Bochs are included:
 	Adds the `jitter' feature described in the project documentation,
 	in which timer interrupts are delivered at random intervals.
 
+    bochs-2.2.6-triple-fault.patch
+
+	Causes Bochs to break to GDB when a triple fault occurs and
+	the GDB stub is active.
+
     bochs-2.2.6-ms-extensions.patch
 
         Needed for Bochs to compile with GCC on some hosts.  Probably
@@ -24,6 +29,7 @@ patches for this version of Bochs are included:
 To apply all the patches, cd into the Bochs directory, then type
 	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-big-endian.patch
 	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-jitter.patch
+	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-triple-fault.patch
 	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-ms-extensions.patch
 	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-solaris.patch
 You will have to supply the proper $PINTOSDIR, of course.  You can use
