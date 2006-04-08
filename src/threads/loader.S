@@ -220,6 +220,17 @@ start:
 
 	movl $1, %ebx
 	movl $LOADER_KERN_BASE + LOADER_PHYS_BASE, %edi
+
+#### Disable interrupt delivery by IDE controller, because we will be
+#### polling for data.
+#### (If we don't do this, Bochs 2.2.6 will never deliver any IDE
+#### interrupt to us later after we reset the interrupt controller
+#### during boot, even if we also reset the IDE controller.)
+
+	movw $0x3f6, %dx
+	movb $0x02, %al
+	outb %al, %dx
+	
 read_sector:
 
 # Poll status register while controller busy.
