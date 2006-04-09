@@ -328,9 +328,10 @@ timer ticks or input events.  Turning off interrupts also increases the
 interrupt handling latency, which can make a machine feel sluggish if
 taken too far.
 
-You may need to add or modify code where interrupts are already
-disabled, such as in @func{sema_up} or @func{sema_down}.  You should
-still try to keep this code as short as you can.
+The synchronization primitives themselves in @file{synch.c} are
+implemented by disabling interrupts.  You may need to increase the
+amount of code that runs with interrupts disabled here, but you should
+still try to keep it to a minimum.
 
 Disabling interrupts can be useful for debugging, if you want to make
 sure that a section of code is not interrupted.  You should remove
