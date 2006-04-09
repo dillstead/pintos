@@ -440,25 +440,25 @@ be written to swap.
 
 The core of the program loader is the loop in @func{load_segment} in
 @file{userprog/process.c}.
-Each time around the loop, @code{read_bytes} receives the number of
-bytes to read from the executable file and @code{zero_bytes} receives
+Each time around the loop, @code{page_read_bytes} receives the number of
+bytes to read from the executable file and @code{page_zero_bytes} receives
 the number of bytes to initialize to zero following the bytes read.  The
 two always sum to @code{PGSIZE} (4,096).  The handling of a page depends
 on these variables' values:
 
 @itemize @bullet
 @item
-If @code{read_bytes} equals @code{PGSIZE}, the page should be demand
+If @code{page_read_bytes} equals @code{PGSIZE}, the page should be demand
 paged from disk on its first access.
 
 @item
-If @code{zero_bytes} equals @code{PGSIZE}, the page does not need to
+If @code{page_zero_bytes} equals @code{PGSIZE}, the page does not need to
 be read from disk at all because it is all zeroes.  You should handle
 such pages by creating a new page consisting of all zeroes at the
 first page fault.
 
 @item
-If neither @code{read_bytes} nor @code{zero_bytes} equals
+If neither @code{page_read_bytes} nor @code{page_zero_bytes} equals
 @code{PGSIZE}, then part of the page is to be read from disk and the
 remainder zeroed.  This is a special case.  You are allowed to handle
 it by reading the partial page from disk at executable load time and
