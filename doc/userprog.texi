@@ -875,9 +875,9 @@ argument passing is implemented correctly (@pxref{Program Startup Details}).
 The @command{objdump} (80@var{x}86) or @command{i386-elf-objdump}
 (SPARC) utility can disassemble entire user
 programs or object files.  Invoke it as @code{objdump -d
-@var{file}}.  You can use @code{gdb}'s
-@command{disassemble} command to disassemble individual functions
-(@pxref{gdb}).
+@var{file}}.  You can use GDB's
+@code{disassemble} command to disassemble individual functions
+(@pxref{GDB}).
 
 @item Why do many C include files not work in Pintos programs?
 

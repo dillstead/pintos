@@ -76,11 +76,11 @@ assembly code.  (You don't have to understand it.)  It saves the
 state of the currently running thread and restores the state of the
 thread we're switching to.
 
-Using the @command{gdb} debugger, slowly trace through a context
-switch to see what happens (@pxref{gdb}).  You can set a
+Using the GDB debugger, slowly trace through a context
+switch to see what happens (@pxref{GDB}).  You can set a
 breakpoint on @func{schedule} to start out, and then
-single-step from there.@footnote{@command{gdb} might tell you that
-@func{schedule} doesn't exist, which is arguably a @command{gdb} bug.
+single-step from there.@footnote{GDB might tell you that
+@func{schedule} doesn't exist, which is arguably a GDB bug.
 You can work around this by setting the breakpoint by filename and
 line number, e.g.@: @code{break thread.c:@var{ln}} where @var{ln} is
 the line number of the first declaration in @func{schedule}.}  Be sure

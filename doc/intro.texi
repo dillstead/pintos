@@ -179,7 +179,7 @@ the kernel.  @xref{Adding Source Files}, for more information.
 Object file for the entire kernel.  This is the result of linking
 object files compiled from each individual kernel source file into a
 single object file.  It contains debug information, so you can run
-@command{gdb} or @command{backtrace} (@pxref{Backtraces}) on it.
+GDB (@pxref{GDB}) or @command{backtrace} (@pxref{Backtraces}) on it.
 
 @item kernel.bin
 Memory image of the kernel.  These are the exact bytes loaded into
@@ -250,7 +250,7 @@ from them by @option{--}, so that the whole command looks like
 @code{pintos} without any arguments to see a list of available options.
 Options can select a simulator to use: the default is Bochs, but on the
 Linux machines @option{--qemu} selects qemu.  You can run the simulator
-with a debugger (@pxref{gdb}).  You can set the amount of memory to give
+with a debugger (@pxref{GDB}).  You can set the amount of memory to give
 the VM.  Finally, you can select how you want VM output to be displayed:
 use @option{-v} to turn off the VGA display, @option{-t} to use your
 terminal window as the VGA display instead of opening a new window
@@ -525,6 +525,10 @@ distribution has full details of the license and lack of warranty.
 Pintos and this documentation were written by Ben Pfaff
 @email{blp@@cs.stanford.edu}.
 
+The GDB macros supplied with Pintos were written by Godmar Back
+@email{gback@@cs.vt.edu}, and their documentation is adapted from his
+work.
+
 The original structure and form of Pintos was inspired by the Nachos
 instructional operating system from the University of California,
 Berkeley.  A few of the source files were originally more-or-less
@@ -538,8 +542,7 @@ course.  These files bear the original MIT license notice.
 The Pintos projects and documentation originated with those designed for
 Nachos by current and former CS140 teaching assistants at Stanford
 University, including at least Yu Ping, Greg Hutchins, Kelly Shaw, Paul
-Twohey, Sameer Qureshi, and John Rector.  If you're not on this list but
-should be, please let me know.
+Twohey, Sameer Qureshi, and John Rector.
 
 Example code for condition variables (@pxref{Condition Variables}) is
 from classroom slides originally by Dawson Engler and updated by Mendel
