@@ -2,7 +2,7 @@
 *.cp
 *.dvi
 *.fn
-*.info
+*.info*
 *.ky
 *.log
 *.pg
