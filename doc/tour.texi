@@ -1093,9 +1093,9 @@ Second, an interrupt handler must not call any function that can
 sleep, which rules out @func{thread_yield}, @func{lock_acquire}, and
 many others.  This is because external interrupts use space on the
 stack of the kernel thread that was running at the time the interrupt
-occurred.  If the interrupt handler tried to sleep and that thread
-resumed, then the two uses of the single stack would interfere, which
-cannot be allowed.
+occurred.  If the interrupt handler slept, it would effectively put that
+thread to sleep too until the interrupt handler resumed control and
+returned.
 
 Because an external interrupt runs with interrupts disabled, it
 effectively monopolizes the machine and delays all other activities.
