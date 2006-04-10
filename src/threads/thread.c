@@ -92,7 +92,7 @@ thread_init (void)
 void
 thread_start (void) 
 {
-  thread_create ("idle", PRI_MAX, idle, NULL);
+  thread_create ("idle", PRI_MIN, idle, NULL);
   intr_enable ();
 }
 

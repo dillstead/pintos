@@ -442,8 +442,8 @@ priority such that it no longer has the highest priority must cause it
 to immediately yield the CPU.
 
 Thread priorities range from @code{PRI_MIN} (0) to @code{PRI_MAX} (63).
-Lower numbers correspond to @emph{higher} priorities, so that priority 0
-is the highest priority and priority 63 is the lowest.
+Lower numbers correspond to lower priorities, so that priority 0
+is the lowest priority and priority 63 is the highest.
 The initial thread priority is passed as an argument to
 @func{thread_create}.  If there's no reason to choose another
 priority, use @code{PRI_DEFAULT} (31).  The @code{PRI_} macros are
@@ -685,8 +685,8 @@ If multiple threads have the same highest priority,
 
 Priority donation only changes the priority of the donee
 thread.  The donor thread's priority is unchanged.  
-Priority donation is not additive: if thread @var{A} (with priority 3) donates
-to thread @var{B} (with priority 5), then @var{B}'s new priority is 3, not 8.
+Priority donation is not additive: if thread @var{A} (with priority 5) donates
+to thread @var{B} (with priority 3), then @var{B}'s new priority is 5, not 8.
 
 @item Can a thread's priority change while it is on the ready queue?
 

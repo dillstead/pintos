@@ -23,7 +23,7 @@ test_priority_preempt (void)
   /* Make sure our priority is the default. */
   ASSERT (thread_get_priority () == PRI_DEFAULT);
 
-  thread_create ("high-priority", PRI_DEFAULT - 1, simple_thread_func, NULL);
+  thread_create ("high-priority", PRI_DEFAULT + 1, simple_thread_func, NULL);
   msg ("The high-priority thread should have already completed.");
 }
 

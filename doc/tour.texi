@@ -327,8 +327,8 @@ the page.  @xref{Interrupt Handling}, for more information.
 
 @deftypecv {Member} {@struct{thread}} {int} priority
 A thread priority, ranging from @code{PRI_MIN} (0) to @code{PRI_MAX}
-(63).  Lower numbers correspond to @emph{higher} priorities, so that
-priority 0 is the highest priority and priority 63 is the lowest.
+(63).  Lower numbers correspond to lower priorities, so that
+priority 0 is the lowest priority and priority 63 is the highest.
 Pintos as provided ignores thread priorities, but you will implement
 priority scheduling in project 1 (@pxref{Priority Scheduling}).
 @end deftypecv

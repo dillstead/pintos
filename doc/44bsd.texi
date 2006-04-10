@@ -104,13 +104,13 @@ highest priority, yields.
 
 Our scheduler has 64 priorities and thus 64 ready queues, numbered 0
 (@code{PRI_MIN}) through 63 (@code{PRI_MAX}).  Lower numbers correspond
-to @emph{higher} priorities, so that priority 0 is the highest priority
-and priority 63 is the lowest.  Thread priority is calculated initially
+to lower priorities, so that priority 0 is the lowest priority
+and priority 63 is the highest.  Thread priority is calculated initially
 at thread initialization.  It is also recalculated once every fourth
 clock tick, for every thread.  In either case, it is determined by
 the formula
 
-@center @t{@var{priority} = (@var{recent_cpu} / 4) + (@var{nice} * 2)},
+@center @t{@var{priority} = @code{PRI_MAX} - (@var{recent_cpu} / 4) - (@var{nice} * 2)},
 
 @noindent where @var{recent_cpu} is an estimate of the CPU time the
 thread has used recently (see below) and @var{nice} is the thread's
@@ -243,9 +243,10 @@ scheduler.  It is not a complete description of scheduler requirements.
 Every thread has a @var{nice} value between -20 and 20 directly under
 its control.  Each thread also has a priority, between 0
 (@code{PRI_MIN}) through 63 (@code{PRI_MAX}), which is recalculated
-using the following formula whenever the value of either term changes:
+using the following formula whenever the value of either variable term
+changes:
 
-@center @t{@var{priority} = (@var{recent_cpu} / 4) + (@var{nice} * 2)}.
+@center @t{@var{priority} = @code{PRI_MAX} - (@var{recent_cpu} / 4) - (@var{nice} * 2)}.
 
 @var{recent_cpu} measures the amount of CPU time a thread has received
 ``recently.''  On each timer tick, the running thread's @var{recent_cpu}
