@@ -534,6 +534,11 @@ Maps the file open as @var{fd} into the process's virtual address
 space.  The entire file is mapped into consecutive virtual pages
 starting at @var{addr}.
 
+Your VM system must lazily load pages in @code{mmap} regions and use the
+@code{mmap}'d file itself as backing store for the mapping.  That is,
+evicting a page mapped by @code{mmap} writes it back to the file it was
+mapped from.
+
 If the file's length is not a multiple of @code{PGSIZE}, then some
 bytes in the final mapped page ``stick out'' beyond the end of the
 file.  Set these bytes to zero when the page is faulted in from disk,
@@ -553,12 +558,6 @@ pages, including the stack or pages mapped at executable load time.
 It must also fail if @var{addr} is 0, because some Pintos code assumes
 virtual page 0 is not mapped.  Finally, file descriptors 0 and 1,
 representing console input and output, are not mappable.
-
-Your VM system should use the @code{mmap}'d file itself as backing
-store for the mapping.  That is, to evict a page mapped by
-@code{mmap}, write it to the file it was mapped from.  (In fact, you
-may choose to implement executable mappings as special, copy-on-write
-file mappings.)
 @end deftypefn
 
 @deftypefn {System Call} void munmap (mapid_t @var{mapping})
