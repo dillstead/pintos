@@ -675,7 +675,7 @@ list.
 
 @item If the highest-priority thread yields, does it continue running?
 
-Yes.  As long as there is a single highest-priority thread, it continues
+Yes.  If there is a single highest-priority thread, it continues
 running until it blocks or finishes, even if it calls
 @func{thread_yield}.
 If multiple threads have the same highest priority,
@@ -730,9 +730,6 @@ scheduler at the same time.
 
 @item Can I use one queue instead of 64 queues?
 
-Yes, that's fine.  It's easiest to describe the algorithm in terms of 64
-separate queues, but that doesn't mean you have to implement it that
-way.
-
-If you use a single queue, it should probably be sorted.
+Yes.  In general, your implementation may differ from the description,
+as long as its behavior is the same.
 @end table
