@@ -85,8 +85,9 @@ lookup_page (uint32_t *pd, const void *vaddr, bool create)
   return &pt[pt_no (vaddr)];
 }
 
-/* Adds a mapping from user virtual page UPAGE to kernel virtual
-   address KPAGE in page directory PD.
+/* Adds a mapping in page directory PD from user virtual page
+   UPAGE to the physical frame identified by kernel virtual
+   address KPAGE.
    UPAGE must not already be mapped.
    KPAGE should probably be a page obtained from the user pool
    with palloc_get_page().
@@ -118,9 +119,10 @@ pagedir_set_page (uint32_t *pd, void *upage, void *kpage,
     return false;
 }
 
-/* Returns the kernel virtual address that user virtual address
-   UADDR is mapped to in PD, or a null pointer if UADDR is not
-   present. */
+/* Looks up the physical address that corresponds to user virtual
+   address UADDR in PD.  Returns the kernel virtual address
+   corresponding to that physical address, or a null pointer if
+   UADDR is unmapped. */
 void *
 pagedir_get_page (uint32_t *pd, const void *uaddr) 
 {
@@ -255,8 +257,7 @@ invalidate_pagedir (uint32_t *pd)
 {
   if (active_pd () == pd) 
     {
-      /* We cleared a page-table entry in the active page table,
-         so we have to invalidate the TLB.  See [IA32-v3a] 3.12
+      /* Re-activating PD clears the TLB.  See [IA32-v3a] 3.12
          "Translation Lookaside Buffers (TLBs)". */
       pagedir_activate (pd);
     } 
