@@ -7,14 +7,14 @@
 /* An "interrupt queue", a circular buffer shared between
    kernel threads and external interrupt handlers.
 
-   These functions can be called from kernel threads or from
-   external interrupt handlers.  Except for intq_init(),
+   Interrupt queue functions can be called from kernel threads or
+   from external interrupt handlers.  Except for intq_init(),
    interrupts must be off in either case.
 
-   Incidentally, this has the structure of a "monitor".  Normally
-   we'd use locks and condition variables from threads/synch.h to
-   implement a monitor, but those are intended only to protect
-   kernel threads from one another, not from interrupt
+   The interrupt queue has the structure of a "monitor".  Locks
+   and condition variables from threads/synch.h cannot be used in
+   this case, as they normally would, because they can only
+   protect kernel threads from one another, not from interrupt
    handlers. */
 
 /* Queue buffer size, in bytes. */
