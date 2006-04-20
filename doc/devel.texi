@@ -1,4 +1,4 @@
-@node Development Tools, , Debugging Tools, Top
+@node Development Tools
 @appendix Development Tools
 
 Here are some tools that you might find useful while developing code.

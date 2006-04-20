@@ -1,4 +1,4 @@
-@node Project 1--Threads, Project 2--User Programs, Pintos Tour, Top
+@node Project 1--Threads
 @chapter Project 1: Threads
 
 In this assignment, we give you a minimally functional thread system.
@@ -12,9 +12,9 @@ side.  Compilation should be done in the @file{threads} directory.
 Before you read the description of this project, you should read all of
 the following sections: @ref{Introduction}, @ref{Coding Standards},
 @ref{Debugging Tools}, and @ref{Development Tools}.  You should at least
-skim the material in @ref{Threads Tour} and especially
-@ref{Synchronization}.  To complete this project you will also need to
-read @ref{4.4BSD Scheduler}.
+skim the material from @ref{Pintos Loading} through @ref{Memory
+Allocation}, especially @ref{Synchronization}.  To complete this project
+you will also need to read @ref{4.4BSD Scheduler}.
 
 @menu
 * Project 1 Background::        
@@ -137,10 +137,10 @@ here.  @xref{Kernel Initialization}, for details.
 
 @item thread.c
 @itemx thread.h
-Basic thread support.  Much of your work will take place in these
-files.  @file{thread.h} defines @struct{thread}, which you are likely
-to modify in all four projects.  See @ref{struct thread} and @ref{Thread
-Support} for more information.
+Basic thread support.  Much of your work will take place in these files.
+@file{thread.h} defines @struct{thread}, which you are likely to modify
+in all four projects.  See @ref{struct thread} and @ref{Threads} for
+more information.
 
 @item switch.S
 @itemx switch.h
@@ -178,10 +178,11 @@ four projects.  @xref{Synchronization}, for more information.
 Functions for I/O port access.  This is mostly used by source code in
 the @file{devices} directory that you won't have to touch.
 
-@item mmu.h
-Functions and macros related to memory management, including page
-directories and page tables.  This will be more important to you in
-project 3.  For now, you can ignore it.
+@item vaddr.h
+@itemx pte.h
+Functions and macros for working with virtual addresses and page table
+entries.  These will be more important to you in project 3.  For now,
+you can ignore them.
 
 @item flags.h
 Macros that define a few bits in the 80@var{x}86 ``flags'' register.

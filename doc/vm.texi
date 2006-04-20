@@ -1,22 +1,25 @@
-@node Project 3--Virtual Memory, Project 4--File Systems, Project 2--User Programs, Top
+@node Project 3--Virtual Memory
 @chapter Project 3: Virtual Memory
 
-By now you should be familiar with the inner workings of Pintos.  Your
+By now you should have some familiarity with the inner workings of
+Pintos.  Your
 OS can properly handle multiple threads of execution with proper
 synchronization, and can load multiple user programs at once.  However,
 the number and size of programs that can run is limited by the machine's
 main memory size.  In this assignment, you will remove that limitation.
 
-You will build this assignment on top of the last one.  It will benefit
-you to get your project 2 in good working order before this assignment
-so those bugs don't keep haunting you.  Test programs from the previous
-project should also work with this project.
+You will build this assignment on top of the last one.  Test programs
+from project 2 should also work with project 3.  You should take care to
+fix any bugs in your project 2 submission before you start work on
+project 3, because those bugs will most likely cause the same problems
+in project 3.
 
 You will continue to handle Pintos disks and file systems the same way
 you did in the previous assignment (@pxref{Using the File System}).
 
 @menu
 * Project 3 Background::        
+* Project 3 Suggested Order of Implementation::  
 * Project 3 Requirements::      
 * Project 3 FAQ::               
 @end menu
@@ -26,9 +29,12 @@ you did in the previous assignment (@pxref{Using the File System}).
 
 @menu
 * Project 3 Source Files::      
-* Page Faults::                 
-* Disk as Backing Store::       
-* Memory Mapped Files Background::  
+* Memory Terminology::          
+* Resource Management Overview::  
+* Managing the Segment Table::  
+* Managing the Frame Table::    
+* Managing the Swap Table::     
+* Managing Memory Mapped Files Back::  
 @end menu
 
 @node Project 3 Source Files
@@ -49,230 +55,424 @@ Provides access to the physical disk, abstracting away the rather awful
 IDE interface.  You will use this interface to access the swap disk.
 @end table
 
-@menu
-* Page Faults::
-* Disk as Backing Store::
-* Memory Mapped Files::
-@end menu
+@node Memory Terminology
+@subsection Memory Terminology
 
-@node Page Faults
-@subsection Page Faults
-
-For the last assignment, whenever a context switch occurred, the new
-process installed its own page table into the machine.  The new page
-table contained all the virtual-to-physical translations for the
-process.  Whenever the processor needed to look up a translation, it
-consulted the page table.  As long as the process only accessed
-memory that it owned, all was well.  If the process accessed
-memory it didn't own, it ``page faulted'' and @func{page_fault}
-terminated the process.
-
-When we implement virtual memory, the rules have to change.  A page
-fault is no longer necessarily an error, since it might only indicate
-that the page must be brought in from a disk file or from swap.  You
-will have to implement a more sophisticated page fault handler to
-handle these cases.
+Careful definitions are needed to keep discussion of virtual memory from
+being confusing.  Thus, we begin by presenting some terminology for
+memory and storage.  Some of these terms should be familiar from project
+2 (@pxref{Virtual Memory Layout}), but much of it is new.
 
 @menu
-* Page Table Structure::        
-* Working with Virtual Addresses::  
-* Accessed and Dirty Bits::     
+* Pages::                       
+* Frames::                      
+* Page Tables::                 
+* Swap Slots::                  
 @end menu
 
-@node Page Table Structure
-@subsubsection Page Table Structure
+@node Pages
+@subsubsection Pages
 
-On the 80@var{x}86, the page table format is fixed by hardware.  We
-have provided code for managing page tables for you to use in
-@file{userprog/pagedir.c}.  The functions in there provide an
-abstract interface to all the page table functionality that you should need
-to complete the project.  However, you may still find it worthwhile to
-understand a little about the hardware page table format, so we'll go
-into a little of detail about that in this section.
-
-The top-level paging data structure is a page called the ``page
-directory'' (PD) arranged as an array of 1,024 32-bit page directory
-entries (PDEs), each of which represents 4 MB of virtual memory.  Each
-PDE may point to the physical address of another page called a
-``page table'' (PT) arranged, similarly, as an array of 1,024
-32-bit page table entries (PTEs), each of which translates a single 4
-kB virtual page to a physical page.
-
-Translation of a virtual address into a physical address follows
-the three-step process illustrated in the diagram
-below:@footnote{Actually, virtual to physical translation on the
-80@var{x}86 architecture occurs via an intermediate ``linear
-address,'' but Pintos (and most other 80@var{x}86 OSes) set up the CPU
-so that linear and virtual addresses are one and the same.  Thus, you
-can effectively ignore this CPU feature.}
-
-@enumerate 1
-@item
-The most-significant 10 bits of the virtual address (bits 22@dots{}32)
-index the page directory.  If the PDE is marked ``present,'' the
-physical address of a page table is read from the PDE thus obtained.
-If the PDE is marked ``not present'' then a page fault occurs.
-
-@item
-The next 10 bits of the virtual address (bits 12@dots{}21) index
-the page table.  If the PTE is marked ``present,'' the physical
-address of a data page is read from the PTE thus obtained.  If the PTE
-is marked ``not present'' then a page fault occurs.
-
-@item
-The least-significant 12 bits of the virtual address (bits 0@dots{}11)
-are added to the data page's physical base address, yielding the final
-physical address.
-@end enumerate
+A @dfn{page}, sometimes called a @dfn{virtual page}, is a contiguous
+region of virtual memory 4,096 bytes (the @dfn{page size}) in length.  A
+page must be @dfn{page-aligned}, that is, start on a virtual address
+evenly divisible by the page size.  Thus, a 32-bit virtual address can
+be divided into a 20-bit @dfn{page number} and a 12-bit @dfn{page
+offset} (or just @dfn{offset}), like this:
 
 @example
 @group
- 31                  22 21                  12 11                   0
-+----------------------+----------------------+----------------------+
-| Page Directory Index |   Page Table Index   |    Page Offset       |
-+----------------------+----------------------+----------------------+
-             |                    |                     |
-     _______/             _______/                _____/
-    /                    /                       /
-   /    Page Directory  /      Page Table       /    Data Page
-  /     .____________. /     .____________.    /   .____________.
-  |1,023|____________| |1,023|____________|    |   |____________|
-  |1,022|____________| |1,022|____________|    |   |____________|
-  |1,021|____________| |1,021|____________|    \__\|____________|
-  |1,020|____________| |1,020|____________|       /|____________|
-  |     |            | |     |            |        |            |
-  |     |            | \____\|            |_       |            |
-  |     |      .     |      /|      .     | \      |      .     |
-  \____\|      .     |_      |      .     |  |     |      .     |
-       /|      .     | \     |      .     |  |     |      .     |
-        |      .     |  |    |      .     |  |     |      .     |
-        |            |  |    |            |  |     |            |
-        |____________|  |    |____________|  |     |____________|
-       4|____________|  |   4|____________|  |     |____________|
-       3|____________|  |   3|____________|  |     |____________|
-       2|____________|  |   2|____________|  |     |____________|
-       1|____________|  |   1|____________|  |     |____________|
-       0|____________|  \__\0|____________|  \____\|____________|
-                           /                      /
+               31               12 11        0
+              +-------------------+-----------+
+              |    Page Number    |   Offset  |
+              +-------------------+-----------+
+                       Virtual Address
 @end group
 @end example
 
-@node Working with Virtual Addresses
-@subsubsection Working with Virtual Addresses
+Each process has an independent set of @dfn{user (virtual) pages}, which
+are those pages below virtual address @code{PHYS_BASE}, typically
+@t{0xc0000000} (3 GB).  The set of @dfn{kernel (virtual) pages}, on the
+other hand, is global, remaining the same regardless of what thread or
+process is active.  The kernel may access both user and kernel pages,
+but a user process may access only its own user pages.  @xref{Virtual
+Memory Layout}, for more information.
 
-Header @file{threads/mmu.h} has useful functions for various
-operations on virtual addresses.  You should look over the header
-yourself.  The most important functions are described below.
+Pintos provides several useful functions for working with virtual
+addresses.  @xref{Virtual Addresses}, for details.
 
-@deftypefun uintptr_t pd_no (const void *@var{va})
-Returns the page directory index for virtual address @var{va}.
-@end deftypefun
+@node Frames
+@subsubsection Frames
 
-@deftypefun uintptr_t pt_no (const void *@var{va})
-Returns the page table index for virtual address @var{va}.
-@end deftypefun
+A @dfn{frame}, sometimes called a @dfn{physical frame} or a @dfn{page
+frame}, is a contiguous region of physical memory.  Like pages, frames
+must be page-size and page-aligned.  Thus, a 32-bit physical address can
+be divided into a 20-bit @dfn{frame number} and a 12-bit @dfn{frame
+offset} (or just @dfn{offset}), like this:
 
-@deftypefun unsigned pg_ofs (const void *@var{va})
-Returns the page offset of virtual address @var{va}.
-@end deftypefun
+@example
+@group
+               31               12 11        0
+              +-------------------+-----------+
+              |    Frame Number   |   Offset  |
+              +-------------------+-----------+
+                       Physical Address
+@end group
+@end example
 
-@deftypefun {void *} pg_round_down (const void *@var{va})
-Returns @var{va} rounded down to the nearest page boundary, that is,
-@var{va} with its page offset set to 0.
-@end deftypefun
+The 80@var{x}86 doesn't provide any way to directly access memory at a
+physical address.  Pintos works around this by mapping kernel virtual
+memory directly to physical memory: the first page of kernel virtual
+memory is mapped to the first frame of physical memory, the second page
+to the second frame, and so on.  Thus, frames can be accessed through
+kernel virtual memory.  
 
-@deftypefun {void *} pg_round_up (const void *@var{va})
-Returns @var{va} rounded up to the nearest page boundary.
-@end deftypefun
+Pintos provides functions for translating between physical addresses and
+kernel virtual addresses.  @xref{Virtual Addresses}, for details.
+
+@node Page Tables
+@subsubsection Page Tables
+
+In Pintos, a @dfn{page table} is a data structure that the CPU uses to
+translate a virtual address to a physical address, that is, from a page
+to a frame.  The page table format is dictated by the 80@var{x}86
+architecture.  Pintos provides page table management code in
+@file{pagedir.c} (@pxref{Page Table}).
+
+The diagram below illustrates the relationship between pages and frames.
+The virtual address, on the left, consists of a page number and an
+offset.  The page table translates the page number into a frame number,
+which is combined with the unmodified offset to obtain the physical
+address, on the right.
+
+@example
+@group
+                         +----------+
+        .--------------->|Page Table|-----------.
+       /                 +----------+            |
+   0   |  12 11 0                            0   V  12 11 0
+  +---------+----+                          +---------+----+
+  |Page Nr  | Ofs|                          |Frame Nr | Ofs|
+  +---------+----+                          +---------+----+
+   Virt Addr   |                             Phys Addr   ^
+                \_______________________________________/
+@end group
+@end example
+
+@node Swap Slots
+@subsubsection Swap Slots
+
+A @dfn{swap slot} is a contiguous, page-size region of disk space on the
+swap disk.  Although hardware limitations dictating the placement of
+slots are looser than for pages and frames, swap slots should be
+page-aligned because there is no downside in doing so.
+
+@node Resource Management Overview
+@subsection Resource Management Overview
+
+You will need to design the following data structures:
+
+@table @asis
+@item Segment table
+
+Enables page fault handling by supplementing the page table.
+@xref{Managing the Segment Table}.
+
+@item Frame table
+
+Allows efficient implementation of eviction policy.
+@xref{Managing the Frame Table}.
+
+@item Swap table
+
+Tracks usage of swap slots.
+@xref{Managing the Swap Table}.
+
+@item Table of file mappings
+
+Processes may map files into their virtual memory space.  You need a
+table to track which files are mapped into which pages.
+@end table
+
+You do not necessarily need to implement four completely distinct data
+structures: it may be convenient to wholly or partially merge related
+resources into a unified data structure.
+
+For each data structure, you need to determine what information each
+element should contain.  You also need to decide on the data structure's
+scope, either local (per-process) or global (applying to the whole
+system), and how many instances are required within its scope.
+
+To simplify your design, you may store these data structures in
+non-pageable memory.  That means that you can be sure that pointers
+among them will remain valid.
+
+Possible choices of data structures include arrays, lists, bitmaps, and
+hash tables.  An array is often the simplest approach, but a sparsely
+populated array wastes memory.  Lists are also simple, but traversing a
+long list to find a particular position wastes time.  Both arrays and
+lists can be resized, but lists more efficiently support insertion and
+deletion in the middle.
+
+Pintos includes a bitmap data structure in @file{lib/kernel/bitmap.c}
+and @file{lib/kernel/bitmap.h}.  A bitmap is an array of bits, each of
+which can be true or false.  Bitmaps are typically used to track usage
+in a set of (identical) resources: if resource @var{n} is in use, then
+bit @var{n} of the bitmap is true.  Pintos bitmaps are fixed in size,
+although you could extend their implementation to support resizing.
+
+Pintos also includes a hash table data structure (@pxref{Hash Table}).
+Pintos hash tables efficiently support insertions and deletions over a
+wide range of table sizes.
+
+Although more complex data structures may yield performance or other
+benefits, they may also needlessly complicate your implementation.
+Thus, we do not recommend implementing any advanced data structure
+(e.g.@: a balanced binary tree) as part of your design.
+
+@node Managing the Segment Table
+@subsection Managing the Segment Table
+
+The @dfn{segment table} supplements the page table with additional data
+about each page.  It is required because of the limitations imposed by
+the page table's format.  Such a supplementary data structure is often
+called a ``page table'' also; we call it a segment table to avoid
+confusion.
+
+The segment table is used for at least two purposes.  Most importantly,
+on a page fault, the kernel looks up the virtual page that faulted in
+the segment table to find out what data should be there.  Second, the
+kernel consults the segment table when a process terminates, to decide
+what resources to free.
+
+You may organize the segment table as you wish.  There are at least two
+basic approaches to its organization: in terms of segments or in terms
+of pages.  Optionally, you may use the page table as part of your
+segment table design.  You will have to modify the Pintos page table
+implementation in @file{pagedir.c} to do so.  We recommend this approach
+for advanced students only.  @xref{Page Table Entry Format}, for more
+information.
+
+The most important user of the segment table is the page fault handler.
+In project 2, a page fault always indicated a bug in the kernel or a
+user program.  In project 3, this is no longer true.  Now, a page fault
+might only indicate that the page must be brought in from a file or
+swap.  You will have to implement a more sophisticated page fault
+handler to handle these cases.  Your page fault handler, which you
+should implement by modifying @func{page_fault} in
+@file{threads/exception.c}, needs to do roughly the following:
+
+@enumerate 1
+@item
+Locate the page that faulted in the segment table.  If the memory
+reference is valid, use the segment table entry to locate the data that
+goes in the page, which might be in the file system, or in a swap slot,
+or it might simply be an all-zero page.  If you implement sharing, the
+page's data might even already be in a page frame, but not in the page
+table.
+
+If the page is unmapped, that is, if there's no data there, or if the
+page lies within kernel virtual memory, or if the access is an attempt
+to write to a read-only page, then the access is invalid.  Any invalid
+access terminates the process and thereby frees all of its resources.
+
+@item
+Obtain a frame to store the page.  @xref{Managing the Frame Table}, for
+details.
+
+If you implement sharing, the data you need may already be in a frame,
+in which case you must be able to locate that frame.
+
+@item
+Fetch the data into the frame, by reading it from the file system or
+swap, zeroing it, etc.
+
+If you implement sharing, the page you need may already be in a frame,
+in which case no action is necessary in this step.
+
+@item
+Point the page table entry for the faulting virtual address to the
+physical page.  You can use the functions in @file{userprog/pagedir.c}.
+@end enumerate
+
+@node Managing the Frame Table
+@subsection Managing the Frame Table
+
+The @dfn{frame table} contains one entry for each frame that contains a
+user page.  Each entry in the frame table contains a pointer to the
+page, if any, that currently occupies it, and other data of your choice.
+The frame table allows Pintos to efficiently implement an eviction
+policy, by choosing a page to evict when no frames are free.
+
+The frames used for user pages should be obtained from the ``user
+pool,'' by calling @code{palloc_get_page(PAL_USER)}.  You must use
+@code{PAL_USER} to avoid allocating from the ``kernel pool,'' which
+could cause some test cases to fail unexpectedly (@pxref{Why
+PAL_USER?}).  If you modify @file{palloc.c} as part of your frame table
+implementation, be sure to retain the distinction between the two pools.
+
+The most important operation on the frame table is obtaining an unused
+frame.  This is easy when a frame is free.  When none is free, a frame
+must be made free by evicting some page from its frame.  If no frame can
+be evicted without allocating a swap slot, but swap is full, some
+process must be killed to free memory (the choice of process to kill is
+up to you).
+
+The process of eviction comprises roughly the following steps:
+
+@enumerate 1
+@item
+Choose a frame to evict, using your page replacement algorithm.  The
+``accessed'' and ``dirty'' bits in the page table, described below, will
+come in handy.
+
+@item
+Remove references to the frame from any page table that refers to it.
+
+Unless you have implemented sharing, only a single page should refer to
+a frame at any given time.
+
+@item
+If necessary, write the page to the file system or to swap.
+@end enumerate
+
+The evicted frame may then be used to store a different page.
+
+@menu
+* Accessed and Dirty Bits::     
+@end menu
 
 @node Accessed and Dirty Bits
 @subsubsection Accessed and Dirty Bits
 
-Most of the page table is under the control of the operating system, but
-two bits in each page table entry are also manipulated by the CPU.  On
-any read or write to the page referenced by a PTE, the CPU sets the
-PTE's @dfn{accessed bit} to 1; on any write, the CPU sets the @dfn{dirty
-bit} to 1.  The CPU never resets these bits to 0, but the OS may do so.
+80@var{x}86 hardware provides some assistance for implementing page
+replacement algorithms, through a pair of bits in the page table entry
+(PTE) for each page.  On any read or write to a page, the CPU sets the
+@dfn{accessed bit} to 1 in the page's PTE, and on any write, the CPU
+sets the @dfn{dirty bit} to 1.  The CPU never resets these bits to 0,
+but the OS may do so.
 
-You will need to use the accessed and dirty bits in your submission to
-choose which pages to evict from memory and to decide whether evicted
-pages need to be written to disk.  The page table code in
-@file{userprog/pagedir.c} provides functions for checking and setting
-these bits.  These functions are described at the end of this section.
-
-You need to watch out for @dfn{aliases}, that is, two (or more)
-different virtual pages that refer to the same physical page frame.
-When an aliased page is accessed, the accessed and dirty bits are
-updated in only one page table entry (the one for the virtual address
-used to access the page).  The accessed and dirty bits for the other
-aliased virtual addresses are not updated.
+You need to be aware of @dfn{aliases}, that is, two (or more) pages that
+refer to the same frame.  When an aliased frame is accessed, the
+accessed and dirty bits are updated in only one page table entry (the
+one for the page used for access).  The accessed and dirty bits for the
+other aliases are not updated.
 
 In Pintos, every user virtual page is aliased to its kernel virtual
-address.  You must manage these aliases somehow.  For example, your code
+page.  You must manage these aliases somehow.  For example, your code
 could check and update the accessed and dirty bits for both addresses.
 Alternatively, the kernel could avoid the problem by only accessing user
 data through the user virtual address.
 
-Other aliases should only arise if you implement sharing, as extra
-credit (@pxref{VM Extra Credit}), or as bugs elsewhere in your code.
+Other aliases should only arise if you implement sharing for extra
+credit (@pxref{VM Extra Credit}), or if there is a bug in your code.
 
-@deftypefun bool pagedir_is_dirty (uint32_t *@var{pd}, const void *@var{vpage})
-@deftypefunx bool pagedir_is_accessed (uint32_t *@var{pd}, const void *@var{vpage})
-Returns true if page directory @var{pd} contains a page table entry for
-virtual page @var{vpage} that is marked dirty (or accessed).  Otherwise,
-returns false.
-@end deftypefun
+@xref{Page Table Accessed and Dirty Bits}, for details of the functions
+to work with accessed and dirty bits.
 
-@deftypefun void pagedir_set_dirty (uint32_t *@var{pd}, const void *@var{vpage}, bool @var{value})
-@deftypefunx void pagedir_set_accessed (uint32_t *@var{pd}, const void *@var{vpage}, bool @var{value})
-If page directory @var{pd} has a page table entry for @var{vpage}, then
-its dirty (or accessed) bit is set to @var{value}.
-@end deftypefun
+@node Managing the Swap Table
+@subsection Managing the Swap Table
 
-@node Disk as Backing Store
-@subsection Disk as Backing Store
+The swap table tracks in-use and free swap slots.  It should allow
+picking an unused swap slot for evicting a page from its frame to the
+swap disk.  It should allow freeing a swap slot when its page is read
+back or the process whose page was swapped is terminated.
 
-VM systems effectively use memory as a cache for disk.  From another
-perspective, disk is a ``backing store'' for memory.  This provides the
-abstraction of an (almost) unlimited virtual memory size.  You must
-implement such a system, with the additional constraint that performance
-should be close to that provided by physical memory.  You can use dirty
-bits to tell whether pages need to be written back to disk when they're
-evicted from main memory, and the accessed bits for page replacement
-algorithms (@pxref{Accessed and Dirty Bits}).
+You may use the disk on interface @code{hd1:1} as the swap disk, using
+the disk interface prototyped in @code{devices/disk.h}.  From the
+@file{vm/build} directory, use the command @code{pintos-mkdisk swap.dsk
+@var{n}} to create an @var{n} MB swap disk named @file{swap.dsk}.
+Afterward, @file{swap.dsk} will automatically be attached as
+@code{hd1:1} when you run @command{pintos}.  Alternatively, you can tell
+@command{pintos} to use a temporary @var{n}-MB swap disk for a single
+run with @option{--swap-disk=@var{n}}.
 
-As with any caching system, performance depends on the policy used to
-decide what to keep in the cache and what to evict.  On a page fault,
-the kernel must decide which page to replace.  Ideally, it will throw
-out a page that will not be referenced for a long time, keeping in
-memory those pages that are soon to be referenced.  Another
-consideration is that if the replaced page has been modified, the page
-must be first written to disk before the needed page can be brought in.
-Many virtual memory systems avoid this extra overhead by writing
-modified pages to disk in advance, so that later page faults can be
-completed more quickly (but you do not have to implement this
-optimization).
+Swap slots should be allocated lazily, that is, only when they are
+actually required by eviction.  Reading data pages from the executable
+and writing them to swap immediately at process startup is not lazy.
+Swap slots should not be reserved to store particular pages.
 
-@node Memory Mapped Files Background
-@subsection Memory Mapped Files
+Free a swap slot when its contents are read back into a frame.
+
+@node Managing Memory Mapped Files Back
+@subsection Managing Memory Mapped Files
 
 The file system is most commonly accessed with @code{read} and
-@code{write} system calls.  A secondary interface is to ``map''
-the file into the virtual address space.  The program can then use load
-and store instructions directly on the file data.  An alternative view
-is to see the file system is as ``durable memory'': files just store
-data structures, so if you access ordinary data structures using normal
-program instructions, why not access durable data structures the same
-way?
+@code{write} system calls.  A secondary interface is to ``map'' the file
+into virtual pages, using the @code{mmap} system call.  The program can
+then use memory instructions directly on the file data.
 
 Suppose file @file{foo} is @t{0x1000} bytes (4 kB, or one page) long.
 If @file{foo} is mapped into memory starting at address @t{0x5000}, then
 any memory accesses to locations @t{0x5000}@dots{}@t{0x5fff} will access
 the corresponding bytes of @file{foo}.
 
-A consequence of memory mapped files is that address spaces are
-sparsely populated with lots of segments, one for each memory mapped
-file (plus one each for code, data, and stack).
+Here's a program that uses @code{mmap} to print a file to the console.
+It opens the file specified on the command line, maps it at virtual
+address @t{0x10000000}, writes the mapped data to the console (fd 1),
+and unmaps the file.
+
+@example
+#include <stdio.h>
+#include <syscall.h>
+int main (int argc UNUSED, char *argv[]) 
+@{
+  void *data = (void *) 0x10000000;     /* @r{Address at which to map.} */
+
+  int fd = open (argv[1]);              /* @r{Open file.} */
+  mapid_t map = mmap (fd, data);        /* @r{Map file.} */
+  write (1, data, filesize (fd));       /* @r{Write file to console.} */
+  munmap (map);                         /* @r{Unmap file (optional).} */
+  return 0;
+@}
+@end example
+
+A similar program with full error handling is included as @file{mcat.c}
+in the @file{examples} directory, which also contains @file{mcp.c} as a
+second example of @code{mmap}.
+
+Your submission must be able to track what memory is used by memory
+mapped files.  This is necessary to properly handle page faults in the
+mapped regions and to ensure that mapped files do not overlap any other
+segments within the process.
+
+@node Project 3 Suggested Order of Implementation
+@section Suggested Order of Implementation
+
+We suggest the following initial order of implementation:
+
+@enumerate 1
+@item
+Frame table (@pxref{Managing the Frame Table}).  Change @file{process.c}
+to use your frame table allocator.
+
+Do not implement swapping yet.  If you run out of frames, fail the
+allocator or panic the kernel.
+
+After this step, your kernel should still pass all the project 2 test
+cases.
+
+@item
+Segment table and page fault handler (@pxref{Managing the Segment
+Table}).  Change @file{process.c} to record the necessary information in
+the segment table when loading an executable and setting up its stack.
+Implement loading of code and data segments in the page fault handler.
+For now, consider only valid accesses.
+
+After this step, your kernel should pass all of the project 2
+functionality test cases, but only some of the robustness tests.
+@end enumerate
+
+From here, you can implement stack growth, mapped files, and page
+reclamation on process exit in parallel.
+
+The next step is to implement eviction (@pxref{Managing the Frame
+Table}).  Initially you could choose the page to evict randomly.  At
+this point, you need to consider how to manage accessed and dirty bits
+and aliasing of user and kernel pages.  Synchronization is also a
+concern: how do you deal with it if process A faults on a page whose
+frame process B is in the process of evicting?  Finally, implement a
+eviction strategy such as the clock algorithm.
 
 @node Project 3 Requirements
 @section Requirements
@@ -286,9 +486,7 @@ disk, how to implement paging, etc.
 
 @menu
 * Project 3 Design Document::   
-* Page Table Management::       
-* Paging To and From Disk::     
-* Lazy Loading::                
+* Paging::                      
 * Stack Growth::                
 * Memory Mapped Files::         
 @end menu
@@ -303,148 +501,32 @@ read the design document template before you start working on the
 project.  @xref{Project Documentation}, for a sample design document
 that goes along with a fictitious project.
 
-@node Page Table Management
-@subsection Page Table Management
+@node Paging
+@subsection Paging
 
-Implement page directory and page table management to support virtual
-memory.  You will need data structures to accomplish the following
-tasks:
+Implement paging for segments loaded from executables.  All of these
+pages should be loaded lazily, that is, only as the kernel intercepts
+page faults for them.  Upon eviction, pages modified since load (e.g.@:
+as indicated by the ``dirty bit'') should be written to swap.
+Unmodified pages, including read-only pages, should never be written to
+swap because they can always be read back from the executable.
 
-@itemize @bullet
-@item
-Some way of translating in software from virtual page frames to
-physical page frames.  Pintos provides a hash table that you may find
-useful for this purpose (@pxref{Hash Table}).
-
-You don't strictly need a new data structure for this.  You could
-instead modify the code in @file{userprog/pagedir.c}.  If you do that
-you'll need to thoroughly understand how 80@var{x}86 page tables work
-by, e.g.,@: studying section 3.7, ``Page Translation Using 32-Bit
-Physical Addressing,'' in @bibref{IA32-v3a}.  In practice, most groups
-use a separate data structure.
-
-@item
-Some way of finding a page on disk (in a file or in swap) if it is not
-in memory.
-
-You can generalize the virtual-to-physical page table, so that it allows
-you to locate a page wherever it is in physical memory or on disk, or
-you can make this a separate table.
-
-@item
-Some way of translating from physical page frames back to virtual page
-frames, so that when you evict a physical page from its frame, you can
-invalidate its page table entry (or entries).
-@end itemize
-
-The page fault handler, @func{page_fault} in
-@file{threads/exception.c}, needs to do roughly the following:
-
-@enumerate 1
-@item
-Locate the page backing the virtual
-address that faulted.  It might be in the file system, in swap,
-or it might be an invalid virtual address.
-If you implement sharing, it might even
-already be in physical memory, but not in the page table.
-
-If the virtual address is invalid, that is, if there's nothing
-assigned to go there, or if the virtual address is above
-@code{PHYS_BASE}, meaning that it belongs to the kernel instead of the
-user, then the process's memory access must be disallowed.  
-In this case, terminate the process and free all of its resources.
-
-@item
-If the page is not in physical memory, fetch it by appropriate means.
-If necessary to make room, first evict some other page from memory.
-(When you do that you need to first remove references to the page from
-any page table that refers to it.)
-
-@item
-Point the page table entry for the faulting virtual address to the
-physical page.  You can use the functions in @file{userprog/pagedir.c}.
-@end enumerate
-
-You'll need to modify the ELF loader in @file{userprog/process.c} to
-do page table management according to your new design.  As supplied,
-it reads all the process's pages from disk and initializes the page
-tables for them at the same time.  As a first step, you might
-want to leave the code that reads the pages from disk, but
-use your new page table management code to construct the page tables
-only as page faults occur for them.
-
-You should use the @func{palloc_get_page} function to get the page
-frames that you use for storing user virtual pages.  Be sure to pass
-the @code{PAL_USER} flag to this function when you do so, because that
-allocates pages from a ``user pool'' separate from the ``kernel pool''
-that other calls to @func{palloc_get_page} make (@pxref{Why PAL_USER?}).
-
-You might find the Pintos bitmap code, in @file{lib/kernel/bitmap.c} and
-@file{lib/kernel/bitmap.h}, useful for tracking pages.  A bitmap is an
-array of bits, each of which can be true or false.  Bitmaps are
-typically used to track usage in a set of (identical) resources: if
-resource @var{n} is in use, then bit @var{n} of the bitmap is true.
-
-There are many possible ways to implement virtual memory.  The above
-is simply an outline of our suggested implementation.
-
-@node Paging To and From Disk
-@subsection Paging To and From Disk
-
-Implement paging to and from files and the swap disk.  You may use the
-disk on interface @code{hd1:1} as the swap disk, using the disk
-interface prototyped in @code{devices/disk.h}.  From the @file{vm/build}
-directory, use the command @code{pintos-mkdisk swap.dsk @var{n}} to
-create an @var{n} MB swap disk named @file{swap.dsk}.  Afterward,
-@file{swap.dsk} will automatically be attached as @code{hd1:1} when you run
-@command{pintos}.  Alternatively, you can tell @command{pintos} to
-use a temporary @var{n}-MB swap disk for a single run with
-@option{--swap-disk=@var{n}}.
-
-You will need routines to move a page from memory to disk and from
-disk to memory, where ``disk'' is either a file or the swap disk.  If
-you do a good job, your VM should still work when you
-implement your own file system for the next assignment.
-
-To fully handle page faults, you will need a way to track pages that
-are used by a process but which are not in physical memory.  Pages in
-swap should not be constrained to any particular ordering.  You will
-also need a way to track physical page frames, to find an unused one
-when needed, or to evict a page when memory is needed but no empty pages
-are available.  The page table data structure that you designed should
-do most of the work for you.
-
-Implement a global page replacement algorithm.  You should be able to
-use the ``accessed'' and ``dirty'' bits (@pxref{Accessed and Dirty
-Bits}) to implement an approximation to LRU.  Your algorithm should
-perform at least as well as the ``second chance'' or ``clock''
-algorithm.
+Implement a global page replacement algorithm that approximates LRU.
+Your algorithm should perform at least as well as the ``second chance''
+or ``clock'' algorithm.
 
 Your design should allow for parallelism.  If one page fault requires
 I/O, in the meantime processes that do not fault should continue
 executing and other page faults that do not require I/O should be able
-to complete.  These criteria require some synchronization effort.
+to complete.  This will require some synchronization effort.
 
-@node Lazy Loading
-@subsection Lazy Loading
-
-Since you will already be paging from disk, you should implement a
-``lazy'' loading scheme for new processes.  When a process is created,
-it will not need all of its resources immediately, so it doesn't make
-sense to load all its code, data, and stack into memory when the process
-is created.  Instead, bring pages in from
-the executable only as needed.  Use the
-executable file itself as backing store for read-only segments, since
-these segments won't change.  This means that read-only pages should not
-be written to swap.
-
-The core of the program loader is the loop in @func{load_segment} in
-@file{userprog/process.c}.
-Each time around the loop, @code{page_read_bytes} receives the number of
-bytes to read from the executable file and @code{page_zero_bytes} receives
-the number of bytes to initialize to zero following the bytes read.  The
-two always sum to @code{PGSIZE} (4,096).  The handling of a page depends
-on these variables' values:
+You'll need to modify the core of the program loader, which is the loop
+in @func{load_segment} in @file{userprog/process.c}.  Each time around
+the loop, @code{page_read_bytes} receives the number of bytes to read
+from the executable file and @code{page_zero_bytes} receives the number
+of bytes to initialize to zero following the bytes read.  The two always
+sum to @code{PGSIZE} (4,096).  The handling of a page depends on these
+variables' values:
 
 @itemize @bullet
 @item
@@ -458,20 +540,10 @@ such pages by creating a new page consisting of all zeroes at the
 first page fault.
 
 @item
-If neither @code{page_read_bytes} nor @code{page_zero_bytes} equals
-@code{PGSIZE}, then part of the page is to be read from disk and the
-remainder zeroed.  This is a special case.  You are allowed to handle
-it by reading the partial page from disk at executable load time and
-zeroing the rest of the page.  This is the only case in which we will
-allow you to load a page in a non-``lazy'' fashion.  Many real OSes
-such as Linux do not load partial pages lazily.
+Otherwise, neither @code{page_read_bytes} nor @code{page_zero_bytes}
+equals @code{PGSIZE}.  In this case, an initial part of the page is to
+be read from disk and the remainder zeroed.
 @end itemize
-
-Incidentally, if you have trouble handling the third case above, you
-can eliminate it temporarily by linking the test programs with a
-special ``linker script.''  Read @file{Makefile.userprog} for
-details.  We will not test your submission with this special linker
-script, so the code you turn in must properly handle all cases.
 
 @node Stack Growth
 @subsection Stack Growth
@@ -524,6 +596,9 @@ for it to be faulted in.  (Even if you did wait, the very first
 instruction in the user program is likely to be one that faults in the
 page.)
 
+All stack pages should be candidates for eviction.  An evicted stack
+page should be written to swap.
+
 @node Memory Mapped Files
 @subsection Memory Mapped Files
 
@@ -543,8 +618,6 @@ If the file's length is not a multiple of @code{PGSIZE}, then some
 bytes in the final mapped page ``stick out'' beyond the end of the
 file.  Set these bytes to zero when the page is faulted in from disk,
 and discard them when the page is written back to disk.
-A partial page need not be lazily loaded, as in the case of a partial
-page in an executable (@pxref{Lazy Loading}).
 
 If successful, this function returns a ``mapping ID'' that
 uniquely identifies the mapping within the process.  On failure,
@@ -604,23 +677,23 @@ files modified by the reference solution, and some may modify files not
 modified by the reference solution.
 
 @verbatim
- Makefile.build       |    4 
+ Makefile.build       |    4
  devices/timer.c      |   42 ++
- threads/init.c       |    5 
- threads/interrupt.c  |    2 
+ threads/init.c       |    5
+ threads/interrupt.c  |    2
  threads/thread.c     |   31 +
  threads/thread.h     |   37 +-
- userprog/exception.c |   12 
- userprog/pagedir.c   |   10 
+ userprog/exception.c |   12
+ userprog/pagedir.c   |   10
  userprog/process.c   |  319 +++++++++++++-----
  userprog/syscall.c   |  545 ++++++++++++++++++++++++++++++-
- userprog/syscall.h   |    1 
+ userprog/syscall.h   |    1
  vm/frame.c           |  162 +++++++++
  vm/frame.h           |   23 +
  vm/page.c            |  297 ++++++++++++++++
  vm/page.h            |   50 ++
  vm/swap.c            |   85 ++++
- vm/swap.h            |   11 
+ vm/swap.h            |   11
  17 files changed, 1532 insertions(+), 104 deletions(-)
 @end verbatim
 
@@ -638,17 +711,6 @@ process.  If you carefully designed your page table data structures,
 sharing of read-only pages should not make this part significantly
 harder.
 
-@end table
-
-@menu
-* Page Table and Paging FAQ::   
-* Memory Mapped File FAQ::      
-@end menu
-
-@node Page Table and Paging FAQ
-@subsection Page Table and Paging FAQ
-
-@table @b
 @item Does the virtual memory system need to support data segment growth?
 
 No.  The size of the data segment is determined by the linker.  We still
@@ -671,63 +733,4 @@ you like, but it should be the underlying mechanism.
 Also, you can use the @option{-ul} option to @command{pintos} to limit
 the size of the user pool, which makes it easy to test your VM
 implementation with various user memory sizes.
-
-@item Data pages might need swap space.  Can I swap them out at process load?
-
-No.  Reading data pages from the executable and writing them to swap
-immediately at program startup is not demand paging.  You need to demand
-page everything (except partial pages).
-@end table
-
-@node Memory Mapped File FAQ
-@subsection Memory Mapped File FAQ
-
-@table @b
-@item How do we interact with memory-mapped files?
-
-Let's say you want to map a file called @file{foo} into your address
-space at address @t{0x10000000}. You open the file then use @code{mmap}:
-
-@example
-#include <stdio.h>
-#include <syscall.h>
-
-int main (void)
-@{
-    void *addr = (void *) 0x10000000;
-    int fd = open ("foo");
-    mapid_t map = mmap (fd, addr);
-    if (map != -1)
-        printf ("success!\n");
-@}
-@end example
-
-Suppose @file{foo} is a text file and you want to print the first 64
-bytes on the screen (assuming, of course, that the length of the file
-is at least 64).  Without @code{mmap}, you'd need to allocate a
-buffer, use @code{read} to get the data from the file into the buffer,
-and finally use @code{write} to put the buffer out to the display. But
-with the file mapped into your address space, you can directly address
-it like so:
-
-@example
-write (STDOUT_FILENO, addr, 64);
-@end example
-
-Similarly, if you wanted to replace the first byte of the file,
-all you need to do is:
-
-@example
-addr[0] = 'b';
-@end example
-
-When you're done using the memory-mapped file, you simply unmap
-it:
-
-@example
-munmap (map);
-@end example
-
-The @command{mcp} program in @file{src/examples} shows how to copy a
-file using memory-mapped I/O.
 @end table

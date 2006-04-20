@@ -5,10 +5,7 @@ $(PROGS): CPPFLAGS += -I$(SRCDIR)/lib/user -I.
 # Linker flags.
 $(PROGS): LDFLAGS = -nostdlib -static -Wl,-T,$(LDSCRIPT)
 $(PROGS): LDLIBS = $(shell $(CC) -print-libgcc-file-name)
-$(PROGS): LDSCRIPT = $(SRCDIR)/lib/user/normal.lds
-# Uncomment the following line to round up section sizes
-# to full pages (for debugging only).
-#$(PROGS): LDSCRIPT = $(SRCDIR)/lib/user/fullpage.lds
+$(PROGS): LDSCRIPT = $(SRCDIR)/lib/user/user.lds
 
 # Library code shared between kernel and user programs.
 lib_SRC  = lib/debug.c			# Debug code.

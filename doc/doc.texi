@@ -1,4 +1,4 @@
-@node Project Documentation, Debugging Tools, Coding Standards, Top
+@node Project Documentation
 @appendix Project Documentation
 
 This chapter presents a sample assignment and a filled-in design

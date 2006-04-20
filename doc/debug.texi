@@ -1,4 +1,4 @@
-@node Debugging Tools, Development Tools, Project Documentation, Top
+@node Debugging Tools
 @appendix Debugging Tools
 
 Many tools lie at your disposal for debugging Pintos.  This appendix
@@ -340,8 +340,8 @@ Example: @code{dumplist all_list thread all_elem} prints all elements of
 Shows the backtrace of @var{thread}, which is a pointer to the
 @struct{thread} of the thread whose backtrace it should show.  For the
 current thread, this is identical to the @code{bt} (backtrace) command.
-It also works for threads that are suspended in @func{schedule},
-provided you know where their kernel stack page is located.
+It also works for any thread suspended in @func{schedule},
+provided you know where its kernel stack page is located.
 @end deffn
 
 @deffn {GDB Macro} btthreadlist list element
@@ -395,8 +395,8 @@ break point in @func{page_fault} in @file{exception.c}, which you will
 need to modify accordingly.
 
 In Project 3, a page fault in a user process no longer automatically
-leads to the termination of a process.  Rather, you may have to page in
-the page containing the address the process was trying to access, either
+leads to the termination of a process.  Instead, it may require reading in
+data for the page the process was trying to access, either
 because it was swapped out or because this is the first time it's
 accessed.  In either case, you will reach @func{page_fault} and need to
 take the appropriate action there.
@@ -710,13 +710,13 @@ above, a good place to start adding @func{printf}s is
 @section Tips
 
 The page allocator in @file{threads/palloc.c} and the block allocator in
-@file{threads/malloc.c} both clear all the bytes in pages and blocks to
-@t{0xcc} when they are freed.  Thus, if you see an attempt to
+@file{threads/malloc.c} clear all the bytes in memory to
+@t{0xcc} at time of free.  Thus, if you see an attempt to
 dereference a pointer like @t{0xcccccccc}, or some other reference to
 @t{0xcc}, there's a good chance you're trying to reuse a page that's
 already been freed.  Also, byte @t{0xcc} is the CPU opcode for ``invoke
 interrupt 3,'' so if you see an error like @code{Interrupt 0x03 (#BP
-Breakpoint Exception)}, Pintos tried to execute code in a freed page or
+Breakpoint Exception)}, then Pintos tried to execute code in a freed page or
 block.
 
 An assertion failure on the expression @code{sec_no < d->capacity}

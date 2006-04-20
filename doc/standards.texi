@@ -1,4 +1,4 @@
-@node Coding Standards, Project Documentation, 4.4BSD Scheduler, Top
+@node Coding Standards
 @appendix Coding Standards
 
 All of you should have taken a class like CS 107, so we expect you to be
@@ -45,7 +45,7 @@ Please limit C source file lines to at most 79 characters long.
 Pintos comments sometimes refer to external standards or
 specifications by writing a name inside square brackets, like this:
 @code{[IA32-v3a]}.  These names refer to the reference names used in
-this documentation (@pxref{References}).
+this documentation (@pxref{Bibliography}).
 
 If you remove existing Pintos code, please delete it from your source
 file entirely.  Don't just put it into a comment or a conditional

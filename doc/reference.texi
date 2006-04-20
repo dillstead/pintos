@@ -1,23 +1,25 @@
-@node Pintos Tour, Project 1--Threads, Introduction, Top
-@chapter A Tour Through Pintos
+@node Reference Guide
+@appendix Reference Guide
 
-This chapter is a brief tour through the Pintos code.  It covers the
+This chapter is a reference for the Pintos code.  It covers the
 entire code base, but you'll only be using Pintos one part at a time,
 so you may find that you want to read each part as you work on the
-corresponding project.
+project where it becomes important.
 
-(Actually, the tour is currently incomplete.  It fully covers only the
-threads project.)
+(Actually, the reference guide is currently incomplete.)
 
 We recommend using ``tags'' to follow along with references to function
 and variable names (@pxref{Tags}).
 
 @menu
 * Pintos Loading::              
-* Threads Tour::                
-* User Programs Tour::          
-* Virtual Memory Tour::         
-* File Systems Tour::           
+* Threads::                     
+* Synchronization::             
+* Interrupt Handling::          
+* Memory Allocation::           
+* Virtual Addresses::           
+* Page Table::                  
+* Hash Table::                  
 @end menu
 
 @node Pintos Loading
@@ -115,7 +117,7 @@ encounter in Pintos from here on out.
 When @func{main} starts, the system is in a pretty raw state.  We're
 in protected mode with paging enabled, but hardly anything else is
 ready.  Thus, the @func{main} function consists primarily of calls
-into other Pintos modules' initialization functions.  
+into other Pintos modules' initialization functions.
 These are usually named @func{@var{module}_init}, where
 @var{module} is the module's name, @file{@var{module}.c} is the
 module's source code, and @file{@var{module}.h} is the module's
@@ -197,18 +199,8 @@ call @func{power_off} to terminate the machine simulator.  Otherwise,
 @func{main} calls @func{thread_exit}, which allows any other running
 threads to continue running.
 
-@node Threads Tour
-@section Threads Project
-
-@menu
-* Thread Support::              
-* Synchronization::             
-* Interrupt Handling::          
-* Memory Allocation::           
-@end menu
-
-@node Thread Support
-@subsection Thread Support
+@node Threads
+@section Threads
 
 @menu
 * struct thread::               
@@ -217,12 +209,12 @@ threads to continue running.
 @end menu
 
 @node struct thread
-@subsubsection @code{struct thread}
+@subsection @code{struct thread}
 
 The main Pintos data structure for threads is @struct{thread},
 declared in @file{threads/thread.h}.
 
-@deftp {Structure} {@struct{thread}}
+@deftp {Structure} {struct thread}
 Represents a thread or a user process.  In the projects, you will have
 to add your own members to @struct{thread}.  You may also change or
 delete the definitions of existing members.
@@ -355,7 +347,7 @@ the final member.
 @end deftypecv
 
 @node Thread Functions
-@subsubsection Thread Functions
+@subsection Thread Functions
 
 @file{threads/thread.c} implements several public functions for thread
 support.  Let's take a look at the most useful:
@@ -464,7 +456,7 @@ Skeletons for the advanced scheduler.  @xref{4.4BSD Scheduler}.
 @end deftypefun
 
 @node Thread Switching
-@subsubsection Thread Switching
+@subsection Thread Switching
 
 @func{schedule} is the function responsible for switching threads.  It
 is internal to @file{threads/thread.c} and called only by the three
@@ -531,7 +523,7 @@ interrupts and calls the thread's function (the function passed to
 @end itemize
 
 @node Synchronization
-@subsection Synchronization
+@section Synchronization
 
 If sharing of resources between threads is not handled in a careful,
 controlled fashion, then the result is usually a big mess.
@@ -548,7 +540,7 @@ synchronization primitives to help out.
 @end menu
 
 @node Disabling Interrupts
-@subsubsection Disabling Interrupts
+@subsection Disabling Interrupts
 
 The crudest way to do synchronization is to disable interrupts, that
 is, to temporarily prevent the CPU from responding to interrupts.  If
@@ -599,7 +591,7 @@ Turns interrupts off.  Returns the previous interrupt state.
 @end deftypefun
 
 @node Semaphores
-@subsubsection Semaphores
+@subsection Semaphores
 
 Pintos' semaphore type and operations are declared in
 @file{threads/synch.h}.
@@ -669,7 +661,7 @@ a list of waiting threads, using the linked list
 implementation in @file{lib/kernel/list.c}.
 
 @node Locks
-@subsubsection Locks
+@subsection Locks
 
 Lock types and functions are declared in @file{threads/synch.h}.
 
@@ -714,7 +706,7 @@ false otherwise.
 @end deftypefun
 
 @node Condition Variables
-@subsubsection Condition Variables
+@subsection Condition Variables
 
 Condition variable types and functions are declared in
 @file{threads/synch.h}.
@@ -768,7 +760,7 @@ monitor lock @var{lock}).  @var{lock} must be held before calling this
 function.
 @end deftypefun
 
-@subsubheading Monitor Example
+@subsubsection Monitor Example
 
 The classical example of a monitor is handling a buffer into which one
 ``producer'' thread writes characters and out of which a second
@@ -810,7 +802,7 @@ char get (void) @{
 @end example
 
 @node Memory Barriers
-@subsubsection Memory Barriers
+@subsection Memory Barriers
 
 Suppose we add a ``feature'' that, whenever a timer interrupt
 occurs, the character in global variable @code{timer_put_char} is
@@ -870,7 +862,7 @@ intr_set_level (old_level);
 A second possibility is to mark the declarations of
 @code{timer_put_char} and @code{timer_do_put} as @samp{volatile}.  This
 keyword tells the compiler that the variables are externally observable
-and allows it less latitude for optimization.  However, the semantics of
+and restricts its latitude for optimization.  However, the semantics of
 @samp{volatile} are not well-defined, so it is not a good general
 solution.
 
@@ -901,7 +893,7 @@ definition, because the compiler may read and parse the entire source
 file before performing optimization.
 
 @node Interrupt Handling
-@subsection Interrupt Handling
+@section Interrupt Handling
 
 An @dfn{interrupt} notifies the CPU of some event.  Much of the work
 of an operating system relates to interrupts in one way or another.
@@ -946,7 +938,7 @@ also want to skim chapter 5, ``Interrupt and Exception Handling,'' in
 @end menu
 
 @node Interrupt Infrastructure
-@subsubsection Interrupt Infrastructure
+@subsection Interrupt Infrastructure
 
 When an interrupt occurs while the kernel is running, the CPU saves
 its most essential state on the stack and jumps to an interrupt
@@ -1017,7 +1009,7 @@ interrupts.
 
 @deftypecv {Member} {@struct{intr_frame}} void (*eip) (void)
 The address of the next instruction to be executed by the interrupted
-thread. 
+thread.
 @end deftypecv
 
 @deftypecv {Member} {@struct{intr_frame}} {void *} esp
@@ -1030,7 +1022,7 @@ Returns the name of the interrupt numbered @var{vec}, or
 @end deftypefun
 
 @node Internal Interrupt Handling
-@subsubsection Internal Interrupt Handling
+@subsection Internal Interrupt Handling
 
 When an internal interrupt occurs, it is because the running kernel
 thread (or, starting from project 2, the running user process) has
@@ -1068,7 +1060,7 @@ starting with project 2).
 @end deftypefun
 
 @node External Interrupt Handling
-@subsubsection External Interrupt Handling
+@subsection External Interrupt Handling
 
 Whereas an internal interrupt runs in the context of the thread that
 caused it, external interrupts do not have any predictable context.
@@ -1140,7 +1132,7 @@ when a thread's time slice expires.
 @end deftypefun
 
 @node Memory Allocation
-@subsection Memory Allocation
+@section Memory Allocation
 
 Pintos contains two memory allocators, one that allocates memory in
 units of a page, and one that can allocate blocks of any size.
@@ -1151,7 +1143,7 @@ units of a page, and one that can allocate blocks of any size.
 @end menu
 
 @node Page Allocator
-@subsubsection Page Allocator
+@subsection Page Allocator
 
 The page allocator declared in @file{threads/palloc.h} allocates
 memory in units of a page.  It is most often used to allocate memory
@@ -1237,7 +1229,7 @@ or @func{palloc_get_multiple}.
 @end deftypefun
 
 @node Block Allocator
-@subsubsection Block Allocator
+@subsection Block Allocator
 
 The block allocator, declared in @file{threads/malloc.h}, can allocate
 blocks of any size.  It is layered on top of the page allocator
@@ -1247,7 +1239,7 @@ allocator are obtained from the kernel pool.
 The block allocator uses two different strategies for allocating
 memory.  The first of these applies to ``small'' blocks, those 1 kB or
 smaller (one
-fourth of the the page size).  These allocations are rounded up to the
+fourth of the page size).  These allocations are rounded up to the
 nearest power of 2, or 16 bytes, whichever is larger.  Then they are
 grouped into a page used only for allocations of the smae
 size.
@@ -1256,7 +1248,7 @@ The second strategy applies to allocating ``large'' blocks, those larger
 than 1 kB.
 These allocations (plus a small amount of overhead) are rounded up to
 the nearest page in size, and then the block allocator requests that
-number of contiguous pages from the page allocator.  
+number of contiguous pages from the page allocator.
 
 In either case, the difference between the allocation requested size
 and the actual block size is wasted.  A real operating system would
@@ -1280,31 +1272,458 @@ a debugging aid (@pxref{Debugging Tips}).
 
 The block allocator may not be called from interrupt context.
 
-@node User Programs Tour
-@section User Programs Project
+@node Virtual Addresses
+@section Virtual Addresses
 
-No tour for this project is available.
+A 32-bit virtual address can be divided into a 20-bit @dfn{page number}
+and a 12-bit @dfn{page offset} (or just @dfn{offset}), like this:
 
-@node Virtual Memory Tour
-@section Virtual Memory Project
+@example
+@group
+               31               12 11        0
+              +-------------------+-----------+
+              |    Page Number    |   Offset  |
+              +-------------------+-----------+
+                       Virtual Address
+@end group
+@end example
 
-Only some parts of the tour for this project are available.
+Header @file{threads/vaddr.h} defines these functions and macros for
+working with virtual addresses:
+
+@defmac PGSHIFT
+@defmacx PGBITS
+The bit index (0) and number of bits (12) in the offset part of a
+virtual address, respectively.
+@end defmac
+
+@defmac PGMASK
+A bit mask with value @t{0xfff}, so that the bits in the page offset are
+set to 1 and other bits set to 0.
+@end defmac
+
+@defmac PGSIZE
+The page size in bytes (4096).
+@end defmac
+
+@deftypefun unsigned pg_ofs (const void *@var{va})
+Extracts and returns the page offset in virtual address @var{va}.
+@end deftypefun
+
+@deftypefun uintptr_t pg_no (const void *@var{va})
+Extracts and returns the page number in virtual address @var{va}.
+@end deftypefun
+
+@deftypefun {void *} pg_round_down (const void *@var{va})
+Returns the start of the virtual page that @var{va} points within, that
+is, @var{va} with the page offset set to 0.
+@end deftypefun
+
+@deftypefun {void *} pg_round_up (const void *@var{va})
+Returns @var{va} rounded up to the nearest page boundary.
+@end deftypefun
+
+Virtual memory in Pintos is divided into two regions: user virtual
+memory and kernel virtual memory.  The boundary between them is
+@code{PHYS_BASE}:
+
+@defmac PHYS_BASE
+Base address of kernel virtual memory.  It defaults to @t{0xc0000000} (3
+GB), but it may be changed to any multiple of @t{0x10000000} from
+@t{0x80000000} to @t{0xf0000000}.
+
+User virtual memory ranges from virtual address 0 up to
+@code{PHYS_BASE}.  Kernel virtual memory occupies the rest of the
+virtual address space, from @code{PHYS_BASE} up to 4 GB.
+@end defmac
+
+@deftypefun {bool} is_user_vaddr (const void *@var{va})
+@deftypefunx {bool} is_kernel_vaddr (const void *@var{va})
+Returns true if @var{va} is a user or kernel virtual address,
+respectively, false otherwise.
+@end deftypefun
+
+The 80@var{x}86 doesn't provide any way to directly access memory given
+a physical address.  This ability is often necessary in an operating
+system kernel, so Pintos works around it by mapping kernel virtual
+memory one-to-one to physical memory.  That is, virtual address
+@code{PHYS_BASE} accesses physical address 0, virtual address
+@code{PHYS_BASE} + @t{0x1234} accesses physical address @t{0x1234}, and
+so on up to the size of the machine's physical memory.  Thus, adding
+@code{PHYS_BASE} to a physical address obtains a kernel virtual address
+that accesses that address; conversely, subtracting @code{PHYS_BASE}
+from a kernel virtual address obtains the corresponding physical
+address.  Header @file{threads/vaddr.h} provides a pair of functions to
+do these translations:
+
+@deftypefun {void *} ptov (uintptr_t @var{pa})
+Returns the kernel virtual address corresponding to physical address
+@var{pa}, which should be between 0 and the number of bytes of physical
+memory.
+@end deftypefun
+
+@deftypefun {uintptr_t} vtop (void *@var{va})
+Returns the physical address corresponding to @var{va}, which must be a
+kernel virtual address.
+@end deftypefun
+
+@node Page Table
+@section Page Table
+
+The code in @file{pagedir.c} is an abstract interface to the 80@var{x}86
+hardware page table, also called a ``page directory'' by Intel processor
+documentation.  The page table interface uses a @code{uint32_t *} to
+represent a page table because this is convenient for accessing their
+internal structure.
+
+The sections below describe the page table interface and internals.
 
 @menu
-* Hash Table::                  
+* Page Table Creation Destruction Activation::  
+* Page Tables Inspection and Updates::  
+* Page Table Accessed and Dirty Bits::  
+* Page Table Details::          
 @end menu
 
-@node Hash Table
-@subsection Hash Table
+@node Page Table Creation Destruction Activation
+@subsection Creation, Destruction, and Activation
 
-Most implementations of the virtual memory project use a hash table to
-translate virtual page frames to physical page frames.  It is possible
-to do this translation without adding a new data structure, by modifying
-the code in @file{userprog/pagedir.c}.  However, if you do that you'll
-need to carefully study and understand section 3.7, ``Page Translation
-Using 32-Bit Physical Addressing,'' in @bibref{IA32-v3a}, and in practice
-it is probably easier to add a new data structure.  You may find other
-uses for hash tables as well.
+These functions create, destroy, and activate page tables.  The base
+Pintos code already calls these functions where necessary, so it should
+not be necessary to call them yourself.
+
+@deftypefun {uint32_t *} pagedir_create (void)
+Creates and returns a new page table.  The new page table contains
+Pintos's normal kernel virtual page mappings, but no user virtual
+mappings.
+
+Returns a null pointer if memory cannot be obtained.
+@end deftypefun
+
+@deftypefun void pagedir_destroy (uint32_t *@var{pd})
+Frees all of the resources held by @var{pd}, including the page table
+itself and the frames that it maps.
+@end deftypefun
+
+@deftypefun void pagedir_activate (uint32_t *@var{pd})
+Activates @var{pd}.  The active page table is the one used by the CPU to
+translate memory references.
+@end deftypefun
+
+@node Page Tables Inspection and Updates
+@subsection Inspection and Updates
+
+These functions examine or update the mappings from pages to frames
+encapsulated by a page table.  They work on both active and inactive
+page tables (that is, those for running and suspended processes),
+flushing the TLB as necessary.
+
+User page parameters (@var{upage})to these functions should be user
+virtual addresses.  Kernel page parameters (@var{kpage}) should be
+kernel virtual addresses and should have been obtained from the user
+pool with @code{palloc_get_page(PAL_USER)} (@pxref{Why PAL_USER?}).
+
+@deftypefun bool pagedir_set_page (uint32_t *@var{pd}, void *@var{upage}, void *@var{kpage}, bool @var{writable})
+Adds to @var{pd} a mapping from page @var{upage} to the frame identified
+by kernel virtual address @var{kpage}.  If @var{writable} is true, the
+page is mapped read/write; otherwise, it is mapped read-only.
+
+Page @var{upage} must not already be mapped.  If it is, the kernel
+panics.
+
+Returns true if successful, false on failure.  Failure will occur if
+additional memory required for the page table cannot be obtained.
+@end deftypefun
+
+@deftypefun {void *} pagedir_get_page (uint32_t *@var{pd}, const void *@var{uaddr})
+Looks up the frame mapped to @var{upage} in @var{pd}.  Returns the
+kernel virtual address for that frame, if @var{upage} is mapped, or a
+null pointer if it is not.
+@end deftypefun
+
+@deftypefun void pagedir_clear_page (uint32_t *@var{pd}, void *@var{upage})
+Marks page @var{upage} ``not present'' in @var{pd}.  Later accesses to
+the page will fault.
+
+Other bits in the page table for @var{upage} are preserved, permitting
+the accessed and dirty bits (see the next section) to be checked.
+
+If @var{upage} is not mapped, this function has no effect.
+@end deftypefun
+
+@node Page Table Accessed and Dirty Bits
+@subsection Accessed and Dirty Bits
+
+80@var{x}86 hardware provides some assistance for implementing page
+replacement algorithms, through a pair of bits in the page table entry
+(PTE) for each page.  On any read or write to a page, the CPU sets the
+@dfn{accessed bit} to 1 in the page's PTE, and on any write, the CPU
+sets the @dfn{dirty bit} to 1.  The CPU never resets these bits to 0,
+but the OS may do so.
+
+Proper interpretation of these bits requires understanding of
+@dfn{aliases}, that is, two (or more) pages that refer to the same
+frame.  When an aliased frame is accessed, the accessed and dirty bits
+are updated in only one page table entry (the one for the page used for
+access).  The accessed and dirty bits for the other aliases are not
+updated.
+
+@xref{Accessed and Dirty Bits}, on applying these bits in implementing
+page replacement algorithms.
+
+@deftypefun bool pagedir_is_dirty (uint32_t *@var{pd}, const void *@var{page})
+@deftypefunx bool pagedir_is_accessed (uint32_t *@var{pd}, const void *@var{page})
+Returns true if page directory @var{pd} contains a page table entry for
+@var{page} that is marked dirty (or accessed).  Otherwise,
+returns false.
+@end deftypefun
+
+@deftypefun void pagedir_set_dirty (uint32_t *@var{pd}, const void *@var{page}, bool @var{value})
+@deftypefunx void pagedir_set_accessed (uint32_t *@var{pd}, const void *@var{page}, bool @var{value})
+If page directory @var{pd} has a page table entry for @var{page}, then
+its dirty (or accessed) bit is set to @var{value}.
+@end deftypefun
+
+@node Page Table Details
+@subsection Page Table Details
+
+The functions provided with Pintos are sufficient to implement the
+projects.  However, you may still find it worthwhile to understand the
+hardware page table format, so we'll go into a little detail in this
+section.
+
+@menu
+* Page Table Structure::        
+* Page Table Entry Format::     
+* Page Directory Entry Format::  
+@end menu
+
+@node Page Table Structure
+@subsubsection Structure
+
+The top-level paging data structure is a page called the ``page
+directory'' (PD) arranged as an array of 1,024 32-bit page directory
+entries (PDEs), each of which represents 4 MB of virtual memory.  Each
+PDE may point to the physical address of another page called a
+``page table'' (PT) arranged, similarly, as an array of 1,024
+32-bit page table entries (PTEs), each of which translates a single 4
+kB virtual page to a physical page.
+
+Translation of a virtual address into a physical address follows
+the three-step process illustrated in the diagram
+below:@footnote{Actually, virtual to physical translation on the
+80@var{x}86 architecture occurs via an intermediate ``linear
+address,'' but Pintos (and most modern 80@var{x}86 OSes) set up the CPU
+so that linear and virtual addresses are one and the same.  Thus, you
+can effectively ignore this CPU feature.}
+
+@enumerate 1
+@item
+The most-significant 10 bits of the virtual address (bits 22@dots{}31)
+index the page directory.  If the PDE is marked ``present,'' the
+physical address of a page table is read from the PDE thus obtained.
+If the PDE is marked ``not present'' then a page fault occurs.
+
+@item
+The next 10 bits of the virtual address (bits 12@dots{}21) index
+the page table.  If the PTE is marked ``present,'' the physical
+address of a data page is read from the PTE thus obtained.  If the PTE
+is marked ``not present'' then a page fault occurs.
+
+@item
+The least-significant 12 bits of the virtual address (bits 0@dots{}11)
+are added to the data page's physical base address, yielding the final
+physical address.
+@end enumerate
+
+@example
+@group
+ 31                  22 21                  12 11                   0
++----------------------+----------------------+----------------------+
+| Page Directory Index |   Page Table Index   |    Page Offset       |
++----------------------+----------------------+----------------------+
+             |                    |                     |
+     _______/             _______/                _____/
+    /                    /                       /
+   /    Page Directory  /      Page Table       /    Data Page
+  /     .____________. /     .____________.    /   .____________.
+  |1,023|____________| |1,023|____________|    |   |____________|
+  |1,022|____________| |1,022|____________|    |   |____________|
+  |1,021|____________| |1,021|____________|    \__\|____________|
+  |1,020|____________| |1,020|____________|       /|____________|
+  |     |            | |     |            |        |            |
+  |     |            | \____\|            |_       |            |
+  |     |      .     |      /|      .     | \      |      .     |
+  \____\|      .     |_      |      .     |  |     |      .     |
+       /|      .     | \     |      .     |  |     |      .     |
+        |      .     |  |    |      .     |  |     |      .     |
+        |            |  |    |            |  |     |            |
+        |____________|  |    |____________|  |     |____________|
+       4|____________|  |   4|____________|  |     |____________|
+       3|____________|  |   3|____________|  |     |____________|
+       2|____________|  |   2|____________|  |     |____________|
+       1|____________|  |   1|____________|  |     |____________|
+       0|____________|  \__\0|____________|  \____\|____________|
+                           /                      /
+@end group
+@end example
+
+Pintos provides some macros and functions that are useful for working
+with raw page tables:
+
+@defmac PTSHIFT
+@defmacx PTBITS
+The bit index (12) and number of bits (10), respectively, in a page table
+index within a virtual address.
+@end defmac
+
+@defmac PTMASK
+A bit mask with the bits in the page table index set to 1 and other bits
+set to 0.
+@end defmac
+
+@defmac PTSPAN
+The number of bytes of virtual address space that a single page table
+page covers (4,194,304 bytes, or 4 MB).
+@end defmac
+
+@defmac PDSHIFT
+@defmacx PDBITS
+The bit index (22) and number of bits (10), respectively, in a page
+directory index within a virtual address.
+@end defmac
+
+@defmac PDMASK
+A bit mask with the bits in the page directory index set to 1 and other
+bits set to 0.
+@end defmac
+
+@deftypefun uintptr_t pd_no (const void *@var{va})
+@deftypefunx uintptr_t pt_no (const void *@var{va})
+Returns the page directory index or page table index, respectively, for
+virtual address @var{va}.  These functions are defined in
+@file{threads/pte.h}.
+@end deftypefun
+
+@deftypefun unsigned pg_ofs (const void *@var{va})
+Returns the page offset for virtual address @var{va}.  This function is
+defined in @file{threads/vaddr.h}.
+@end deftypefun
+
+@node Page Table Entry Format
+@subsubsection Page Table Entry Format
+
+You do not need to understand the PTE format to do the Pintos
+projects, unless you wish to incorporate the page table into your
+segment table (@pxref{Managing the Segment Table}).
+
+The actual format of a page table entry is summarized below.  For
+complete information, refer to section 3.7, ``Page Translation Using
+32-Bit Physical Addressing,'' in @bibref{IA32-v3a}.
+
+@example
+@group
+ 31                                   12 11 9      6 5     2 1 0
++---------------------------------------+----+----+-+-+---+-+-+-+
+|           Physical Address            | AVL|    |D|A|   |U|W|P|
++---------------------------------------+----+----+-+-+---+-+-+-+
+@end group
+@end example
+
+Some more information on each bit is given below.  The names are
+@file{threads/pte.h} macros that represent the bits' values:
+
+@defmac PTE_P
+Bit 0, the ``present'' bit.  When this bit is 1, the
+other bits are interpreted as described below.  When this bit is 0, any
+attempt to access the page will page fault.  The remaining bits are then
+not used by the CPU and may be used by the OS for any purpose.
+@end defmac
+
+@defmac PTE_W
+Bit 1, the ``read/write'' bit.  When it is 1, the page
+is writable.  When it is 0, write attempts will page fault.
+@end defmac
+
+@defmac PTE_U
+Bit 2, the ``user/supervisor'' bit.  When it is 1, user
+processes may access the page.  When it is 0, only the kernel may access
+the page (user accesses will page fault).
+
+Pintos clears this bit in PTEs for kernel virtual memory, to prevent
+user processes from accessing them.
+@end defmac
+ 
+@defmac PTE_A
+Bit 5, the ``accessed'' bit.  @xref{Page Table Accessed
+and Dirty Bits}.
+@end defmac
+
+@defmac PTE_D
+Bit 6, the ``dirty'' bit.  @xref{Page Table Accessed and
+Dirty Bits}.
+@end defmac
+
+@defmac PTE_AVL
+Bits 9@dots{}11, available for operating system use.
+Pintos, as provided, does not use them and sets them to 0.
+@end defmac
+
+@defmac PTE_ADDR
+Bits 12@dots{}31, the top 20 bits of the physical address of a frame.
+The low 12 bits of the frame's address are always 0.
+@end defmac
+
+Other bits are either reserved or uninteresting in a Pintos context and
+should be set to@tie{}0.
+
+Header @file{threads/pte.h} defines three functions for working with
+page table entries:
+
+@deftypefun uint32_t pte_create_kernel (uint32_t *@var{page}, bool @var{writable})
+Returns a page table entry that points to @var{page}, which should be a
+kernel virtual address.  The PTE's present bit will be set.  It will be
+marked for kernel-only access.  If @var{writable} is true, the PTE will
+also be marked read/write; otherwise, it will be read-only.
+@end deftypefun
+
+@deftypefun uint32_t pte_create_user (uint32_t *@var{page}, bool @var{writable})
+Returns a page table entry that points to @var{page}, which should be
+the kernel virtual address of a frame in the user pool (@pxref{Why
+PAL_USER?}).  The PTE's present bit will be set and it will be marked to
+allow user-mode access.  If @var{writable} is true, the PTE will also be
+marked read/write; otherwise, it will be read-only.
+@end deftypefun
+
+@deftypefun {void *} pte_get_page (uint32_t @var{pte})
+Returns the kernel virtual address for the frame that @var{pte} points
+to.  The @var{pte} may be present or not-present; if it is not-present
+then the pointer return is only meaningful if the proper bits in the PTE
+actually represent a physical address.
+@end deftypefun
+
+@node Page Directory Entry Format
+@subsubsection Page Directory Entry Format
+
+Page directory entries have the same format as PTEs, except that the
+physical address points to a page table page instead of a frame.  Header
+@file{threads/pte.h} defines two functions for working with page
+directory entries:
+
+@deftypefun uint32_t pde_create (uint32_t *@var{pt})
+Returns a page directory that points to @var{page}, which should be the
+kernel virtual address of a page table page.  The PDE's present bit will
+be set, it will be marked to allow user-mode access, and it will be
+marked read/write.
+@end deftypefun
+
+@deftypefun {uint32_t *} pde_get_pt (uint32_t @var{pde})
+Returns the kernel virtual address for the page table page that
+@var{pde} points to.  The @var{pde} must be marked present.
+@end deftypefun
+
+@node Hash Table
+@section Hash Table
 
 Pintos provides a hash table data structure in @file{lib/kernel/hash.c}.
 To use it you will need to manually include its header file,
@@ -1312,6 +1731,10 @@ To use it you will need to manually include its header file,
 no code provided with Pintos uses the hash table, which means that you
 are free to use it as is, modify its implementation for your own
 purposes, or ignore it, as you wish.
+
+Most implementations of the virtual memory project use a hash table to
+translate pages to frames.  You may find other uses for hash tables as
+well.
 
 @menu
 * Hash Data Types::             
@@ -1324,20 +1747,20 @@ purposes, or ignore it, as you wish.
 @end menu
 
 @node Hash Data Types
-@subsubsection Data Types
+@subsection Data Types
 
 A hash table is represented by @struct{hash}.
 
-@deftp {Type} {@struct{hash}}
+@deftp {Type} {struct hash}
 Represents an entire hash table.  The actual members of @struct{hash}
 are ``opaque.''  That is, code that uses a hash table should not access
 @struct{hash} members directly, nor should it need to.  Instead, use
 hash table functions and macros.
 @end deftp
 
-The hash table operates on elements of type @struct{hash_elem}.  
+The hash table operates on elements of type @struct{hash_elem}.
 
-@deftp {Type} {@struct{hash_elem}}
+@deftp {Type} {struct hash_elem}
 Embed a @struct{hash_elem} member in the structure you want to include
 in a hash table.  Like @struct{hash}, @struct{hash_elem} is opaque.
 All functions for operating on hash table elements actually take and
@@ -1392,7 +1815,7 @@ hash} for 32-bit words.
 Returns a hash of null-terminated string @var{s}.
 @end deftypefun
 
-@deftypefun unsigned hash_int (int @var{i}) 
+@deftypefun unsigned hash_int (int @var{i})
 Returns a hash of integer @var{i}.
 @end deftypefun
 
@@ -1428,7 +1851,7 @@ Performs some kind of action, chosen by the caller, on @var{element}.
 @end deftp
 
 @node Basic Hash Functions
-@subsubsection Basic Functions
+@subsection Basic Functions
 
 These functions create and destroy hash tables and obtain basic
 information about their contents.
@@ -1476,7 +1899,7 @@ false if @var{hash} contains at least one element.
 @end deftypefun
 
 @node Hash Search Functions
-@subsubsection Search Functions
+@subsection Search Functions
 
 Each of these functions searches a hash table for an element that
 compares equal to one provided.  Based on the success of the search,
@@ -1530,7 +1953,7 @@ must @func{free} the element after it is no longer needed.
 @end deftypefun
 
 @node Hash Iteration Functions
-@subsubsection Iteration Functions
+@subsection Iteration Functions
 
 These functions allow iterating through the elements in a hash table.
 Two interfaces are supplied.  The first requires writing and supplying a
@@ -1558,7 +1981,7 @@ while (hash_next (&i))
   @}
 @end example
 
-@deftp {Type} {@struct{hash_iterator}}
+@deftp {Type} {struct hash_iterator}
 Represents a position within a hash table.  Calling any function that
 may modify a hash table, such as @func{hash_insert} or
 @func{hash_delete}, invalidates all iterators within that hash table.
@@ -1586,7 +2009,7 @@ called for the first time.
 @end deftypefun
 
 @node Hash Table Example
-@subsubsection Hash Table Example
+@subsection Hash Table Example
 
 Suppose you have a structure, called @struct{page}, that you
 want to put into a hash table.  First, define @struct{page} to include a
@@ -1608,7 +2031,7 @@ operator works fine for comparing pointers:
 @example
 /* @r{Returns a hash value for page @var{p}.} */
 unsigned
-page_hash (const struct hash_elem *p_, void *aux UNUSED) 
+page_hash (const struct hash_elem *p_, void *aux UNUSED)
 @{
   const struct page *p = hash_entry (p_, struct page, hash_elem);
   return hash_bytes (&p->addr, sizeof p->addr);
@@ -1617,11 +2040,11 @@ page_hash (const struct hash_elem *p_, void *aux UNUSED)
 /* @r{Returns true if page @var{a} precedes page @var{b}.} */
 bool
 page_less (const struct hash_elem *a_, const struct hash_elem *b_,
-           void *aux UNUSED) 
+           void *aux UNUSED)
 @{
   const struct page *a = hash_entry (a_, struct page, hash_elem);
   const struct page *b = hash_entry (b_, struct page, hash_elem);
-  
+
   return a->addr < b->addr;
 @}
 @end example
@@ -1662,7 +2085,7 @@ scope:
 /* @r{Returns the page containing the given virtual @var{address},
    or a null pointer if no such page exists.} */
 struct page *
-page_lookup (const void *address) 
+page_lookup (const void *address)
 @{
   struct page p;
   struct hash_elem *e;
@@ -1682,7 +2105,7 @@ A similar function could delete a page by address using
 @func{hash_delete}.
 
 @node Hash Auxiliary Data
-@subsubsection Auxiliary Data
+@subsection Auxiliary Data
 
 In simple cases like the example above, there's no need for the
 @var{aux} parameters.  In these cases, just pass a null pointer to
@@ -1700,7 +2123,7 @@ themselves don't indicate what that fixed length is, you could pass
 the length as an @var{aux} parameter.
 
 @node Hash Synchronization
-@subsubsection Synchronization
+@subsection Synchronization
 
 The hash table does not do any internal synchronization.  It is the
 caller's responsibility to synchronize calls to hash table functions.
@@ -1715,7 +2138,3 @@ It is also the caller's responsibility to synchronize access to data in
 hash table elements.  How to synchronize access to this data depends on
 how it is designed and organized, as with any other data structure.
 
-@node File Systems Tour
-@section File Systems Project
-
-No tour for this project is available.

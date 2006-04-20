@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <string.h>
 #include "threads/init.h"
-#include "threads/mmu.h"
+#include "threads/pte.h"
 #include "threads/palloc.h"
 
 static uint32_t *active_pd (void);
@@ -34,13 +34,13 @@ pagedir_destroy (uint32_t *pd)
 
   ASSERT (pd != base_page_dir);
   for (pde = pd; pde < pd + pd_no (PHYS_BASE); pde++)
-    if (*pde & PG_P) 
+    if (*pde & PTE_P) 
       {
         uint32_t *pt = pde_get_pt (*pde);
         uint32_t *pte;
         
         for (pte = pt; pte < pt + PGSIZE / sizeof *pte; pte++)
-          if (*pte & PG_P) 
+          if (*pte & PTE_P) 
             palloc_free_page (pte_get_page (*pte));
         palloc_free_page (pt);
       }
@@ -110,7 +110,7 @@ pagedir_set_page (uint32_t *pd, void *upage, void *kpage, bool writable)
 
   if (pte != NULL) 
     {
-      ASSERT ((*pte & PG_P) == 0);
+      ASSERT ((*pte & PTE_P) == 0);
       *pte = pte_create_user (kpage, writable);
       return true;
     }
@@ -130,7 +130,7 @@ pagedir_get_page (uint32_t *pd, const void *uaddr)
   ASSERT (is_user_vaddr (uaddr));
   
   pte = lookup_page (pd, uaddr, false);
-  if (pte != NULL && (*pte & PG_P) != 0)
+  if (pte != NULL && (*pte & PTE_P) != 0)
     return pte_get_page (*pte) + pg_ofs (uaddr);
   else
     return NULL;
@@ -149,9 +149,9 @@ pagedir_clear_page (uint32_t *pd, void *upage)
   ASSERT (is_user_vaddr (upage));
 
   pte = lookup_page (pd, upage, false);
-  if (pte != NULL && (*pte & PG_P) != 0)
+  if (pte != NULL && (*pte & PTE_P) != 0)
     {
-      *pte &= ~PG_P;
+      *pte &= ~PTE_P;
       invalidate_pagedir (pd);
     }
 }
@@ -164,7 +164,7 @@ bool
 pagedir_is_dirty (uint32_t *pd, const void *vpage) 
 {
   uint32_t *pte = lookup_page (pd, vpage, false);
-  return pte != NULL && (*pte & PG_D) != 0;
+  return pte != NULL && (*pte & PTE_D) != 0;
 }
 
 /* Set the dirty bit to DIRTY in the PTE for virtual page VPAGE
@@ -176,10 +176,10 @@ pagedir_set_dirty (uint32_t *pd, const void *vpage, bool dirty)
   if (pte != NULL) 
     {
       if (dirty)
-        *pte |= PG_D;
+        *pte |= PTE_D;
       else 
         {
-          *pte &= ~(uint32_t) PG_D;
+          *pte &= ~(uint32_t) PTE_D;
           invalidate_pagedir (pd);
         }
     }
@@ -193,7 +193,7 @@ bool
 pagedir_is_accessed (uint32_t *pd, const void *vpage) 
 {
   uint32_t *pte = lookup_page (pd, vpage, false);
-  return pte != NULL && (*pte & PG_A) != 0;
+  return pte != NULL && (*pte & PTE_A) != 0;
 }
 
 /* Sets the accessed bit to ACCESSED in the PTE for virtual page
@@ -205,10 +205,10 @@ pagedir_set_accessed (uint32_t *pd, const void *vpage, bool accessed)
   if (pte != NULL) 
     {
       if (accessed)
-        *pte |= PG_A;
+        *pte |= PTE_A;
       else 
         {
-          *pte &= ~(uint32_t) PG_A; 
+          *pte &= ~(uint32_t) PTE_A; 
           invalidate_pagedir (pd);
         }
     }

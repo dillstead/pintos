@@ -1,4 +1,4 @@
-@node Project 2--User Programs, Project 3--Virtual Memory, Project 1--Threads, Top
+@node Project 2--User Programs
 @chapter Project 2: User Programs
 
 Now that you've worked with Pintos and are becoming familiar with its
@@ -10,12 +10,12 @@ is possible.  In this project, you will enable programs to interact with
 the OS via system calls.
 
 You will be working out of the @file{userprog} directory for this
-assignment.  However, you will also be interacting with almost every
-other part of the code for this assignment. We will describe the
+assignment, but you will also be interacting with almost every
+other part of Pintos.  We will describe the
 relevant parts below.
 
 You can build project 2 on top of your project 1 submission or you can
-start with a fresh copy.  No code from project 1 is required for this
+start fresh.  No code from project 1 is required for this
 assignment.  The ``alarm clock'' functionality may be useful in
 projects 3 and 4, but it is not strictly required.
 
@@ -41,7 +41,7 @@ of the operating system kernel.  This means, for example, that all the
 test code from the last assignment ran as part of the kernel, with
 full access to privileged parts of the system.  Once we start running
 user programs on top of the operating system, this is no longer true.
-This project deals with consequences of the change.
+This project deals with the consequences.
 
 We allow more than one process to run at a time.  Each process has one
 thread (multithreaded processes are not supported).  User programs are
@@ -81,9 +81,10 @@ Loads ELF binaries and starts processes.
 
 @item pagedir.c
 @itemx pagedir.h
-A simple manager for 80@var{x}86 page directories and page tables.
+A simple manager for 80@var{x}86 hardware page tables.
 Although you probably won't want to modify this code for this project,
 you may want to call some of its functions.
+@xref{Page Tables}, for more information.
 
 @item syscall.c
 @itemx syscall.h
@@ -97,9 +98,9 @@ else needed by system calls.
 @itemx exception.h
 When a user process performs a privileged or prohibited operation, it
 traps into the kernel as an ``exception'' or ``fault.''@footnote{We
-will treat these terms as synonymous.  There is no standard
-distinction between them, although Intel processor manuals define
-them slightly differently on 80@var{x}86.}  These files handle
+will treat these terms as synonyms.  There is no standard
+distinction between them, although Intel processor manuals make 
+a minor distinction between them on 80@var{x}86.}  These files handle
 exceptions.  Currently all exceptions simply print a message and
 terminate the process.  Some, but not all, solutions to project 2
 require modifying @func{page_fault} in this file.
@@ -108,16 +109,16 @@ require modifying @func{page_fault} in this file.
 @itemx gdt.h
 The 80@var{x}86 is a segmented architecture.  The Global Descriptor
 Table (GDT) is a table that describes the segments in use.  These
-files set up the GDT.  @strong{You should not need to modify these
-files for any of the projects.}  You can read the code if
+files set up the GDT.  You should not need to modify these
+files for any of the projects.  You can read the code if
 you're interested in how the GDT works.
 
 @item tss.c
 @itemx tss.h
 The Task-State Segment (TSS) is used for 80@var{x}86 architectural
 task switching.  Pintos uses the TSS only for switching stacks when a
-user process enters an interrupt handler, as does Linux.  @strong{You
-should not need to modify these files for any of the projects.}
+user process enters an interrupt handler, as does Linux.  You
+should not need to modify these files for any of the projects.
 You can read the code if you're interested in how the TSS
 works.
 @end table
@@ -125,11 +126,13 @@ works.
 @node Using the File System
 @subsection Using the File System
 
-You will need to use some file system code for this project.  First,
-user programs are loaded from the file system.  Second, many of the
+You will need to interface to the file system code for this project,
+because
+user programs are loaded from the file system and many of the
 system calls you must implement deal with the file system.  However,
-the focus of this project is not on the file system code, so we have
-provided a simple file system in the @file{filesys} directory.  You
+the focus of this project is not the file system, so we have
+provided a simple but complete file system in the @file{filesys}
+directory.  You
 will want to look over the @file{filesys.h} and @file{file.h}
 interfaces to understand how to use the file system, and especially
 its many limitations.
@@ -140,13 +143,13 @@ distract you from this project's focus.
 
 Proper use of the file system routines now
 will make life much easier for project 4, when you improve the file
-system implementation.  Until then, you will have to put up with the
+system implementation.  Until then, you will have to tolerate the
 following limitations:
 
 @itemize @bullet
 @item
-No synchronization.  Concurrent accesses will interfere with one
-another.  You should use a lock to ensure that only one process at a
+No internal synchronization.  Concurrent accesses will interfere with one
+another.  You should use synchronization to ensure that only one process at a
 time is executing file system code.
 
 @item
@@ -179,13 +182,13 @@ One important feature is included:
 Unix-like semantics for @func{filesys_remove} are implemented.
 That is, if a file is open when it is removed, its blocks
 are not deallocated and it may still be accessed by any
-threads that have it open until the last one closes it.  @xref{Removing
+threads that have it open, until the last one closes it.  @xref{Removing
 an Open File}, for more information.
 @end itemize
 
 You need to be able to create simulated disks.  The
 @command{pintos-mkdisk} program provides this functionality.  From the
-@file{userprog/build} directory, execute @code{pintos-mkdisk fs.dsk 2}.
+@file{userprog/build} directory, execute @code{pintos-mkdisk fs.dsk@tie{}2}.
 This command creates a 2 MB simulated disk named @file{fs.dsk}.  Then
 format the disk by passing @option{-f -q} on the kernel's command
 line: @code{pintos -f -q}.  The @option{-f} option causes the disk to be
@@ -206,13 +209,13 @@ commands for copying files out of a VM are similar, but substitute
 Incidentally, these commands work by passing special commands
 @command{put} and @command{get} on the kernel's command line and copying
 to and from a special simulated ``scratch'' disk.  If you're very
-curious, you can look at the @command{pintos} program as well as
+curious, you can look at the @command{pintos} script as well as
 @file{filesys/fsutil.c} to learn the implementation details.
 
 Here's a summary of how to create and format a disk, copy the
 @command{echo} program into the new disk, and then run @command{echo},
 passing argument @code{x}.  (Argument passing won't work until
-you've implemented it.)  It assumes
+you implemented it.)  It assumes
 that you've already built the
 examples in @file{examples} and that the current directory is
 @file{userprog/build}:
@@ -250,8 +253,7 @@ You can delete a file from the Pintos file system using the @code{rm
 @node How User Programs Work
 @subsection How User Programs Work
 
-Pintos can run normal C programs.  In fact, Pintos can run any program
-you want, as long as it's compiled into the proper file format and uses
+Pintos can run normal C programs, as long as they fit into memory and use
 only the system calls you implement.  Notably, @func{malloc} cannot be
 implemented because none of the system calls required for this project
 allow for memory allocation.  Pintos also can't run programs that use
@@ -261,7 +263,8 @@ processor's floating-point unit when switching threads.
 The @file{src/examples} directory contains a few sample user
 programs.  The @file{Makefile} in this directory
 compiles the provided examples, and you can edit it
-compile your own programs as well.
+compile your own programs as well.  Some of the example programs will
+only work once projects 3 or 4 have been implemented.
 
 Pintos can load @dfn{ELF} executables with the loader provided for you
 in @file{userprog/process.c}.  ELF is a file format used by Linux,
@@ -272,7 +275,7 @@ for Pintos.  (We've provided compilers and linkers that should do just
 fine.)
 
 You should realize immediately that, until you copy a
-test program to the emulated disk, Pintos will be unable to do
+test program to the simulated disk, Pintos will be unable to do
 useful work.  You won't be able to do
 interesting things until you copy a variety of programs to the disk.
 You might want to create a clean reference disk and copy that
@@ -285,7 +288,7 @@ which may happen occasionally while debugging.
 Virtual memory in Pintos is divided into two regions: user virtual
 memory and kernel virtual memory.  User virtual memory ranges from
 virtual address 0 up to @code{PHYS_BASE}, which is defined in
-@file{threads/mmu.h} and defaults to @t{0xc0000000} (3 GB).  Kernel
+@file{threads/vaddr.h} and defaults to @t{0xc0000000} (3 GB).  Kernel
 virtual memory occupies the rest of the virtual address space, from
 @code{PHYS_BASE} up to 4 GB.
 
@@ -294,7 +297,7 @@ When the kernel switches from one process to another, it
 also switches user virtual address spaces by changing the processor's
 page directory base register (see @func{pagedir_activate} in
 @file{userprog/pagedir.c}).  @struct{thread} contains a pointer to a
-process's page directory.
+process's page table.
 
 Kernel virtual memory is global.  It is always mapped the same way,
 regardless of what user process or kernel thread is running.  In
@@ -311,12 +314,13 @@ access kernel virtual memory causes a page fault, handled by
 will be terminated.  Kernel threads can access both kernel virtual
 memory and, if a user process is running, the user virtual memory of
 the running process.  However, even in the kernel, an attempt to
-access memory at a user virtual address that doesn't have a page
-mapped into it will cause a page fault.
+access memory at an unmapped user virtual address
+will cause a page fault.
 
 You must handle memory fragmentation gracefully, that is, a process that
 needs @var{N} pages of user virtual memory must not require those pages
-to be contiguous in kernel virtual memory.
+to be contiguous in physical memory (or, equivalently, in kernel virtual
+memory).
 
 @menu
 * Typical Memory Layout::       
@@ -403,7 +407,7 @@ There are at least two reasonable ways to do this correctly.  The
 first method is to verify
 the validity of a user-provided pointer, then dereference it.  If you
 choose this route, you'll want to look at the functions in
-@file{userprog/pagedir.c} and in @file{threads/mmu.h}.  This is the
+@file{userprog/pagedir.c} and in @file{threads/vaddr.h}.  This is the
 simplest way to handle user memory access.
 
 The second method is to check only that a user
@@ -416,7 +420,7 @@ used in real kernels (including Linux).
 
 In either case, you need to make sure not to ``leak'' resources.  For
 example, suppose that your system call has acquired a lock or
-allocated a page of memory.  If you encounter an invalid user pointer
+allocated memory with @func{malloc}.  If you encounter an invalid user pointer
 afterward, you must still be sure to release the lock or free the page
 of memory.  If you choose to verify user pointers before dereferencing
 them, this should be straightforward.  It's more difficult to handle
@@ -585,11 +589,11 @@ need to set up the stack.
 Implement the system call handler in @file{userprog/syscall.c}.  The
 skeleton implementation we provide ``handles'' system calls by
 terminating the process.  It will need to retrieve the system call
-number, then any system call arguments, and carry appropriate actions.
+number, then any system call arguments, and carry out appropriate actions.
 
 Implement the following system calls.  The prototypes listed are those
 seen by a user program that includes @file{lib/user/syscall.h}.  (This
-header and all other files in @file{lib/user} are for use by user
+header, and all others in @file{lib/user}, are for use by user
 programs only.)  System call numbers for each system call are defined in
 @file{lib/syscall-nr.h}:
 
@@ -642,20 +646,19 @@ when called from @var{A}, even if @var{B} is dead.
 Consider all the ways a wait can occur: nested waits (@var{A} waits
 for @var{B}, then @var{B} waits for @var{C}), multiple waits (@var{A}
 waits for @var{B}, then @var{A} waits for @var{C}), and so on.
+
+Implementing this system call requires considerably more work than any
+of the rest.
 @end deftypefn
 
 @deftypefn {System Call} bool create (const char *@var{file}, unsigned @var{initial_size})
 Creates a new file called @var{file} initially @var{initial_size} bytes
 in size.  Returns true if successful, false otherwise.
-
-Consider implementing this function in terms of @func{filesys_create}.
 @end deftypefn
 
 @deftypefn {System Call} bool remove (const char *@var{file})
 Deletes the file called @var{file}.  Returns true if successful, false
 otherwise.
-
-Consider implementing this function in terms of @func{filesys_remove}.
 @end deftypefn
 
 @deftypefn {System Call} int open (const char *@var{file})
@@ -664,21 +667,17 @@ called a ``file descriptor'' (fd), or -1 if the file could not be
 opened.  
 
 File descriptors numbered 0 and 1 are reserved for the console: fd 0
-is standard input (@code{stdin}), fd 1 is standard output
-(@code{stdout}).  The @code{open} system call will never return either
+(@code{STDIN_FILENO}) is standard input, fd 1 (@code{STDOUT_FILENO}) is
+standard output.  The @code{open} system call will never return either
 of these file descriptors, which are valid as system call arguments only
 as explicitly described below.
 
 Each process has an independent set of file descriptors.  File
 descriptors are not inherited by child processes.
-
-Consider implementing this function in terms of @func{filesys_open}.
 @end deftypefn
 
 @deftypefn {System Call} int filesize (int @var{fd})
 Returns the size, in bytes, of the file open as @var{fd}.
-
-Consider implementing this function in terms of @func{file_length}.
 @end deftypefn
 
 @deftypefn {System Call} int read (int @var{fd}, void *@var{buffer}, unsigned @var{size})
@@ -688,8 +687,6 @@ file), or -1 if the file could not be read (due to a condition other
 than end of file).  Fd 0 reads from the keyboard using
 @func{kbd_getc}.  (Keyboard input will not work if you pass the
 @option{-v} option to @command{pintos}.)
-
-Consider implementing this function in terms of @func{file_read}.
 @end deftypefn
 
 @deftypefn {System Call} int write (int @var{fd}, const void *@var{buffer}, unsigned @var{size})
@@ -708,8 +705,6 @@ long as @var{size} is not bigger than a few hundred bytes.  (It is
 reasonable to break up larger buffers.)  Otherwise,
 lines of text output by different processes may end up interleaved on
 the console, confusing both human readers and our grading scripts.
-
-Consider implementing this function in terms of @func{file_write}.
 @end deftypefn
 
 @deftypefn {System Call} void seek (int @var{fd}, unsigned @var{position})
@@ -724,23 +719,17 @@ have a fixed length until project 4 is complete, so writes past end of
 file will return an error.)  These semantics are implemented in the
 file system and do not require any special effort in system call
 implementation.
-
-Consider implementing this function in terms of @func{file_seek}.
 @end deftypefn
 
 @deftypefn {System Call} unsigned tell (int @var{fd})
 Returns the position of the next byte to be read or written in open
 file @var{fd}, expressed in bytes from the beginning of the file.
-
-Consider implementing this function in terms of @func{file_tell}.
 @end deftypefn
 
 @deftypefn {System Call} void close (int @var{fd})
 Closes file descriptor @var{fd}.  
 Exiting or terminating a process implicitly closes all its open file
 descriptors, as if by calling this function for each one.
-
-Consider implementing this function in terms of @func{file_close}.
 @end deftypefn
 
 The file defines other syscalls.  Ignore them for now.  You will
@@ -757,17 +746,16 @@ pointer, a pointer into kernel memory, or a block
 partially in one of those regions?  You should handle these cases by
 terminating the user process.  We recommend
 writing and testing this code before implementing any other system
-call functionality.
+call functionality.  @xref{Accessing User Memory}, for more information.
 
 You must synchronize system calls so that
 any number of user processes can make them at once.  In particular, it
 is not safe to call into the file system code provided in the
-@file{filesys} directory from multiple threads at once.  For now, we
-recommend adding a single lock that controls access to the file system
-code.  You should acquire this lock before calling any functions in
-the @file{filesys} directory, and release it afterward.  Don't forget
-that @func{process_execute} also accesses files.  @strong{For now, we
-recommend against modifying code in the @file{filesys} directory.}
+@file{filesys} directory from multiple threads at once.  Your system
+call implementation must treat the file system code as a critical
+section.  Don't forget
+that @func{process_execute} also accesses files.  For now, we
+recommend against modifying code in the @file{filesys} directory.
 
 We have provided you a user-level function for each system call in
 @file{lib/user/syscall.c}.  These provide a way for user processes to
@@ -801,7 +789,7 @@ hurt even now.
 You can use @func{file_deny_write} to prevent writes to an open file.
 Calling @func{file_allow_write} on the file will re-enable them (unless
 the file is denied writes by another opener).  Closing a file will also
-re-enable writes.  Thus, to deny writes to process's executable, you
+re-enable writes.  Thus, to deny writes to a process's executable, you
 must keep it open as long as the process is still running.
 
 @node Project 2 FAQ
@@ -880,6 +868,7 @@ programs or object files.  Invoke it as @code{objdump -d
 (@pxref{GDB}).
 
 @item Why do many C include files not work in Pintos programs?
+@itemx Can I use lib@var{foo} in my Pintos programs?
 
 The C library we provide is very limited.  It does not include many of
 the features that are expected of a real operating system's C library.
@@ -888,9 +877,7 @@ architecture), since it must make system calls for I/O and memory
 allocation.  (Not all functions do, of course, but usually the library
 is compiled as a unit.)
 
-@item Can I use lib@var{foo} in my Pintos programs?
-
-The chances are good that lib@var{foo} uses parts of the C library
+The chances are good that the library you want uses parts of the C library
 that Pintos doesn't implement.  It will probably take at least some
 porting effort to make it work under Pintos.  Notably, the Pintos
 user program C library does not have a @func{malloc} implementation.
@@ -919,9 +906,10 @@ You can choose whatever suitable types you like for @code{tid_t} and
 a one-to-one mapping, so that the same values in both identify the
 same process, or you can use a more complex mapping.  It's up to you.
 
-@item Keyboard input doesn't work with @command{pintos} option @option{-v}.
+@item Keyboard input doesn't work.
 
-Serial input isn't implemented.  Don't use @option{-v} if you
+You are probably passing @option{-v} to @command{pintos}, but
+serial input isn't implemented.  Don't use @option{-v} if you
 want to use the shell or otherwise need keyboard input.
 @end table
 
@@ -934,12 +922,12 @@ want to use the shell or otherwise need keyboard input.
 @subsection Argument Passing FAQ
 
 @table @asis
-@item Isn't the top of stack off the top of user virtual memory?
+@item Isn't the top of stack in kernel virtual memory?
 
 The top of stack is at @code{PHYS_BASE}, typically @t{0xc0000000}, which
 is also where kernel virtual memory starts.
-But when the processor pushes data on the stack, it decrements the stack
-pointer first.  Thus, the first (4-byte) value pushed on the stack
+But before the processor pushes data on the stack, it decrements the stack
+pointer.  Thus, the first (4-byte) value pushed on the stack
 will be at address @t{0xbffffffc}.
 
 @item Is @code{PHYS_BASE} fixed?
@@ -991,15 +979,19 @@ better solution.
 This section summarizes important points of the convention used for
 normal function calls on 32-bit 80@var{x}86 implementations of Unix.
 Some details are omitted for brevity.  If you do want all the details,
-you can refer to @bibref{SysV-i386}.
+refer to @bibref{SysV-i386}.
 
-The basic calling convention works like this:
+The calling convention works like this:
 
 @enumerate 1
 @item
 The caller pushes each of the function's arguments on the stack one by
 one, normally using the @code{PUSH} assembly language instruction.
 Arguments are pushed in right-to-left order.
+
+The stack grows downward: each push decrements the stack pointer, then
+stores into the location it now points to, like the C expression
+@samp{*--sp = @var{value}}.
 
 @item
 The caller pushes the address of its next instruction (the @dfn{return
@@ -1026,7 +1018,7 @@ The caller pops the arguments off the stack.
 Consider a function @func{f} that takes three @code{int} arguments.
 This diagram shows a sample stack frame as seen by the callee at the
 beginning of step 3 above, supposing that @func{f} is invoked as
-@code{f(1, 2, 3)}.  The stack addresses are arbitrary:
+@code{f(1, 2, 3)}.  The initial stack address is arbitrary:
 
 @html
 <CENTER>
@@ -1034,11 +1026,8 @@ beginning of step 3 above, supposing that @func{f} is invoked as
 @example
                              +----------------+
                   0xbffffe7c |        3       |
-                             +----------------+
                   0xbffffe78 |        2       |
-                             +----------------+
                   0xbffffe74 |        1       |
-                             +----------------+
 stack pointer --> 0xbffffe70 | return address |
                              +----------------+
 @end example
@@ -1067,14 +1056,15 @@ _start (int argc, char *argv[])
 @}
 @end example
 
-The kernel is responsible for setting up the arguments for the initial
-function on the stack, in accordance with the calling convention
-explained in the preceding section, before it allows the user program to
-begin executing.
+The kernel must put the arguments for the initial function on the stack
+before it allows the user program to begin executing.  The arguments are
+passed in the same way as the normal calling convention (@pxref{80x86
+Calling Convention}).
 
-Consider the following example command: @samp{/bin/ls -l foo bar}.
-First, the kernel must break the command into words, as @samp{/bin/ls},
-@samp{-l}, @samp{foo}, and @samp{bar}, and place them at the top of the
+Consider how to handle arguments for the following example command:
+@samp{/bin/ls -l foo bar}.
+First, break the command into words: @samp{/bin/ls},
+@samp{-l}, @samp{foo}, @samp{bar}.  Place the words at the top of the
 stack.  Order doesn't matter, because they will be referenced through
 pointers.
 
@@ -1122,7 +1112,7 @@ In this example, the stack pointer would be initialized to
 
 As shown above, your code should start the stack at the very top of
 the user virtual address space, in the page just below virtual address
-@code{PHYS_BASE} (defined in @file{threads/mmu.h}).
+@code{PHYS_BASE} (defined in @file{threads/vaddr.h}).
 
 You may find the non-standard @func{hex_dump} function, declared in
 @file{<stdio.h>}, useful for debugging your argument passing code.
@@ -1155,7 +1145,7 @@ is handled in the same way as other software exceptions.  In Pintos,
 user programs invoke @samp{int $0x30} to make a system call.  The
 system call number and any additional arguments are expected to be
 pushed on the stack in the normal fashion before invoking the
-interrupt.
+interrupt (@pxref{80x86 Calling Convention}).
 
 Thus, when the system call handler @func{syscall_handler} gets control,
 the system call number is in the 32-bit word at the caller's stack

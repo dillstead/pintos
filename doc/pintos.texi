@@ -41,6 +41,7 @@
 @author by Ben Pfaff
 @end titlepage
 
+@shortcontents
 @contents
 
 @ifnottex
@@ -50,30 +51,30 @@
 
 @menu
 * Introduction::                
-* Pintos Tour::
 * Project 1--Threads::          
 * Project 2--User Programs::    
 * Project 3--Virtual Memory::   
 * Project 4--File Systems::     
-* References::
+* Reference Guide::
 * 4.4BSD Scheduler::  
 * Coding Standards::            
 * Project Documentation::       
 * Debugging Tools::             
 * Development Tools::
+* Bibliography::
 @end menu
 
 @include intro.texi
-@include tour.texi
 @include threads.texi
 @include userprog.texi
 @include vm.texi
 @include filesys.texi
-@include references.texi
+@include reference.texi
 @include 44bsd.texi
 @include standards.texi
 @include doc.texi
 @include debug.texi
 @include devel.texi
+@include bibliography.texi
 
 @bye

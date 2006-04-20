@@ -1,4 +1,4 @@
-@node Introduction, Pintos Tour, Top, Top
+@node Introduction
 @chapter Introduction
 
 Welcome to Pintos.  Pintos is a simple operating system framework for
@@ -531,16 +531,14 @@ work.
 
 The original structure and form of Pintos was inspired by the Nachos
 instructional operating system from the University of California,
-Berkeley.  A few of the source files were originally more-or-less
-literal translations of the Nachos C++ code into C.  These files bear
-the original UCB license notice.
+Berkeley.
 
 A few of the Pintos source files are derived from code used in the
 Massachusetts Institute of Technology's 6.828 advanced operating systems
 course.  These files bear the original MIT license notice.
 
 The Pintos projects and documentation originated with those designed for
-Nachos by current and former CS140 teaching assistants at Stanford
+Nachos by current and former CS 140 teaching assistants at Stanford
 University, including at least Yu Ping, Greg Hutchins, Kelly Shaw, Paul
 Twohey, Sameer Qureshi, and John Rector.
 

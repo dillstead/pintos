@@ -1,5 +1,5 @@
-@node References, 4.4BSD Scheduler, Project 4--File Systems, Top
-@appendix References
+@node Bibliography
+@unnumbered Bibliography
 
 @macro bibdfn{cite}
 @noindent @anchor{\cite\}

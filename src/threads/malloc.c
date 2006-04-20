@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "threads/mmu.h"
 #include "threads/palloc.h"
 #include "threads/synch.h"
+#include "threads/vaddr.h"
 
 /* A simple implementation of malloc().
 

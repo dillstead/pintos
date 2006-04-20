@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <string.h>
 #include "threads/io.h"
-#include "threads/mmu.h"
 #include "threads/interrupt.h"
+#include "threads/vaddr.h"
 
 /* VGA text screen support.  See [FREEVGA] for more information. */
 

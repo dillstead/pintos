@@ -2,8 +2,8 @@
 #include <debug.h>
 #include <stddef.h>
 #include "userprog/gdt.h"
-#include "threads/mmu.h"
 #include "threads/palloc.h"
+#include "threads/vaddr.h"
 
 /* The Task-State Segment (TSS).
 

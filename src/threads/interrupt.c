@@ -6,8 +6,8 @@
 #include "threads/flags.h"
 #include "threads/intr-stubs.h"
 #include "threads/io.h"
-#include "threads/mmu.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 #include "devices/timer.h"
 
 /* Number of x86 interrupts. */

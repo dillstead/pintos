@@ -1,4 +1,4 @@
-@node 4.4BSD Scheduler, Coding Standards, References, Top
+@node 4.4BSD Scheduler
 @appendix 4.4@acronym{BSD} Scheduler
 
 @iftex

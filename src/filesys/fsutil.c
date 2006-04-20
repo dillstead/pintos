@@ -6,9 +6,9 @@
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "devices/disk.h"
-#include "threads/mmu.h"
 #include "threads/malloc.h"
 #include "threads/palloc.h"
+#include "threads/vaddr.h"
 
 /* List files in the root directory. */
 void
