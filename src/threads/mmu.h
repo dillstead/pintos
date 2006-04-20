@@ -9,24 +9,24 @@
 
 /* Virtual to physical translation works like this on an x86:
 
-   - The top 10 bits of the virtual address (bits 22:32) are used
+   - The top 10 bits of the virtual address (bits 22:31) are used
      to index into the page directory.  If the PDE is marked
      "present," the physical address of a page table is read from
      the PDE thus obtained.  If the PDE is marked "not present"
      then a page fault occurs.
 
-   - The next 10 bits of the virtual address (bits 12:22) are
+   - The next 10 bits of the virtual address (bits 12:21) are
      used to index into the page table.  If the PTE is marked
      "present," the physical address of a data page is read from
      the PTE thus obtained.  If the PTE is marked "not present"
      then a page fault occurs.
 
-   - The bottom 12 bits of the virtual address (bits 0:12) are
+   - The bottom 12 bits of the virtual address (bits 0:11) are
      added to the data page's physical base address, producing
      the final physical address.
 
 
-   32                    22                     12                      0
+    31                  22 21                  12 11                   0
    +--------------------------------------------------------------------+
    | Page Directory Index |   Page Table Index   |    Page Offset       |
    +--------------------------------------------------------------------+
@@ -147,7 +147,7 @@ vtop (const void *vaddr)
 
    PDEs and PTEs share a common format:
 
-   32                                   12                       0
+   31                                 12 11                     0
    +------------------------------------+------------------------+
    |         Physical Address           |         Flags          |
    +------------------------------------+------------------------+
