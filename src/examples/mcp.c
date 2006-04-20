@@ -1,4 +1,4 @@
-/* cat.c
+/* mcp.c
 
    Copies one file to another, using mmap. */
 
