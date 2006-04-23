@@ -3,7 +3,7 @@
 
 In the previous two assignments, you made extensive use of a
 file system without actually worrying about how it was implemented
-underneath.  For this last assignment, you will fill in the
+underneath.  For this last assignment, you will improve the
 implementation of the file system.  You will be working primarily in
 the @file{filesys} directory.
 
@@ -68,7 +68,7 @@ Our file system has a Unix-like interface, so you may also wish to
 read the Unix man pages for @code{creat}, @code{open}, @code{close},
 @code{read}, @code{write}, @code{lseek}, and @code{unlink}.  Our file
 system has calls that are similar, but not identical, to these.  The
-file system translates these calls into physical disk operations.  
+file system translates these calls into disk operations.  
 
 All the basic functionality is there in the code above, so that the
 file system is usable from the start, as you've seen
@@ -76,7 +76,7 @@ in the previous two projects.  However, it has severe limitations
 which you will remove.
 
 While most of your work will be in @file{filesys}, you should be
-prepared for interactions with all previous parts (as usual).
+prepared for interactions with all previous parts.
 
 @node Project 4 Requirements
 @section Requirements
@@ -103,7 +103,9 @@ that goes along with a fictitious project.
 @subsection Indexed and Extensible Files
 
 The basic file system allocates files as a single extent, making it
-vulnerable to external fragmentation.  Eliminate this problem by
+vulnerable to external fragmentation, that is, it is possible that an
+@var{n}-block file cannot be allocated even though @var{n} blocks are
+free.  Eliminate this problem by
 modifying the on-disk inode structure.  In practice, this probably means using
 an index structure with direct, indirect, and doubly indirect blocks.
 (You are welcome to choose a different scheme as long as you explain the
@@ -117,9 +119,9 @@ can contain.  Supporting 8 MB files will require you to implement
 doubly-indirect blocks.
 
 An extent-based file can only grow if it is followed by empty space, but
-with indexed inodes file growth is possible whenever free space is
+indexed inodes make file growth possible whenever free space is
 available.  Implement file growth.  In the basic file system, the file
-size is specified when the file is created.  In UNIX and most other file
+size is specified when the file is created.  In most modern file
 systems, a file is initially created with size 0 and is then expanded
 every time a write is made off the end of the file.  Your file system
 must allow this.
@@ -210,8 +212,8 @@ credit.
 @subsection Buffer Cache
 
 Modify the file system to keep a cache of file blocks.  When a request
-is made to read or write a block, check to see if it is stored in the
-cache, and if so, fetch it immediately from the cache without going to
+is made to read or write a block, check to see if it is in the
+cache, and if so, use the cached data without going to
 disk.  Otherwise, fetch the block from disk into cache, evicting an
 older entry if necessary.  You are limited to a cache no greater than 64
 sectors in size.
@@ -231,35 +233,30 @@ the system call interface's byte-by-byte interface.  You should get rid
 of these bounce buffers.  Instead, copy data into and out of sectors in
 the buffer cache directly.
 
-Your implementation should also include the following features:
-
-@table @b
-@item write-behind:
-Keep dirty blocks in the cache, instead of immediately writing modified
+Your cache should be @dfn{write-behind}, that is,
+keep dirty blocks in the cache, instead of immediately writing modified
 data to disk.  Write dirty blocks to disk whenever they are evicted.
 Because write-behind makes your file system more fragile in the face of
 crashes, in addition you should periodically write all dirty, cached
 blocks back to disk.  The cache should also be written back to disk in
 @func{filesys_done}, so that halting Pintos flushes the cache.
 
-If you have @func{timer_sleep} from the first project working, this is
-an excellent application for it.  If you're still using the base
+If you have @func{timer_sleep} from the first project working, write-behind is
+an excellent application.  If you're still using the base
 implementation of @func{timer_sleep}, be aware that it busy-waits, which
-is not an acceptable solution. If @func{timer_sleep}'s delays seem too
+is not acceptable here (or elsewhere).  If @func{timer_sleep}'s delays seem too
 short or too long, reread the explanation of the @option{-r} option to
 @command{pintos} (@pxref{Debugging versus Testing}).
 
-@item read-ahead:
-Your buffer cache should automatically fetch the next block of a file
+You should also implement @dfn{read-ahead}, that is,
+automatically fetch the next block of a file
 into the cache when one block of a file is read, in case that block is
 about to be read.
-
 Read-ahead is only really useful when done asynchronously.  That means,
 if a process requests disk block 1 from the file, it should block until disk
 block 1 is read in, but once that read is complete, control should
 return to the process immediately.  The read-ahead request for disk
 block 2 should be handled asynchronously, in the background.
-@end table
 
 @strong{We recommend integrating the cache into your design early.}  In
 the past, many groups have tried to tack the cache onto a design late in
@@ -400,7 +397,7 @@ You'll need to consider this when deciding your inode organization.
 The current directory of each process is independent.  A @command{cd}
 program could change its own current directory, but that would have no
 effect on the shell.  In fact, Unix-like systems don't provide any way
-for one process to change another process's current working directory.
+for one process to change another's current working directory.
 @end table
 
 @node Buffer Cache FAQ
@@ -434,6 +431,6 @@ like.  It doesn't have to count against the cache size.
 @func{byte_to_sector} in @file{filesys/inode.c} uses the
 @struct{inode_disk} directly, without first reading that sector from
 wherever it was in the storage hierarchy.  This will no longer work.
-You will need to change @func{inode_byte_to_sector} so that it reads the
-@struct{inode_disk} from the storage hierarchy before using it.
+You will need to change @func{inode_byte_to_sector} to obtain the
+@struct{inode_disk} from the cache before using it.
 @end table
