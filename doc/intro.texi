@@ -248,8 +248,8 @@ must precede the commands passed to the Pintos kernel and be separated
 from them by @option{--}, so that the whole command looks like
 @code{pintos @var{option}@dots{} -- @var{argument}@dots{}}.  Invoke
 @code{pintos} without any arguments to see a list of available options.
-Options can select a simulator to use: the default is Bochs, but on the
-Linux machines @option{--qemu} selects qemu.  You can run the simulator
+Options can select a simulator to use: the default is Bochs, but
+@option{--qemu} selects qemu.  You can run the simulator
 with a debugger (@pxref{GDB}).  You can set the amount of memory to give
 the VM.  Finally, you can select how you want VM output to be displayed:
 use @option{-v} to turn off the VGA display, @option{-t} to use your
@@ -307,7 +307,7 @@ timings, in which a one-second delay should take approximately one
 second of real time.  Simulation in real-time mode is not reproducible,
 and options @option{-j} and @option{-r} are mutually exclusive.
 
-On the Linux machines only, the qemu simulator is available as an
+The qemu simulator is available as an
 alternative to Bochs (use @option{--qemu} when invoking
 @command{pintos}).  The qemu simulator is much faster than Bochs, but it
 only supports real-time simulation and does not have a reproducible
