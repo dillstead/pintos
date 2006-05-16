@@ -2,23 +2,31 @@
 #define __LIB_SYSCALL_NR_H
 
 /* System call numbers. */
-#define SYS_halt 0              /* Halts the operating system. */
-#define SYS_exit 1              /* Terminates this process. */
-#define SYS_exec 2              /* Start another process. */
-#define SYS_wait 3              /* Waits for a child process to die. */
-#define SYS_create 4            /* Creates a file. */
-#define SYS_remove 5            /* Deletes a file. */
-#define SYS_open 6              /* Opens a file. */
-#define SYS_filesize 7          /* Obtains a file's size. */
-#define SYS_read 8              /* Reads from a file. */
-#define SYS_write 9             /* Writes to a file. */
-#define SYS_seek 10             /* Change position in a file. */
-#define SYS_tell 11             /* Report current position in a file. */
-#define SYS_close 12            /* Closes a file. */
-#define SYS_mmap 13             /* Maps a file into memory. */
-#define SYS_munmap 14           /* Removes a memory mapping. */
-#define SYS_chdir 15            /* Changes the current directory. */
-#define SYS_mkdir 16            /* Create a directory. */
-#define SYS_lsdir 17            /* Lists the current directory to stdout. */
+enum 
+  {
+    /* Projects 2 and later. */
+    SYS_halt,                   /* Halts the operating system. */
+    SYS_exit,                   /* Terminates this process. */
+    SYS_exec,                   /* Start another process. */
+    SYS_wait,                   /* Waits for a child process to die. */
+    SYS_create,                 /* Creates a file. */
+    SYS_remove,                 /* Deletes a file. */
+    SYS_open,                   /* Opens a file. */
+    SYS_filesize,               /* Obtains a file's size. */
+    SYS_read,                   /* Reads from a file. */
+    SYS_write,                  /* Writes to a file. */
+    SYS_seek,                   /* Change position in a file. */
+    SYS_tell,                   /* Report current position in a file. */
+    SYS_close,                  /* Closes a file. */
+
+    /* Project 3 and optionally project 4. */
+    SYS_mmap,                   /* Maps a file into memory. */
+    SYS_munmap,                 /* Removes a memory mapping. */
+
+    /* Project 4 only. */
+    SYS_chdir,                  /* Changes the current directory. */
+    SYS_mkdir,                  /* Create a directory. */
+    SYS_lsdir                   /* Lists the current directory to stdout. */
+  };
 
 #endif /* lib/syscall-nr.h */
