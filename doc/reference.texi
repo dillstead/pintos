@@ -1615,7 +1615,7 @@ defined in @file{threads/vaddr.h}.
 
 You do not need to understand the PTE format to do the Pintos
 projects, unless you wish to incorporate the page table into your
-segment table (@pxref{Managing the Segment Table}).
+supplemental page table (@pxref{Managing the Supplemental Page Table}).
 
 The actual format of a page table entry is summarized below.  For
 complete information, refer to section 3.7, ``Page Translation Using

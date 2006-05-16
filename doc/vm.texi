@@ -35,7 +35,7 @@ PINTOSOPTS='--qemu'}.
 * Project 3 Source Files::      
 * Memory Terminology::          
 * Resource Management Overview::  
-* Managing the Segment Table::  
+* Managing the Supplemental Page Table::  
 * Managing the Frame Table::    
 * Managing the Swap Table::     
 * Managing Memory Mapped Files Back::  
@@ -177,10 +177,10 @@ page-aligned because there is no downside in doing so.
 You will need to design the following data structures:
 
 @table @asis
-@item Segment table
+@item Supplemental page table
 
 Enables page fault handling by supplementing the page table.
-@xref{Managing the Segment Table}.
+@xref{Managing the Supplemental Page Table}.
 
 @item Frame table
 
@@ -234,46 +234,46 @@ benefits, they may also needlessly complicate your implementation.
 Thus, we do not recommend implementing any advanced data structure
 (e.g.@: a balanced binary tree) as part of your design.
 
-@node Managing the Segment Table
-@subsection Managing the Segment Table
+@node Managing the Supplemental Page Table
+@subsection Managing the Supplemental Page Table
 
-The @dfn{segment table} supplements the page table with additional data
-about each page.  It is required because of the limitations imposed by
-the page table's format.  Such a supplementary data structure is often
-called a ``page table'' also; we call it a segment table to avoid
-confusion.
+The @dfn{supplemental page table} supplements the page table with
+additional data about each page.  It is needed because of the
+limitations imposed by the page table's format.  Such a data structure
+is often called a ``page table'' also; we add the word ``supplemental''
+to reduce confusion.
 
-The segment table is used for at least two purposes.  Most importantly,
-on a page fault, the kernel looks up the virtual page that faulted in
-the segment table to find out what data should be there.  Second, the
-kernel consults the segment table when a process terminates, to decide
-what resources to free.
+The supplemental page table is used for at least two purposes.  Most
+importantly, on a page fault, the kernel looks up the virtual page that
+faulted in the supplemental page table to find out what data should be
+there.  Second, the kernel consults the supplemental page table when a
+process terminates, to decide what resources to free.
 
-You may organize the segment table as you wish.  There are at least two
-basic approaches to its organization: in terms of segments or in terms
-of pages.  Optionally, you may use the page table as part of your
-segment table design.  You will have to modify the Pintos page table
-implementation in @file{pagedir.c} to do so.  We recommend this approach
-for advanced students only.  @xref{Page Table Entry Format}, for more
-information.
+You may organize the supplemental page table as you wish.  There are at
+least two basic approaches to its organization: in terms of segments or
+in terms of pages.  Optionally, you may use the page table itself as an
+index to track the members of the supplemental page table.  You will
+have to modify the Pintos page table implementation in @file{pagedir.c}
+to do so.  We recommend this approach for advanced students only.
+@xref{Page Table Entry Format}, for more information.
 
-The most important user of the segment table is the page fault handler.
-In project 2, a page fault always indicated a bug in the kernel or a
-user program.  In project 3, this is no longer true.  Now, a page fault
-might only indicate that the page must be brought in from a file or
-swap.  You will have to implement a more sophisticated page fault
-handler to handle these cases.  Your page fault handler, which you
+The most important user of the supplemental page table is the page fault
+handler.  In project 2, a page fault always indicated a bug in the
+kernel or a user program.  In project 3, this is no longer true.  Now, a
+page fault might only indicate that the page must be brought in from a
+file or swap.  You will have to implement a more sophisticated page
+fault handler to handle these cases.  Your page fault handler, which you
 should implement by modifying @func{page_fault} in
 @file{threads/exception.c}, needs to do roughly the following:
 
 @enumerate 1
 @item
-Locate the page that faulted in the segment table.  If the memory
-reference is valid, use the segment table entry to locate the data that
-goes in the page, which might be in the file system, or in a swap slot,
-or it might simply be an all-zero page.  If you implement sharing, the
-page's data might even already be in a page frame, but not in the page
-table.
+Locate the page that faulted in the supplemental page table.  If the
+memory reference is valid, use the supplemental page table entry to
+locate the data that goes in the page, which might be in the file
+system, or in a swap slot, or it might simply be an all-zero page.  If
+you implement sharing, the page's data might even already be in a page
+frame, but not in the page table.
 
 If the page is unmapped, that is, if there's no data there, or if the
 page lies within kernel virtual memory, or if the access is an attempt
@@ -457,11 +457,12 @@ After this step, your kernel should still pass all the project 2 test
 cases.
 
 @item
-Segment table and page fault handler (@pxref{Managing the Segment
-Table}).  Change @file{process.c} to record the necessary information in
-the segment table when loading an executable and setting up its stack.
-Implement loading of code and data segments in the page fault handler.
-For now, consider only valid accesses.
+Supplemental page table and page fault handler (@pxref{Managing the
+Supplemental Page Table}).  Change @file{process.c} to record the
+necessary information in the supplemental page table when loading an
+executable and setting up its stack.  Implement loading of code and data
+segments in the page fault handler.  For now, consider only valid
+accesses.
 
 After this step, your kernel should pass all of the project 2
 functionality test cases, but only some of the robustness tests.
@@ -711,7 +712,7 @@ Yes.
 You may implement sharing: when multiple processes are created that use
 the same executable file, share read-only pages among those processes
 instead of creating separate copies of read-only segments for each
-process.  If you carefully designed your page table data structures,
+process.  If you carefully designed your data structures,
 sharing of read-only pages should not make this part significantly
 harder.
 
