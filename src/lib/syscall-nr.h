@@ -7,6 +7,7 @@ enum
     /* Projects 2 and later. */
     SYS_HALT,                   /* Halt the operating system. */
     SYS_EXIT,                   /* Terminate this process. */
+    SYS_EXEC,                   /* Start another process. */
     SYS_WAIT,                   /* Wait for a child process to die. */
     SYS_CREATE,                 /* Create a file. */
     SYS_REMOVE,                 /* Delete a file. */
