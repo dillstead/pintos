@@ -159,15 +159,15 @@ backtrace kernel.o 0xc0106eff 0xc01102fb 0xc010dc22 0xc010cf67
 The backtrace output would then look something like this:
 
 @example
-0xc0106eff: debug_panic (../../lib/debug.c:86)
-0xc01102fb: file_seek (../../filesys/file.c:405)
-0xc010dc22: seek (../../userprog/syscall.c:744)
-0xc010cf67: syscall_handler (../../userprog/syscall.c:444)
-0xc0102319: intr_handler (../../threads/interrupt.c:334)
-0xc010325a: ?? (threads/intr-stubs.S:1554)
-0x804812c: ?? (??:0)
-0x8048a96: ?? (??:0)
-0x8048ac8: ?? (??:0)
+0xc0106eff: debug_panic (lib/debug.c:86)
+0xc01102fb: file_seek (filesys/file.c:405)
+0xc010dc22: seek (userprog/syscall.c:744)
+0xc010cf67: syscall_handler (userprog/syscall.c:444)
+0xc0102319: intr_handler (threads/interrupt.c:334)
+0xc010325a: intr_entry (threads/intr-stubs.S:38)
+0x0804812c: (unknown)
+0x08048a96: (unknown)
+0x08048ac8: (unknown)
 @end example
 
 (You will probably not see exactly the same addresses if you run the
@@ -209,22 +209,48 @@ panicked, you can re-run @command{backtrace} on the user program, like
 so: (typing the command on a single line, of course):
 
 @example
-backtrace grow-too-big 0xc0106eff 0xc01102fb 0xc010dc22 0xc010cf67
-0xc0102319 0xc010325a 0x804812c 0x8048a96 0x8048ac8
+backtrace tests/filesys/extended/grow-too-big 0xc0106eff 0xc01102fb
+0xc010dc22 0xc010cf67 0xc0102319 0xc010325a 0x804812c 0x8048a96
+0x8048ac8
 @end example
 
 The results look like this:
 
 @example
-0xc0106eff: ?? (??:0)
-0xc01102fb: ?? (??:0)
-0xc010dc22: ?? (??:0)
-0xc010cf67: ?? (??:0)
-0xc0102319: ?? (??:0)
-0xc010325a: ?? (??:0)
-0x804812c: test_main (../../tests/filesys/extended/grow-too-big.c:20)
-0x8048a96: main (../../tests/main.c:10)
-0x8048ac8: _start (../../lib/user/entry.c:9)
+0xc0106eff: (unknown)
+0xc01102fb: (unknown)
+0xc010dc22: (unknown)
+0xc010cf67: (unknown)
+0xc0102319: (unknown)
+0xc010325a: (unknown)
+0x0804812c: test_main (...xtended/grow-too-big.c:20)
+0x08048a96: main (tests/main.c:10)
+0x08048ac8: _start (lib/user/entry.c:9)
+@end example
+
+You can even specify both the kernel and the user program names on
+the command line, like so:
+
+@example
+backtrace kernel.o tests/filesys/extended/grow-too-big 0xc0106eff
+0xc01102fb 0xc010dc22 0xc010cf67 0xc0102319 0xc010325a 0x804812c
+0x8048a96 0x8048ac8
+@end example
+
+The result is a combined backtrace:
+
+@example
+In kernel.o:
+0xc0106eff: debug_panic (lib/debug.c:86)
+0xc01102fb: file_seek (filesys/file.c:405)
+0xc010dc22: seek (userprog/syscall.c:744)
+0xc010cf67: syscall_handler (userprog/syscall.c:444)
+0xc0102319: intr_handler (threads/interrupt.c:334)
+0xc010325a: intr_entry (threads/intr-stubs.S:38)
+In tests/filesys/extended/grow-too-big:
+0x0804812c: test_main (...xtended/grow-too-big.c:20)
+0x08048a96: main (tests/main.c:10)
+0x08048ac8: _start (lib/user/entry.c:9)
 @end example
 
 Here's an extra tip for anyone who read this far: @command{backtrace}
