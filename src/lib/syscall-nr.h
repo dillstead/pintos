@@ -8,7 +8,6 @@ enum
     SYS_HALT,                   /* Halt the operating system. */
     SYS_EXIT,                   /* Terminate this process. */
     SYS_WAIT,                   /* Wait for a child process to die. */
-    SYS_YIELD,                  /* Yield to another process. */
     SYS_CREATE,                 /* Create a file. */
     SYS_REMOVE,                 /* Delete a file. */
     SYS_OPEN,                   /* Open a file. */
