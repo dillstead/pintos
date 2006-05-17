@@ -13,6 +13,7 @@ extern test_func test_alarm_negative;
 extern test_func test_priority_change;
 extern test_func test_priority_donate_one;
 extern test_func test_priority_donate_multiple;
+extern test_func test_priority_donate_multiple2;
 extern test_func test_priority_donate_nest;
 extern test_func test_priority_fifo;
 extern test_func test_priority_preempt;
