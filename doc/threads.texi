@@ -609,13 +609,13 @@ to cause many of the tests to fail.
 You are probably looking at a backtrace that looks something like this:
 
 @example
-0xc0108810: debug_panic (../../lib/kernel/debug.c:32)
-0xc010a99f: pass (../../tests/threads/tests.c:93)
-0xc010bdd3: test_mlfqs_load_1 (../../tests/threads/mlfqs-load-1.c:33)
-0xc010a8cf: run_test (../../tests/threads/tests.c:51)
-0xc0100452: run_task (../../threads/init.c:283)
-0xc0100536: run_actions (../../threads/init.c:333)
-0xc01000bb: main (../../threads/init.c:137)
+0xc0108810: debug_panic (lib/kernel/debug.c:32)
+0xc010a99f: pass (tests/threads/tests.c:93)
+0xc010bdd3: test_mlfqs_load_1 (...threads/mlfqs-load-1.c:33)
+0xc010a8cf: run_test (tests/threads/tests.c:51)
+0xc0100452: run_task (threads/init.c:283)
+0xc0100536: run_actions (threads/init.c:333)
+0xc01000bb: main (threads/init.c:137)
 @end example
 
 This is just confusing output from the @command{backtrace} program.  It
