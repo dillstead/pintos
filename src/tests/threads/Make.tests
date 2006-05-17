@@ -4,10 +4,10 @@
 tests/threads_TESTS = $(addprefix tests/threads/,alarm-single		\
 alarm-multiple alarm-priority alarm-zero alarm-negative			\
 priority-change priority-donate-one priority-donate-multiple		\
-priority-donate-multiple2						\
-priority-donate-nest priority-fifo priority-preempt priority-sema	\
-priority-condvar mlfqs-load-1 mlfqs-load-60 mlfqs-load-avg		\
-mlfqs-recent-1 mlfqs-fair-2 mlfqs-fair-20 mlfqs-nice-2 mlfqs-nice-10)
+priority-donate-multiple2 priority-donate-nest priority-donate-sema	\
+priority-fifo priority-preempt priority-sema priority-condvar		\
+mlfqs-load-1 mlfqs-load-60 mlfqs-load-avg mlfqs-recent-1 mlfqs-fair-2	\
+mlfqs-fair-20 mlfqs-nice-2 mlfqs-nice-10)
 
 # Sources for tests.
 tests/threads_SRC  = tests/threads/tests.c
@@ -20,6 +20,7 @@ tests/threads_SRC += tests/threads/priority-donate-one.c
 tests/threads_SRC += tests/threads/priority-donate-multiple.c
 tests/threads_SRC += tests/threads/priority-donate-multiple2.c
 tests/threads_SRC += tests/threads/priority-donate-nest.c
+tests/threads_SRC += tests/threads/priority-donate-sema.c
 tests/threads_SRC += tests/threads/priority-fifo.c
 tests/threads_SRC += tests/threads/priority-preempt.c
 tests/threads_SRC += tests/threads/priority-sema.c

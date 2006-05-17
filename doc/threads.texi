@@ -697,6 +697,13 @@ priority to @var{L}.  @var{L} releases the lock and
 thus loses the CPU and is moved to the ready queue.  Now @var{L}'s
 old priority is restored while it is in the ready queue.
 
+@item Can a thread's priority change while it is blocked?
+
+Yes.  While a thread that has acquired lock @var{L} is blocked for any
+reason, its priority can increase by priority donation if a
+higher-priority thread attempts to acquire @var{L}.  This case is
+checked by the @code{priority-donate-sema} test.
+
 @item Can a thread added to the ready list preempt the processor?
 
 Yes.  If a thread added to the ready list has higher priority than the
