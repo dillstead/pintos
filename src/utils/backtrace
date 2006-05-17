@@ -83,7 +83,7 @@ for my $bin (@binaries) {
 my ($cur_binary);
 for my $loc (@locs) {
     if (defined ($loc->{BINARY})
-	&& @binaries > 0
+	&& @binaries > 1
 	&& (!defined ($cur_binary) || $loc->{BINARY} ne $cur_binary)) {
 	$cur_binary = $loc->{BINARY};
 	print "In $cur_binary:\n";
