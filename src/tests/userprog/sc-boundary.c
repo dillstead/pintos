@@ -13,7 +13,7 @@ test_main (void)
      and its argument at the beginning of another. */
   int *p = get_boundary_area ();
   p--;
-  p[0] = SYS_exit;
+  p[0] = SYS_EXIT;
   p[1] = 42;
 
   /* Invoke the system call. */

@@ -13,7 +13,7 @@ test_main (void)
   /* Make one byte of a syscall argument hang over into a second
      page. */
   int *p = (int *) ((char *) get_boundary_area () - 7);
-  p[0] = SYS_exit;
+  p[0] = SYS_EXIT;
   p[1] = 67;
 
   /* Invoke the system call. */

@@ -64,110 +64,110 @@
 void
 halt (void) 
 {
-  syscall0 (SYS_halt);
+  syscall0 (SYS_HALT);
   NOT_REACHED ();
 }
 
 void
 exit (int status)
 {
-  syscall1 (SYS_exit, status);
+  syscall1 (SYS_EXIT, status);
   NOT_REACHED ();
 }
 
 pid_t
 exec (const char *file)
 {
-  return (pid_t) syscall1 (SYS_exec, file);
+  return (pid_t) syscall1 (SYS_EXEC, file);
 }
 
 int
 wait (pid_t pid)
 {
-  return syscall1 (SYS_wait, pid);
+  return syscall1 (SYS_WAIT, pid);
 }
 
 bool
 create (const char *file, unsigned initial_size)
 {
-  return syscall2 (SYS_create, file, initial_size);
+  return syscall2 (SYS_CREATE, file, initial_size);
 }
 
 bool
 remove (const char *file)
 {
-  return syscall1 (SYS_remove, file);
+  return syscall1 (SYS_REMOVE, file);
 }
 
 int
 open (const char *file)
 {
-  return syscall1 (SYS_open, file);
+  return syscall1 (SYS_OPEN, file);
 }
 
 int
 filesize (int fd) 
 {
-  return syscall1 (SYS_filesize, fd);
+  return syscall1 (SYS_FILESIZE, fd);
 }
 
 int
 read (int fd, void *buffer, unsigned size)
 {
-  return syscall3 (SYS_read, fd, buffer, size);
+  return syscall3 (SYS_READ, fd, buffer, size);
 }
 
 int
 write (int fd, const void *buffer, unsigned size)
 {
-  return syscall3 (SYS_write, fd, buffer, size);
+  return syscall3 (SYS_WRITE, fd, buffer, size);
 }
 
 void
 seek (int fd, unsigned position) 
 {
-  syscall2 (SYS_seek, fd, position);
+  syscall2 (SYS_SEEK, fd, position);
 }
 
 unsigned
 tell (int fd) 
 {
-  return syscall1 (SYS_tell, fd);
+  return syscall1 (SYS_TELL, fd);
 }
 
 void
 close (int fd)
 {
-  syscall1 (SYS_close, fd);
+  syscall1 (SYS_CLOSE, fd);
 }
 
 mapid_t
 mmap (int fd, void *addr)
 {
-  return syscall2 (SYS_mmap, fd, addr);
+  return syscall2 (SYS_MMAP, fd, addr);
 }
 
 void
 munmap (mapid_t mapid)
 {
-  syscall1 (SYS_munmap, mapid);
+  syscall1 (SYS_MUNMAP, mapid);
 }
 
 bool
 chdir (const char *dir)
 {
-  return syscall1 (SYS_chdir, dir);
+  return syscall1 (SYS_CHDIR, dir);
 }
 
 bool
 mkdir (const char *dir)
 {
-  return syscall1 (SYS_mkdir, dir);
+  return syscall1 (SYS_MKDIR, dir);
 }
 
 void
 lsdir (void)
 {
-  syscall0 (SYS_lsdir);
+  syscall0 (SYS_LSDIR);
 }
 
