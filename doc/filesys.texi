@@ -424,8 +424,10 @@ corresponding sector from disk when it's created.  Keeping extra
 copies of inodes would subvert the 64-block limitation that we place
 on your cache.
 
-You can store a pointer to inode data in @struct{inode}, if you want,
-and you can store other information to help you find the inode when you
+You can store a pointer to inode data in @struct{inode}, but it you do
+so you should carefully make sure that this does not limit your OS to 64
+simultaneously open files.
+You can also store other information to help you find the inode when you
 need it.  Similarly, you may store some metadata along each of your 64
 cache entries.
 
