@@ -7,7 +7,7 @@
    seconds (until the main thread releases it).  If recent_cpu
    decays properly while the "block" thread sleeps, then the
    block thread should be immediately scheduled when the main
-   thread releases the lock,. */
+   thread releases the lock. */
 
 #include <stdio.h>
 #include "tests/threads/tests.h"
