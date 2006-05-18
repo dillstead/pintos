@@ -115,7 +115,7 @@ sense (e.g.@: function A is listed above function B, but B doesn't
 call A), then it's a good sign that you're corrupting a kernel
 thread's stack, because the backtrace is extracted from the stack.
 Alternatively, it could be that the @file{kernel.o} you passed to
-@command{backtrace} does not correspond to the kernel that produced
+@command{backtrace} is not the same kernel that produced
 the backtrace.
 
 Sometimes backtraces can be confusing without implying corruption.
