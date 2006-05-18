@@ -10,3 +10,5 @@ Functionality of advanced scheduler:
 
 4	mlfqs-nice-2
 2	mlfqs-nice-10
+
+5	mlfqs-block
