@@ -118,7 +118,7 @@ Alternatively, it could be that the @file{kernel.o} you passed to
 @command{backtrace} is not the same kernel that produced
 the backtrace.
 
-Sometimes backtraces can be confusing without implying corruption.
+Sometimes backtraces can be confusing without any corruption.
 Compiler optimizations can cause surprising behavior.  When a function
 has called another function as its final action (a @dfn{tail call}), the
 calling function may not appear in a backtrace at all.  Similarly, when
