@@ -714,9 +714,11 @@ preempting whatever thread is currently running.
 
 @item How does @func{thread_set_priority} affect a thread receiving donations?
 
-It should do something sensible, but no particular behavior is
-required.  None of the test cases call @func{thread_set_priority} from a
-thread while it is receiving a priority donation.
+It sets the thread's base priority.  The thread's effective priority
+becomes the higher of the newly set priority or the highest donated
+priority.  When the donations are released, the thread's priority
+becomes the one set through the function call.  This behavior is checked
+by the @code{priority-donate-lower} test.
 
 @item Calling @func{printf} in @func{sema_up} or @func{sema_down} reboots!
 
