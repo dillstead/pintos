@@ -90,6 +90,9 @@ main (void)
   argv = read_command_line ();
   argv = parse_options (argv);
 
+  /* Set random seed if parse_options() didn't. */
+  random_init (0);
+
   /* Initialize memory system. */
   palloc_init ();
   malloc_init ();
@@ -100,9 +103,6 @@ main (void)
   tss_init ();
   gdt_init ();
 #endif
-
-  /* Set random seed if parse_options() didn't. */
-  random_init (0);
 
   /* Initialize interrupt handlers. */
   intr_init ();
