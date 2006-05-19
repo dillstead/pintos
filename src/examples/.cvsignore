@@ -5,6 +5,7 @@ echo
 halt
 hex-dump
 ls
+mcat
 mcp
 mkdir
 rm
