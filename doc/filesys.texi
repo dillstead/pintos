@@ -136,7 +136,7 @@ that a file cannot exceed the size of the disk (minus metadata).  This
 also applies to the root directory file, which should now be allowed
 to expand beyond its initial limit of 16 files.
 
-The user is allowed to seek beyond the current end-of-file (EOF).  The
+User programs are allowed to seek beyond the current end-of-file (EOF).  The
 seek itself does not extend the file.  Writing at a position past EOF
 extends the file to the position being written, and any gap between the
 previous EOF and the start of the write must be filled with zeros.  A
@@ -176,10 +176,18 @@ not an external program.)
 Update the existing system calls so that, anywhere a file name is
 provided by the caller, an absolute or relative path name may used.
 The directory separator character is forward slash (@samp{/}).
+You may support @file{.} and @file{..} for a small amount of extra
+credit.
 
 Update the @code{remove} system call so that it can delete empty
 directories in addition to regular files.  Directories can only be
 deleted if they do not contain any files or subdirectories.
+
+Update the @code{open} system call so that it can also open directories.
+Passing @file{.} as the argument to @code{open} must open the current
+directory, regardless of whether @file{.} and @file{..} are fully
+implemented.  Of the existing system calls, only @code{close} needs to
+accept a file descriptor for a directory.
 
 Implement the following new system calls:
 
@@ -198,21 +206,38 @@ Fails if @var{dir} already exists or if any directory name in
 @file{/a/b/c} does not.
 @end deftypefn
 
-@deftypefn {System Call} void lsdir (void)
-Prints a list of files in the current directory to @code{stdout}, one
-per line, in no particular order.
+@deftypefn {System Call} bool readdir (int @var{fd}, char *@var{name})
+Reads a directory entry from file descriptor @var{fd}, which must
+represent a directory.  If successful, stores the null-terminated file
+name in @var{name}, which must have room for @code{READDIR_MAX_LEN + 1}
+bytes, and returns true.  If no entries are left in the directory,
+returns false.
+
+@file{.} and @file{..} should not be returned by @code{readdir},
+regardless of whether they are implemented.
+
+If the directory changes while it is open, then it is acceptable for
+some entries not to be read at all or to be read multiple times.
+Otherwise, each directory entry should be read once, in any order.
+
+@code{READDIR_MAX_LEN} is defined in @file{lib/user/syscall.h}.  If your
+file system supports longer file names than the basic file system, you
+should increase this value from the default of 14.
+@end deftypefn
+
+@deftypefn {System Call} bool isdir (int @var{fd})
+Returns true if @var{fd} represents a directory,
+false if it represents an ordinary file.
 @end deftypefn
 
 We have provided @command{ls} and @command{mkdir} user programs, which
-are straightforward once the above syscalls are implemented.
+are straightforward once the above syscalls are implemented.  The
+@command{shell} program implements @command{cd} internally.
 
 The @code{pintos} @option{put} and @option{get} commands should now
 accept full path names, assuming that the directories used in the
 paths have already been created.  This should not require any extra
 effort on your part.
-
-You may support @file{.} and @file{..} for a small amount of extra
-credit.
 
 @node Buffer Cache
 @subsection Buffer Cache
@@ -375,6 +400,7 @@ of IDE disk hardware.
 
 @menu
 * Indexed Files FAQ::           
+* Subdirectories FAQ::          
 * Buffer Cache FAQ::            
 @end menu
 
@@ -387,6 +413,22 @@ of IDE disk hardware.
 The disk we create will be 8 MB or smaller.  However, individual files
 will have to be smaller than the disk to accommodate the metadata.
 You'll need to consider this when deciding your inode organization.
+@end table
+
+@node Subdirectories FAQ
+@subsection Subdirectories FAQ
+
+@table @b
+@item How should a file name like @samp{//a//b} be interpreted?
+
+Multiple consecutive slashes are equivalent to a single slash, so this
+file name is the same as @samp{/a/b}.
+
+@item How about a file name like @samp{/../x}?
+
+If you don't implement @file{.} and @file{..}, then this is not a
+special case.  If you do, then it is equivalent to @samp{/x}.  That is,
+the root directory is its own parent.
 @end table
 
 @node Buffer Cache FAQ

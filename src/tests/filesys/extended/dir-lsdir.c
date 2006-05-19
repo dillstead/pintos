@@ -1,4 +1,4 @@
-/* Just runs lsdir(). */
+/* Lists the contents of a directory using readdir. */
 
 #include <syscall.h>
 #include "tests/lib.h"
@@ -7,5 +7,15 @@
 void
 test_main (void) 
 {
-  lsdir ();
+  int fd;
+  char name[READDIR_MAX_LEN + 1];
+
+  CHECK ((fd = open (".")) > 1, "open .");
+  CHECK (isdir (fd), "isdir(.)");
+
+  while (readdir (fd, name))
+    msg ("readdir: \"%s\"", name);
+
+  msg ("close .");
+  close (fd);
 }

@@ -90,24 +90,6 @@ filesys_remove (const char *name)
 
   return success;
 }
-
-/* Prints a list of files in the filesystem to the system
-   console.
-   Returns true if successful, false on failure,
-   which occurs only if an internal memory allocation fails. */
-bool
-filesys_list (void) 
-{
-  struct dir *dir = dir_open_root ();
-  if (dir != NULL) 
-    {
-      dir_list (dir);
-      dir_close (dir);
-      return true;
-    }
-  else
-    return false;
-}
 
 static void must_succeed_function (int, bool) NO_INLINE;
 #define MUST_SUCCEED(EXPR) must_succeed_function (__LINE__, EXPR)

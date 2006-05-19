@@ -10,6 +10,7 @@
 struct dir 
   {
     struct inode *inode;                /* Backing store. */
+    off_t pos;                          /* Current position. */
   };
 
 /* A single directory entry. */
@@ -37,6 +38,7 @@ dir_open (struct inode *inode)
   if (inode != NULL && dir != NULL)
     {
       dir->inode = inode;
+      dir->pos = 0;
       return dir;
     }
   else
@@ -72,6 +74,13 @@ dir_close (struct dir *dir)
       inode_close (dir->inode);
       free (dir);
     }
+}
+
+/* Returns the inode encapsulated by DIR. */
+struct inode *
+dir_get_inode (struct dir *dir) 
+{
+  return dir->inode;
 }
 
 /* Searches DIR for a file with the given NAME.
@@ -206,15 +215,22 @@ dir_remove (struct dir *dir, const char *name)
   return success;
 }
 
-/* Prints the names of the files in DIR to the system console. */
-void
-dir_list (const struct dir *dir)
+/* Reads the next directory entry in DIR and stores the name in
+   NAME.  Returns true if successful, false if the directory
+   contains no more entries. */
+bool
+dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
 {
   struct dir_entry e;
-  size_t ofs;
-  
-  for (ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
-       ofs += sizeof e) 
-    if (e.in_use)
-      printf ("%s\n", e.name);
+
+  while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e) 
+    {
+      dir->pos += sizeof e;
+      if (e.in_use)
+        {
+          strlcpy (name, e.name, NAME_MAX + 1);
+          return true;
+        } 
+    }
+  return false;
 }

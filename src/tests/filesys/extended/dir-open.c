@@ -1,6 +1,5 @@
-/* Tries to open a directory.
-   This is allowed to succeed or fail,
-   but if it succeeds then attempts to write to it must fail. */
+/* Opens a directory, then tries to write to it, which must
+   fail. */
 
 #include <syscall.h>
 #include "tests/lib.h"
@@ -10,16 +9,13 @@ void
 test_main (void) 
 {
   int fd;
+  int retval;
   
   CHECK (mkdir ("xyzzy"), "mkdir \"xyzzy\"");
-  msg ("open \"xyzzy\"");
-  fd = open ("xyzzy");
-  if (fd == -1) 
-    msg ("open returned -1 -- ok");
-  else 
-    {
-      int retval = write (fd, "foobar", 6);
-      CHECK (retval == -1, "write \"xyzzy\" (must return -1, actually %d)",
-             retval);
-    }
+  CHECK ((fd = open ("xyzzy")) > 1, "open \"xyzzy\"");
+
+  msg ("write \"xyzzy\"");
+  retval = write (fd, "foobar", 6);
+  CHECK (retval == -1,
+         "write \"xyzzy\" (must return -1, actually %d)", retval);
 }

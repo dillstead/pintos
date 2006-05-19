@@ -10,6 +10,8 @@ typedef int pid_t;
 typedef int mapid_t;
 #define MAP_FAILED ((mapid_t) -1)
 
+#define READDIR_MAX_LEN 14
+
 void halt (void) NO_RETURN;
 void exit (int status) NO_RETURN;
 pid_t exec (const char *file);
@@ -27,6 +29,7 @@ mapid_t mmap (int fd, void *addr);
 void munmap (mapid_t);
 bool chdir (const char *dir);
 bool mkdir (const char *dir);
-void lsdir (void);
+bool readdir (int fd, char name[READDIR_MAX_LEN + 1]);
+bool isdir (int fd);
 
 #endif /* lib/user/syscall.h */

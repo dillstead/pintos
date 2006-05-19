@@ -165,9 +165,14 @@ mkdir (const char *dir)
   return syscall1 (SYS_MKDIR, dir);
 }
 
-void
-lsdir (void)
+bool
+readdir (int fd, char name[READDIR_MAX_LEN + 1]) 
 {
-  syscall0 (SYS_LSDIR);
+  return syscall2 (SYS_READDIR, fd, name);
 }
 
+bool
+isdir (int fd) 
+{
+  return syscall1 (SYS_ISDIR, fd);
+}

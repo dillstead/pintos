@@ -26,7 +26,8 @@ enum
     /* Project 4 only. */
     SYS_CHDIR,                  /* Change the current directory. */
     SYS_MKDIR,                  /* Create a directory. */
-    SYS_LSDIR                   /* List the current directory to stdout. */
+    SYS_READDIR,                /* Reads a directory entry. */
+    SYS_ISDIR                   /* Tests if a fd represents a directory. */
   };
 
 #endif /* lib/syscall-nr.h */

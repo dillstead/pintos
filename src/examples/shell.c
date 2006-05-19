@@ -21,6 +21,11 @@ main (void)
       /* Execute command. */
       if (!strcmp (command, "exit"))
         break;
+      else if (!memcmp (command, "cd ", 3)) 
+        {
+          if (!chdir (command + 3))
+            printf ("\"%s\": chdir failed\n", command + 3);
+        }
       else if (command[0] == '\0') 
         {
           /* Empty command. */

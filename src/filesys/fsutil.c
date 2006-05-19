@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "devices/disk.h"
@@ -14,8 +15,15 @@
 void
 fsutil_ls (char **argv UNUSED) 
 {
+  struct dir *dir;
+  char name[NAME_MAX + 1];
+  
   printf ("Files in the root directory:\n");
-  filesys_list ();
+  dir = dir_open_root ();
+  if (dir == NULL)
+    PANIC ("root dir open failed");
+  while (dir_readdir (dir, name))
+    printf ("%s\n", name);
   printf ("End of listing.\n");
 }
 
