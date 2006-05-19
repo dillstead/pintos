@@ -106,7 +106,7 @@ wait_children (pid_t pids[], size_t child_cnt)
 
 void
 check_file_handle (int fd,
-                   const char *filename, const void *buf_, size_t size) 
+                   const char *file_name, const void *buf_, size_t size) 
 {
   const char *buf = buf_;
   size_t ofs = 0;
@@ -118,7 +118,7 @@ check_file_handle (int fd,
   file_size = filesize (fd);
   if (file_size != size)
     msg ("size of %s (%zu) differs from expected (%zu)",
-          filename, file_size, size);
+          file_name, file_size, size);
 
   /* Read the file block-by-block, comparing data as we go. */
   while (ofs < size)
@@ -133,34 +133,35 @@ check_file_handle (int fd,
       ret_val = read (fd, block, block_size);
       if (ret_val != block_size)
         fail ("read of %zu bytes at offset %zu in \"%s\" returned %zu",
-              block_size, ofs, filename, ret_val);
+              block_size, ofs, file_name, ret_val);
 
-      compare_bytes (block, buf + ofs, block_size, ofs, filename);
+      compare_bytes (block, buf + ofs, block_size, ofs, file_name);
       ofs += block_size;
     }
 
   /* Now fail due to wrong file size. */
   if (file_size != size)
     fail ("size of %s (%zu) differs from expected (%zu)",
-          filename, file_size, size);
+          file_name, file_size, size);
 
-  msg ("verified contents of \"%s\"", filename);
+  msg ("verified contents of \"%s\"", file_name);
 }
 
 void
-check_file (const char *filename, const void *buf, size_t size) 
+check_file (const char *file_name, const void *buf, size_t size) 
 {
   int fd;
 
-  CHECK ((fd = open (filename)) > 1, "open \"%s\" for verification", filename);
-  check_file_handle (fd, filename, buf, size);
-  msg ("close \"%s\"", filename);
+  CHECK ((fd = open (file_name)) > 1, "open \"%s\" for verification",
+         file_name);
+  check_file_handle (fd, file_name, buf, size);
+  msg ("close \"%s\"", file_name);
   close (fd);
 }
 
 void
 compare_bytes (const void *read_data_, const void *expected_data_, size_t size,
-               size_t ofs, const char *filename) 
+               size_t ofs, const char *file_name) 
 {
   const uint8_t *read_data = read_data_;
   const uint8_t *expected_data = expected_data_;
@@ -179,7 +180,7 @@ compare_bytes (const void *read_data_, const void *expected_data_, size_t size,
 
   quiet = false;
   msg ("%zu bytes read starting at offset %zu in \"%s\" differ "
-       "from expected.", j - i, ofs + i, filename);
+       "from expected.", j - i, ofs + i, file_name);
   show_cnt = j - i;
   if (j - i > 64) 
     {
@@ -191,5 +192,5 @@ compare_bytes (const void *read_data_, const void *expected_data_, size_t size,
   msg ("Expected data:");
   hex_dump (ofs + i, expected_data + i, show_cnt, true);
   fail ("%zu bytes read starting at offset %zu in \"%s\" differ "
-        "from expected", j - i, ofs, filename);
+        "from expected", j - i, ofs, file_name);
 }

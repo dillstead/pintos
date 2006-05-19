@@ -19,7 +19,7 @@ int order[BLOCK_CNT];
 void
 test_main (void) 
 {
-  const char *filename = "bazzle";
+  const char *file_name = "bazzle";
   int fd;
   size_t i;
 
@@ -29,10 +29,10 @@ test_main (void)
   for (i = 0; i < BLOCK_CNT; i++)
     order[i] = i;
 
-  CHECK (create (filename, TEST_SIZE), "create \"%s\"", filename);
-  CHECK ((fd = open (filename)) > 1, "open \"%s\"", filename);
+  CHECK (create (file_name, TEST_SIZE), "create \"%s\"", file_name);
+  CHECK ((fd = open (file_name)) > 1, "open \"%s\"", file_name);
 
-  msg ("write \"%s\" in random order", filename);
+  msg ("write \"%s\" in random order", file_name);
   shuffle (order, BLOCK_CNT, sizeof *order);
   for (i = 0; i < BLOCK_CNT; i++) 
     {
@@ -42,7 +42,7 @@ test_main (void)
         fail ("write %d bytes at offset %zu failed", (int) BLOCK_SIZE, ofs);
     }
 
-  msg ("read \"%s\" in random order", filename);
+  msg ("read \"%s\" in random order", file_name);
   shuffle (order, BLOCK_CNT, sizeof *order);
   for (i = 0; i < BLOCK_CNT; i++) 
     {
@@ -51,9 +51,9 @@ test_main (void)
       seek (fd, ofs);
       if (read (fd, block, BLOCK_SIZE) != BLOCK_SIZE)
         fail ("read %d bytes at offset %zu failed", (int) BLOCK_SIZE, ofs);
-      compare_bytes (block, buf + ofs, BLOCK_SIZE, ofs, filename);
+      compare_bytes (block, buf + ofs, BLOCK_SIZE, ofs, file_name);
     }
 
-  msg ("close \"%s\"", filename);
+  msg ("close \"%s\"", file_name);
   close (fd);
 }

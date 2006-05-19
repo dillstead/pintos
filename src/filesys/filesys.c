@@ -8,19 +8,19 @@
 #include "filesys/directory.h"
 #include "devices/disk.h"
 
-/* The disk that contains the filesystem. */
+/* The disk that contains the file system. */
 struct disk *filesys_disk;
 
 static void do_format (void);
 
-/* Initializes the filesystem module.
-   If FORMAT is true, reformats the filesystem. */
+/* Initializes the file system module.
+   If FORMAT is true, reformats the file system. */
 void
 filesys_init (bool format) 
 {
   filesys_disk = disk_get (0, 1);
   if (filesys_disk == NULL)
-    PANIC ("hd0:1 (hdb) not present, filesystem initialization failed");
+    PANIC ("hd0:1 (hdb) not present, file system initialization failed");
 
   inode_init ();
   free_map_init ();
@@ -31,7 +31,7 @@ filesys_init (bool format)
   free_map_open ();
 }
 
-/* Shuts down the filesystem module, writing any unwritten data
+/* Shuts down the file system module, writing any unwritten data
    to disk. */
 void
 filesys_done (void) 
@@ -94,8 +94,8 @@ filesys_remove (const char *name)
 static void must_succeed_function (int, bool) NO_INLINE;
 #define MUST_SUCCEED(EXPR) must_succeed_function (__LINE__, EXPR)
 
-/* Performs basic sanity checks on the filesystem.
-   The filesystem should not contain a file named `foo' when
+/* Performs basic sanity checks on the file system.
+   The file system should not contain a file named `foo' when
    called. */
 void
 filesys_self_test (void)
@@ -150,11 +150,11 @@ must_succeed_function (int line_no, bool success)
     PANIC ("filesys_self_test: operation failed on line %d", line_no);
 }
 
-/* Formats the filesystem. */
+/* Formats the file system. */
 static void
 do_format (void)
 {
-  printf ("Formatting filesystem...");
+  printf ("Formatting file system...");
   free_map_create ();
   if (!dir_create (ROOT_DIR_SECTOR, 16))
     PANIC ("root directory creation failed");

@@ -263,7 +263,7 @@ usage (int ret_code, const char *message, ...)
           "  -h:               this help message\n"
           "  -s <integer>:     set the random seed (default 4951)\n"
           "  -n <integer>:     choose number of insults (default 4)\n"
-          "  -f <filename>:    redirect output to a File.\n");
+          "  -f <file>:        redirect output to <file>\n");
 
   exit (ret_code);
 }

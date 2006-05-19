@@ -40,11 +40,11 @@ void shuffle (void *, size_t cnt, size_t size);
 void exec_children (const char *child_name, pid_t pids[], size_t child_cnt);
 void wait_children (pid_t pids[], size_t child_cnt);
 
-void check_file_handle (int fd, const char *filename,
+void check_file_handle (int fd, const char *file_name,
                         const void *buf_, size_t filesize);
-void check_file (const char *filename, const void *buf, size_t filesize);
+void check_file (const char *file_name, const void *buf, size_t filesize);
 
 void compare_bytes (const void *read_data, const void *expected_data,
-                    size_t size, size_t ofs, const char *filename);
+                    size_t size, size_t ofs, const char *file_name);
 
 #endif /* test/lib.h */

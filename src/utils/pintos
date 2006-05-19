@@ -70,15 +70,15 @@ sub parse_command_line {
 
 		    "h|help" => sub { usage (0); },
 
-		    "os-disk=s" => \$disks{OS}{FILENAME},
-		    "fs-disk=s" => \$disks{FS}{FILENAME},
-		    "scratch-disk=s" => \$disks{SCRATCH}{FILENAME},
-		    "swap-disk=s" => \$disks{SWAP}{FILENAME},
+		    "os-disk=s" => \$disks{OS}{FILE_NAME},
+		    "fs-disk=s" => \$disks{FS}{FILE_NAME},
+		    "scratch-disk=s" => \$disks{SCRATCH}{FILE_NAME},
+		    "swap-disk=s" => \$disks{SWAP}{FILE_NAME},
 
-		    "0|disk-0|hda=s" => \$disks_by_iface[0]{FILENAME},
-		    "1|disk-1|hdb=s" => \$disks_by_iface[1]{FILENAME},
-		    "2|disk-2|hdc=s" => \$disks_by_iface[2]{FILENAME},
-		    "3|disk-3|hdd=s" => \$disks_by_iface[3]{FILENAME})
+		    "0|disk-0|hda=s" => \$disks_by_iface[0]{FILE_NAME},
+		    "1|disk-1|hdb=s" => \$disks_by_iface[1]{FILE_NAME},
+		    "2|disk-2|hdc=s" => \$disks_by_iface[2]{FILE_NAME},
+		    "3|disk-3|hdd=s" => \$disks_by_iface[3]{FILE_NAME})
 	  or exit 1;
     }
 
@@ -201,42 +201,42 @@ sub find_disks {
     for my $disk (values %disks) {
 	# If there's no assigned file name but the default file exists,
 	# try to assign a default file name.
-	if (!defined ($disk->{FILENAME})) {
+	if (!defined ($disk->{FILE_NAME})) {
 	    for my $try_fn ($disk->{DEF_FN}, "build/" . $disk->{DEF_FN}) {
-		$disk->{FILENAME} = $try_fn, last
+		$disk->{FILE_NAME} = $try_fn, last
 		  if -e $try_fn;
 	    }
 	}
 
 	# If there's no file name, we're done.
-	next if !defined ($disk->{FILENAME});
+	next if !defined ($disk->{FILE_NAME});
 
-	if ($disk->{FILENAME} =~ /^\d+(\.\d+)?|\.\d+$/) {
+	if ($disk->{FILE_NAME} =~ /^\d+(\.\d+)?|\.\d+$/) {
 	    # Create a temporary disk of approximately the specified
 	    # size in megabytes.
 	    die "OS disk can't be temporary\n" if $disk == $disks{OS};
 
-	    my ($mb) = $disk->{FILENAME};
-	    undef $disk->{FILENAME};
+	    my ($mb) = $disk->{FILE_NAME};
+	    undef $disk->{FILE_NAME};
 
 	    my ($cyl_size) = 512 * 16 * 63;
 	    extend_disk ($disk, ceil ($mb * 2) * $cyl_size);
 	} else {
 	    # The file must exist and have nonzero size.
-	    -e $disk->{FILENAME} or die "$disk->{FILENAME}: stat: $!\n";
-	    -s _ or die "$disk->{FILENAME}: disk has zero size\n";
+	    -e $disk->{FILE_NAME} or die "$disk->{FILE_NAME}: stat: $!\n";
+	    -s _ or die "$disk->{FILE_NAME}: disk has zero size\n";
 	}
     }
 
     # Warn about (potentially) missing disks.
-    die "Cannot find OS disk\n" if !defined $disks{OS}{FILENAME};
+    die "Cannot find OS disk\n" if !defined $disks{OS}{FILE_NAME};
     if (my ($project) = `pwd` =~ /\b(threads|userprog|vm|filesys)\b/) {
 	if ((grep ($project eq $_, qw (userprog vm filesys)))
-	    && !defined ($disks{FS}{FILENAME})) {
+	    && !defined ($disks{FS}{FILE_NAME})) {
 	    print STDERR "warning: it looks like you're running the $project ";
 	    print STDERR "project, but no file system disk is present\n";
 	}
-	if ($project eq 'vm' && !defined $disks{SWAP}{FILENAME}) {
+	if ($project eq 'vm' && !defined $disks{SWAP}{FILE_NAME}) {
 	    print STDERR "warning: it looks like you're running the $project ";
 	    print STDERR "project, but no swap disk is present\n";
 	}
@@ -268,28 +268,28 @@ sub finish_scratch_disk {
 #
 # Copies $file into the scratch disk.
 sub put_scratch_file {
-    my ($put_filename) = @_;
-    my ($disk_handle, $disk_filename) = open_disk ($disks{SCRATCH});
+    my ($put_file_name) = @_;
+    my ($disk_handle, $disk_file_name) = open_disk ($disks{SCRATCH});
 
-    print "Copying $put_filename into $disk_filename...\n";
+    print "Copying $put_file_name into $disk_file_name...\n";
 
     # Write metadata sector, which consists of a 4-byte signature
     # followed by the file size.
-    stat $put_filename or die "$put_filename: stat: $!\n";
+    stat $put_file_name or die "$put_file_name: stat: $!\n";
     my ($size) = -s _;
     my ($metadata) = pack ("a4 V x504", "PUT\0", $size);
-    write_fully ($disk_handle, $disk_filename, $metadata);
+    write_fully ($disk_handle, $disk_file_name, $metadata);
 
     # Copy file data.
     my ($put_handle);
-    sysopen ($put_handle, $put_filename, O_RDONLY)
-      or die "$put_filename: open: $!\n";
-    copy_file ($put_handle, $put_filename, $disk_handle, $disk_filename,
+    sysopen ($put_handle, $put_file_name, O_RDONLY)
+      or die "$put_file_name: open: $!\n";
+    copy_file ($put_handle, $put_file_name, $disk_handle, $disk_file_name,
 	       $size);
     close ($put_handle);
 
     # Round up disk data to beginning of next sector.
-    write_fully ($disk_handle, $disk_filename, "\0" x (512 - $size % 512))
+    write_fully ($disk_handle, $disk_file_name, "\0" x (512 - $size % 512))
       if $size % 512;
 }
 
@@ -297,28 +297,28 @@ sub put_scratch_file {
 #
 # Copies from the scratch disk to $file.
 sub get_scratch_file {
-    my ($get_filename) = @_;
-    my ($disk_handle, $disk_filename) = open_disk ($disks{SCRATCH});
+    my ($get_file_name) = @_;
+    my ($disk_handle, $disk_file_name) = open_disk ($disks{SCRATCH});
 
-    print "Copying $get_filename out of $disk_filename...\n";
+    print "Copying $get_file_name out of $disk_file_name...\n";
 
     # Read metadata sector, which has a 4-byte signature followed by
     # the file size.
-    my ($metadata) = read_fully ($disk_handle, $disk_filename, 512);
+    my ($metadata) = read_fully ($disk_handle, $disk_file_name, 512);
     my ($signature, $size) = unpack ("a4 V", $metadata);
     die "bad signature reading scratch disk--did Pintos run correctly?\n"
       if $signature ne "GET\0";
 
     # Copy file data.
     my ($get_handle);
-    sysopen ($get_handle, $get_filename, O_WRONLY | O_CREAT | O_EXCL, 0666)
-      or die "$get_filename: create: $!\n";
-    copy_file ($disk_handle, $disk_filename, $get_handle, $get_filename,
+    sysopen ($get_handle, $get_file_name, O_WRONLY | O_CREAT | O_EXCL, 0666)
+      or die "$get_file_name: create: $!\n";
+    copy_file ($disk_handle, $disk_file_name, $get_handle, $get_file_name,
 	       $size);
     close ($get_handle);
 
     # Skip forward in disk up to beginning of next sector.
-    read_fully ($disk_handle, $disk_filename, 512 - $size % 512)
+    read_fully ($disk_handle, $disk_file_name, 512 - $size % 512)
       if $size % 512;
 }
 
@@ -345,10 +345,10 @@ sub write_cmd_line {
     $args .= "\0" x (128 - length ($args));
 
     # Write command line.
-    my ($handle, $filename) = open_disk_copy ($disk);
-    print "Writing command line to $filename...\n";
-    sysseek ($handle, 0x17a, 0) == 0x17a or die "$filename: seek: $!\n";
-    syswrite ($handle, "$arg_cnt$args") or die "$filename: write: $!\n";
+    my ($handle, $file_name) = open_disk_copy ($disk);
+    print "Writing command line to $file_name...\n";
+    sysseek ($handle, 0x17a, 0) == 0x17a or die "$file_name: seek: $!\n";
+    syswrite ($handle, "$arg_cnt$args") or die "$file_name: write: $!\n";
 }
 
 # Running simulators.
@@ -387,8 +387,8 @@ EOF
       " time0=0\n";
     print_bochs_disk_line ("ata0-master", 0);
     print_bochs_disk_line ("ata0-slave", 1);
-    if (defined ($disks_by_iface[2]{FILENAME})
-	|| defined ($disks_by_iface[3]{FILENAME})) {
+    if (defined ($disks_by_iface[2]{FILE_NAME})
+	|| defined ($disks_by_iface[3]{FILE_NAME})) {
 	print BOCHSRC "ata1: enabled=1, ioaddr1=0x170, ",
 	  "ioaddr2=0x370, irq=15\n";
 	print_bochs_disk_line ("ata1-master", 2);
@@ -428,7 +428,7 @@ EOF
 sub print_bochs_disk_line {
     my ($device, $iface) = @_;
     my ($disk) = $disks_by_iface[$iface];
-    my ($file) = $disk->{FILENAME};
+    my ($file) = $disk->{FILE_NAME};
     if (defined $file) {
 	my (%geom) = disk_geometry ($disk);
 	print BOCHSRC "$device: type=disk, path=$file, mode=flat, ";
@@ -446,8 +446,8 @@ sub run_qemu {
     my (@cmd) = ('qemu');
     for my $iface (0...3) {
 	my ($option) = ('-hda', '-hdb', '-hdc', '-hdd')[$iface];
-	push (@cmd, $option, $disks_by_iface[$iface]{FILENAME})
-	  if defined $disks_by_iface[$iface]{FILENAME};
+	push (@cmd, $option, $disks_by_iface[$iface]{FILE_NAME})
+	  if defined $disks_by_iface[$iface]{FILE_NAME};
     }
     push (@cmd, '-m', $mem);
     push (@cmd, '-nographic') if $vga eq 'none';
@@ -491,7 +491,7 @@ EOF
 
     for (my ($i) = 0; $i < 4; $i++) {
 	my ($disk) = $disks_by_iface[$i];
-	my ($dsk) = $disk->{FILENAME};
+	my ($dsk) = $disk->{FILE_NAME};
 	next if !defined $dsk;
 
 	my ($pln) = $dsk;
@@ -539,15 +539,15 @@ EOF
 sub open_disk {
     my ($disk) = @_;
     if (!defined ($disk->{HANDLE})) {
-	if ($disk->{FILENAME}) {
-	    sysopen ($disk->{HANDLE}, $disk->{FILENAME}, O_RDWR)
-	      or die "$disk->{FILENAME}: open: $!\n";
+	if ($disk->{FILE_NAME}) {
+	    sysopen ($disk->{HANDLE}, $disk->{FILE_NAME}, O_RDWR)
+	      or die "$disk->{FILE_NAME}: open: $!\n";
 	} else {
-	    ($disk->{HANDLE}, $disk->{FILENAME}) = tempfile (UNLINK => 1,
+	    ($disk->{HANDLE}, $disk->{FILE_NAME}) = tempfile (UNLINK => 1,
 							     SUFFIX => '.dsk');
 	}
     }
-    return ($disk->{HANDLE}, $disk->{FILENAME});
+    return ($disk->{HANDLE}, $disk->{FILE_NAME});
 }
 
 # open_disk_copy($disk)
@@ -555,13 +555,13 @@ sub open_disk {
 # Makes a temporary copy of $disk and returns its file handle and file name.
 sub open_disk_copy {
     my ($disk) = @_;
-    die if !$disk->{FILENAME};
+    die if !$disk->{FILE_NAME};
 
-    my ($orig_handle, $orig_filename) = open_disk ($disk);
-    my ($cp_handle, $cp_filename) = tempfile (UNLINK => 1, SUFFIX => '.dsk');
-    copy_file ($orig_handle, $orig_filename, $cp_handle, $cp_filename,
+    my ($orig_handle, $orig_file_name) = open_disk ($disk);
+    my ($cp_handle, $cp_file_name) = tempfile (UNLINK => 1, SUFFIX => '.dsk');
+    copy_file ($orig_handle, $orig_file_name, $cp_handle, $cp_file_name,
 	       -s $orig_handle);
-    return ($disk->{HANDLE}, $disk->{FILENAME}) = ($cp_handle, $cp_filename);
+    return ($disk->{HANDLE}, $disk->{FILE_NAME}) = ($cp_handle, $cp_file_name);
 }
 
 # extend_disk($disk, $size)
@@ -570,12 +570,12 @@ sub open_disk_copy {
 # long.
 sub extend_disk {
     my ($disk, $size) = @_;
-    my ($handle, $filename) = open_disk ($disk);
+    my ($handle, $file_name) = open_disk ($disk);
     if (-s ($handle) < $size) {
 	sysseek ($handle, $size - 1, 0) == $size - 1
-	  or die "$filename: seek: $!\n";
+	  or die "$file_name: seek: $!\n";
 	syswrite ($handle, "\0") == 1
-	  or die "$filename: write: $!\n";
+	  or die "$file_name: write: $!\n";
     }
 }
 
@@ -585,7 +585,7 @@ sub extend_disk {
 # hash.
 sub disk_geometry {
     my ($disk) = @_;
-    my ($file) = $disk->{FILENAME};
+    my ($file) = $disk->{FILE_NAME};
     my ($size) = -s $file;
     die "$file: stat: $!\n" if !defined $size;
     die "$file: size not a multiple of 512 bytes\n" if $size % 512;
@@ -599,45 +599,45 @@ sub disk_geometry {
 	    S => 63);
 }
 
-# copy_file($from_handle, $from_filename, $to_handle, $to_filename, $size)
+# copy_file($from_handle, $from_file_name, $to_handle, $to_file_name, $size)
 #
 # Copies $size bytes from $from_handle to $to_handle.
-# $from_filename and $to_filename are used in error messages.
+# $from_file_name and $to_file_name are used in error messages.
 sub copy_file {
-    my ($from_handle, $from_filename, $to_handle, $to_filename, $size) = @_;
+    my ($from_handle, $from_file_name, $to_handle, $to_file_name, $size) = @_;
 
     while ($size > 0) {
 	my ($chunk_size) = 4096;
 	$chunk_size = $size if $chunk_size > $size;
 	$size -= $chunk_size;
 
-	my ($data) = read_fully ($from_handle, $from_filename, $chunk_size);
-	write_fully ($to_handle, $to_filename, $data);
+	my ($data) = read_fully ($from_handle, $from_file_name, $chunk_size);
+	write_fully ($to_handle, $to_file_name, $data);
     }
 }
 
-# read_fully($handle, $filename, $bytes)
+# read_fully($handle, $file_name, $bytes)
 #
 # Reads exactly $bytes bytes from $handle and returns the data read.
-# $filename is used in error messages.
+# $file_name is used in error messages.
 sub read_fully {
-    my ($handle, $filename, $bytes) = @_;
+    my ($handle, $file_name, $bytes) = @_;
     my ($data);
     my ($read_bytes) = sysread ($handle, $data, $bytes);
-    die "$filename: read: $!\n" if !defined $read_bytes;
-    die "$filename: unexpected end of file\n" if $read_bytes != $bytes;
+    die "$file_name: read: $!\n" if !defined $read_bytes;
+    die "$file_name: unexpected end of file\n" if $read_bytes != $bytes;
     return $data;
 }
 
-# write_fully($handle, $filename, $data)
+# write_fully($handle, $file_name, $data)
 #
 # Write $data to $handle.
-# $filename is used in error messages.
+# $file_name is used in error messages.
 sub write_fully {
-    my ($handle, $filename, $data) = @_;
+    my ($handle, $file_name, $data) = @_;
     my ($written_bytes) = syswrite ($handle, $data);
-    die "$filename: write: $!\n" if !defined $written_bytes;
-    die "$filename: short write\n" if $written_bytes != length $data;
+    die "$file_name: write: $!\n" if !defined $written_bytes;
+    die "$file_name: short write\n" if $written_bytes != length $data;
 }
 
 # Subprocess utilities.

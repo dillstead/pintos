@@ -46,7 +46,7 @@ uint32_t *base_page_dir;
 bool enable_mlfqs;
 
 #ifdef FILESYS
-/* -f: Format the filesystem? */
+/* -f: Format the file system? */
 static bool format_filesys;
 #endif
 
@@ -119,7 +119,7 @@ main (void)
   timer_calibrate ();
 
 #ifdef FILESYS
-  /* Initialize filesystem. */
+  /* Initialize file system. */
   disk_init ();
   filesys_init (format_filesys);
 #endif

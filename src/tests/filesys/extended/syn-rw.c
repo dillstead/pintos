@@ -18,8 +18,8 @@ test_main (void)
   size_t ofs;
   int fd;
 
-  CHECK (create (filename, 0), "create \"%s\"", filename);
-  CHECK ((fd = open (filename)) > 1, "open \"%s\"", filename);
+  CHECK (create (file_name, 0), "create \"%s\"", file_name);
+  CHECK ((fd = open (file_name)) > 1, "open \"%s\"", file_name);
 
   exec_children ("child-syn-rw", children, CHILD_CNT);
 
@@ -28,7 +28,7 @@ test_main (void)
   for (ofs = 0; ofs < BUF_SIZE; ofs += CHUNK_SIZE)
     CHECK (write (fd, buf + ofs, CHUNK_SIZE) > 0,
            "write %d bytes at offset %zu in \"%s\"",
-           (int) CHUNK_SIZE, ofs, filename);
+           (int) CHUNK_SIZE, ofs, file_name);
   quiet = false;
 
   wait_children (children, CHILD_CNT);

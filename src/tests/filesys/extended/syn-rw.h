@@ -4,6 +4,6 @@
 #define CHUNK_SIZE 8
 #define CHUNK_CNT 512
 #define BUF_SIZE (CHUNK_SIZE * CHUNK_CNT)
-static const char filename[] = "logfile";
+static const char file_name[] = "logfile";
 
 #endif /* tests/filesys/extended/syn-rw.h */

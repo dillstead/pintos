@@ -27,13 +27,13 @@ test_main (void)
 #endif
   for (i = 0; i < FILE_CNT; i++) 
     {
-      char filename[128];
-      snprintf (filename, sizeof filename, "%sfile%zu", DIR_PREFIX, i);
+      char file_name[128];
+      snprintf (file_name, sizeof file_name, "%sfile%zu", DIR_PREFIX, i);
 
-      msg ("creating and checking \"%s\"", filename);
+      msg ("creating and checking \"%s\"", file_name);
 
       quiet = true;
-      seq_test (filename,
+      seq_test (file_name,
                 buf, sizeof buf, sizeof buf,
                 return_block_size, NULL); 
       quiet = false;

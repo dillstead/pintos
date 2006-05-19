@@ -11,7 +11,7 @@ static char buf_a[FILE_SIZE];
 static char buf_b[FILE_SIZE];
 
 static void
-write_some_bytes (const char *filename, int fd, const char *buf, size_t *ofs) 
+write_some_bytes (const char *file_name, int fd, const char *buf, size_t *ofs) 
 {
   if (*ofs < FILE_SIZE) 
     {
@@ -23,7 +23,7 @@ write_some_bytes (const char *filename, int fd, const char *buf, size_t *ofs)
       ret_val = write (fd, buf + *ofs, block_size);
       if (ret_val != block_size)
         fail ("write %zu bytes at offset %zu in \"%s\" returned %zu",
-              block_size, *ofs, filename, ret_val);
+              block_size, *ofs, file_name, ret_val);
       *ofs += block_size;
     }
 }

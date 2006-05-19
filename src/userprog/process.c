@@ -26,20 +26,20 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t
-process_execute (const char *filename) 
+process_execute (const char *file_name) 
 {
   char *fn_copy;
   tid_t tid;
 
-  /* Make a copy of FILENAME.
+  /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
-  strlcpy (fn_copy, filename, PGSIZE);
+  strlcpy (fn_copy, file_name, PGSIZE);
 
-  /* Create a new thread to execute FILENAME. */
-  tid = thread_create (filename, PRI_DEFAULT, execute_thread, fn_copy);
+  /* Create a new thread to execute FILE_NAME. */
+  tid = thread_create (file_name, PRI_DEFAULT, execute_thread, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -48,9 +48,9 @@ process_execute (const char *filename)
 /* A thread function that loads a user process and starts it
    running. */
 static void
-execute_thread (void *filename_)
+execute_thread (void *file_name_)
 {
-  char *filename = filename_;
+  char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
 
@@ -59,10 +59,10 @@ execute_thread (void *filename_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (filename, &if_.eip, &if_.esp);
+  success = load (file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
-  palloc_free_page (filename);
+  palloc_free_page (file_name);
   if (!success) 
     thread_exit ();
 
@@ -200,12 +200,12 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
                           bool writable);
 
-/* Loads an ELF executable from FILENAME into the current thread.
+/* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *filename, void (**eip) (void), void **esp) 
+load (const char *file_name, void (**eip) (void), void **esp) 
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -221,10 +221,10 @@ load (const char *filename, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Open executable file. */
-  file = filesys_open (filename);
+  file = filesys_open (file_name);
   if (file == NULL) 
     {
-      printf ("load: %s: open failed\n", filename);
+      printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
 
@@ -237,7 +237,7 @@ load (const char *filename, void (**eip) (void), void **esp)
       || ehdr.e_phentsize != sizeof (struct Elf32_Phdr)
       || ehdr.e_phnum > 1024) 
     {
-      printf ("load: %s: error loading executable\n", filename);
+      printf ("load: %s: error loading executable\n", file_name);
       goto done; 
     }
 
