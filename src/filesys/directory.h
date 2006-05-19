@@ -12,10 +12,10 @@
 #define NAME_MAX 14
 
 struct inode;
-struct dir;
 bool dir_create (disk_sector_t sector, size_t entry_cnt);
-bool dir_open (struct inode *, struct dir **);
-bool dir_open_root (struct dir **);
+struct dir *dir_open (struct inode *);
+struct dir *dir_open_root (void);
+struct dir *dir_reopen (struct dir *);
 void dir_close (struct dir *);
 bool dir_lookup (const struct dir *, const char *name, struct inode **);
 bool dir_add (struct dir *, const char *name, disk_sector_t);

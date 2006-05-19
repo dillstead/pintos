@@ -46,9 +46,9 @@ filesys_done (void)
 bool
 filesys_create (const char *name, off_t initial_size) 
 {
-  struct dir *dir;
   disk_sector_t inode_sector = 0;
-  bool success = (dir_open_root (&dir)
+  struct dir *dir = dir_open_root ();
+  bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, initial_size)
                   && dir_add (dir, name, inode_sector));
@@ -67,10 +67,10 @@ filesys_create (const char *name, off_t initial_size)
 struct file *
 filesys_open (const char *name)
 {
-  struct dir *dir;
+  struct dir *dir = dir_open_root ();
   struct inode *inode = NULL;
 
-  if (dir_open_root (&dir))
+  if (dir != NULL)
     dir_lookup (dir, name, &inode);
   dir_close (dir);
 
@@ -84,9 +84,8 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name) 
 {
-  struct dir *dir = NULL;
-  bool success = (dir_open_root (&dir)
-                  && dir_remove (dir, name));
+  struct dir *dir = dir_open_root ();
+  bool success = dir != NULL && dir_remove (dir, name);
   dir_close (dir); 
 
   return success;
@@ -99,13 +98,15 @@ filesys_remove (const char *name)
 bool
 filesys_list (void) 
 {
-  struct dir *dir = NULL;
-  bool success = dir_open_root (&dir);
-  if (success)
-    dir_list (dir);
-  dir_close (dir);
-
-  return success;
+  struct dir *dir = dir_open_root ();
+  if (dir != NULL) 
+    {
+      dir_list (dir);
+      dir_close (dir);
+      return true;
+    }
+  else
+    return false;
 }
 
 static void must_succeed_function (int, bool) NO_INLINE;

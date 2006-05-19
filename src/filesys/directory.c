@@ -28,37 +28,39 @@ dir_create (disk_sector_t sector, size_t entry_cnt)
   return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
 }
 
-/* Opens the directory in the given INODE, of which it takes
-   ownership, and sets *DIRP to the new directory or a null
-   pointer on failure.  Return true if successful, false on
-   failure. */
-bool
-dir_open (struct inode *inode, struct dir **dirp) 
+/* Opens and returns the directory for the given INODE, of which
+   it takes ownership.  Returns a null pointer on failure. */
+struct dir *
+dir_open (struct inode *inode) 
 {
-  struct dir *dir = NULL;
-  
-  ASSERT (dirp != NULL);
-
-  if (inode != NULL) 
+  struct dir *dir = calloc (1, sizeof *dir);
+  if (inode != NULL && dir != NULL)
     {
-      dir = malloc (sizeof *dir);
-      if (dir != NULL) 
-        dir->inode = inode;
+      dir->inode = inode;
+      return dir;
     }
-  
-  *dirp = dir;
-  if (dir == NULL)
-    inode_close (inode);
-  return dir != NULL;
+  else
+    {
+      inode_close (inode);
+      free (dir);
+      return NULL; 
+    }
 }
 
-/* Opens the root directory and sets *DIRP to it or to a null
-   pointer on failure.  Return true if successful, false on
-   failure. */
-bool
-dir_open_root (struct dir **dirp)
+/* Opens the root directory and returns a directory for it.
+   Return true if successful, false on failure. */
+struct dir *
+dir_open_root (void)
 {
-  return dir_open (inode_open (ROOT_DIR_SECTOR), dirp);
+  return dir_open (inode_open (ROOT_DIR_SECTOR));
+}
+
+/* Opens and returns a new directory for the same inode as DIR.
+   Returns a null pointer on failure. */
+struct dir *
+dir_reopen (struct dir *dir) 
+{
+  return dir_open (inode_reopen (dir->inode));
 }
 
 /* Destroys DIR and frees associated resources. */
