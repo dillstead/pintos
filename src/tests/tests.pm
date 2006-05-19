@@ -50,10 +50,27 @@ sub check_for_panic {
 
     my (@stack_line) = grep (/Call stack:/, @output);
     if (@stack_line != 0) {
-	my (@addrs) = $stack_line[0] =~ /Call stack:((?: 0x[0-9a-f]+)+)/;
-	print "Call stack: @addrs\n";
+	my ($addrs) = $stack_line[0] =~ /Call stack:((?: 0x[0-9a-f]+)+)/;
+
+	# Find a user program to translate user virtual addresses.
+	my ($userprog) = "";
+	$userprog = "$test"
+	  if grep (hex ($_) < 0xc0000000, split (' ', $addrs)) > 0 && -e $test;
+
+	# Get and print the backtrace.
+	my ($trace) = scalar (`backtrace kernel.o $userprog $addrs`);
+	print "Call stack:$addrs\n";
 	print "Translation of call stack:\n";
-	print `backtrace kernel.o @addrs`;
+	print $trace;
+
+	# Print disclaimer.
+	if ($userprog ne '' && index ($trace, $userprog) >= 0) {
+	    print <<EOF;
+Translations of user virtual addresses above are based on a guess at
+the binary to use.  If this guess is incorrect, then those
+translations will be misleading.
+EOF
+	}
     }
 
     if ($panic =~ /sec_no \< d-\>capacity/) {
