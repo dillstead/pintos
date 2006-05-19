@@ -112,9 +112,10 @@ vulnerable to external fragmentation, that is, it is possible that an
 free.  Eliminate this problem by
 modifying the on-disk inode structure.  In practice, this probably means using
 an index structure with direct, indirect, and doubly indirect blocks.
-(You are welcome to choose a different scheme as long as you explain the
+You are welcome to choose a different scheme as long as you explain the
 rationale for it in your design documentation, and as long as it does
-not suffer from external fragmentation.)
+not suffer from external fragmentation (as does the extent-based file
+system we provide).
 
 You can assume that the disk will not be larger than 8 MB.  You must
 support files as large as the disk (minus metadata).  Each inode is
@@ -163,15 +164,18 @@ retain this limit for individual file name components, or may extend
 it, at your option.  You must allow full path names to be
 much longer than 14 characters.
 
-The current directory is maintained separately for each process.  At
-startup, the initial process's current directory is the root directory.
+Maintain a separate current directory for each process.  At
+startup, set the root as the initial process's current directory.
 When one process starts another with the @code{exec} system call, the
 child process inherits its parent's current directory.  After that, the
 two processes' current directories are independent, so that either
 changing its own current directory has no effect on the other.
+(This is why, under Unix, the @command{cd} command is a shell built-in,
+not an external program.)
 
 Update the existing system calls so that, anywhere a file name is
 provided by the caller, an absolute or relative path name may used.
+The directory separator character is forward slash (@samp{/}).
 
 Update the @code{remove} system call so that it can delete empty
 directories in addition to regular files.  Directories can only be
@@ -200,9 +204,7 @@ per line, in no particular order.
 @end deftypefn
 
 We have provided @command{ls} and @command{mkdir} user programs, which
-are straightforward once the above syscalls are implemented.  In Unix,
-these are programs rather than built-in shell commands, but
-@command{cd} is a shell command.
+are straightforward once the above syscalls are implemented.
 
 The @code{pintos} @option{put} and @option{get} commands should now
 accept full path names, assuming that the directories used in the
@@ -369,10 +371,6 @@ You may submit with VM enabled.
 
 No, @code{DISK_SECTOR_SIZE} is fixed at 512.  This is a fixed property
 of IDE disk hardware.
-
-@item What's the directory separator character?
-
-Forward slash (@samp{/}).
 @end table
 
 @menu
@@ -390,18 +388,6 @@ Forward slash (@samp{/}).
 The disk we create will be 8 MB or smaller.  However, individual files
 will have to be smaller than the disk to accommodate the metadata.
 You'll need to consider this when deciding your inode organization.
-@end table
-
-@node Subdirectories FAQ
-@subsection Subdirectories FAQ
-
-@table @b
-@item Why is @command{cd} a shell command?
-
-The current directory of each process is independent.  A @command{cd}
-program could change its own current directory, but that would have no
-effect on the shell.  In fact, Unix-like systems don't provide any way
-for one process to change another's current working directory.
 @end table
 
 @node Buffer Cache FAQ
