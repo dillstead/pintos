@@ -8,7 +8,6 @@ sub pass;
 
 die if @ARGV != 2;
 our ($test, $src_dir) = @ARGV;
-our ($src_stem) = "$src_dir/$test";
 
 my ($msg_file) = tempfile ();
 select ($msg_file);
