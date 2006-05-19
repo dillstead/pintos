@@ -13,19 +13,16 @@ check:
 clean:
 	rm -rf $(TESTS)
 
-SUBMAKEFLAGS = -s
-
 define mk-sandbox
 rm -rf $@ && mkdir $@ && cp -R ../src $@/src
-cd $@/src && $(MAKE) clean $(SUBMAKEFLAGS)
+cd $@/src && $(MAKE) -s clean
 endef
 
 define run-tests
-cd $@/src/$(PROJECT) && $(MAKE) check
+cd $@/src/$(PROJECT) && $(MAKE) check PINTOSOPTS=$(PINTOSOPTS)
 endef
 
-define run-tests-grade
-cd $@/src/$(PROJECT) && $(MAKE) check
+define grade-tests
 cd $@/src/$(PROJECT) && $(MAKE) grade
 cd $@/src/$(PROJECT) && grep -q PERFECT build/grade
 cd $@/src/$(PROJECT) && grep -qv warning build/grade
@@ -40,52 +37,31 @@ rm -rf $@
 endef
 
 define apply-patch
-(cd $@ && patch -p0)
+(cd $@ && patch -p0) < ../solutions/$@.patch
 endef
 
 PROJECT = $@
+p1: PROJECT = threads
+p2: PROJECT = userprog
+p3: PROJECT = vm
+p4: PROJECT = filesys
 
+# Tests that just compile the provided code.
 threads::
 	$(mk-sandbox)
 	$(compile)
 	$(run-tests) TESTS=tests/threads/alarm-single
 	$(clean)
-
 userprog vm filesys::
 	$(mk-sandbox)
 	$(compile)
 	$(clean)
 
-FAST_SIM := $(if $(shell which qemu),--qemu)
-export PINTOSOPTS
-
-p1: PROJECT = threads
-p1::
+# Tests for the reference solutions.
+p2 p3 p4: PINTOSOPTS = --qemu
+p1 p2 p3 p4::
 	$(mk-sandbox)
-	$(apply-patch) < ../solutions/p1.patch
-	$(run-tests-grade)
-	$(clean)
-
-p2: PROJECT = userprog
-p2: PINTOSOPTS = $(FAST_SIM)
-p2::
-	$(mk-sandbox)
-	$(apply-patch) < ../solutions/p2.patch
-	$(run-tests-grade)
-	$(clean)
-
-p3: PROJECT = vm
-p3: PINTOSOPTS = $(FAST_SIM)
-p3::
-	$(mk-sandbox)
-	$(apply-patch) < ../solutions/p3.patch
-	$(run-tests-grade)
-	$(clean)
-
-p4: PROJECT = filesys
-p4: PINTOSOPTS = $(FAST_SIM)
-p4::
-	$(mk-sandbox)
-	$(apply-patch) < ../solutions/p4.patch
-	$(run-tests-grade)
+	$(apply-patch)
+	$(run-tests)
+	$(grade-tests)
 	$(clean)
