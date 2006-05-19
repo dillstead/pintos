@@ -21,7 +21,7 @@ PINTOSOPTS='--qemu'}.
 @menu
 * Project 4 Background::        
 * Project 4 Requirements::      
-* Project 4 FAQ::             
+* Project 4 FAQ::               
 @end menu
 
 @node Project 4 Background
@@ -375,7 +375,6 @@ of IDE disk hardware.
 
 @menu
 * Indexed Files FAQ::           
-* Subdirectories FAQ::          
 * Buffer Cache FAQ::            
 @end menu
 
