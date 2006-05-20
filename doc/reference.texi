@@ -579,6 +579,11 @@ interrupts is to synchronize kernel threads with external interrupt
 handlers, which cannot sleep and thus cannot use most other forms of
 synchronization (@pxref{External Interrupt Handling}).
 
+Some external interrupts cannot be postponed, even by disabling
+interrupts.  These interrupts, called @dfn{non-maskable interrupts}
+(NMIs), are supposed to be used only in emergencies, e.g.@: when the
+computer is on fire.  Pintos does not handle non-maskable interrupts.
+
 Types and functions for disabling and enabling interrupts are in
 @file{threads/interrupt.h}.
 
@@ -940,29 +945,28 @@ For our purposes, we classify interrupts into two broad categories:
 
 @itemize @bullet
 @item
+@dfn{Internal interrupts}, that is, interrupts caused directly by CPU
+instructions.  System calls, attempts at invalid memory access
+(@dfn{page faults}), and attempts to divide by zero are some activities
+that cause internal interrupts.  Because they are caused by CPU
+instructions, internal interrupts are @dfn{synchronous} or synchronized
+with CPU instructions.  @func{intr_disable} does not disable internal
+interrupts.
+
+@item
 @dfn{External interrupts}, that is, interrupts originating outside the
 CPU.  These interrupts come from hardware devices such as the system
 timer, keyboard, serial ports, and disks.  External interrupts are
 @dfn{asynchronous}, meaning that their delivery is not
-synchronized with normal CPU activities.  External interrupts
-are what @func{intr_disable} and related functions
-postpone (@pxref{Disabling Interrupts}).
-
-@item
-@dfn{Internal interrupts}, that is, interrupts caused by something
-executing on the CPU.  These interrupts are caused by something
-unusual happening during instruction execution: accessing invalid
-memory (a @dfn{page fault}), executing invalid instructions, and
-various other disallowed activities.  Because they are caused by CPU
-instructions, internal interrupts are @dfn{synchronous} or
-synchronized with CPU instructions.  @func{intr_disable} does not
-disable internal interrupts.
+synchronized with instruction execution.  Handling of external interrupts
+can be postponed with @func{intr_disable} and related functions
+(@pxref{Disabling Interrupts}).
 @end itemize
 
-Because the CPU treats all interrupts largely the same way, regardless
-of source, Pintos uses the same infrastructure for both internal and
-external interrupts, to a point.  The following section describes this
-common infrastructure, and sections after that give the specifics of
+The CPU treats both classes of interrupts largely the same way,
+so Pintos has common infrastructure to handle both classes.
+The following section describes this
+common infrastructure.  The sections after that give the specifics of
 external and internal interrupts.
 
 If you haven't already read chapter 3, ``Basic Execution Environment,''
@@ -979,11 +983,11 @@ also want to skim chapter 5, ``Interrupt and Exception Handling,'' in
 @node Interrupt Infrastructure
 @subsection Interrupt Infrastructure
 
-When an interrupt occurs while the kernel is running, the CPU saves
-its most essential state on the stack and jumps to an interrupt
-handler routine.  The 80@var{x}86 architecture allows for 256 possible
-interrupts, each of which can have its own handler. The handler for
-each interrupt is defined in an array called the @dfn{interrupt
+When an interrupt occurs, the CPU saves
+its most essential state on a stack and jumps to an interrupt
+handler routine.  The 80@var{x}86 architecture supports 256
+interrupts, numbered 0 through 255, each with an independent
+handler defined in an array called the @dfn{interrupt
 descriptor table} or IDT.
 
 In Pintos, @func{intr_init} in @file{threads/interrupt.c} sets up the
@@ -994,20 +998,20 @@ hexadecimal.  Because the CPU doesn't give
 us any other way to find out the interrupt number, this entry point
 pushes the interrupt number on the stack.  Then it jumps to
 @func{intr_entry}, which pushes all the registers that the processor
-didn't already save for us, and then calls @func{intr_handler}, which
+didn't already push for us, and then calls @func{intr_handler}, which
 brings us back into C in @file{threads/interrupt.c}.
 
-The main job of @func{intr_handler} is to call any function that has
-been registered for handling the particular interrupt.  (If no
+The main job of @func{intr_handler} is to call the function
+registered for handling the particular interrupt.  (If no
 function is registered, it dumps some information to the console and
-panics.)  It does some extra processing for external
-interrupts that we'll discuss later.
+panics.)  It also does some extra processing for external
+interrupts (@pxref{External Interrupt Handling}).
 
 When @func{intr_handler} returns, the assembly code in
 @file{threads/intr-stubs.S} restores all the CPU registers saved
 earlier and directs the CPU to return from the interrupt.
 
-A few types and functions apply to both internal and external
+The following types and functions are common to all
 interrupts.
 
 @deftp {Type} {void intr_handler_func (struct intr_frame *@var{frame})}
@@ -1017,8 +1021,8 @@ and the state of the thread that was interrupted.
 @end deftp
 
 @deftp {Type} {struct intr_frame}
-The stack frame of an interrupt handler, as saved by CPU, the interrupt
-stubs, and @func{intr_entry}. Its most interesting members are described
+The stack frame of an interrupt handler, as saved by the CPU, the interrupt
+stubs, and @func{intr_entry}.  Its most interesting members are described
 below.
 @end deftp
 
@@ -1032,7 +1036,7 @@ below.
 @deftypecvx {Member} {@struct{intr_frame}} uint32_t eax
 @deftypecvx {Member} {@struct{intr_frame}} uint16_t es
 @deftypecvx {Member} {@struct{intr_frame}} uint16_t ds
-Register values in the interrupted thread saved by @func{intr_entry}.
+Register values in the interrupted thread, pushed by @func{intr_entry}.
 The @code{esp_dummy} value isn't actually used (refer to the
 description of @code{PUSHA} in @bibref{IA32-v2b} for details).
 @end deftypecv
@@ -1063,17 +1067,16 @@ Returns the name of the interrupt numbered @var{vec}, or
 @node Internal Interrupt Handling
 @subsection Internal Interrupt Handling
 
-When an internal interrupt occurs, it is because the running kernel
-thread (or, starting from project 2, the running user process) has
-caused it.  Thus, because it is related to a thread (or process), an
-internal interrupt is said to happen in a ``process context.''
+Internal interrupts are caused directly by CPU instructions executed by
+the running kernel thread or user process (from project 2 onward).  An
+internal interrupt is therefore said to arise in a ``process context.''
 
-In an internal interrupt, it can make sense to examine the
+In an internal interrupt's handler, it can make sense to examine the
 @struct{intr_frame} passed to the interrupt handler, or even to modify
-it.  When the interrupt returns, modified members
-in @struct{intr_frame} become changes to the thread's registers.
-We'll use this in project 2 to return values from system call
-handlers.
+it.  When the interrupt returns, modifications in @struct{intr_frame}
+become changes to the calling thread or process's state.  For example,
+the Pintos system call handler returns a value to the user program by
+modifying the saved EAX register (@pxref{System Call Details}).
 
 There are no special restrictions on what an internal interrupt
 handler can or can't do.  Generally they should run with interrupts
@@ -1081,21 +1084,33 @@ enabled, just like other code, and so they can be preempted by other
 kernel threads.  Thus, they do need to synchronize with other threads
 on shared data and other resources (@pxref{Synchronization}).
 
+Internal interrupt handlers can be invoked recursively.  For example,
+the system call handler might cause a page fault while attempting to
+read user memory.  Deep recursion would risk overflowing the limited
+kernel stack (@pxref{struct thread}), but should be unnecessary.
+
 @deftypefun void intr_register_int (uint8_t @var{vec}, int @var{dpl}, enum intr_level @var{level}, intr_handler_func *@var{handler}, const char *@var{name})
 Registers @var{handler} to be called when internal interrupt numbered
 @var{vec} is triggered.  Names the interrupt @var{name} for debugging
 purposes.
 
-If @var{level} is @code{INTR_OFF} then handling of further interrupts
-will be disabled while the interrupt is being processed.  Interrupts
-should normally be turned on during the handling of an internal
-interrupt.
+If @var{level} is @code{INTR_ON}, external interrupts will be processed
+normally during the interrupt handler's execution, which is normally
+desirable.  Specifying @code{INTR_OFF} will cause the CPU to disable
+external interrupts when it invokes the interrupt handler.  The effect
+is slightly different from calling @func{intr_disable} inside the
+handler, because that leaves a window of one or more CPU instructions in
+which external interrupts are still enabled.  This is important for the
+page fault handler; refer to the comments in @file{userprog/exception.c}
+for details.
 
-@var{dpl} determines how the interrupt can be
-invoked.  If @var{dpl} is 0, then the interrupt can be invoked only by
-kernel threads.  Otherwise @var{dpl} should be 3, which allows user
-processes to invoke the interrupt as well (this is useful only
-starting with project 2).
+@var{dpl} determines how the interrupt can be invoked.  If @var{dpl} is
+0, then the interrupt can be invoked only by kernel threads.  Otherwise
+@var{dpl} should be 3, which allows user processes to invoke the
+interrupt with an explicit INT instruction.  The value of @var{dpl}
+doesn't affect user processes' ability to invoke the interrupt
+indirectly, e.g.@: an invalid memory reference will cause a page fault
+regardless of @var{dpl}.
 @end deftypefun
 
 @node External Interrupt Handling
