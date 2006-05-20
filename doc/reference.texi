@@ -52,9 +52,9 @@ sector) into memory.  This is a severe restriction and it means that,
 practically speaking, the loader has to be written in assembly
 language.
 
-Pintos' loader first initializes the CPU.  The first important part of
+The Pintos loader first initializes the CPU.  The first important part of
 this is to enable the A20 line, that is, the CPU's address line
-numbered 20.  For historical reasons, PCs start out with this address
+numbered 20.  For historical reasons, PCs boot with this address
 line fixed at 0, which means that attempts to access memory beyond the
 first 1 MB (2 raised to the 20th power) will fail.  Pintos wants to
 access more memory than this, so we have to enable it.
@@ -79,8 +79,8 @@ then we've just pulled the rug out from under ourselves.
 
 After the page table is initialized, we load the CPU's control
 registers to turn on protected mode and paging, and then we set up the
-segment registers.  We aren't equipped to handle interrupts in
-protected mode yet, so we disable interrupts.
+segment registers.  We aren't yet equipped to handle interrupts in
+protected mode, so we disable interrupts.
 
 Finally it's time to load the kernel from disk.  We use a simple but
 inflexible method to do this: we program the IDE disk
@@ -95,16 +95,17 @@ kernel starting 1 MB into physical memory.
 
 Then we jump to the start of the compiled kernel image.  Using the
 ``linker script'' in @file{threads/kernel.lds.S}, the kernel has
-arranged that it begins with the assembly module
+arranged to begin with the assembly module
 @file{threads/start.S}.  This assembly module just calls
 @func{main}, which never returns.
 
 There's one more trick: the Pintos kernel command line
-is stored in the boot loader.  The @command{pintos} program actually
-modifies the boot loader on disk each time it runs the kernel, putting
+is in stored the boot loader.  The @command{pintos} program actually
+modifies a copy of the boot loader on disk each time it runs the kernel,
+putting
 in whatever command line arguments the user supplies to the kernel,
 and then the kernel at boot time reads those arguments out of the boot
-loader in memory.  This is something of a nasty hack, but it is simple
+loader in memory.  This is not an elegant solution, but it is simple
 and effective.
 
 @node Kernel Initialization
@@ -115,7 +116,7 @@ The kernel proper starts with the @func{main} function.  The
 encounter in Pintos from here on out.
 
 When @func{main} starts, the system is in a pretty raw state.  We're
-in protected mode with paging enabled, but hardly anything else is
+in 32-bit protected mode with paging enabled, but hardly anything else is
 ready.  Thus, the @func{main} function consists primarily of calls
 into other Pintos modules' initialization functions.
 These are usually named @func{@var{module}_init}, where
@@ -141,35 +142,38 @@ called so early in initialization because the console, initialized
 just afterward, tries to use locks, and locks in turn require there to be a
 running thread.
 
-Then we initialize the console so that we can use @func{printf}.
+Then we initialize the console so that @func{printf} will work.
 @func{main} calls @func{vga_init}, which initializes the VGA text
 display and clears the screen.  It also calls @func{serial_init_poll}
 to initialize the first serial port in ``polling mode,'' that is,
 where the kernel busy-waits for the port to be ready for each
-character to be output.  (We use polling mode until we're ready to set
-up interrupts later.)  Finally we initialize the console device and
+character to be output.  (We use polling mode until we're ready to enable
+interrupts, later.)  Finally we initialize the console device and
 print a startup message to the console.
 
 @func{main} calls @func{read_command_line} to break the kernel command
 line into arguments, then @func{parse_options} to read any options at
-the beginning of the command line.  (Executing actions specified on the
-command line happens later.)
-
-The next block of functions we call initialize the kernel's memory
-system.  @func{palloc_init} sets up the kernel page allocator, which
-doles out memory one or more pages at a time.  @func{malloc_init} sets
-up the allocator that handles odd-sized allocations.
-@func{paging_init} sets up a page table for the kernel.
-
-In projects 2 and later, @func{main} also calls @func{tss_init} and
-@func{gdt_init}, but we'll talk about those later.
+the beginning of the command line.  (Actions specified on the
+command line execute later.)
 
 @func{main} calls @func{random_init} to initialize the kernel random
 number generator.  If the user specified @option{-rs} on the
-@command{pintos} command line, @func{parse_options} has already done
-this, but calling it a second time is harmless and has no effect.
+@command{pintos} command line, @func{parse_options} already did
+this, but calling it a second time is harmless.
 
-We initialize the interrupt system in the next set of calls.
+The next block of functions we call initialize the kernel's memory
+system.  @func{palloc_init} sets up the kernel page allocator, which
+doles out memory one or more pages at a time (@xpref{Page Allocator}).
+@func{malloc_init} sets
+up the allocator that handles allocations of arbitrary-size blocks of
+memory (@pxref{Block Allocator}).
+@func{paging_init} sets up a page table for the kernel (@pxref{Page
+Table}).
+
+In projects 2 and later, @func{main} also calls @func{tss_init} and
+@func{gdt_init}.
+
+The next set of calls initializes the interrupt system.
 @func{intr_init} sets up the CPU's @dfn{interrupt descriptor table}
 (IDT) to ready it for interrupt handling (@pxref{Interrupt
 Infrastructure}), then @func{timer_init} and @func{kbd_init} prepare for
@@ -177,15 +181,16 @@ handling timer interrupts and keyboard interrupts, respectively.  In
 projects 2 and later, we also prepare to handle interrupts caused by
 user programs using @func{exception_init} and @func{syscall_init}.
 
-Now that interrupts are set up, we can start preemptively scheduling
-threads with @func{thread_start}, which also enables interrupts.
+Now that interrupts are set up, we can start the scheduler
+with @func{thread_start}, which creates the idle thread and enables
+interrupts.
 With interrupts enabled, interrupt-driven serial port I/O becomes
 possible, so we use
 @func{serial_init_queue} to switch to that mode.  Finally,
 @func{timer_calibrate} calibrates the timer for accurate short delays.
 
 If the file system is compiled in, as it will starting in project 2, we
-now initialize the disks with @func{disk_init}, then the
+initialize the disks with @func{disk_init}, then the
 file system with @func{filesys_init}.
 
 Boot is complete, so we print a message.
