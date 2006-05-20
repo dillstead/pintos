@@ -840,6 +840,9 @@ char get (void) @{
 @node Memory Barriers
 @subsection Memory Barriers
 
+@c We should try to come up with a better example.
+@c Perhaps something with a linked list?
+
 Suppose we add a ``feature'' that, whenever a timer interrupt
 occurs, the character in global variable @code{timer_put_char} is
 printed on the console, but only if global Boolean variable
