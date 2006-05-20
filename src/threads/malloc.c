@@ -214,7 +214,7 @@ realloc (void *old_block, size_t new_size)
 }
 
 /* Frees block P, which must have been previously allocated with
-   malloc() or calloc(). */
+   malloc(), calloc(), or realloc(). */
 void
 free (void *p) 
 {
