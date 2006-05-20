@@ -644,7 +644,7 @@ Semaphores can also be initialized to values larger than 1.  These are
 rarely used.
 
 Semaphores were invented by Edsger Dijkstra and first used in the THE
-operating system (@bibref{THE}).
+operating system (@bibref{Dijkstra}).
 
 Pintos' semaphore type and operations are declared in
 @file{threads/synch.h}.  
@@ -762,7 +762,7 @@ up one waiter, or ``broadcasts'' the condition to wake all of them.
 
 The theoretical framework for monitors was laid out by C.@: A.@: R.@:
 Hoare (@bibref{Hoare}).  Their practical usage was later elaborated in a
-paper on the Mesa operating system (@bibref{Mesa}).
+paper on the Mesa operating system (@bibref{Lampson}).
 
 Condition variable types and functions are declared in
 @file{threads/synch.h}.
@@ -1202,7 +1202,8 @@ at once.
 
 The page allocator divides the memory it allocates into two pools,
 called the kernel and user pools.  By default, each pool gets half of
-system memory, but this can be changed with a kernel command line
+system memory, but this can be changed with the @option{-ul} kernel
+command line
 option (@pxref{Why PAL_USER?}).  An allocation request draws from one
 pool or the other.  If one pool becomes empty, the other may still
 have free pages.  The user pool should be used for allocating memory
@@ -1215,16 +1216,16 @@ the pool.  A request to allocate @var{n} pages scans the bitmap
 for @var{n} consecutive bits set to
 false, indicating that those pages are free, and then sets those bits
 to true to mark them as used.  This is a ``first fit'' allocation
-strategy.
+strategy (@pxref{Wilson}).
 
 The page allocator is subject to fragmentation.  That is, it may not
 be possible to allocate @var{n} contiguous pages even though @var{n}
 or more pages are free, because the free pages are separated by used
 pages.  In fact, in pathological cases it may be impossible to
-allocate 2 contiguous pages even though @var{n} / 2 pages are free!
+allocate 2 contiguous pages even though half of the pool's pages are free.
 Single-page requests can't fail due to fragmentation, so
-it is best to limit, as much as possible, the need for multiple
-contiguous pages.
+requests for multiple contiguous pages should be limited as much as
+possible.
 
 Pages may not be allocated from interrupt context, but they may be
 freed.
@@ -1234,10 +1235,12 @@ a debugging aid (@pxref{Debugging Tips}).
 
 Page allocator types and functions are described below.
 
-@deftp {Type} {enum palloc_flags}
-A set of flags that describe how to allocate pages.  These flags may
-be combined in any combination.
-@end deftp
+@deftypefun {void *} palloc_get_page (enum palloc_flags @var{flags})
+@deftypefunx {void *} palloc_get_multiple (enum palloc_flags @var{flags}, size_t @var{page_cnt})
+Obtains and returns one page, or @var{page_cnt} contiguous pages,
+respectively.  Returns a null pointer if the pages cannot be allocated.
+
+The @var{flags} argument may be any combination of the following flags:
 
 @defvr {Page Allocator Flag} @code{PAL_ASSERT}
 If the pages cannot be allocated, panic the kernel.  This is only
@@ -1254,28 +1257,13 @@ set, the contents of newly allocated pages are unpredictable.
 Obtain the pages from the user pool.  If not set, pages are allocated
 from the kernel pool.
 @end defvr
-
-@deftypefun {void *} palloc_get_page (enum palloc_flags @var{flags})
-Obtains and returns a single page, allocating it in the manner specified by
-@var{flags}.  Returns a null pointer if no pages are
-free.
-@end deftypefun
-
-@deftypefun {void *} palloc_get_multiple (enum palloc_flags @var{flags}, size_t @var{page_cnt})
-Obtains @var{page_cnt} contiguous free pages, allocating them in the
-manner specified by @var{flags}, and returns them.  Returns a null
-pointer if no pages are free.
 @end deftypefun
 
 @deftypefun void palloc_free_page (void *@var{page})
-Frees @var{page}, which must have been obtained using
+@deftypefunx void palloc_free_multiple (void *@var{pages}, size_t @var{page_cnt})
+Frees one page, or @var{page_cnt} contiguous pages, respectively,
+starting at @var{pages}.  All of the pages must have been obtained using
 @func{palloc_get_page} or @func{palloc_get_multiple}.
-@end deftypefun
-
-@deftypefun void palloc_free_multiple (void *@var{pages}, size_t @var{page_cnt})
-Frees the @var{page_cnt} contiguous pages starting at @var{pages}.
-All of the pages must have been obtained using @func{palloc_get_page}
-or @func{palloc_get_multiple}.
 @end deftypefun
 
 @node Block Allocator
@@ -1286,16 +1274,13 @@ blocks of any size.  It is layered on top of the page allocator
 described in the previous section.  Blocks returned by the block
 allocator are obtained from the kernel pool.
 
-The block allocator uses two different strategies for allocating
-memory.  The first of these applies to ``small'' blocks, those 1 kB or
-smaller (one
-fourth of the page size).  These allocations are rounded up to the
+The block allocator uses two different strategies for allocating memory.
+The first strategy applies to blocks that are 1 kB or smaller
+(one-fourth of the page size).  These allocations are rounded up to the
 nearest power of 2, or 16 bytes, whichever is larger.  Then they are
-grouped into a page used only for allocations of the smae
-size.
+grouped into a page used only for allocations of that size.
 
-The second strategy applies to allocating ``large'' blocks, those larger
-than 1 kB.
+The second strategy applies to blocks larger than 1 kB.
 These allocations (plus a small amount of overhead) are rounded up to
 the nearest page in size, and then the block allocator requests that
 number of contiguous pages from the page allocator.
@@ -1306,21 +1291,50 @@ carefully tune its allocator to minimize this waste, but this is
 unimportant in an instructional system like Pintos.
 
 As long as a page can be obtained from the page allocator, small
-allocations always succeed.  Most small allocations will not require a
-new page from the page allocator at all.  However, large allocations
+allocations always succeed.  Most small allocations do not require a
+new page from the page allocator at all, because they are satisfied
+using part of a page already allocated.  However, large allocations
 always require calling into the page allocator, and any allocation
 that needs more than one contiguous page can fail due to fragmentation,
 as already discussed in the previous section.  Thus, you should
 minimize the number of large allocations in your code, especially
 those over approximately 4 kB each.
 
-The interface to the block allocator is through the standard C library
-functions @func{malloc}, @func{calloc}, and @func{free}.
-
 When a block is freed, all of its bytes are cleared to @t{0xcc}, as
 a debugging aid (@pxref{Debugging Tips}).
 
 The block allocator may not be called from interrupt context.
+
+The block allocator functions are described below.  Their interfaces are
+the same as the standard C library functions of the same names.
+
+@deftypefun {void *} malloc (size_t @var{size})
+Obtains and returns a new block, from the kernel pool, at least
+@var{size} bytes long.  Returns a null pointer if @var{size} is zero or
+if memory is not available.
+@end deftypefun
+
+@deftypefun {void *} calloc (size_t @var{a}, size_t @var{b})
+Obtains a returns a new block, from the kernel pool, at least
+@code{@var{a} * @var{b}} bytes long.  The block's contents will be
+cleared to zeros.  Returns a null pointer if @var{a} or @var{b} is zero
+or if insufficient memory is available.
+@end deftypefun
+
+@deftypefun {void *} realloc (void *@var{block}, size_t @var{new_size})
+Attempts to resize @var{block} to @var{new_size} bytes, possibly moving
+it in the process.  If successful, returns the new block, in which case
+the old block must no longer be accessed.  On failure, returns a null
+pointer, and the old block remains valid.
+
+A call with @var{block} null is equivalent to @func{malloc}.  A call
+with @var{new_size} zero is equivalent to @func{free}.
+@end deftypefun
+
+@deftypefun void free (void *@var{block})
+Frees @var{block}, which must have been previously returned by
+@func{malloc}, @func{calloc}, or @func{realloc} (and not yet freed).
+@end deftypefun
 
 @node Virtual Addresses
 @section Virtual Addresses
