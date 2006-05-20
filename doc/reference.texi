@@ -163,7 +163,7 @@ this, but calling it a second time is harmless.
 
 The next block of functions we call initialize the kernel's memory
 system.  @func{palloc_init} sets up the kernel page allocator, which
-doles out memory one or more pages at a time (@xpref{Page Allocator}).
+doles out memory one or more pages at a time (@pxref{Page Allocator}).
 @func{malloc_init} sets
 up the allocator that handles allocations of arbitrary-size blocks of
 memory (@pxref{Block Allocator}).
@@ -230,27 +230,27 @@ grows downward from the end of the page.  It looks like this:
 
 @example
 @group
-        4 kB +---------------------------------+
-             |          kernel stack           |
-             |                |                |
-             |                |                |
-             |                V                |
-             |         grows downward          |
-             |                                 |
-             |                                 |
-             |                                 |
-             |                                 |
-             |                                 |
-             |                                 |
-             |                                 |
-             |                                 |
-             +---------------------------------+
-             |              magic              |
-             |                :                |
-             |                :                |
-             |              status             |
-             |               tid               |
-        0 kB +---------------------------------+
+                  4 kB +---------------------------------+
+                       |          kernel stack           |
+                       |                |                |
+                       |                |                |
+                       |                V                |
+                       |         grows downward          |
+                       |                                 |
+                       |                                 |
+                       |                                 |
+                       |                                 |
+                       |                                 |
+                       |                                 |
+                       |                                 |
+                       |                                 |
+sizeof (struct thread) +---------------------------------+
+                       |              magic              |
+                       |                :                |
+                       |                :                |
+                       |              status             |
+                       |               tid               |
+                  0 kB +---------------------------------+
 @end group
 @end example
 
@@ -294,7 +294,12 @@ invoked.  Ready threads are kept in a doubly linked list called
 The thread is waiting for something, e.g.@: a lock to become
 available, an interrupt to be invoked.  The thread won't be scheduled
 again until it transitions to the @code{THREAD_READY} state with a
-call to @func{thread_unblock}.
+call to @func{thread_unblock}.  This is most conveniently done
+indirectly, using one of the Pintos synchronization primitives that
+block and unblock threads automatically (@pxref{Synchronization}).
+
+There is no @i{a priori} way to tell what a blocked thread is waiting
+for, but a backtrace can help (@pxref{Backtraces}).
 @end defvr
 
 @defvr {Thread State} @code{THREAD_DYING}
@@ -332,23 +337,24 @@ priority scheduling in project 1 (@pxref{Priority Scheduling}).
 
 @deftypecv {Member} {@struct{thread}} {@struct{list_elem}} elem
 A ``list element'' used to put the thread into doubly linked lists,
-either the list of threads ready to run or a list of threads waiting
-on a semaphore.  Take a look at @file{lib/kernel/list.h} for
-information on how to use Pintos doubly linked lists.
+either @code{ready_list} (the list of threads ready to run) or a list of
+threads waiting on a semaphore in @func{sema_down}.  It can do double
+duty because a thread waiting on a semaphore is not ready, and vice
+versa.
 @end deftypecv
 
 @deftypecv {Member} {@struct{thread}} {uint32_t *} pagedir
-Only present in project 2 and later.
+Only present in project 2 and later.  @xref{Page Tables}.
 @end deftypecv
 
 @deftypecv {Member} {@struct{thread}} {unsigned} magic
-Always set to @code{THREAD_MAGIC}, which is just a random number defined
+Always set to @code{THREAD_MAGIC}, which is just an arbitrary number defined
 in @file{threads/thread.c}, and used to detect stack overflow.
 @func{thread_current} checks that the @code{magic} member of the running
 thread's @struct{thread} is set to @code{THREAD_MAGIC}.  Stack overflow
-will normally change this value, triggering the assertion.  For greatest
-benefit, as you add members to @struct{thread}, leave @code{magic} as
-the final member.
+tends to change this value, triggering the assertion.  For greatest
+benefit, as you add members to @struct{thread}, leave @code{magic} at
+the end.
 @end deftypecv
 
 @node Thread Functions
