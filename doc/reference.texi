@@ -1116,8 +1116,7 @@ regardless of @var{dpl}.
 @node External Interrupt Handling
 @subsection External Interrupt Handling
 
-Whereas an internal interrupt runs in the context of the thread that
-caused it, external interrupts do not have any predictable context.
+External interrupts are caused by events outside the CPU.
 They are asynchronous, so they can be invoked at any time that
 interrupts have not been disabled.  We say that an external interrupt
 runs in an ``interrupt context.''
@@ -1128,38 +1127,35 @@ or process that was interrupted, but there is no way to predict which
 one that is.  It is possible, although rarely useful, to examine it, but
 modifying it is a recipe for disaster.
 
-The activities of an external interrupt handler are severely
-restricted.  First, only one external interrupt may be processed at a
-time, that is, nested external interrupt handling is not supported.
-This means that external interrupts must be processed with interrupts
-disabled (@pxref{Disabling Interrupts}) and that interrupts may not be
-enabled at any point during their execution.
+Only one external interrupt may be processed at a time.  Neither
+internal nor external interrupt may nest within an external interrupt
+handler.  Thus, an external interrupt's handler must run with interrupts
+disabled (@pxref{Disabling Interrupts}).
 
-Second, an interrupt handler must not call any function that can
-sleep, which rules out @func{thread_yield}, @func{lock_acquire}, and
-many others.  This is because external interrupts use space on the
-stack of the kernel thread that was running at the time the interrupt
-occurred.  If the interrupt handler slept, it would effectively put that
-thread to sleep too until the interrupt handler resumed control and
-returned.
+An external interrupt handler must not sleep or yield, which rules out
+calling @func{lock_acquire}, @func{thread_yield}, and many other
+functions.  Sleeping in interrupt context would effectively put the
+interrupted thread to sleep, too, until the interrupt handler was again
+scheduled and returned.  This would be unfair to the unlucky thread, and
+it would deadlock if the handler were waiting for the sleeping thread
+to, e.g., release a lock.
 
-Because an external interrupt runs with interrupts disabled, it
+An external interrupt handler
 effectively monopolizes the machine and delays all other activities.
 Therefore, external interrupt handlers should complete as quickly as
-they can.  Any activities that require much CPU time should instead
-run in a kernel thread, possibly a thread whose activity is triggered
-by the interrupt using some synchronization primitive.
+they can.  Anything that require much CPU time should instead run in a
+kernel thread, possibly one that the interrupt triggers using a
+synchronization primitive.
 
-External interrupts are also special because they are controlled by a
+External interrupts are controlled by a
 pair of devices outside the CPU called @dfn{programmable interrupt
 controllers}, @dfn{PICs} for short.  When @func{intr_init} sets up the
 CPU's IDT, it also initializes the PICs for interrupt handling.  The
 PICs also must be ``acknowledged'' at the end of processing for each
 external interrupt.  @func{intr_handler} takes care of that by calling
-@func{pic_end_of_interrupt}, which sends the proper signals to the
-right PIC.
+@func{pic_end_of_interrupt}, which properly signals the PICs.
 
-The following additional functions are related to external
+The following functions relate to external
 interrupts.
 
 @deftypefun void intr_register_ext (uint8_t @var{vec}, intr_handler_func *@var{handler}, const char *@var{name})
@@ -1170,7 +1166,7 @@ purposes.  The handler will run with interrupts disabled.
 
 @deftypefun bool intr_context (void)
 Returns true if we are running in an interrupt context, otherwise
-false.  Mainly used at the beginning of functions that might sleep
+false.  Mainly used in functions that might sleep
 or that otherwise should not be called from interrupt context, in this
 form:
 @example
@@ -1180,9 +1176,9 @@ ASSERT (!intr_context ());
 
 @deftypefun void intr_yield_on_return (void)
 When called in an interrupt context, causes @func{thread_yield} to be
-called just before the interrupt returns.  This is used, for example,
-in the timer interrupt handler to cause a new thread to be scheduled
-when a thread's time slice expires.
+called just before the interrupt returns.  Used
+in the timer interrupt handler when a thread's time slice expires, to
+cause a new thread to be scheduled.
 @end deftypefun
 
 @node Memory Allocation
