@@ -542,7 +542,7 @@ Nachos by current and former CS 140 teaching assistants at Stanford
 University, including at least Yu Ping, Greg Hutchins, Kelly Shaw, Paul
 Twohey, Sameer Qureshi, and John Rector.
 
-Example code for condition variables (@pxref{Condition Variables}) is
+Example code for monitors (@pxref{Monitors}) is
 from classroom slides originally by Dawson Engler and updated by Mendel
 Rosenblum.
 

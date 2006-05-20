@@ -540,7 +540,7 @@ interrupts and calls the thread's function (the function passed to
 @section Synchronization
 
 If sharing of resources between threads is not handled in a careful,
-controlled fashion, then the result is usually a big mess.
+controlled fashion, the result is usually a big mess.
 This is especially the case in operating system kernels, where
 faulty sharing can crash the entire machine.  Pintos provides several
 synchronization primitives to help out.
@@ -549,7 +549,7 @@ synchronization primitives to help out.
 * Disabling Interrupts::        
 * Semaphores::                  
 * Locks::                       
-* Condition Variables::         
+* Monitors::                    
 * Memory Barriers::             
 @end menu
 
@@ -607,12 +607,8 @@ Turns interrupts off.  Returns the previous interrupt state.
 @node Semaphores
 @subsection Semaphores
 
-Pintos' semaphore type and operations are declared in
-@file{threads/synch.h}.
-
-@deftp {Type} {struct semaphore}
-Represents a @dfn{semaphore}, a nonnegative integer together with two
-operators that manipulate it atomically, which are:
+A @dfn{semaphore} is a nonnegative integer together with two operators
+that manipulate it atomically, which are:
 
 @itemize @bullet
 @item
@@ -641,6 +637,15 @@ more appropriate.
 
 Semaphores can also be initialized to values larger than 1.  These are
 rarely used.
+
+Semaphores were invented by Edsger Dijkstra and first used in the THE
+operating system (@bibref{THE}).
+
+Pintos' semaphore type and operations are declared in
+@file{threads/synch.h}.  
+
+@deftp {Type} {struct semaphore}
+Represents a semaphore.
 @end deftp
 
 @deftypefun void sema_init (struct semaphore *@var{sema}, unsigned @var{value})
@@ -655,17 +660,22 @@ its value to become positive and then decrementing it by one.
 
 @deftypefun bool sema_try_down (struct semaphore *@var{sema})
 Tries to execute the ``down'' or ``P'' operation on @var{sema},
-without waiting.  Returns true if @var{sema} had a positive value
-that was successfully decremented, or false if it was already
-zero and thus could not be decremented.  Calling this function in a
-tight loop wastes CPU time (use @func{sema_down} instead, or find a
-different approach).
+without waiting.  Returns true if @var{sema}
+was successfully decremented, or false if it was already
+zero and thus could not be decremented without waiting.  Calling this
+function in a
+tight loop wastes CPU time, so use @func{sema_down} or find a
+different approach instead.
 @end deftypefun
 
 @deftypefun void sema_up (struct semaphore *@var{sema})
 Executes the ``up'' or ``V'' operation on @var{sema},
 incrementing its value.  If any threads are waiting on
 @var{sema}, wakes one of them up.
+
+Unlike most synchronization primitives, @func{sema_up} may be called
+inside an external interrupt handler (@pxref{External Interrupt
+Handling}).
 @end deftypefun
 
 Semaphores are internally built out of disabling interrupt
@@ -677,29 +687,31 @@ implementation in @file{lib/kernel/list.c}.
 @node Locks
 @subsection Locks
 
-Lock types and functions are declared in @file{threads/synch.h}.
+A @dfn{lock} is like a semaphore with an initial value of 1
+(@pxref{Semaphores}).  A lock's equivalent of ``up'' is called
+``acquire'', and the ``down'' operation is called ``release''.
 
-@deftp {Type} {struct lock}
-Represents a @dfn{lock}, a specialized semaphore with an initial value
-of 1 (@pxref{Semaphores}).  The difference between a lock and such a
-semaphore is twofold.  First, a semaphore does not have an owner,
-meaning that one thread can ``down'' the semaphore and then another one
-``up'' it, but a single thread must both acquire and release a lock.
-Second, a semaphore can have a value greater than 1, but a lock can only
-be owned by a single thread at a time.  If these restrictions prove
-onerous, it's a good sign that a semaphore should be used, instead of a
-lock.
+Compared to a semaphore, a lock has one added restriction: only the
+thread that acquires a lock, called the lock's ``owner'', is allowed to
+release it.  If this restriction is a problem, it's a good sign that a
+semaphore should be used, instead of a lock.
 
 Locks in Pintos are not ``recursive,'' that is, it is an error for the
 thread currently holding a lock to try to acquire that lock.
+
+Lock types and functions are declared in @file{threads/synch.h}.
+
+@deftp {Type} {struct lock}
+Represents a lock.
 @end deftp
 
 @deftypefun void lock_init (struct lock *@var{lock})
 Initializes @var{lock} as a new lock.
+The lock is not initially owned by any thread.
 @end deftypefun
 
 @deftypefun void lock_acquire (struct lock *@var{lock})
-Acquires @var{lock} for use by the current thread, first waiting for
+Acquires @var{lock} for the current thread, first waiting for
 any current owner to release it if necessary.
 @end deftypefun
 
@@ -707,7 +719,7 @@ any current owner to release it if necessary.
 Tries to acquire @var{lock} for use by the current thread, without
 waiting.  Returns true if successful, false if the lock is already
 owned.  Calling this function in a tight loop is a bad idea because it
-wastes CPU time (use @func{lock_acquire} instead).
+wastes CPU time, so use @func{lock_acquire} instead.
 @end deftypefun
 
 @deftypefun void lock_release (struct lock *@var{lock})
@@ -717,37 +729,41 @@ Releases @var{lock}, which the current thread must own.
 @deftypefun bool lock_held_by_current_thread (const struct lock *@var{lock})
 Returns true if the running thread owns @var{lock},
 false otherwise.
+There is no function to test whether an arbitrary thread owns a lock,
+because the answer could change before the caller could act on it.
 @end deftypefun
 
-@node Condition Variables
-@subsection Condition Variables
+@node Monitors
+@subsection Monitors
+
+A @dfn{monitor} is a higher-level form of synchronization than a
+semaphore or a lock.  A monitor consists of data being synchronized,
+plus a lock, called the @dfn{monitor lock}, and one or more
+@dfn{condition variables}.  Before it accesses the protected data, a
+thread first acquires the monitor lock.  It is then said to be ``in the
+monitor''.  While in the monitor, the thread has control over all the
+protected data, which it may freely examine or modify.  When access to
+the protected data is complete, it releases the monitor lock.
+
+Condition variables allow code in the monitor to wait for a condition to
+become true.  Each condition variable is associated with an abstract
+condition, e.g.@: ``some data has arrived for processing'' or ``over 10
+seconds has passed since the user's last keystroke''.  When code in the
+monitor needs to wait for a condition to become true, it ``waits'' on
+the associated condition variable, which releases the lock and waits for
+the condition to be signaled.  If, on the other hand, it has caused one
+of these conditions to become true, it ``signals'' the condition to wake
+up one waiter, or ``broadcasts'' the condition to wake all of them.
+
+The theoretical framework for monitors was laid out by C.@: A.@: R.@:
+Hoare (@bibref{Hoare}).  Their practical usage was later elaborated in a
+paper on the Mesa operating system (@bibref{Mesa}).
 
 Condition variable types and functions are declared in
 @file{threads/synch.h}.
 
 @deftp {Type} {struct condition}
-Represents a condition variable, which allows one piece of code to
-signal a condition
-and cooperating code to receive the signal and act upon it.  Each
-condition variable is associated with a lock.  A given condition
-variable is associated with only a single lock, but one lock may be
-associated with any number of condition variables.  A set of condition
-variables taken together with their lock is called a ``monitor.''
-
-A thread that owns the monitor lock is said to be ``in the monitor.''
-The thread in the monitor has control over all the data protected by
-the lock.  It may freely examine or modify this data.  If it discovers
-that it needs to wait for some condition to become true, then it
-``waits'' on the associated condition, which releases the lock and
-waits for the condition to be signaled.  If, on the other hand, it has
-caused one of these conditions to become true, it ``signals'' the
-condition to wake up one waiter, or ``broadcasts'' the condition to
-wake all of them.
-
-Pintos monitors are ``Mesa'' style, not
-``Hoare'' style.  That is, sending and receiving a signal are not an
-atomic operation.  Thus, typically the caller must recheck the
-condition after the wait completes and, if necessary, wait again.
+Represents a condition variable.
 @end deftp
 
 @deftypefun void cond_init (struct condition *@var{cond})
@@ -759,6 +775,11 @@ Atomically releases @var{lock} (the monitor lock) and waits for
 @var{cond} to be signaled by some other piece of code.  After
 @var{cond} is signaled, reacquires @var{lock} before returning.
 @var{lock} must be held before calling this function.
+
+Sending a signal and waking up from a wait are not an atomic operation.
+Thus, typically @func{cond_wait}'s caller must recheck the condition
+after the wait completes and, if necessary, wait again.  See the next
+section for an example.
 @end deftypefun
 
 @deftypefun void cond_signal (struct condition *@var{cond}, struct lock *@var{lock})
@@ -777,8 +798,9 @@ function.
 @subsubsection Monitor Example
 
 The classical example of a monitor is handling a buffer into which one
-``producer'' thread writes characters and out of which a second
-``consumer'' thread reads characters.  To implement this case we need,
+or more
+``producer'' threads write characters and out of which one or more
+``consumer'' threads read characters.  To implement this we need,
 besides the monitor lock, two condition variables which we will call
 @var{not_full} and @var{not_empty}:
 
