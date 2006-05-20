@@ -276,6 +276,7 @@ if you like.
 @end deftypecv
 
 @deftypecv {Member} {@struct{thread}} {enum thread_status} status
+@anchor{Thread States}
 The thread's state, one of the following:
 
 @defvr {Thread State} @code{THREAD_RUNNING}
@@ -402,20 +403,21 @@ Creates and starts a new thread named @var{name} with the given
 
 @func{thread_create} allocates a page for the thread's
 @struct{thread} and stack and initializes its members, then it sets
-up a set of fake stack frames for it (more about this
-later).  The thread is initialized in the blocked state, so the final
-action before returning is to unblock it, which allows the new thread to
-be scheduled.
-@end deftypefun
+up a set of fake stack frames for it (@pxref{Thread Switching}).  The
+thread is initialized in the blocked state, then unblocked just before
+returning, which allows the new thread to
+be scheduled (@pxref{Thread States}).
 
 @deftp {Type} {void thread_func (void *@var{aux})}
-This is the type of a thread function.  Its @var{aux} argument is the
-value passed to @func{thread_create}.
+This is the type of the function passed to @func{thread_create}, whose
+@var{aux} argument is passed along as the function's argument.
 @end deftp
+@end deftypefun
 
 @deftypefun void thread_block (void)
 Transitions the running thread from the running state to the blocked
-state.  The thread will not run again until @func{thread_unblock} is
+state (@pxref{Thread States}).  The thread will not run again until
+@func{thread_unblock} is
 called on it, so you'd better have some way arranged for that to happen.
 Because @func{thread_block} is so low-level, you should prefer to use
 one of the synchronization primitives instead (@pxref{Synchronization}).
@@ -423,8 +425,9 @@ one of the synchronization primitives instead (@pxref{Synchronization}).
 
 @deftypefun void thread_unblock (struct thread *@var{thread})
 Transitions @var{thread}, which must be in the blocked state, to the
-ready state, allowing it to resume running.  This is called when the
-event that the thread is waiting for occurs, e.g.@: when the lock that
+ready state, allowing it to resume running (@pxref{Thread States}).
+This is called when the event that the thread is waiting for occurs,
+e.g.@: when the lock that 
 the thread is waiting on becomes available.
 @end deftypefun
 
@@ -456,20 +459,20 @@ time.
 
 @deftypefun int thread_get_priority (void)
 @deftypefunx void thread_set_priority (int @var{new_priority})
-Skeleton to set and get thread priority.  @xref{Priority Scheduling}.
+Stub to set and get thread priority.  @xref{Priority Scheduling}.
 @end deftypefun
 
 @deftypefun int thread_get_nice (void)
 @deftypefunx void thread_set_nice (int @var{new_nice})
 @deftypefunx int thread_get_recent_cpu (void)
 @deftypefunx int thread_get_load_avg (void)
-Skeletons for the advanced scheduler.  @xref{4.4BSD Scheduler}.
+Stubs for the advanced scheduler.  @xref{4.4BSD Scheduler}.
 @end deftypefun
 
 @node Thread Switching
 @subsection Thread Switching
 
-@func{schedule} is the function responsible for switching threads.  It
+@func{schedule} is responsible for switching threads.  It
 is internal to @file{threads/thread.c} and called only by the three
 public thread functions that need to switch threads:
 @func{thread_block}, @func{thread_exit}, and @func{thread_yield}.
@@ -477,7 +480,7 @@ Before any of these functions call @func{schedule}, they disable
 interrupts (or ensure that they are already disabled) and then change
 the running thread's state to something other than running.
 
-@func{schedule} is simple but tricky.  It records the
+@func{schedule} is short but tricky.  It records the
 current thread in local variable @var{cur}, determines the next thread
 to run as local variable @var{next} (by calling
 @func{next_thread_to_run}), and then calls @func{switch_threads} to do
@@ -492,7 +495,7 @@ CPU's current stack pointer in the current @struct{thread}'s @code{stack}
 member, restores the new thread's @code{stack} into the CPU's stack
 pointer, restores registers from the stack, and returns.
 
-The rest of the scheduler is implemented as @func{schedule_tail}.  It
+The rest of the scheduler is implemented in @func{schedule_tail}.  It
 marks the new thread as running.  If the thread we just switched from
 is in the dying state, then it also frees the page that contained the
 dying thread's @struct{thread} and stack.  These couldn't be freed
@@ -500,7 +503,7 @@ prior to the thread switch because the switch needed to use it.
 
 Running a thread for the first time is a special case.  When
 @func{thread_create} creates a new thread, it goes through a fair
-amount of trouble to get it started properly.  In particular, a new
+amount of trouble to get it started properly.  In particular, the new
 thread hasn't started running yet, so there's no way for it to be
 running inside @func{switch_threads} as the scheduler expects.  To
 solve the problem, @func{thread_create} creates some fake stack frames
