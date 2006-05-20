@@ -1788,9 +1788,9 @@ Returns the kernel virtual address for the page table page that
 @section Hash Table
 
 Pintos provides a hash table data structure in @file{lib/kernel/hash.c}.
-To use it you will need to manually include its header file,
-@file{lib/kernel/hash.h}, with @code{#include <hash.h>}.  Intentionally,
-no code provided with Pintos uses the hash table, which means that you
+To use it you will need to include its header file,
+@file{lib/kernel/hash.h}, with @code{#include <hash.h>}.
+No code provided with Pintos uses the hash table, which means that you
 are free to use it as is, modify its implementation for your own
 purposes, or ignore it, as you wish.
 
@@ -1830,12 +1830,11 @@ return pointers to @struct{hash_elem}, not pointers to your hash table's
 real element type.
 @end deftp
 
-You will often need to obtain a @struct{hash_elem}
-given a real element of the hash table, and vice versa.  Given
-a real element of the hash table, obtaining a pointer to its
-@struct{hash_elem} is trivial: take the address of the
-@struct{hash_elem} member.  Use the @code{hash_entry()} macro to go the
-other direction.
+You will often need to obtain a @struct{hash_elem} given a real element
+of the hash table, and vice versa.  Given a real element of the hash
+table, you may use the @samp{&} operator to obtain a pointer to its
+@struct{hash_elem}.  Use the @code{hash_entry()} macro to go the other
+direction.
 
 @deftypefn {Macro} {@var{type} *} hash_entry (struct hash_elem *@var{elem}, @var{type}, @var{member})
 Returns a pointer to the structure that @var{elem}, a pointer to a
@@ -1845,18 +1844,23 @@ the name of the member in @var{type} that @var{elem} points to.
 
 For example, suppose @code{h} is a @code{struct hash_elem *} variable
 that points to a @struct{thread} member (of type @struct{hash_elem})
-named @code{h_elem}.  Then, @code{hash_entry (h, struct thread, h_elem)}
+named @code{h_elem}.  Then, @code{hash_entry@tie{}(h, struct thread, h_elem)}
 yields the address of the @struct{thread} that @code{h} points within.
 @end deftypefn
 
+@xref{Hash Table Example}, for an example.
+
 Each hash table element must contain a key, that is, data that
-identifies and distinguishes elements in the hash table.  Every element
-in a hash table at a given time must have a unique key.  (Elements may
+identifies and distinguishes elements, which must be unique
+among elements in the hash table.  (Elements may
 also contain non-key data that need not be unique.)  While an element is
-in a hash table, its key data must not be changed.  For each hash table,
-you must write two functions that act on keys: a hash function and a
-comparison function.  These functions must match the following
-prototypes:
+in a hash table, its key data must not be changed.  Instead, if need be,
+remove the element from the hash table, modify its key, then reinsert
+the element.
+
+For each hash table, you must write two functions that act on keys: a
+hash function and a comparison function.  These functions must match the
+following prototypes:
 
 @deftp {Type} {unsigned hash_hash_func (const struct hash_elem *@var{element}, void *@var{aux})}
 Returns a hash of @var{element}'s data, as a value anywhere in the range
@@ -1903,7 +1907,9 @@ If two elements compare equal, then they must hash to equal values.
 @xref{Hash Auxiliary Data}, for an explanation of @var{aux}.
 @end deftp
 
-A few functions that act on hashes accept a pointer to a third kind of
+@xref{Hash Table Example}, for hash and comparison function examples.
+
+A few functions accept a pointer to a third kind of
 function as an argument:
 
 @deftp {Type} {void hash_action_func (struct hash_elem *@var{element}, void *@var{aux})}
@@ -1915,11 +1921,10 @@ Performs some kind of action, chosen by the caller, on @var{element}.
 @node Basic Hash Functions
 @subsection Basic Functions
 
-These functions create and destroy hash tables and obtain basic
-information about their contents.
+These functions create, destroy, and inspect hash tables.
 
 @deftypefun bool hash_init (struct hash *@var{hash}, hash_hash_func *@var{hash_func}, hash_less_func *@var{less_func}, void *@var{aux})
-Initializes @var{hash} as a hash table using @var{hash_func} as hash
+Initializes @var{hash} as a hash table with @var{hash_func} as hash
 function, @var{less_func} as comparison function, and @var{aux} as
 auxiliary data.
 Returns true if successful, false on failure.  @func{hash_init} calls
@@ -1971,8 +1976,8 @@ table, or simply return the result of the search.
 @deftypefun {struct hash_elem *} hash_insert (struct hash *@var{hash}, struct hash_elem *@var{element})
 Searches @var{hash} for an element equal to @var{element}.  If none is
 found, inserts @var{element} into @var{hash} and returns a null pointer.
-If the table already contains an element equal to @var{element}, returns
-the existing element without modifying @var{hash}.
+If the table already contains an element equal to @var{element}, it is
+returned without modifying @var{hash}.
 @end deftypefun
 
 @deftypefun {struct hash_elem *} hash_replace (struct hash *@var{hash}, struct hash_elem *@var{element})
@@ -1982,14 +1987,14 @@ removed, or a null pointer if @var{hash} did not contain an element
 equal to @var{element}.
 
 The caller is responsible for deallocating any resources associated with
-the element returned, as appropriate.  For example, if the hash table
+the returned element, as appropriate.  For example, if the hash table
 elements are dynamically allocated using @func{malloc}, then the caller
 must @func{free} the element after it is no longer needed.
 @end deftypefun
 
 The element passed to the following functions is only used for hashing
 and comparison purposes.  It is never actually inserted into the hash
-table.  Thus, only the key data in the element need be initialized, and
+table.  Thus, only key data in the element needs to be initialized, and
 other data in the element will not be used.  It often makes sense to
 declare an instance of the element type as a local variable, initialize
 the key data, and then pass the address of its @struct{hash_elem} to
@@ -2009,7 +2014,7 @@ found, it is removed from @var{hash} and returned.  Otherwise, a null
 pointer is returned and @var{hash} is unchanged.
 
 The caller is responsible for deallocating any resources associated with
-the element returned, as appropriate.  For example, if the hash table
+the returned element, as appropriate.  For example, if the hash table
 elements are dynamically allocated using @func{malloc}, then the caller
 must @func{free} the element after it is no longer needed.
 @end deftypefun
@@ -2144,8 +2149,8 @@ based on a virtual address, assuming that @var{pages} is defined at file
 scope:
 
 @example
-/* @r{Returns the page containing the given virtual @var{address},
-   or a null pointer if no such page exists.} */
+/* @r{Returns the page containing the given virtual @var{address},}
+   @r{or a null pointer if no such page exists.} */
 struct page *
 page_lookup (const void *address)
 @{
@@ -2178,9 +2183,9 @@ the @code{UNUSED} macro, as shown in the example, or you can just ignore
 it.)
 
 @var{aux} is useful when you have some property of the data in the
-hash table that's both constant and needed for hashing or comparisons,
-but which is not stored in the data items themselves.  For example, if
-the items in a hash table contain fixed-length strings, but the items
+hash table is both constant and needed for hashing or comparison,
+but not stored in the data items themselves.  For example, if
+the items in a hash table are fixed-length strings, but the items
 themselves don't indicate what that fixed length is, you could pass
 the length as an @var{aux} parameter.
 
