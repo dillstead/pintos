@@ -44,7 +44,7 @@ vary over time.  A well-designed scheduler can often accommodate threads
 with all these requirements simultaneously.
 
 For project 1, you must implement the scheduler described in this
-appendix.  Our scheduler resembles the one described in @bibref{4.4BSD},
+appendix.  Our scheduler resembles the one described in @bibref{McKusick},
 which is one example of a @dfn{multilevel feedback queue} scheduler.
 This type of scheduler maintains several queues of ready-to-run threads,
 where each queue holds threads with a different priority.  At any given

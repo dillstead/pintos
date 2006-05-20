@@ -105,12 +105,7 @@ Interface---DRAFT---24 April 2001}.  A draft of a revised version of
 @node Operating System Design References
 @section Operating System Design References
 
-@bibdfn{4.4BSD}
-M.@: K.@: McKusick, K.@: Bostic, M.@: J.@: Karels, J.@: S.@: Quarterman,
-@cite{The Design and Implementation of the 4.4@acronym{BSD} Operating
-System}.  Addison-Wesley 1996.
-
-@bibdfn{THE}
+@bibdfn{Dijkstra}
 E.@: W.@: Dijkstra, @cite{The structure of the ``THE''
 multiprogramming system}.  Communications of the ACM 11(5):341--346,
 1968.  @uref{http://doi.acm.org/10.1145/363095.363143}.
@@ -120,7 +115,18 @@ C.@: A.@: R.@: Hoare, @cite{Monitors: An Operating System
 Structuring Concept}.  Communications of the ACM, 17(10):549--557,
 1974.  @uref{http://www.acm.org/classics/feb96/}.
 
-@bibdfn{Mesa}
+@bibdfn{Lampson}
 B.@: W.@: Lampson, D.@: D.@: Redell, @cite{Experience with processes and
 monitors in Mesa}.  Communications of the ACM, 23(2):105--117, 1980.
 @uref{http://doi.acm.org/10.1145/358818.358824}.
+
+@bibdfn{McKusick}
+M.@: K.@: McKusick, K.@: Bostic, M.@: J.@: Karels, J.@: S.@: Quarterman,
+@cite{The Design and Implementation of the 4.4@acronym{BSD} Operating
+System}.  Addison-Wesley, 1996.
+
+@bibdfn{Wilson}
+P.@: R.@: Wilson, M.@: S.@: Johnstone, M.@: Neely, D.@: Boles,
+@cite{Dynamic Storage Allocation: A Survey and Critical Review}.
+International Workshop on Memory Management, 1995.
+@uref{http://www.cs.utexas.edu/users/oops/papers.html#allocsrv}.
