@@ -1357,17 +1357,17 @@ working with virtual addresses:
 
 @defmac PGSHIFT
 @defmacx PGBITS
-The bit index (0) and number of bits (12) in the offset part of a
+The bit index (0) and number of bits (12) of the offset part of a
 virtual address, respectively.
 @end defmac
 
 @defmac PGMASK
-A bit mask with value @t{0xfff}, so that the bits in the page offset are
-set to 1 and other bits set to 0.
+A bit mask with the bits in the page offset set to 1, the rest set to 0
+(@t{0xfff}).
 @end defmac
 
 @defmac PGSIZE
-The page size in bytes (4096).
+The page size in bytes (4,096).
 @end defmac
 
 @deftypefun unsigned pg_ofs (const void *@var{va})
@@ -1388,8 +1388,8 @@ Returns @var{va} rounded up to the nearest page boundary.
 @end deftypefun
 
 Virtual memory in Pintos is divided into two regions: user virtual
-memory and kernel virtual memory.  The boundary between them is
-@code{PHYS_BASE}:
+memory and kernel virtual memory (@pxref{Virtual Memory Layout}).  The
+boundary between them is @code{PHYS_BASE}:
 
 @defmac PHYS_BASE
 Base address of kernel virtual memory.  It defaults to @t{0xc0000000} (3
@@ -1482,37 +1482,35 @@ encapsulated by a page table.  They work on both active and inactive
 page tables (that is, those for running and suspended processes),
 flushing the TLB as necessary.
 
-User page parameters (@var{upage})to these functions should be user
-virtual addresses.  Kernel page parameters (@var{kpage}) should be
-kernel virtual addresses and should have been obtained from the user
-pool with @code{palloc_get_page(PAL_USER)} (@pxref{Why PAL_USER?}).
-
 @deftypefun bool pagedir_set_page (uint32_t *@var{pd}, void *@var{upage}, void *@var{kpage}, bool @var{writable})
-Adds to @var{pd} a mapping from page @var{upage} to the frame identified
+Adds to @var{pd} a mapping from user page @var{upage} to the frame identified
 by kernel virtual address @var{kpage}.  If @var{writable} is true, the
 page is mapped read/write; otherwise, it is mapped read-only.
 
-Page @var{upage} must not already be mapped.  If it is, the kernel
-panics.
+User page @var{upage} must not already be mapped in @var{pd}.
+
+Kernel page @var{kpage} should be a kernel virtual address obtained from
+the user pool with @code{palloc_get_page(PAL_USER)} (@pxref{Why
+PAL_USER?}).
 
 Returns true if successful, false on failure.  Failure will occur if
 additional memory required for the page table cannot be obtained.
 @end deftypefun
 
 @deftypefun {void *} pagedir_get_page (uint32_t *@var{pd}, const void *@var{uaddr})
-Looks up the frame mapped to @var{upage} in @var{pd}.  Returns the
-kernel virtual address for that frame, if @var{upage} is mapped, or a
+Looks up the frame mapped to @var{uaddr} in @var{pd}.  Returns the
+kernel virtual address for that frame, if @var{uaddr} is mapped, or a
 null pointer if it is not.
 @end deftypefun
 
-@deftypefun void pagedir_clear_page (uint32_t *@var{pd}, void *@var{upage})
-Marks page @var{upage} ``not present'' in @var{pd}.  Later accesses to
+@deftypefun void pagedir_clear_page (uint32_t *@var{pd}, void *@var{page})
+Marks @var{page} ``not present'' in @var{pd}.  Later accesses to
 the page will fault.
 
-Other bits in the page table for @var{upage} are preserved, permitting
+Other bits in the page table for @var{page} are preserved, permitting
 the accessed and dirty bits (see the next section) to be checked.
 
-If @var{upage} is not mapped, this function has no effect.
+This function has no effect if @var{page} is not mapped.
 @end deftypefun
 
 @node Page Table Accessed and Dirty Bits
@@ -1637,13 +1635,13 @@ with raw page tables:
 
 @defmac PTSHIFT
 @defmacx PTBITS
-The bit index (12) and number of bits (10), respectively, in a page table
-index within a virtual address.
+The starting bit index (12) and number of bits (10), respectively, in a
+page table index.
 @end defmac
 
 @defmac PTMASK
-A bit mask with the bits in the page table index set to 1 and other bits
-set to 0.
+A bit mask with the bits in the page table index set to 1 and the rest
+set to 0 (@t{0x3ff000}).
 @end defmac
 
 @defmac PTSPAN
@@ -1653,13 +1651,13 @@ page covers (4,194,304 bytes, or 4 MB).
 
 @defmac PDSHIFT
 @defmacx PDBITS
-The bit index (22) and number of bits (10), respectively, in a page
-directory index within a virtual address.
+The starting bit index (22) and number of bits (10), respectively, in a
+page directory index.
 @end defmac
 
 @defmac PDMASK
 A bit mask with the bits in the page directory index set to 1 and other
-bits set to 0.
+bits set to 0 (@t{0xffc00000}).
 @end defmac
 
 @deftypefun uintptr_t pd_no (const void *@var{va})
@@ -1762,7 +1760,7 @@ marked read/write; otherwise, it will be read-only.
 @deftypefun {void *} pte_get_page (uint32_t @var{pte})
 Returns the kernel virtual address for the frame that @var{pte} points
 to.  The @var{pte} may be present or not-present; if it is not-present
-then the pointer return is only meaningful if the proper bits in the PTE
+then the pointer returned is only meaningful if the address bits in the PTE
 actually represent a physical address.
 @end deftypefun
 
@@ -1783,7 +1781,7 @@ marked read/write.
 
 @deftypefun {uint32_t *} pde_get_pt (uint32_t @var{pde})
 Returns the kernel virtual address for the page table page that
-@var{pde} points to.  The @var{pde} must be marked present.
+@var{pde}, which must be marked present, points to.
 @end deftypefun
 
 @node Hash Table
