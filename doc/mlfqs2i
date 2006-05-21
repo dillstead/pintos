@@ -1,8 +1,0 @@
-#! /usr/bin/perl
-print "0 0\n";
-while (<>) {
-    my ($ix, $iy) = /^(\d+) (\d+)$/ or die;
-    my ($x) = ($ix - 201) / (443 - 201) * 60;
-    my ($y) = ($iy - 456) / (645 - 456) * 25;
-    printf "%.2f %.2f\n", $x, $y;
-}
