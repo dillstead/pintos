@@ -74,8 +74,7 @@ snprintf (char *buffer, size_t buf_size, const char *format, ...)
 /* Writes formatted output to the console.
    In the kernel, the console is both the video display and first
    serial port.
-   In userspace, the console is file descriptor 1.
-*/
+   In userspace, the console is file descriptor 1. */
 int
 printf (const char *format, ...) 
 {
