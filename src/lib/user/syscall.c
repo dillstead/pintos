@@ -176,3 +176,9 @@ isdir (int fd)
 {
   return syscall1 (SYS_ISDIR, fd);
 }
+
+int
+inumber (int fd) 
+{
+  return syscall1 (SYS_INUMBER, fd);
+}

@@ -176,18 +176,17 @@ not an external program.)
 Update the existing system calls so that, anywhere a file name is
 provided by the caller, an absolute or relative path name may used.
 The directory separator character is forward slash (@samp{/}).
-You may support @file{.} and @file{..} for a small amount of extra
-credit.
+You must also support special file names @file{.} and @file{..}, which
+have the same meanings as they do in Unix.
 
 Update the @code{remove} system call so that it can delete empty
-directories in addition to regular files.  Directories can only be
-deleted if they do not contain any files or subdirectories.
+directories in addition to regular files.  Directories may only be
+deleted if they do not contain any files or subdirectories (other than
+@file{.} and @file{..}).
 
 Update the @code{open} system call so that it can also open directories.
-Passing @file{.} as the argument to @code{open} must open the current
-directory, regardless of whether @file{.} and @file{..} are fully
-implemented.  Of the existing system calls, only @code{close} needs to
-accept a file descriptor for a directory.
+Of the existing system calls, only @code{close} needs to accept a file
+descriptor for a directory.
 
 Implement the following new system calls:
 
@@ -213,8 +212,7 @@ name in @var{name}, which must have room for @code{READDIR_MAX_LEN + 1}
 bytes, and returns true.  If no entries are left in the directory,
 returns false.
 
-@file{.} and @file{..} should not be returned by @code{readdir},
-regardless of whether they are implemented.
+@file{.} and @file{..} should not be returned by @code{readdir}.
 
 If the directory changes while it is open, then it is acceptable for
 some entries not to be read at all or to be read multiple times.
@@ -230,14 +228,24 @@ Returns true if @var{fd} represents a directory,
 false if it represents an ordinary file.
 @end deftypefn
 
+@deftypefn {System Call} int inumber (int @var{fd})
+Returns the @dfn{inode number} of the inode associated with @var{fd}.
+Applicable to file descriptors for both files and directories.
+
+An inode number persistently identifies a file or directory.  It is
+unique during the file's existence.  In Pintos, the sector number of the
+inode is suitable for use as an inode number.
+@end deftypefn
+
 We have provided @command{ls} and @command{mkdir} user programs, which
-are straightforward once the above syscalls are implemented.  The
-@command{shell} program implements @command{cd} internally.
+are straightforward once the above syscalls are implemented.  
+We have also provided @command{pwd}, which is not so straightforward.
+The @command{shell} program implements @command{cd} internally.
 
 The @code{pintos} @option{put} and @option{get} commands should now
 accept full path names, assuming that the directories used in the
-paths have already been created.  This should not require any extra
-effort on your part.
+paths have already been created.  This should not require any significant
+extra effort on your part.
 
 @node Buffer Cache
 @subsection Buffer Cache
@@ -385,13 +393,6 @@ modified by the reference solution.
  30 files changed, 2721 insertions(+), 286 deletions(-)
 @end verbatim
 
-@item What extra credit opportunities are available?
-
-You may implement Unix-style support for @file{.} and @file{..} in
-relative paths in their projects.
-
-You may submit with VM enabled.
-
 @item Can @code{DISK_SECTOR_SIZE} change?
 
 No, @code{DISK_SECTOR_SIZE} is fixed at 512.  This is a fixed property
@@ -419,16 +420,20 @@ You'll need to consider this when deciding your inode organization.
 @subsection Subdirectories FAQ
 
 @table @b
-@item How should a file name like @samp{//a//b} be interpreted?
+@item How should a file name like @samp{a//b} be interpreted?
 
 Multiple consecutive slashes are equivalent to a single slash, so this
-file name is the same as @samp{/a/b}.
+file name is the same as @samp{a/b}.
 
 @item How about a file name like @samp{/../x}?
 
-If you don't implement @file{.} and @file{..}, then this is not a
-special case.  If you do, then it is equivalent to @samp{/x}.  That is,
-the root directory is its own parent.
+The root directory is its own parent, so it is equivalent to @samp{/x}.
+
+@item How should a file name that ends in @samp{/} be treated?
+
+Most Unix systems allow a slash at the end of the name for a directory,
+and reject other names that end in slashes.  We will allow this
+behavior, as well as simply rejecting a name that ends in a slash.
 @end table
 
 @node Buffer Cache FAQ

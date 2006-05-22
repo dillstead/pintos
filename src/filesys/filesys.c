@@ -91,65 +91,6 @@ filesys_remove (const char *name)
   return success;
 }
 
-static void must_succeed_function (int, bool) NO_INLINE;
-#define MUST_SUCCEED(EXPR) must_succeed_function (__LINE__, EXPR)
-
-/* Performs basic sanity checks on the file system.
-   The file system should not contain a file named `foo' when
-   called. */
-void
-filesys_self_test (void)
-{
-  static const char s[] = "This is a test string.";
-  static const char zeros[sizeof s] = {0};
-  struct file *file;
-  char s2[sizeof s];
-  int i;
-
-  filesys_remove ("foo");
-  for (i = 0; i < 2; i++) 
-    {
-      /* Create file and check that it contains zeros
-         throughout the created length. */
-      MUST_SUCCEED (filesys_create ("foo", sizeof s));
-      MUST_SUCCEED ((file = filesys_open ("foo")) != NULL);
-      MUST_SUCCEED (file_read (file, s2, sizeof s2) == sizeof s2);
-      MUST_SUCCEED (memcmp (s2, zeros, sizeof s) == 0);
-      MUST_SUCCEED (file_tell (file) == sizeof s);
-      MUST_SUCCEED (file_length (file) == sizeof s);
-      file_close (file);
-
-      /* Reopen file and write to it. */
-      MUST_SUCCEED ((file = filesys_open ("foo")) != NULL);
-      MUST_SUCCEED (file_write (file, s, sizeof s) == sizeof s);
-      MUST_SUCCEED (file_tell (file) == sizeof s);
-      MUST_SUCCEED (file_length (file) == sizeof s);
-      file_close (file);
-
-      /* Reopen file and verify that it reads back correctly.
-         Delete file while open to check proper semantics. */
-      MUST_SUCCEED ((file = filesys_open ("foo")) != NULL);
-      MUST_SUCCEED (filesys_remove ("foo"));
-      MUST_SUCCEED (filesys_open ("foo") == NULL);
-      MUST_SUCCEED (file_read (file, s2, sizeof s) == sizeof s);
-      MUST_SUCCEED (memcmp (s, s2, sizeof s) == 0);
-      MUST_SUCCEED (file_tell (file) == sizeof s);
-      MUST_SUCCEED (file_length (file) == sizeof s);
-      file_close (file);
-    }
-  
-  printf ("filesys: self test ok\n");
-}
-
-/* If SUCCESS is false, panics with an error complaining about
-   LINE_NO. */
-static void 
-must_succeed_function (int line_no, bool success) 
-{
-  if (!success)
-    PANIC ("filesys_self_test: operation failed on line %d", line_no);
-}
-
 /* Formats the file system. */
 static void
 do_format (void)

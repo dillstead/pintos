@@ -8,6 +8,7 @@ ls
 mcat
 mcp
 mkdir
+pwd
 rm
 shell
 bubsort

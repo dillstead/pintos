@@ -5,8 +5,8 @@
    named.
 
    By default, only the name of each file is printed.  If "-l" is
-   given as the first argument, the type and size of each file is
-   also printed. */
+   given as the first argument, the type, size, and inumber of
+   each file is also printed.  This won't work until project 4. */
 
 #include <syscall.h>
 #include <stdio.h>
@@ -25,7 +25,12 @@ list_dir (const char *dir, bool verbose)
   if (isdir (dir_fd))
     {
       char name[READDIR_MAX_LEN];
-      printf ("%s:\n", dir);
+
+      printf ("%s", dir);
+      if (verbose)
+        printf (" (inumber %d)", inumber (dir_fd));
+      printf (":\n");
+
       while (readdir (dir_fd, name)) 
         {
           printf ("%s", name); 
@@ -34,14 +39,7 @@ list_dir (const char *dir, bool verbose)
               char full_name[128];
               int entry_fd;
 
-              if (strcmp (dir, "."))
-                snprintf (full_name, sizeof full_name, "%s/%s", dir, name);
-              else 
-                {
-                  /* This is a special case for implementations
-                     that don't fully understand . and .. */
-                  strlcpy (full_name, name, sizeof full_name); 
-                }
+              snprintf (full_name, sizeof full_name, "%s/%s", dir, name);
               entry_fd = open (full_name);
 
               printf (": ");
@@ -51,6 +49,7 @@ list_dir (const char *dir, bool verbose)
                     printf ("directory");
                   else
                     printf ("%d-byte file", filesize (entry_fd));
+                  printf (", inumber %d", inumber (entry_fd));
                 }
               else
                 printf ("open failed");
