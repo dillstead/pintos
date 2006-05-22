@@ -1,4 +1,4 @@
-TESTS = threads p1 userprog p2 vm p3 filesys p4 
+TESTS = examples threads p1 userprog p2 vm p3 filesys p4
 
 PATH := $(shell pwd)/../src/utils:$(PATH)
 
@@ -52,7 +52,7 @@ threads::
 	$(compile)
 	$(run-tests) TESTS=tests/threads/alarm-single
 	$(clean)
-userprog vm filesys::
+examples userprog vm filesys::
 	$(mk-sandbox)
 	$(compile)
 	$(clean)
