@@ -8,6 +8,7 @@
 int
 main (int argc, char *argv[]) 
 {
+  bool success = true;
   int i;
   
   for (i = 1; i < argc; i++) 
@@ -16,6 +17,7 @@ main (int argc, char *argv[])
       if (fd < 0) 
         {
           printf ("%s: open failed\n", argv[i]);
+          success = false;
           continue;
         }
       for (;;) 
@@ -28,5 +30,5 @@ main (int argc, char *argv[])
         }
       close (fd);
     }
-  return 0;
+  return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }

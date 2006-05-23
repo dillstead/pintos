@@ -18,7 +18,7 @@ main (int argc, char *argv[])
   if (argc != 3) 
     {
       printf ("usage: cp OLD NEW\n");
-      return 1;
+      return EXIT_FAILURE;
     }
 
   /* Open input file. */
@@ -26,7 +26,7 @@ main (int argc, char *argv[])
   if (in_fd < 0) 
     {
       printf ("%s: open failed\n", argv[1]);
-      return 1;
+      return EXIT_FAILURE;
     }
   size = filesize (in_fd);
 
@@ -34,13 +34,13 @@ main (int argc, char *argv[])
   if (!create (argv[2], size)) 
     {
       printf ("%s: create failed\n", argv[2]);
-      return 1;
+      return EXIT_FAILURE;
     }
   out_fd = open (argv[2]);
   if (out_fd < 0) 
     {
       printf ("%s: open failed\n", argv[2]);
-      return 1;
+      return EXIT_FAILURE;
     }
 
   /* Map files. */
@@ -48,13 +48,13 @@ main (int argc, char *argv[])
   if (in_map == MAP_FAILED) 
     {
       printf ("%s: mmap failed\n", argv[1]);
-      return 1;
+      return EXIT_FAILURE;
     }
   out_map = mmap (out_fd, out_data);
   if (out_map == MAP_FAILED)
     {
       printf ("%s: mmap failed\n", argv[2]);
-      return 1;
+      return EXIT_FAILURE;
     }
 
   /* Copy files. */
@@ -64,5 +64,5 @@ main (int argc, char *argv[])
   munmap (in_map);
   munmap (out_map);
 
-  return 0;
+  return EXIT_SUCCESS;
 }

@@ -42,5 +42,5 @@ main (int argc, char *argv[])
 
   close (handle);
 
-  return 0;
+  return EXIT_SUCCESS;
 }

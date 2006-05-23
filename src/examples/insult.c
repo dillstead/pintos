@@ -319,7 +319,7 @@ main (int argc, char *argv[])
           if (handle < 0)
             {
               printf ("%s: open failed\n", argv[i]);
-              return -1;
+              return EXIT_FAILURE;
             }
 	}
       else
@@ -341,7 +341,7 @@ main (int argc, char *argv[])
   if (file_flag)
     close (handle);
 
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 void

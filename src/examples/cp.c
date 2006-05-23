@@ -13,7 +13,7 @@ main (int argc, char *argv[])
   if (argc != 3) 
     {
       printf ("usage: cp OLD NEW\n");
-      return 1;
+      return EXIT_FAILURE;
     }
 
   /* Open input file. */
@@ -21,20 +21,20 @@ main (int argc, char *argv[])
   if (in_fd < 0) 
     {
       printf ("%s: open failed\n", argv[1]);
-      return 1;
+      return EXIT_FAILURE;
     }
 
   /* Create and open output file. */
   if (!create (argv[2], filesize (in_fd))) 
     {
       printf ("%s: create failed\n", argv[2]);
-      return 1;
+      return EXIT_FAILURE;
     }
   out_fd = open (argv[2]);
   if (out_fd < 0) 
     {
       printf ("%s: open failed\n", argv[2]);
-      return 1;
+      return EXIT_FAILURE;
     }
 
   /* Copy data. */
@@ -47,9 +47,9 @@ main (int argc, char *argv[])
       if (write (out_fd, buffer, bytes_read) != bytes_read) 
         {
           printf ("%s: write failed\n", argv[2]);
-          return 1;
+          return EXIT_FAILURE;
         }
     }
 
-  return 0;
+  return EXIT_SUCCESS;
 }

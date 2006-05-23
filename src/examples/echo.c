@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <syscall.h>
 
 int
 main (int argc, char **argv)
@@ -9,5 +10,5 @@ main (int argc, char **argv)
     printf ("%s ", argv[i]);
   printf ("\n");
 
-  return 0;
+  return EXIT_SUCCESS;
 }

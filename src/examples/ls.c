@@ -12,14 +12,14 @@
 #include <stdio.h>
 #include <string.h>
 
-static void
+static bool
 list_dir (const char *dir, bool verbose) 
 {
   int dir_fd = open (dir);
   if (dir_fd == -1) 
     {
       printf ("%s: not found\n", dir);
-      return; 
+      return false;
     }
 
   if (isdir (dir_fd))
@@ -60,13 +60,16 @@ list_dir (const char *dir, bool verbose)
     }
   else 
     printf ("%s: not a directory\n", dir);
-  close (dir_fd); 
+  close (dir_fd);
+  return true;
 }
 
 int
 main (int argc, char *argv[]) 
 {
+  bool success = true;
   bool verbose = false;
+  
   if (argc > 1 && !strcmp (argv[1], "-l")) 
     {
       verbose = true;
@@ -75,12 +78,13 @@ main (int argc, char *argv[])
     }
   
   if (argc <= 1)
-    list_dir (".", verbose);
+    success = list_dir (".", verbose);
   else 
     {
       int i;
       for (i = 1; i < argc; i++)
-        list_dir (argv[i], verbose);
+        if (!list_dir (argv[i], verbose))
+          success = false;
     }
-  return 0;
+  return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }

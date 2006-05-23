@@ -23,7 +23,7 @@ main (int argc, char *argv[])
       if (fd < 0) 
         {
           printf ("%s: open failed\n", argv[i]);
-          return 1;
+          return EXIT_FAILURE;
         }
       size = filesize (fd);
 
@@ -32,7 +32,7 @@ main (int argc, char *argv[])
       if (map == MAP_FAILED) 
         {
           printf ("%s: mmap failed\n", argv[i]);
-          return 1;
+          return EXIT_FAILURE;
         }
 
       /* Write file to console. */
@@ -41,5 +41,5 @@ main (int argc, char *argv[])
       /* Unmap files (optional). */
       munmap (map);
     }
-  return 0;
+  return EXIT_SUCCESS;
 }

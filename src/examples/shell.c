@@ -41,7 +41,7 @@ main (void)
     }
 
   printf ("Shell exiting.");
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 /* Reads a line of input from the user into LINE, which has room

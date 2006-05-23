@@ -16,12 +16,12 @@ main (void)
   if (getcwd (cwd, sizeof cwd)) 
     {
       printf ("%s\n", cwd);
-      return 0; 
+      return EXIT_SUCCESS;
     }
   else 
     {
       printf ("error\n");
-      return 1; 
+      return EXIT_FAILURE; 
     }
 }
 

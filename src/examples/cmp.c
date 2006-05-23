@@ -13,7 +13,7 @@ main (int argc, char *argv[])
   if (argc != 3) 
     {
       printf ("usage: cmp A B\n");
-      return 1;
+      return EXIT_FAILURE;
     }
 
   /* Open files. */
@@ -21,13 +21,13 @@ main (int argc, char *argv[])
   if (fd[0] < 0) 
     {
       printf ("%s: open failed\n", argv[1]);
-      return 1;
+      return EXIT_FAILURE;
     }
   fd[1] = open (argv[2]);
   if (fd[1] < 0) 
     {
       printf ("%s: open failed\n", argv[1]);
-      return 1;
+      return EXIT_FAILURE;
     }
 
   /* Compare data. */
@@ -53,7 +53,7 @@ main (int argc, char *argv[])
                     pos + i,
                     buffer[0][i], buffer[0][i], argv[1],
                     buffer[1][i], buffer[1][i], argv[2]);
-            return 1;
+            return EXIT_FAILURE;
           }
 
       if (min_read < bytes_read[1])
@@ -64,5 +64,5 @@ main (int argc, char *argv[])
 
   printf ("%s and %s are identical\n", argv[1], argv[2]);
 
-  return 0;
+  return EXIT_SUCCESS;
 }
