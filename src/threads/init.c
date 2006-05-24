@@ -219,7 +219,10 @@ read_command_line (void)
   /* Print kernel command line. */
   printf ("Kernel command line:");
   for (i = 0; i < argc; i++)
-    printf (" %s", argv[i]);
+    if (strchr (argv[i], ' ') == NULL)
+      printf (" %s", argv[i]);
+    else
+      printf (" '%s'", argv[i]);
   printf ("\n");
 
   return argv;
