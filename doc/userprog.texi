@@ -21,7 +21,7 @@ projects 3 and 4, but it is not strictly required.
 
 You might find it useful to go back and reread how to run the tests
 (@pxref{Testing}).  In particular, the tests for project 2 (and later
-projects) will probably run faster if you use the qemu emulator, e.g.@:
+projects) will run much faster if you use the qemu emulator, e.g.@:
 via @code{make check PINTOSOPTS='--qemu'}.
 
 @menu

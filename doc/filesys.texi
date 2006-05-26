@@ -14,7 +14,7 @@ filesys submission.  If you build on project 3, then all of the project
 @file{filesys/Make.vars} to enable VM functionality.  You can receive up
 to 5% extra credit if you do enable VM.
 
-The tests for project 4 will probably run faster if
+The tests for project 4 will run much faster if
 you use the qemu emulator, e.g.@: via @code{make check
 PINTOSOPTS='--qemu'}.
 
