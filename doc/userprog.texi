@@ -20,9 +20,7 @@ assignment.  The ``alarm clock'' functionality may be useful in
 projects 3 and 4, but it is not strictly required.
 
 You might find it useful to go back and reread how to run the tests
-(@pxref{Testing}).  In particular, the tests for project 2 (and later
-projects) will run much faster if you use the qemu emulator, e.g.@:
-via @code{make check PINTOSOPTS='--qemu'}.
+(@pxref{Testing}).
 
 @menu
 * Project 2 Background::        

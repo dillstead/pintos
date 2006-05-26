@@ -8,7 +8,7 @@ use Getopt::Long qw(:config bundling);
 
 # Command-line options.
 our ($start_time) = time ();
-our ($sim) = $ENV{PINTOSSIM};	# Simulator: bochs, qemu, or gsx.
+our ($sim);			# Simulator: bochs, qemu, or gsx.
 our ($debug) = "none";		# Debugger: none, monitor, or gdb.
 our ($mem) = 4;			# Physical RAM in MB.
 our ($serial_out) = 1;		# Send output to serial port?
@@ -130,8 +130,6 @@ Disk options: (name an existing FILE or specify SIZE in MB for a temp disk)
   --swap-disk=FILE|SIZE    Set swap disk file (default: swap.dsk)
 Other options:
   -h, --help               Display this help message.
-Environment variables:
-  PINTOSSIM                Select default simulator.
 EOF
     exit $exitcode;
 }

@@ -19,7 +19,7 @@ cd $@/src && $(MAKE) -s clean
 endef
 
 define run-tests
-cd $@/src/$(PROJECT) && $(MAKE) check PINTOSOPTS=$(PINTOSOPTS)
+cd $@/src/$(PROJECT) && $(MAKE) check
 endef
 
 define grade-tests
@@ -58,7 +58,6 @@ examples userprog vm filesys::
 	$(clean)
 
 # Tests for the reference solutions.
-p2 p3 p4: PINTOSOPTS = --qemu
 p1 p2 p3 p4::
 	$(mk-sandbox)
 	$(apply-patch)

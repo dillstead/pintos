@@ -268,8 +268,8 @@ When you're debugging code, it's useful to be able to run a
 program twice and have it do exactly the same thing.  On second and
 later runs, you can make new observations without having to discard or
 verify your old observations.  This property is called
-``reproducibility.''  The simulator we use by default, Bochs, can be set
-up for
+``reproducibility.''  One of the simulators that Pintos supports, Bochs,
+can be set up for
 reproducibility, and that's the way that @command{pintos} invokes it
 by default.
 
@@ -337,7 +337,10 @@ After running all the tests, @command{make check} also prints a summary
 of the test results.
 
 For project 1, the tests will probably run faster in Bochs.  For the
-rest of the projects, they will probably run faster in qemu.
+rest of the projects, they will run much faster in qemu.
+@command{make check} will select the faster simulator by default, but
+you can override its choice by specifying @option{SIMULATOR=--bochs} or
+@option{SIMULATOR=--qemu} on the @command{make} command line.
 
 You can also run individual tests one at a time.  A given test @var{t}
 writes its output to @file{@var{t}.output}, then a script scores the
@@ -353,8 +356,8 @@ its run.  If you prefer, you can observe the progress of each test by
 specifying @option{VERBOSE=1} on the @command{make} command line, as in
 @code{make check VERBOSE=1}.  You can also provide arbitrary options to the
 @command{pintos} run by the tests with @option{PINTOSOPTS='@dots{}'},
-e.g.@: @code{make check PINTOSOPTS='--qemu'} to run the tests under
-qemu.
+e.g.@: @code{make check PINTOSOPTS='-j 1'} to select a jitter value of 1
+(@pxref{Debugging Versus Testing}).
 
 All of the tests and related files are in @file{pintos/src/tests}.
 Before we test your submission, we will replace the contents of that

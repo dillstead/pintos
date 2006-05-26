@@ -17,10 +17,6 @@ in project 3.
 You will continue to handle Pintos disks and file systems the same way
 you did in the previous assignment (@pxref{Using the File System}).
 
-The tests for project 3 (and later projects) will run much faster if
-you use the qemu emulator, e.g.@: via @code{make check
-PINTOSOPTS='--qemu'}.
-
 @menu
 * Project 3 Background::        
 * Project 3 Suggested Order of Implementation::  

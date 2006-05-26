@@ -12,7 +12,7 @@ PINTOSFLAGS += -v -T $(TIMEOUT)						\
 	$(foreach file,$(PUTFILES),-p $(file) -a $(notdir $(file)))
 KERNELFLAGS += -q
 
-PINTOS = pintos $(PINTOSOPTS) $(PINTOSFLAGS) -- $(KERNELFLAGS)
+PINTOS = pintos $(SIMULATOR) $(PINTOSOPTS) $(PINTOSFLAGS) -- $(KERNELFLAGS)
 
 OUTPUTS = $(addsuffix .output,$(TESTS))
 ERRORS = $(addsuffix .errors,$(TESTS))
