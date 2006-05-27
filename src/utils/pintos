@@ -448,6 +448,7 @@ sub run_qemu {
 	  if defined $disks_by_iface[$iface]{FILE_NAME};
     }
     push (@cmd, '-m', $mem);
+    push (@cmd, '-net', 'none');
     push (@cmd, '-nographic') if $vga eq 'none';
     push (@cmd, '-serial', 'stdio') if $serial_out && $vga ne 'none';
     push (@cmd, '-S') if $debug eq 'monitor';
