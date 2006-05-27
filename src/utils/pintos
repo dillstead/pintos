@@ -16,6 +16,7 @@ our ($vga);			# VGA output: window, terminal, or none.
 our ($jitter);			# Seed for random timer interrupts, if set.
 our ($realtime);		# Synchronize timer interrupts with real time?
 our ($timeout);			# Maximum runtime in seconds, if set.
+our ($kill_on_failure);		# Abort quickly on test failure?
 our (@puts);			# Files to copy into the VM.
 our (@gets);			# Files to copy out of the VM.
 our ($as_ref);			# Reference to last addition to @gets or @puts.
@@ -58,7 +59,9 @@ sub parse_command_line {
 		    "m|memory=i" => \$mem,
 		    "j|jitter=i" => sub { set_jitter (@_) },
 		    "r|realtime" => sub { set_realtime () },
+
 		    "T|timeout=i" => \$timeout,
+		    "k|kill-on-failure" => \$kill_on_failure,
 
 		    "v|no-vga" => sub { set_vga ('none'); },
 		    "s|no-serial" => sub { $serial_out = 0; },
@@ -86,8 +89,11 @@ sub parse_command_line {
     $debug = "none" if !defined $debug;
     $vga = "window" if !defined $vga;
 
-    print "warning: -T or --timeout should not be used with --$debug\n"
+    undef $timeout, print "warning: disabling timeout with --$debug\n"
       if defined ($timeout) && $debug ne 'none';
+
+    print "warning: enabling serial output for -k or --kill-on-failure\n"
+      if $kill_on_failure && !$serial_out;
 }
 
 # usage($exitcode).
@@ -115,8 +121,11 @@ Display options: (default is both VGA and serial)
 Timing options: (Bochs only)
   -j SEED                  Randomize timer interrupts
   -r, --realtime           Use realistic, not reproducible, timings
+Testing options:
   -T, --timeout=N          Kill Pintos after N seconds CPU time or N*load_avg
                            seconds wall-clock time (whichever comes first)
+  -k, --kill-on-failure    Kill Pintos a few seconds after a kernel or user
+                           panic, test failure, or triple fault
 Configuration options:
   -m, --mem=N              Give Pintos N MB physical RAM (default: 4)
 File system commands (for `run' command):
@@ -471,6 +480,7 @@ sub run_gsx {
     gsx_unsup ("--no-vga") if $vga eq 'none';
     gsx_unsup ("--terminal") if $vga eq 'terminal';
     gsx_unsup ("--jitter") if defined $jitter;
+    gsx_unsup ("--kill-on-failure") if defined $kill_on_failure;
 
     unlink ("pintos.out");
 
@@ -656,21 +666,69 @@ sub run_command {
 # Relays common signals to the subprocess.
 # If $timeout is set then the subprocess will be killed after that long.
 sub xsystem {
+    # qemu turns off local echo and does not restore it if killed by a signal.
+    # We compensate by restoring it ourselves.
+    my $cleanup = sub {};
+    if (isatty (0)) {
+	my $termios = POSIX::Termios->new;
+	$termios->getattr (0);
+	$cleanup = sub { $termios->setattr (0, &POSIX::TCSANOW); }
+    }
+
+    # Create pipe for filtering output.
+    pipe (my $in, my $out) or die "pipe: $!\n" if $kill_on_failure;
+
     my ($pid) = fork;
     if (!defined ($pid)) {
 	# Fork failed.
 	die "fork: $!\n";
     } elsif (!$pid) {
 	# Running in child process.
+	dup2 (fileno ($out), STDOUT_FILENO) or die "dup2: $!\n"
+	  if $kill_on_failure;
 	exec_setitimer (@_);
     } else {
 	# Running in parent process.
-	local $SIG{ALRM} = sub { timeout ($pid); };
-	local $SIG{INT} = sub { relay_signal ($pid, "INT"); };
-	local $SIG{TERM} = sub { relay_signal ($pid, "TERM"); };
+	close $out if $kill_on_failure;
+
+	my ($cause);
+	local $SIG{ALRM} = sub { timeout ($pid, $cause, $cleanup); };
+	local $SIG{INT} = sub { relay_signal ($pid, "INT", $cleanup); };
+	local $SIG{TERM} = sub { relay_signal ($pid, "TERM", $cleanup); };
 	alarm ($timeout * get_load_average () + 1) if defined ($timeout);
-	waitpid ($pid, 0);
+
+	if ($kill_on_failure) {
+	    # Filter output.
+	    my ($buf) = "";
+	    my ($boots) = 0;
+	    while (waitpid ($pid, WNOHANG) == 0) {
+		# Read and print out pipe data.
+		my ($len) = length ($buf);
+		waitpid ($pid, 0), last
+		  if sysread ($in, $buf, 4096, $len) <= 0;
+		print STDOUT substr ($buf, $len);
+
+		# Remove full lines from $buf and scan them for keywords.
+		while ((my $idx = index ($buf, "\n")) >= 0) {
+		    local $_ = substr ($buf, 0, $idx + 1, '');
+		    next if defined ($cause);
+		    if (/(Kernel PANIC|User process ABORT)/ ) {
+			$cause = "\L$1\E";
+			alarm (5);
+		    } elsif (/Pintos booting/ && ++$boots > 1) {
+			$cause = "triple fault";
+			alarm (5);
+		    } elsif (/FAILED/) {
+			$cause = "test failure";
+			alarm (5);
+		    }
+		}
+	    }
+	} else {
+	    waitpid ($pid, 0);
+	}
 	alarm (0);
+	&$cleanup ();
 
 	if (WIFSIGNALED ($?) && WTERMSIG ($?) == SIGVTALRM ()) {
 	    seek (STDOUT, 0, 2);
@@ -682,31 +740,38 @@ sub xsystem {
     }
 }
 
-# relay_signal($pid, $signal)
+# relay_signal($pid, $signal, &$cleanup)
 #
 # Relays $signal to $pid and then reinvokes it for us with the default
-# handler.  Also cleans up temporary files.
+# handler.  Also cleans up temporary files and invokes $cleanup.
 sub relay_signal {
-    my ($pid, $signal) = @_;
+    my ($pid, $signal, $cleanup) = @_;
     kill $signal, $pid;
     File::Temp::cleanup();
+    &$cleanup ();
     $SIG{$signal} = 'DEFAULT';
     kill $signal, getpid ();
 }
 
-# timeout($pid)
+# timeout($pid, $cause, &$cleanup)
 #
-# Interrupts $pid and dies with a timeout error message.
+# Interrupts $pid and dies with a timeout error message,
+# after invoking $cleanup.
 sub timeout {
-    my ($pid) = @_;
+    my ($pid, $cause, $cleanup) = @_;
     kill "INT", $pid;
     waitpid ($pid, 0);
+    &$cleanup ();
     seek (STDOUT, 0, 2);
-    my ($load_avg) = `uptime` =~ /(load average:.*)$/i;
-    print "\nTIMEOUT after ", time () - $start_time,
-      " seconds of wall-clock time";
-    print  " - $load_avg" if defined $load_avg;
-    print "\n";
+    if (!defined ($cause)) {
+	my ($load_avg) = `uptime` =~ /(load average:.*)$/i;
+	print "\nTIMEOUT after ", time () - $start_time,
+	  " seconds of wall-clock time";
+	print  " - $load_avg" if defined $load_avg;
+	print "\n";
+    } else {
+	print "Simulation terminated due to $cause.\n";
+    }
     exit 0;
 }
 

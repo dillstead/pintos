@@ -27,7 +27,7 @@ tests/filesys/extended/syn-rw_PUTFILES += tests/filesys/extended/child-syn-rw
 
 GETTIMEOUT = 60
 
-GETCMD = pintos -v -T $(GETTIMEOUT)
+GETCMD = pintos -v -k -T $(GETTIMEOUT)
 GETCMD += $(PINTOSOPTS)
 GETCMD += $(SIMULATOR)
 GETCMD += --fs-disk=$(FSDISK)

@@ -47,7 +47,7 @@ $(foreach prog,$(PROGS),$(eval $(prog).output: $(prog)))
 $(foreach test,$(TESTS),$(eval $(test).output: $($(test)_PUTFILES)))
 $(foreach test,$(TESTS),$(eval $(test).output: TEST = $(test)))
 
-TESTCMD = pintos -v -T $(TIMEOUT)
+TESTCMD = pintos -v -k -T $(TIMEOUT)
 TESTCMD += $(SIMULATOR)
 TESTCMD += $(PINTOSOPTS)
 ifeq ($(filter userprog, $(KERNEL_SUBDIRS)), userprog)
