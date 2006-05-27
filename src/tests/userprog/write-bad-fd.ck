@@ -10,3 +10,4 @@ EOF
 (write-bad-fd) begin
 write-bad-fd: exit(-1)
 EOF
+pass;

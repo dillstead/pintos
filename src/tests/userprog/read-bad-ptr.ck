@@ -12,3 +12,4 @@ EOF
 (read-bad-ptr) open "sample.txt"
 read-bad-ptr: exit(-1)
 EOF
+pass;

@@ -13,3 +13,4 @@ child-inherit: exit(-1)
 (mmap-inherit) end
 mmap-inherit: exit(0)
 EOF
+pass;

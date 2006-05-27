@@ -1,14 +1,12 @@
 Functionality of extended file system:
 - Test directory support.
 1	dir-mkdir
-2	dir-mk-vine
 3	dir-mk-tree
 
 1	dir-rmdir
-2	dir-rm-vine
 3	dir-rm-tree
 
-1	dir-lsdir
+5	dir-vine
 
 - Test file growth.
 1	grow-create

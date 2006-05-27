@@ -12,3 +12,4 @@ EOF
 (mmap-bad-fd) try to mmap invalid fd
 mmap-bad-fd: exit(-1)
 EOF
+pass;

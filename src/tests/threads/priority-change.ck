@@ -11,3 +11,4 @@ check_expected ([<<'EOF']);
 (priority-change) Thread 2 should have just exited.
 (priority-change) end
 EOF
+pass;

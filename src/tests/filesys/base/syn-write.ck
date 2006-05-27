@@ -29,3 +29,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (syn-write) read "stuff"
 (syn-write) end
 EOF
+pass;

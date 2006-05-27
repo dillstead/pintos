@@ -13,3 +13,4 @@ check_expected ([<<'EOF']);
 (priority-donate-sema) Main thread finished.
 (priority-donate-sema) end
 EOF
+pass;

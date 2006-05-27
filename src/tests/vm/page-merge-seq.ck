@@ -26,3 +26,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (page-merge-seq) success, buf_idx=1,032,192
 (page-merge-seq) end
 EOF
+pass;

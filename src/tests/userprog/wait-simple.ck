@@ -10,3 +10,4 @@ child-simple: exit(81)
 (wait-simple) end
 wait-simple: exit(0)
 EOF
+pass;

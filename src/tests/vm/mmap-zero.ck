@@ -9,3 +9,4 @@ check_expected ([<<'EOF']);
 (mmap-zero) mmap "empty"
 mmap-zero: exit(-1)
 EOF
+pass;

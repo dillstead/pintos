@@ -11,3 +11,4 @@ EOF
 (create-empty) begin
 create-empty: exit(-1)
 EOF
+pass;

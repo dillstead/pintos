@@ -12,3 +12,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (pt-grow-stk-sc) compare written data against read data
 (pt-grow-stk-sc) end
 EOF
+pass;

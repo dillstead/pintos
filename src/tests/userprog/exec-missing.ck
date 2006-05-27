@@ -28,3 +28,4 @@ no-such-file: exit(-1)
 (exec-missing) end
 exec-missing: exit(0)
 EOF
+pass;

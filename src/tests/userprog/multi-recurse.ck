@@ -67,3 +67,4 @@ multi-recurse: exit(14)
 (multi-recurse) end 15
 multi-recurse: exit(15)
 EOF
+pass;

@@ -11,3 +11,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (mmap-remove) create "another"
 (mmap-remove) end
 EOF
+pass;

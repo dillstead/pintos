@@ -10,3 +10,4 @@ EOF
 (open-bad-ptr) begin
 open-bad-ptr: exit(-1)
 EOF
+pass;

@@ -8,3 +8,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (mmap-null) try to mmap at address 0
 (mmap-null) end
 EOF
+pass;

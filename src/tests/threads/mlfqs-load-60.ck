@@ -7,8 +7,8 @@ use tests::threads::mlfqs;
 our ($test);
 
 my (@output) = read_text_file ("$test.output");
-common_checks (@output);
-@output = get_core_output (@output);
+common_checks ("run", @output);
+@output = get_core_output ("run", @output);
 
 # Get actual values.
 local ($_);

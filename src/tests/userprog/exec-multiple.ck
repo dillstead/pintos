@@ -15,3 +15,4 @@ child-simple: exit(81)
 (exec-multiple) end
 exec-multiple: exit(0)
 EOF
+pass;

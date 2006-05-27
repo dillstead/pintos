@@ -10,3 +10,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (mmap-write) compare read data against written data
 (mmap-write) end
 EOF
+pass;

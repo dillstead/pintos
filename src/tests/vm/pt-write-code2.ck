@@ -7,3 +7,4 @@ check_expected ([<<'EOF']);
 (pt-write-code2) open "sample.txt"
 pt-write-code2: exit(-1)
 EOF
+pass;

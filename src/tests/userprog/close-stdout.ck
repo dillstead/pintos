@@ -10,3 +10,4 @@ EOF
 (close-stdout) begin
 close-stdout: exit(-1)
 EOF
+pass;

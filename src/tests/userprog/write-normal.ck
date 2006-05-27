@@ -9,3 +9,4 @@ check_expected ([<<'EOF']);
 (write-normal) end
 write-normal: exit(0)
 EOF
+pass;

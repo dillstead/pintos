@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use tests::tests;
+use tests::random;
 check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-dir-lg) begin
 (grow-dir-lg) mkdir /x
@@ -57,3 +58,7 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-dir-lg) creating and checking "/x/file49"
 (grow-dir-lg) end
 EOF
+my ($fs);
+$fs->{'x'}{"file$_"} = [random_bytes (512)] foreach 0...49;
+check_archive ($fs);
+pass;

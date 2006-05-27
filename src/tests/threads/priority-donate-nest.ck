@@ -16,3 +16,4 @@ check_expected ([<<'EOF']);
 (priority-donate-nest) Low thread should have priority 31.  Actual priority: 31.
 (priority-donate-nest) end
 EOF
+pass;

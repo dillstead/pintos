@@ -7,3 +7,4 @@ check_expected ([<<'EOF']);
 (alarm-zero) PASS
 (alarm-zero) end
 EOF
+pass;

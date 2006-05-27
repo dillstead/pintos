@@ -17,3 +17,4 @@ child-rox: exit(12)
 (rox-child) end
 rox-child: exit(0)
 EOF
+pass;

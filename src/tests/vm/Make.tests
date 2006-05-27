@@ -1,7 +1,5 @@
 # -*- makefile -*-
 
-PINTOSFLAGS += --swap-disk=4
-
 tests/vm_TESTS = $(addprefix tests/vm/,pt-grow-stack pt-grow-pusha	\
 pt-grow-bad pt-big-stk-obj pt-bad-addr pt-bad-read pt-write-code	\
 pt-write-code2 pt-grow-stk-sc page-linear page-parallel page-merge-seq	\

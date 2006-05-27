@@ -30,3 +30,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (syn-read) wait for child 10 of 10 returned 9 (expected 9)
 (syn-read) end
 EOF
+pass;

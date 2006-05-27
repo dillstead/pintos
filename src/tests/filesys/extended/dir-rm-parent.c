@@ -1,6 +1,5 @@
-/* Tries to remove the change of parents of the current
-   directory.
-   This can succeed or fail as long as it doesn't crash. */
+/* Tries to remove a parent of the current directory.  This must
+   fail, because that directory is non-empty. */
 
 #include <syscall.h>
 #include "tests/lib.h"
@@ -13,8 +12,5 @@ test_main (void)
   CHECK (chdir ("a"), "chdir \"a\"");
   CHECK (mkdir ("b"), "mkdir \"b\"");
   CHECK (chdir ("b"), "chdir \"b\"");
-  msg ("remove \"/b\" (must not crash)");
-  remove ("/b");
-  msg ("remove \"/a\" (must not crash)");
-  remove ("/a");
+  CHECK (!remove ("/a"), "remove \"/a\" (must fail)");
 }

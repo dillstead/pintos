@@ -11,3 +11,5 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (dir-rm-tree) open "/3/0/2/0" (must return -1)
 (dir-rm-tree) end
 EOF
+check_archive ({});
+pass;

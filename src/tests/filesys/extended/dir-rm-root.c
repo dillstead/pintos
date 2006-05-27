@@ -1,5 +1,5 @@
 /* Try to remove the root directory.
-   This must return failure. */
+   This must fail. */
 
 #include <syscall.h>
 #include "tests/lib.h"
@@ -8,6 +8,6 @@
 void
 test_main (void) 
 {
-  CHECK (!remove ("/"), "remove \"/\" (must return false)");
+  CHECK (!remove ("/"), "remove \"/\" (must fail)");
   CHECK (create ("/a", 243), "create \"/a\"");
 }

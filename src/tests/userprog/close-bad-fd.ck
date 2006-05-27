@@ -10,3 +10,4 @@ EOF
 (close-bad-fd) begin
 close-bad-fd: exit(-1)
 EOF
+pass;

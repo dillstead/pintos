@@ -36,3 +36,4 @@ check_expected ([<<'EOF']);
 (priority-condvar) Thread priority 21 woke up.
 (priority-condvar) end
 EOF
+pass;

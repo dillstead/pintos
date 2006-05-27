@@ -10,3 +10,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (lg-create) close "blargle"
 (lg-create) end
 EOF
+pass;

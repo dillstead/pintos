@@ -13,3 +13,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (lg-seq-random) close "nibble"
 (lg-seq-random) end
 EOF
+pass;

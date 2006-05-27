@@ -41,3 +41,4 @@ child-rox: exit(12)
 (rox-multichild) end
 rox-multichild: exit(0)
 EOF
+pass;

@@ -19,7 +19,7 @@ cd $@/src && $(MAKE) -s clean
 endef
 
 define run-tests
-cd $@/src/$(PROJECT) && $(MAKE) check
+cd $@/src/$(PROJECT) && time $(MAKE) check
 endef
 
 define grade-tests

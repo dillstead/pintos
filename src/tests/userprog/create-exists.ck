@@ -12,3 +12,4 @@ check_expected ([<<'EOF']);
 (create-exists) end
 create-exists: exit(0)
 EOF
+pass;

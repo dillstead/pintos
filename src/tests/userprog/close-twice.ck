@@ -16,3 +16,4 @@ EOF
 (close-twice) close "sample.txt" again
 close-twice: exit(-1)
 EOF
+pass;

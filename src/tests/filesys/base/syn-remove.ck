@@ -13,3 +13,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (syn-remove) close "deleteme"
 (syn-remove) end
 EOF
+pass;

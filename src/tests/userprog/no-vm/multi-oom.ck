@@ -5,9 +5,9 @@ use tests::tests;
 
 our ($test);
 my (@output) = read_text_file ("$test.output");
-common_checks (@output);
+common_checks ("run", @output);
 
-@output = get_core_output (@output);
+@output = get_core_output ("run", @output);
 my ($n) = 0;
 while (my ($m) = $output[0] =~ /^\(multi-oom\) begin (\d+)$/) {
     fail "Child process $m started out of order.\n" if $m != $n;

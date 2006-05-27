@@ -10,3 +10,4 @@ check_expected ([<<'EOF']);
 (read-normal) end
 read-normal: exit(0)
 EOF
+pass;

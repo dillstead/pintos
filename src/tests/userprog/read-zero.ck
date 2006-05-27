@@ -8,3 +8,4 @@ check_expected ([<<'EOF']);
 (read-zero) end
 read-zero: exit(0)
 EOF
+pass;

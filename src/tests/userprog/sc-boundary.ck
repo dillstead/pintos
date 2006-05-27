@@ -6,3 +6,4 @@ check_expected ([<<'EOF']);
 (sc-boundary) begin
 sc-boundary: exit(42)
 EOF
+pass;

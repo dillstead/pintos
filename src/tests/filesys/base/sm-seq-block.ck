@@ -13,3 +13,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (sm-seq-block) close "noodle"
 (sm-seq-block) end
 EOF
+pass;

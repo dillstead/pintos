@@ -13,3 +13,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (sm-full) close "quux"
 (sm-full) end
 EOF
+pass;

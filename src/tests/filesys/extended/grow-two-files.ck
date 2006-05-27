@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use tests::tests;
+use tests::random;
 check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-two-files) begin
 (grow-two-files) create "a"
@@ -19,3 +20,7 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-two-files) close "b"
 (grow-two-files) end
 EOF
+my ($a) = random_bytes (8143);
+my ($b) = random_bytes (8143);
+check_archive ({"a" => [$a], "b" => [$b]});
+pass;

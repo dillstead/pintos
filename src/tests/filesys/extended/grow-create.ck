@@ -10,3 +10,5 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-create) close "blargle"
 (grow-create) end
 EOF
+check_archive ({"blargle" => ['']});
+pass;

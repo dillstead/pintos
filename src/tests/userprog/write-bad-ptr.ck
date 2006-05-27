@@ -12,3 +12,4 @@ EOF
 (write-bad-ptr) open "sample.txt"
 write-bad-ptr: exit(-1)
 EOF
+pass;

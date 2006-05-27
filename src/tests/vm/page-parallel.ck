@@ -12,3 +12,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (page-parallel) wait for child 2
 (page-parallel) end
 EOF
+pass;

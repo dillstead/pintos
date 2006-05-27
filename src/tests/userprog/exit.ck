@@ -6,3 +6,4 @@ check_expected ([<<'EOF']);
 (exit) begin
 exit: exit(57)
 EOF
+pass;

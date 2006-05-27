@@ -8,3 +8,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (mmap-over-code) try to mmap over code segment
 (mmap-over-code) end
 EOF
+pass;

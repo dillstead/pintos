@@ -29,7 +29,7 @@ use tests::tests;
 our ($test);
 my (@output) = read_text_file ("$test.output");
 
-common_checks (@output);
+common_checks ("run", @output);
 
 my ($thread_cnt) = 16;
 my ($iter_cnt) = 16;

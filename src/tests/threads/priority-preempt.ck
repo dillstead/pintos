@@ -13,3 +13,4 @@ check_expected ([<<'EOF']);
 (priority-preempt) The high-priority thread should have already completed.
 (priority-preempt) end
 EOF
+pass;

@@ -8,3 +8,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (mmap-over-stk) try to mmap over stack segment
 (mmap-over-stk) end
 EOF
+pass;

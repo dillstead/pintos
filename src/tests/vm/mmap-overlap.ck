@@ -10,3 +10,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (mmap-overlap) try to mmap "zeros" again
 (mmap-overlap) end
 EOF
+pass;

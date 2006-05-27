@@ -10,3 +10,4 @@ EOF
 (open-null) begin
 open-null: exit(-1)
 EOF
+pass;

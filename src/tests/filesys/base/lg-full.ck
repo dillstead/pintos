@@ -13,3 +13,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (lg-full) close "quux"
 (lg-full) end
 EOF
+pass;

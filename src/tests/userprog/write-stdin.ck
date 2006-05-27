@@ -10,3 +10,4 @@ EOF
 (write-stdin) begin
 write-stdin: exit(-1)
 EOF
+pass;

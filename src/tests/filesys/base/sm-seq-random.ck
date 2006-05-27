@@ -13,3 +13,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (sm-seq-random) close "nibble"
 (sm-seq-random) end
 EOF
+pass;

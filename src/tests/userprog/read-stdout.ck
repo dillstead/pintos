@@ -10,3 +10,4 @@ EOF
 (read-stdout) begin
 read-stdout: exit(-1)
 EOF
+pass;

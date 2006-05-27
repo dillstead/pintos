@@ -8,3 +8,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (mmap-read) mmap "sample.txt"
 (mmap-read) end
 EOF
+pass;

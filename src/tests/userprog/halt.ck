@@ -6,7 +6,7 @@ use tests::tests;
 our ($test);
 my (@output) = read_text_file ("$test.output");
 
-common_checks (@output);
+common_checks ("run", @output);
 
 fail "missing 'begin' message\n"
   if !grep ($_ eq '(halt) begin', @output);

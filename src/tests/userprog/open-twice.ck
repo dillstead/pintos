@@ -9,3 +9,4 @@ check_expected ([<<'EOF']);
 (open-twice) end
 open-twice: exit(0)
 EOF
+pass;

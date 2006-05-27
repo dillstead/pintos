@@ -8,3 +8,4 @@ check_expected ([<<'EOF']);
 (create-bound) end
 create-bound: exit(0)
 EOF
+pass;

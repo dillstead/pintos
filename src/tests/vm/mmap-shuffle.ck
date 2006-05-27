@@ -44,3 +44,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<EOF]);
 (mmap-shuffle) shuffle 9: cksum=$shuffle[9]
 (mmap-shuffle) end
 EOF
+pass;

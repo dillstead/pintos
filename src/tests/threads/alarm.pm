@@ -3,7 +3,7 @@ sub check_alarm {
     our ($test);
 
     @output = read_text_file ("$test.output");
-    common_checks (@output);
+    common_checks ("run", @output);
 
     my (@products);
     for (my ($i) = 0; $i < $iterations; $i++) {

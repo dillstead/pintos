@@ -5,18 +5,15 @@ include $(patsubst %,$(SRCDIR)/%/Make.tests,$(TEST_SUBDIRS))
 PROGS = $(foreach subdir,$(TEST_SUBDIRS),$($(subdir)_PROGS))
 TESTS = $(foreach subdir,$(TEST_SUBDIRS),$($(subdir)_TESTS))
 
-include ../../Makefile.userprog
-
-TIMEOUT = 60
-PINTOSFLAGS += -v -T $(TIMEOUT)						\
-	$(foreach file,$(PUTFILES),-p $(file) -a $(notdir $(file)))
-KERNELFLAGS += -q
-
-PINTOS = pintos $(SIMULATOR) $(PINTOSOPTS) $(PINTOSFLAGS) -- $(KERNELFLAGS)
-
 OUTPUTS = $(addsuffix .output,$(TESTS))
 ERRORS = $(addsuffix .errors,$(TESTS))
 RESULTS = $(addsuffix .result,$(TESTS))
+
+ifdef PROGS
+include ../../Makefile.userprog
+endif
+
+TIMEOUT = 60
 
 clean::
 	rm -f $(OUTPUTS) $(ERRORS) $(RESULTS) 
@@ -48,11 +45,27 @@ outputs:: $(OUTPUTS)
 
 $(foreach prog,$(PROGS),$(eval $(prog).output: $(prog)))
 $(foreach test,$(TESTS),$(eval $(test).output: $($(test)_PUTFILES)))
-tests/%.output: RUNCMD = $(if $($*_ARGS),run '$(*F) $($*_ARGS)',run $(*F))
-tests/%.output: RUNREDIR = 2>$*.errors $(if $(VERBOSE),|tee,>) $*.output
-tests/%.output: RUNTEST = $(PINTOS) $(RUNCMD) $(RUNREDIR)
+$(foreach test,$(TESTS),$(eval $(test).output: TEST = $(test)))
+
+TESTCMD = pintos -v -T $(TIMEOUT)
+TESTCMD += $(SIMULATOR)
+TESTCMD += $(PINTOSOPTS)
+ifeq ($(filter userprog, $(KERNEL_SUBDIRS)), userprog)
+TESTCMD += --fs-disk=$(FSDISK)
+TESTCMD += $(foreach file,$(PUTFILES),-p $(file) -a $(notdir $(file)))
+endif
+ifeq ($(filter vm, $(KERNEL_SUBDIRS)), vm)
+TESTCMD += --swap-disk=4
+endif
+TESTCMD += -- -q 
+TESTCMD += $(KERNELFLAGS)
+ifeq ($(filter userprog, $(KERNEL_SUBDIRS)), userprog)
+TESTCMD += -f
+endif
+TESTCMD += $(if $($(TEST)_ARGS),run '$(*F) $($(TEST)_ARGS)',run $(*F))
+TESTCMD += 2> $(TEST).errors $(if $(VERBOSE),|tee,>) $(TEST).output
 %.output: os.dsk
-	$(RUNTEST)
+	$(TESTCMD)
 
 %.result: %.ck %.output
 	perl -I$(SRCDIR) $< $* $@

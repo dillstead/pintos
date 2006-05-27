@@ -11,3 +11,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (page-linear) read pass
 (page-linear) end
 EOF
+pass;

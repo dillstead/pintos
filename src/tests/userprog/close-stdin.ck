@@ -10,3 +10,4 @@ EOF
 (close-stdin) begin
 close-stdin: exit(-1)
 EOF
+pass;

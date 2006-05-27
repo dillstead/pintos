@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use tests::tests;
+use tests::random;
 check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-seq-sm) begin
 (grow-seq-sm) create "testme"
@@ -13,3 +14,5 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-seq-sm) close "testme"
 (grow-seq-sm) end
 EOF
+check_archive ({"testme" => [random_bytes (5678)]});
+pass;

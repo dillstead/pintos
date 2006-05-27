@@ -73,8 +73,8 @@ sub check_mlfqs_fair {
     my ($nice, $maxdiff) = @_;
     our ($test);
     my (@output) = read_text_file ("$test.output");
-    common_checks (@output);
-    @output = get_core_output (@output);
+    common_checks ("run", @output);
+    @output = get_core_output ("run", @output);
 
     my (@actual);
     local ($_);

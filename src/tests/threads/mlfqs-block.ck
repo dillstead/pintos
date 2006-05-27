@@ -14,3 +14,4 @@ check_expected ([<<'EOF']);
 (mlfqs-block) Block thread should have already acquired lock.
 (mlfqs-block) end
 EOF
+pass;

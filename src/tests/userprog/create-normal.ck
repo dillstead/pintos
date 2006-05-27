@@ -8,3 +8,4 @@ check_expected ([<<'EOF']);
 (create-normal) end
 create-normal: exit(0)
 EOF
+pass;

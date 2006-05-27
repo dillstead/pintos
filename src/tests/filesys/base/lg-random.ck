@@ -11,3 +11,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (lg-random) close "bazzle"
 (lg-random) end
 EOF
+pass;

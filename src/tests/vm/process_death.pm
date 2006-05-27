@@ -8,8 +8,8 @@ sub check_process_death {
     our ($test);
     my (@output) = read_text_file ("$test.output");
 
-    common_checks (@output);
-    @output = get_core_output (@output);
+    common_checks ("run", @output);
+    @output = get_core_output ("run", @output);
     fail "First line of output is not `($proc_name) begin' message.\n"
       if $output[0] ne "($proc_name) begin";
     fail "Output missing '$proc_name: exit(-1)' message.\n"

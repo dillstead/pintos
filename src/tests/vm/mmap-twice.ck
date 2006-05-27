@@ -12,3 +12,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (mmap-twice) compare mmap'd file 1 against data
 (mmap-twice) end
 EOF
+pass;

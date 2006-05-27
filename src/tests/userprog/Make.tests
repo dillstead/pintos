@@ -1,8 +1,6 @@
 # -*- makefile -*-
 
-PINTOSFLAGS += --fs-disk=2
-KERNELFLAGS += -f
-
+tests/%.output: FSDISK = 2
 tests/%.output: PUTFILES = $(filter-out os.dsk, $^)
 
 tests/userprog_TESTS = $(addprefix tests/userprog/,args-none		\

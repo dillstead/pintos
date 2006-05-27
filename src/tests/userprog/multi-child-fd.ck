@@ -22,3 +22,4 @@ child-close: exit(-1)
 (multi-child-fd) end
 multi-child-fd: exit(0)
 EOF
+pass;

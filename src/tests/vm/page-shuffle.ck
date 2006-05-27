@@ -41,3 +41,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<EOF]);
 (page-shuffle) shuffle 9: cksum=$shuffle[9]
 (page-shuffle) end
 EOF
+pass;

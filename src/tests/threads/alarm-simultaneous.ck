@@ -34,3 +34,4 @@ check_expected ([<<'EOF']);
 (alarm-simultaneous) iteration 4, thread 4: woke up 0 ticks later
 (alarm-simultaneous) end
 EOF
+pass;

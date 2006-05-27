@@ -12,3 +12,4 @@ check_expected ([<<'EOF']);
 (args) end
 args-dbl-space: exit(0)
 EOF
+pass;

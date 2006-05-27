@@ -8,3 +8,4 @@ check_expected ([<<'EOF']);
 (create-long) end
 create-long: exit(0)
 EOF
+pass;

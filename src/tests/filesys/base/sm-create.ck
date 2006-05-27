@@ -10,3 +10,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (sm-create) close "blargle"
 (sm-create) end
 EOF
+pass;

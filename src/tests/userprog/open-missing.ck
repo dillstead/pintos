@@ -7,3 +7,4 @@ check_expected ([<<'EOF']);
 (open-missing) end
 open-missing: exit(0)
 EOF
+pass;

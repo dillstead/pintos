@@ -10,3 +10,4 @@ child-bad: exit(-1)
 (wait-killed) end
 wait-killed: exit(0)
 EOF
+pass;

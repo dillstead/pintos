@@ -16,3 +16,4 @@ check_expected ([<<'EOF']);
 (priority-donate-multiple2) Main thread should have priority 31.  Actual priority: 31.
 (priority-donate-multiple2) end
 EOF
+pass;

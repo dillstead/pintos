@@ -10,3 +10,4 @@ check_expected ([<<'EOF']);
 (rox-simple) end
 rox-simple: exit(0)
 EOF
+pass;

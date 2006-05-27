@@ -14,3 +14,4 @@ check_expected ([<<'EOF']);
 (priority-donate-one) This should be the last line before finishing this test.
 (priority-donate-one) end
 EOF
+pass;

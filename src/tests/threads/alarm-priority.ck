@@ -16,3 +16,4 @@ check_expected ([<<'EOF']);
 (alarm-priority) Thread priority 21 woke up.
 (alarm-priority) end
 EOF
+pass;

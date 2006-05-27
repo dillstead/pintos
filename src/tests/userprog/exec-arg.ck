@@ -14,3 +14,4 @@ child-args: exit(0)
 (exec-arg) end
 exec-arg: exit(0)
 EOF
+pass;

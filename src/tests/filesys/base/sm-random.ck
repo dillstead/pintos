@@ -11,3 +11,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (sm-random) close "bazzle"
 (sm-random) end
 EOF
+pass;

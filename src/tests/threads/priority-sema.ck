@@ -26,3 +26,4 @@ check_expected ([<<'EOF']);
 (priority-sema) Back in main thread.
 (priority-sema) end
 EOF
+pass;

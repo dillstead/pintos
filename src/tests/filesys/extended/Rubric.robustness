@@ -4,9 +4,6 @@ Robustness of file system:
 1	dir-over-file
 1	dir-under-file
 
-1	dir-rm-cwd
-2	dir-rm-cwd-cd
+3	dir-rm-cwd
 2	dir-rm-parent
 1	dir-rm-root
-
-1	grow-too-big

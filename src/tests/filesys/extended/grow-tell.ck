@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use tests::tests;
+use tests::random;
 check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-tell) begin
 (grow-tell) create "foobar"
@@ -13,3 +14,5 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-tell) close "foobar"
 (grow-tell) end
 EOF
+check_archive ({"foobar" => [random_bytes (2134)]});
+pass;

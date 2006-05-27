@@ -32,3 +32,4 @@ check_expected ([<<'EOF']);
 (args) end
 args-many: exit(0)
 EOF
+pass;

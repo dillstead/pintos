@@ -10,3 +10,4 @@ EOF
 (exec-bad-ptr) begin
 exec-bad-ptr: exit(-1)
 EOF
+pass;

@@ -13,3 +13,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (lg-seq-block) close "noodle"
 (lg-seq-block) end
 EOF
+pass;

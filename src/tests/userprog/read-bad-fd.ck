@@ -10,3 +10,4 @@ EOF
 (read-bad-fd) begin
 read-bad-fd: exit(-1)
 EOF
+pass;

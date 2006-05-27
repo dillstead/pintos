@@ -10,3 +10,4 @@ EOF
 (wait-bad-pid) begin
 wait-bad-pid: exit(-1)
 EOF
+pass;

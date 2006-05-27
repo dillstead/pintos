@@ -11,3 +11,4 @@ child-simple: exit(81)
 (wait-twice) end
 wait-twice: exit(0)
 EOF
+pass;
