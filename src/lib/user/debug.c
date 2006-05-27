@@ -12,7 +12,7 @@ debug_panic (const char *file, int line, const char *function,
 {
   va_list args;
 
-  printf ("User process abort at %s:%d in %s(): ", file, line, function);
+  printf ("User process ABORT at %s:%d in %s(): ", file, line, function);
 
   va_start (args, message);
   vprintf (message, args);
