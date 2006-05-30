@@ -5,6 +5,7 @@ Functionality of priority scheduler:
 3	priority-donate-multiple2
 3	priority-donate-nest
 3	priority-donate-sema
+3	priority-donate-lower
 3	priority-change
 
 3	priority-fifo
