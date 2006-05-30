@@ -702,11 +702,16 @@ sub xsystem {
 	    my ($buf) = "";
 	    my ($boots) = 0;
 	    local ($|) = 1;
-	    while (waitpid ($pid, WNOHANG) == 0) {
+	    for (;;) {
+		if (waitpid ($pid, WNOHANG) == 0) {
+		    # Subprocess died.  Pass through any remaining data.
+		    print $buf while sysread ($in, $buf, 4096) > 0;
+		    last;
+		}
+
 		# Read and print out pipe data.
 		my ($len) = length ($buf);
-		waitpid ($pid, 0), last
-		  if sysread ($in, $buf, 4096, $len) <= 0;
+		last if sysread ($in, $buf, 4096, $len) <= 0;
 		print substr ($buf, $len);
 
 		# Remove full lines from $buf and scan them for keywords.
@@ -725,9 +730,8 @@ sub xsystem {
 		    }
 		}
 	    }
-	} else {
-	    waitpid ($pid, 0);
 	}
+	waitpid ($pid, 0);
 	alarm (0);
 	&$cleanup ();
 
