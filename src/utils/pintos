@@ -701,12 +701,13 @@ sub xsystem {
 	    # Filter output.
 	    my ($buf) = "";
 	    my ($boots) = 0;
+	    local ($|) = 1;
 	    while (waitpid ($pid, WNOHANG) == 0) {
 		# Read and print out pipe data.
 		my ($len) = length ($buf);
 		waitpid ($pid, 0), last
 		  if sysread ($in, $buf, 4096, $len) <= 0;
-		print STDOUT substr ($buf, $len);
+		print substr ($buf, $len);
 
 		# Remove full lines from $buf and scan them for keywords.
 		while ((my $idx = index ($buf, "\n")) >= 0) {
