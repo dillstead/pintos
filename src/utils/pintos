@@ -492,7 +492,9 @@ config.version = 6
 guestOS = "linux"
 floppy0.present = FALSE
 memsize = $mem
+EOF
 
+    print VMX <<EOF if $serial;
 serial0.present = TRUE
 serial0.fileType = "file"
 serial0.fileName = "pintos.out"
@@ -754,7 +756,7 @@ sub xsystem {
 sub relay_signal {
     my ($pid, $signal, $cleanup) = @_;
     kill $signal, $pid;
-    File::Temp::cleanup();
+    eval { File::Temp::cleanup() };	# Not defined in old File::Temp.
     &$cleanup ();
     $SIG{$signal} = 'DEFAULT';
     kill $signal, getpid ();
