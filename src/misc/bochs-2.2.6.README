@@ -22,7 +22,12 @@ patches for this version of Bochs are included:
         Needed for Bochs to compile with GCC on some hosts.  Probably
         harmless elsewhere.
 
-    bochs-2.2.6-solaris.patch
+    bochs-2.2.6-solaris-tty.patch
+
+        Needed for Bochs to compile in terminal support on Solaris
+	hosts.  Probably harmless elsewhere.
+
+    bochs-2.2.6-solaris-link.patch
 
         Needed on Solaris hosts.  Do not apply it elsewhere.
 
@@ -31,7 +36,8 @@ To apply all the patches, cd into the Bochs directory, then type
 	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-jitter.patch
 	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-triple-fault.patch
 	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-ms-extensions.patch
-	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-solaris.patch
+	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-solaris-tty.patch
+	patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-solaris-link.patch
 You will have to supply the proper $PINTOSDIR, of course.  You can use
 patch's --dry-run option if you want to test whether the patches would
 apply cleanly before trying to apply them.
