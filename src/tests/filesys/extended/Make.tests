@@ -16,8 +16,9 @@ $(foreach prog,$(tests/filesys/extended_TESTS),		\
 	$(eval $(prog)_SRC += tests/main.c))
 $(foreach prog,$(tests/filesys/extended_TESTS),		\
 	$(eval $(prog)_PUTFILES += tests/filesys/extended/tar))
-$(foreach test,$(tests/filesys/extended_TESTS),	\
-	$(eval $(test).output: FSDISK = tmp.dsk))
+# The version of GNU make 3.80 on vine barfs if this is split at
+# the last comma.
+$(foreach test,$(tests/filesys/extended_TESTS),$(eval $(test).output: FSDISK = tmp.dsk))
 
 tests/filesys/extended/dir-mk-tree_SRC += tests/filesys/extended/mk-tree.c
 tests/filesys/extended/dir-rm-tree_SRC += tests/filesys/extended/mk-tree.c
