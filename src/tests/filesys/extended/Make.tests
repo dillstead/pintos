@@ -39,8 +39,8 @@ endif
 GETCMD += -- -q
 GETCMD += $(KERNELFLAGS)
 GETCMD += run 'tar fs.tar /'
-GETCMD += 2>> $(TEST).get-errors
-GETCMD += $(if $(VERBOSE),|tee -a,>>) $(TEST).get-output
+GETCMD += < /dev/null
+GETCMD += 2> $(TEST).get-errors $(if $(VERBOSE),|tee,>) $(TEST).get-output
 
 tests/filesys/extended/%.output: os.dsk
 	rm -f tmp.dsk

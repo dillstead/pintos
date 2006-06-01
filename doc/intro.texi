@@ -239,7 +239,8 @@ read.  However, you've probably noticed by now that the same text was
 displayed in the terminal you used to run @command{pintos}.  This is
 because Pintos sends all output both to the VGA display and to the first
 serial port, and by default the serial port is connected to Bochs's
-@code{stdout}.  You can log this output to a file by redirecting at the
+@code{stdin} and @code{stdout}.  You can log serial output to a file by
+redirecting at the
 command line, e.g.@: @code{pintos run alarm-multiple > logfile}.
 
 The @command{pintos} program offers several options for configuring the
@@ -254,8 +255,8 @@ with a debugger (@pxref{GDB}).  You can set the amount of memory to give
 the VM.  Finally, you can select how you want VM output to be displayed:
 use @option{-v} to turn off the VGA display, @option{-t} to use your
 terminal window as the VGA display instead of opening a new window
-(Bochs only), or @option{-s} to suppress the serial output to
-@code{stdout}.
+(Bochs only), or @option{-s} to suppress serial input from @code{stdin}
+and output to @code{stdout}.
 
 The Pintos kernel has commands and options other than @command{run}.
 These are not very interesting for now, but you can see a list of them

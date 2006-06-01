@@ -3,7 +3,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <string.h>
-#include "devices/intq.h"
+#include "devices/input.h"
 #include "threads/interrupt.h"
 #include "threads/io.h"
 
@@ -20,9 +20,6 @@ static bool left_ctrl, right_ctrl;      /* Left and right Ctl keys. */
    True when on, false when off. */
 static bool caps_lock;
 
-/* Keyboard buffer. */
-static struct intq buffer;
-
 /* Number of keys pressed. */
 static int64_t key_cnt;
 
@@ -32,23 +29,7 @@ static intr_handler_func keyboard_interrupt;
 void
 kbd_init (void) 
 {
-  intq_init (&buffer);
   intr_register_ext (0x21, keyboard_interrupt, "8042 Keyboard");
-}
-
-/* Retrieves a key from the keyboard buffer.
-   If the buffer is empty, waits for a key to be pressed. */
-uint8_t
-kbd_getc (void) 
-{
-  enum intr_level old_level;
-  uint8_t key;
-
-  old_level = intr_disable ();
-  key = intq_getc (&buffer);
-  intr_set_level (old_level);
-  
-  return key;
 }
 
 /* Prints keyboard statistics. */
@@ -75,7 +56,7 @@ static const struct keymap invariant_keymap[] =
     {0x01, "\033"},
     {0x0e, "\b"},
     {0x0f, "\tQWERTYUIOP"},
-    {0x1c, "\n"},
+    {0x1c, "\r"},
     {0x1e, "ASDFGHJKL"},
     {0x2c, "ZXCVBNM"},
     {0x37, "*"},
@@ -167,10 +148,10 @@ keyboard_interrupt (struct intr_frame *args UNUSED)
             c += 0x80;
 
           /* Append to keyboard buffer. */
-          if (!intq_full (&buffer)) 
+          if (!input_full ())
             {
               key_cnt++;
-              intq_putc (&buffer, c); 
+              input_putc (c);
             }
         }
     }

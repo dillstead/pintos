@@ -177,7 +177,9 @@ The next set of calls initializes the interrupt system.
 @func{intr_init} sets up the CPU's @dfn{interrupt descriptor table}
 (IDT) to ready it for interrupt handling (@pxref{Interrupt
 Infrastructure}), then @func{timer_init} and @func{kbd_init} prepare for
-handling timer interrupts and keyboard interrupts, respectively.  In
+handling timer interrupts and keyboard interrupts, respectively. 
+@func{input_init} sets up to merge serial and keyboard input into one
+stream.  In
 projects 2 and later, we also prepare to handle interrupts caused by
 user programs using @func{exception_init} and @func{syscall_init}.
 

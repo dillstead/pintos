@@ -1,3 +1,8 @@
+If you want to be able to give input to Pintos running in Bochs
+through a terminal (as opposed to a VGA console window), you will need
+to compile squish-pty (with `make') and install it in PATH.
+Otherwise, squish-pty is unneeded.
+
 If your version of Perl predates 5.8.0 and you want the "pintos"
 script's timeout support (with -T) to properly limit the child's CPU
 time, then you will need to compile setitimer-helper (with `make') and

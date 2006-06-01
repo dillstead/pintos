@@ -217,13 +217,23 @@ call this code yourself.
 @item serial.c
 @itemx serial.h
 Serial port driver.  Again, @func{printf} calls this code for you,
-so you don't need to do so yourself.  Feel free to look through it if
-you're curious.
+so you don't need to do so yourself.
+It handles serial input by passing it to the input layer (see below).
 
 @item disk.c
 @itemx disk.h
 Supports reading and writing sectors on up to 4 IDE disks.  This won't
 actually be used until project 2.
+
+@item kbd.c
+@itemx kbd.h
+Keyboard driver.  Handles keystrokes passing them to the input layer
+(see below).
+
+@item input.c
+@itemx input.h
+Input layer.  Queues input characters passed along by the keyboard or
+serial drivers.
 
 @item intq.c
 @itemx intq.h

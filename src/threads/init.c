@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "devices/kbd.h"
+#include "devices/input.h"
 #include "devices/serial.h"
 #include "devices/timer.h"
 #include "devices/vga.h"
@@ -108,6 +109,7 @@ main (void)
   intr_init ();
   timer_init ();
   kbd_init ();
+  input_init ();
 #ifdef USERPROG
   exception_init ();
   syscall_init ();

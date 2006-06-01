@@ -690,8 +690,7 @@ Reads @var{size} bytes from the file open as @var{fd} into
 @var{buffer}.  Returns the number of bytes actually read (0 at end of
 file), or -1 if the file could not be read (due to a condition other
 than end of file).  Fd 0 reads from the keyboard using
-@func{kbd_getc}.  (Keyboard input will not work if you pass the
-@option{-v} option to @command{pintos}.)
+@func{input_getc}.
 @end deftypefn
 
 @deftypefn {System Call} int write (int @var{fd}, const void *@var{buffer}, unsigned @var{size})
@@ -910,12 +909,6 @@ You can choose whatever suitable types you like for @code{tid_t} and
 @code{pid_t}.  By default, they're both @code{int}.  You can make them
 a one-to-one mapping, so that the same values in both identify the
 same process, or you can use a more complex mapping.  It's up to you.
-
-@item Keyboard input doesn't work.
-
-You are probably passing @option{-v} to @command{pintos}, but
-serial input isn't implemented.  Don't use @option{-v} if you
-want to use the shell or otherwise need keyboard input.
 @end table
 
 @menu

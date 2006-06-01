@@ -11,7 +11,7 @@ our ($start_time) = time ();
 our ($sim);			# Simulator: bochs, qemu, or gsx.
 our ($debug) = "none";		# Debugger: none, monitor, or gdb.
 our ($mem) = 4;			# Physical RAM in MB.
-our ($serial_out) = 1;		# Send output to serial port?
+our ($serial) = 1;		# Use serial port for input and output?
 our ($vga);			# VGA output: window, terminal, or none.
 our ($jitter);			# Seed for random timer interrupts, if set.
 our ($realtime);		# Synchronize timer interrupts with real time?
@@ -64,7 +64,7 @@ sub parse_command_line {
 		    "k|kill-on-failure" => \$kill_on_failure,
 
 		    "v|no-vga" => sub { set_vga ('none'); },
-		    "s|no-serial" => sub { $serial_out = 0; },
+		    "s|no-serial" => sub { $serial = 0; },
 		    "t|terminal" => sub { set_vga ('terminal'); },
 
 		    "p|put-file=s" => sub { add_file (\@puts, $_[1]); },
@@ -92,8 +92,8 @@ sub parse_command_line {
     undef $timeout, print "warning: disabling timeout with --$debug\n"
       if defined ($timeout) && $debug ne 'none';
 
-    print "warning: enabling serial output for -k or --kill-on-failure\n"
-      if $kill_on_failure && !$serial_out;
+    print "warning: enabling serial port for -k or --kill-on-failure\n"
+      if $kill_on_failure && !$serial;
 }
 
 # usage($exitcode).
@@ -115,8 +115,8 @@ Debugger selection:
   --monitor                Debug with simulator's monitor
   --gdb                    Debug with gdb
 Display options: (default is both VGA and serial)
-  -v, --no-vga             No VGA display
-  -s, --no-serial          No serial output
+  -v, --no-vga             No VGA display or keyboard
+  -s, --no-serial          No serial input or output
   -t, --terminal           Display VGA in terminal (Bochs only)
 Timing options: (Bochs only)
   -j SEED                  Randomize timer interrupts
@@ -378,6 +378,15 @@ sub run_bochs {
     # Select Bochs binary based on the chosen debugger.
     my ($bin) = $debug eq 'monitor' ? 'bochs-dbg' : 'bochs';
 
+    my ($squish_pty);
+    if ($serial) {
+	for my $dir (split (':', $ENV{PATH})) {
+	    $squish_pty = "$dir/squish-pty", last if -x "$dir/squish-pty";
+	}
+	print "warning: can't find squish-pty, so terminal input will fail\n"
+	  if !defined $squish_pty;
+    }
+
     # Write bochsrc.txt configuration file.
     open (BOCHSRC, ">", "bochsrc.txt") or die "bochsrc.txt: create: $!\n";
     print BOCHSRC <<EOF;
@@ -402,8 +411,10 @@ EOF
 	print_bochs_disk_line ("ata1-slave", 3);
     }
     if ($vga ne 'terminal') {
-	print BOCHSRC "com1: enabled=1, mode=file, dev=/dev/stdout\n"
-	  if $serial_out;
+	if ($serial) {
+	    my $mode = defined ($squish_pty) ? "term" : "file";
+	    print BOCHSRC "com1: enabled=1, mode=$mode, dev=/dev/stdout\n";
+	}
 	print BOCHSRC "display_library: nogui\n" if $vga eq 'none';
     } else {
 	print BOCHSRC "display_library: term\n";
@@ -412,6 +423,7 @@ EOF
 
     # Compose Bochs command line.
     my (@cmd) = ($bin, '-q');
+    unshift (@cmd, $squish_pty) if defined $squish_pty;
     push (@cmd, '-j', $jitter) if defined $jitter;
 
     # Run Bochs.
@@ -459,7 +471,7 @@ sub run_qemu {
     push (@cmd, '-m', $mem);
     push (@cmd, '-net', 'none');
     push (@cmd, '-nographic') if $vga eq 'none';
-    push (@cmd, '-serial', 'stdio') if $serial_out && $vga ne 'none';
+    push (@cmd, '-serial', 'stdio') if $serial && $vga ne 'none';
     push (@cmd, '-S') if $debug eq 'monitor';
     push (@cmd, '-s', '-S') if $debug eq 'gdb';
     push (@cmd, '-monitor', 'null') if $vga eq 'none' && $debug eq 'none';
