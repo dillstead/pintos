@@ -35,7 +35,7 @@ projects.
 @menu
 * Getting Started::             
 * Grading::                     
-* License::                     
+* Legal and Ethical Issues::    
 * Acknowledgements::            
 * Trivia::                      
 @end menu
@@ -503,12 +503,15 @@ In the end, remember your audience.  Code is written primarily to be
 read by humans.  It has to be acceptable to the compiler too, but the
 compiler doesn't care about how it looks or how well it is written.
 
-@node License
-@section License
+@node Legal and Ethical Issues
+@section Legal and Ethical Issues
 
 Pintos is distributed under a liberal license that allows free use,
 modification, and distribution.  Students and others who work on Pintos
 own the code that they write and may use it for any purpose.
+Pintos comes with NO WARRANTY, not even for MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.
+@xref{License}, for details of the license and lack of warranty.
 
 In the context of Stanford's CS 140 course, please respect the spirit
 and the letter of the honor code by refraining from reading any homework
@@ -516,12 +519,6 @@ solutions available online or elsewhere.  Reading the source code for
 other operating system kernels, such as Linux or FreeBSD, is allowed,
 but do not copy code from them literally.  Please cite the code that
 inspired your own in your design documentation.
-
-Pintos comes with NO WARRANTY, not even for MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE.
-
-The @file{LICENSE} file at the top level of the Pintos source
-distribution has full details of the license and lack of warranty.
 
 @node Acknowledgements
 @section Acknowledgements

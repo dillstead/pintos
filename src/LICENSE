@@ -1,7 +1,8 @@
-Most of Pintos is subject to the following license:  
+Pintos, including its documentation, is subject to the following
+license:
 
-    Copyright 2004 Board of Trustees, Leland Stanford Jr. University
-    All rights reserved.
+    Copyright (C) 2004, 2005, 2006 Board of Trustees, Leland Stanford
+    Jr. University.  All rights reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining
     a copy of this software and associated documentation files (the

@@ -61,7 +61,9 @@
 * Project Documentation::       
 * Debugging Tools::             
 * Development Tools::
+* Installing Pintos::
 * Bibliography::
+* License::
 @end menu
 
 @include intro.texi
@@ -75,6 +77,8 @@
 @include doc.texi
 @include debug.texi
 @include devel.texi
+@include installation.texi
 @include bibliography.texi
+@include license.texi
 
 @bye
