@@ -358,7 +358,7 @@ specifying @option{VERBOSE=1} on the @command{make} command line, as in
 @code{make check VERBOSE=1}.  You can also provide arbitrary options to the
 @command{pintos} run by the tests with @option{PINTOSOPTS='@dots{}'},
 e.g.@: @code{make check PINTOSOPTS='-j 1'} to select a jitter value of 1
-(@pxref{Debugging Versus Testing}).
+(@pxref{Debugging versus Testing}).
 
 All of the tests and related files are in @file{pintos/src/tests}.
 Before we test your submission, we will replace the contents of that

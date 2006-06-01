@@ -96,9 +96,9 @@ system.
 The grading scripts check the file system's correctness based on the
 contents of the file copied out in the second run.  This means that your
 project will not pass any of the extended file system tests until the
-file system is implemented well enough to support @program{tar}, the
+file system is implemented well enough to support @command{tar}, the
 Pintos user program that produces the file that is copied out.  The
-@program{tar} program is fairly demanding (it requires both extensible
+@command{tar} program is fairly demanding (it requires both extensible
 file and subdirectory support), so this will take some work.  Until
 then, you can ignore errors from @command{make check} regarding the
 extracted file system.
