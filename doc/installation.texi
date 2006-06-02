@@ -79,12 +79,12 @@ described below (@pxref{Building Bochs for Pintos}).
 
 @item
 Install scripts from @file{src/utils}.  Copy @file{backtrace},
-@command{pintos}, @command{pintos-gdb}, @command{pintos-mkdisk} into the
+@file{pintos}, @file{pintos-gdb}, @file{pintos-mkdisk} into the
 default @env{PATH}.
 
 @item 
 Install @file{src/misc/gdb-macros} in a public location.  Then use a
-text editor to edit the installed copy of @command{pintos-gdb}, changing
+text editor to edit the installed copy of @file{pintos-gdb}, changing
 the definition of @env{GDBMACROS} to point to where you installed
 @file{gdb-macros}.  Test the installation by running
 @command{pintos-gdb} without any arguments.  If it does not complain
