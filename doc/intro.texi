@@ -49,8 +49,9 @@ Stanford ITSS, as described on the
 @uref{http://www.stanford.edu/services/cluster/environs/sweet/, , ITSS
 webpage}.  You may use the Solaris or Linux machines.  We will test your
 code on these machines, and the instructions given here assume this
-environment.  However, Pintos and its supporting tools are portable
-enough that it should build ``out of the box'' in other environments.
+environment.  We cannot provide support for installing and working on
+Pintos on your own machine, but we provide instructions for doing so
+nonetheless (@pxref{Installing Pintos}).
 
 Once you've logged into one of these machines, either locally or
 remotely, start out by adding our binaries directory to your @env{PATH}
