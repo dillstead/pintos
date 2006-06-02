@@ -8,7 +8,7 @@ use Getopt::Long qw(:config bundling);
 
 # Command-line options.
 our ($start_time) = time ();
-our ($sim);			# Simulator: bochs, qemu, or gsx.
+our ($sim);			# Simulator: bochs, qemu, or player.
 our ($debug) = "none";		# Debugger: none, monitor, or gdb.
 our ($mem) = 4;			# Physical RAM in MB.
 our ($serial) = 1;		# Use serial port for input and output?
@@ -49,7 +49,7 @@ sub parse_command_line {
 	GetOptions ("sim=s" => sub { set_sim (@_) },
 		    "bochs" => sub { set_sim ("bochs") },
 		    "qemu" => sub { set_sim ("qemu") },
-		    "gsx" => sub { set_sim ("gsx") },
+		    "player" => sub { set_sim ("player") },
 
 		    "debug=s" => sub { set_debug (@_) },
 		    "no-debug" => sub { set_debug ("none") },
@@ -109,7 +109,7 @@ where each OPTION is one of the following options
 Simulator selection:
   --bochs                  (default) Use Bochs as simulator
   --qemu                   Use qemu as simulator
-  --gsx                    Use VMware GSX Server 3.x as simulator
+  --player                 Use VMware Player as simulator
 Debugger selection:
   --no-debug               (default) No debugger
   --monitor                Debug with simulator's monitor
@@ -366,8 +366,8 @@ sub run_vm {
 	run_bochs ();
     } elsif ($sim eq 'qemu') {
 	run_qemu ();
-    } elsif ($sim eq 'gsx') {
-	run_gsx ();
+    } elsif ($sim eq 'player') {
+	run_player ();
     } else {
 	die "unknown simulator `$sim'\n";
     }
@@ -380,9 +380,7 @@ sub run_bochs {
 
     my ($squish_pty);
     if ($serial) {
-	for my $dir (split (':', $ENV{PATH})) {
-	    $squish_pty = "$dir/squish-pty", last if -x "$dir/squish-pty";
-	}
+	$squish_pty = find_in_path ("squish-pty");
 	print "warning: can't find squish-pty, so terminal input will fail\n"
 	  if !defined $squish_pty;
     }
@@ -478,38 +476,50 @@ sub run_qemu {
     run_command (@cmd);
 }
 
-# gsx_unsup($flag)
+# player_unsup($flag)
 #
-# Prints a message that $flag is unsupported by GSX Server.
-sub gsx_unsup {
+# Prints a message that $flag is unsupported by VMware Player.
+sub player_unsup {
     my ($flag) = @_;
-    print "warning: no support for $flag with VMware GSX Server\n";
+    print "warning: no support for $flag with VMware Player\n";
 }
 
-# Runs VMware GSX Server.
-sub run_gsx {
-    gsx_unsup ("--$debug") if $debug ne 'none';
-    gsx_unsup ("--no-vga") if $vga eq 'none';
-    gsx_unsup ("--terminal") if $vga eq 'terminal';
-    gsx_unsup ("--jitter") if defined $jitter;
-    gsx_unsup ("--kill-on-failure") if defined $kill_on_failure;
+# Runs VMware Player.
+sub run_player {
+    player_unsup ("--$debug") if $debug ne 'none';
+    player_unsup ("--no-vga") if $vga eq 'none';
+    player_unsup ("--terminal") if $vga eq 'terminal';
+    player_unsup ("--jitter") if defined $jitter;
+    player_unsup ("--timeout"), undef $timeout if defined $timeout;
+    player_unsup ("--kill-on-failure"), undef $kill_on_failure
+      if defined $kill_on_failure;
 
-    unlink ("pintos.out");
+    # Memory size must be multiple of 4.
+    $mem = int (($mem + 3) / 4) * 4;
 
     open (VMX, ">", "pintos.vmx") or die "pintos.vmx: create: $!\n";
     chmod 0777 & ~umask, "pintos.vmx";
     print VMX <<EOF;
 #! /usr/bin/vmware -G
-config.version = 6
+config.version = 8
 guestOS = "linux"
-floppy0.present = FALSE
 memsize = $mem
+floppy0.present = FALSE
+usb.present = FALSE
+sound.present = FALSE
+gui.exitAtPowerOff = TRUE
+gui.exitOnCLIHLT = TRUE
+gui.powerOnAtStartUp = TRUE
 EOF
+
+
 
     print VMX <<EOF if $serial;
 serial0.present = TRUE
-serial0.fileType = "file"
-serial0.fileName = "pintos.out"
+serial0.fileType = "pipe"
+serial0.fileName = "pintos.socket"
+serial0.pipe.endPoint = "client"
+serial0.tryNoRxLoss = "TRUE"
 EOF
 
     for (my ($i) = 0; $i < 4; $i++) {
@@ -517,11 +527,8 @@ EOF
 	my ($dsk) = $disk->{FILE_NAME};
 	next if !defined $dsk;
 
-	my ($pln) = $dsk;
-	$pln =~ s/\.dsk//;
-	$pln .= ".pln";
-
 	my ($device) = "ide" . int ($i / 2) . ":" . ($i % 2);
+	my ($pln) = "$device.pln";
 	print VMX <<EOF;
 
 $device.present = TRUE
@@ -529,28 +536,48 @@ $device.deviceType = "plainDisk"
 $device.fileName = "$pln"
 EOF
 
+	open (URANDOM, '<', '/dev/urandom') or die "/dev/urandom: open: $!\n";
+	my ($bytes);
+	sysread (URANDOM, $bytes, 4) == 4 or die "/dev/urandom: read: $!\n";
+	close (URANDOM);
+	my ($cid) = unpack ("L", $bytes);
+
 	my (%geom) = disk_geometry ($disk);
 	open (PLN, ">", $pln) or die "$pln: create: $!\n";
 	print PLN <<EOF;
-DRIVETYPE	ide
-#vm|VERSION	2
-#vm|TOOLSVERSION	2
-CYLINDERS	$geom{C}
-HEADS		$geom{H}
-SECTORS		$geom{S}
-#vm|CAPACITY	$geom{CAPACITY}
-ACCESS "$dsk" 0 $geom{CAPACITY}
+version=1
+CID=$cid
+parentCID=ffffffff
+createType="monolithicFlat"
+
+RW $geom{CAPACITY} FLAT "$dsk" 0
+
+# The Disk Data Base
+#DDB
+
+ddb.adapterType = "ide"
+ddb.virtualHWVersion = "4"
+ddb.toolsVersion = "2"
+ddb.geometry.cylinders = "$geom{C}"
+ddb.geometry.heads = "$geom{H}"
+ddb.geometry.sectors = "$geom{S}"
 EOF
 	close (PLN);
     }
     close (VMX);
 
+    my ($squish_unix);
+    if ($serial) {
+	$squish_unix = find_in_path ("squish-unix");
+	print "warning: can't find squish-unix, so terminal input ",
+	  "and output will fail\n" if !defined $squish_unix;
+    }
+
     my ($vmx) = getcwd () . "/pintos.vmx";
-    system ("vmware-cmd -s register $vmx >&/dev/null");
-    system ("vmware-cmd $vmx stop hard >&/dev/null");
-    system ("vmware -l -G -x -q $vmx");
-    system ("vmware-cmd $vmx stop hard >&/dev/null");
-    system ("vmware-cmd -s unregister $vmx >&/dev/null");
+    my (@cmd) = ("vmplayer", $vmx);
+    unshift (@cmd, $squish_unix, "pintos.socket") if $squish_unix;
+    print join (' ', @cmd), "\n";
+    xsystem (@cmd);
 }
 
 # Disk utilities.
@@ -830,4 +857,14 @@ sub SIGVTALRM {
 	$i++;
     }
     return 0;
+}
+
+# find_in_path ($program)
+#
+# Searches for $program in $ENV{PATH}.
+# Returns $program if found, otherwise undef.
+sub find_in_path {
+    my ($program) = @_;
+    -x "$_/$program" and return $program foreach split (':', $ENV{PATH});
+    return;
 }

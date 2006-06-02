@@ -65,7 +65,7 @@ Optional: @uref{http://www.tug.org/, @TeX{}}.  Also required to build
 the PDF version of the documentation.
 
 @item
-Optional: @uref{http://www.vmware.com/, VMware GSX Server}.  This is a
+Optional: @uref{http://www.vmware.com/, VMware Player}.  This is a
 third platform that can also be used to test Pintos.
 @end itemize
 
@@ -93,6 +93,7 @@ about missing @file{gdb-macros}, it is installed correctly.
 @item
 Compile the remaining Pintos utilities by typing @command{make} in
 @file{src/utils}.  Install @file{squish-pty} somewhere in @env{PATH}.
+To support VMware Player, install @file{squish-unix}.
 If your Perl is older than version 5.8.0, also install
 @file{setitimer-helper}; otherwise, it is unneeded.
 

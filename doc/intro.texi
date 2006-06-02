@@ -17,8 +17,7 @@ systems and software can run under it.  In class we will use the
 @uref{http://bochs.sourceforge.net, , Bochs} and 
 @uref{http://fabrice.bellard.free.fr/qemu/, ,
 qemu} simulators.  Pintos has also been tested with
-@uref{http://www.vmware.com/products/server/gsx_features.html, ,
-VMware GSX Server}.
+@uref{http://www.vmware.com/, , VMware Player}.
 
 These projects are hard.  CS 140 has a reputation of taking a lot of
 time, and deservedly so.  We will do what we can to reduce the workload, such
