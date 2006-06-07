@@ -39,3 +39,10 @@ Robustness of system calls:
 5	wait-bad-pid
 5	wait-killed
 
+- Test robustness of exception handling.
+1	bad-read
+1	bad-write
+1	bad-jump
+1	bad-read2
+1	bad-write2
+1	bad-jump2
