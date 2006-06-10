@@ -206,7 +206,7 @@ static void
 serial_interrupt (struct intr_frame *f UNUSED) 
 {
   /* Inquire about interrupt in UART.  Without this, we can
-     occasionally miss an interrupt running under qemu. */
+     occasionally miss an interrupt running under QEMU. */
   inb (IIR_REG);
 
   /* As long as we have room to receive a byte, and the hardware

@@ -16,7 +16,7 @@ CPU and its peripheral devices accurately enough that unmodified operating
 systems and software can run under it.  In class we will use the
 @uref{http://bochs.sourceforge.net, , Bochs} and 
 @uref{http://fabrice.bellard.free.fr/qemu/, ,
-qemu} simulators.  Pintos has also been tested with
+QEMU} simulators.  Pintos has also been tested with
 @uref{http://www.vmware.com/, , VMware Player}.
 
 These projects are hard.  CS 140 has a reputation of taking a lot of
@@ -250,7 +250,7 @@ from them by @option{--}, so that the whole command looks like
 @code{pintos @var{option}@dots{} -- @var{argument}@dots{}}.  Invoke
 @code{pintos} without any arguments to see a list of available options.
 Options can select a simulator to use: the default is Bochs, but
-@option{--qemu} selects qemu.  You can run the simulator
+@option{--qemu} selects QEMU.  You can run the simulator
 with a debugger (@pxref{GDB}).  You can set the amount of memory to give
 the VM.  Finally, you can select how you want VM output to be displayed:
 use @option{-v} to turn off the VGA display, @option{-t} to use your
@@ -308,9 +308,9 @@ timings, in which a one-second delay should take approximately one
 second of real time.  Simulation in real-time mode is not reproducible,
 and options @option{-j} and @option{-r} are mutually exclusive.
 
-The qemu simulator is available as an
+The QEMU simulator is available as an
 alternative to Bochs (use @option{--qemu} when invoking
-@command{pintos}).  The qemu simulator is much faster than Bochs, but it
+@command{pintos}).  The QEMU simulator is much faster than Bochs, but it
 only supports real-time simulation and does not have a reproducible
 mode.
 
@@ -338,7 +338,7 @@ After running all the tests, @command{make check} also prints a summary
 of the test results.
 
 For project 1, the tests will probably run faster in Bochs.  For the
-rest of the projects, they will run much faster in qemu.
+rest of the projects, they will run much faster in QEMU.
 @command{make check} will select the faster simulator by default, but
 you can override its choice by specifying @option{SIMULATOR=--bochs} or
 @option{SIMULATOR=--qemu} on the @command{make} command line.

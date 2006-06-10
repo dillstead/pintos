@@ -108,7 +108,7 @@ where each OPTION is one of the following options
   and each ARGUMENT is passed to Pintos kernel verbatim.
 Simulator selection:
   --bochs                  (default) Use Bochs as simulator
-  --qemu                   Use qemu as simulator
+  --qemu                   Use QEMU as simulator
   --player                 Use VMware Player as simulator
 Debugger selection:
   --no-debug               (default) No debugger
@@ -454,7 +454,7 @@ sub print_bochs_disk_line {
     }
 }
 
-# Runs qemu.
+# Runs QEMU.
 sub run_qemu {
     print "warning: qemu doesn't support --terminal\n"
       if $vga eq 'terminal';
@@ -707,7 +707,7 @@ sub run_command {
 # Relays common signals to the subprocess.
 # If $timeout is set then the subprocess will be killed after that long.
 sub xsystem {
-    # qemu turns off local echo and does not restore it if killed by a signal.
+    # QEMU turns off local echo and does not restore it if killed by a signal.
     # We compensate by restoring it ourselves.
     my $cleanup = sub {};
     if (isatty (0)) {

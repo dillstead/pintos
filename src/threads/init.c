@@ -367,7 +367,7 @@ usage (void)
 
 
 /* Powers down the machine we're running on,
-   as long as we're running on Bochs or qemu. */
+   as long as we're running on Bochs or QEMU. */
 void
 power_off (void) 
 {
@@ -385,6 +385,8 @@ power_off (void)
 
   for (p = s; *p != '\0'; p++)
     outb (0x8900, *p);
+  asm ("cli; hlt");
+  printf ("still running...\n");
   for (;;);
 }
 
