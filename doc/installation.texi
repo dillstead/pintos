@@ -112,6 +112,13 @@ documentation, plus the design document templates and various hardware
 specifications referenced by the documentation.  Building the PDF
 version of the manual requires Texinfo and @TeX{} (see above).  You may
 install @file{WWW} wherever you find most useful.
+
+The @file{doc} directory is not included in the @file{.tar.gz}
+distributed for Pintos.  It is in the Pintos CVS tree available via
+@code{:pserver:anonymous@footstool.stanford.edu:/var/lib/cvs}, in the
+@code{pintos} module.  The CVS tree is @emph{not} the authoritative
+source for Stanford course materials, which should be obtained from the
+course website.
 @end enumerate
 
 @menu
