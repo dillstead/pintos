@@ -56,14 +56,16 @@
 #define CR0_PG 0x80000000      /* Paging. */
 #define CR0_WP 0x00010000      /* Write-Protect enable in kernel mode. */
 
-# Code runs in real mode, which is a 16-bit segment.
 
 .globl start
 start:
+	
+# Code runs in real mode, which is a 16-bit segment.
 	.code16
 
-# Disable interrupts.
-# String instructions go upward.
+# Disable interrupts, because we will not be prepared to handle them
+# in protected mode until much later.
+# String instructions go upward (e.g. for "rep stosl" below).
 
 	cli
 	cld
