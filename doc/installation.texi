@@ -115,7 +115,7 @@ install @file{WWW} wherever you find most useful.
 
 The @file{doc} directory is not included in the @file{.tar.gz}
 distributed for Pintos.  It is in the Pintos CVS tree available via
-@code{:pserver:anonymous@footstool.stanford.edu:/var/lib/cvs}, in the
+@code{:pserver:anonymous@@footstool.stanford.edu:/var/lib/cvs}, in the
 @code{pintos} module.  The CVS tree is @emph{not} the authoritative
 source for Stanford course materials, which should be obtained from the
 course website.
