@@ -82,7 +82,7 @@ you log in.
 Now you can extract the source for Pintos into a directory named
 @file{pintos/src}, by executing
 @example
-tar xzf /usr/class/cs140/pintos/pintos.tar.gz
+zcat /usr/class/cs140/pintos/pintos.tar.gz | tar x
 @end example
 Alternatively, fetch
 @uref{http://@/www.stanford.edu/@/class/@/cs140/@/pintos/@/pintos.@/tar.gz}
