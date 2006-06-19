@@ -149,9 +149,21 @@ sub compare_output {
     my (@output) = get_core_output ($run, @$output);
     fail "\u$run didn't produce any output" if !@output;
 
-    if (exists $options{IGNORE_EXIT_CODES}) {
+    my $ignore_exit_codes = exists $options{IGNORE_EXIT_CODES};
+    if ($ignore_exit_codes) {
 	delete $options{IGNORE_EXIT_CODES};
 	@output = grep (!/^[a-zA-Z0-9-_]+: exit\(\d+\)$/, @output);
+    }
+    my $ignore_user_faults = exists $options{IGNORE_USER_FAULTS};
+    if ($ignore_user_faults) {
+	delete $options{IGNORE_USER_FAULTS};
+	@output = grep (!/^Page fault at.*in user context\.$/
+			&& !/: dying due to interrupt 0x0e \(.*\).$/
+			&& !/^Interrupt 0x0e \(.*\) at eip=/
+			&& !/^ cr2=.* error=.*/
+			&& !/^ eax=.* ebx=.* ecx=.* edx=.*/
+			&& !/^ esi=.* edi=.* esp=.* ebp=.*/
+			&& !/^ cs=.* ds=.* es=.* ss=.*/, @output);
     }
     die "unknown option " . (keys (%options))[0] . "\n" if %options;
 
@@ -196,6 +208,10 @@ sub compare_output {
     }
 
     # Failed to match.  Report failure.
+    $msg .= "\n(Process exit codes are excluded for matching purposes.)\n"
+      if $ignore_exit_codes;
+    $msg .= "\n(User fault messages are excluded for matching purposes.)\n"
+      if $ignore_user_faults;
     fail "Test output failed to match any acceptable form.\n\n$msg";
 }
 
