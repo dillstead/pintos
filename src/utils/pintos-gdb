@@ -11,7 +11,7 @@ else
 fi
 
 # Run GDB.
-if test -e "$GDBMACROS"; then
+if test -f "$GDBMACROS"; then
 	exec $GDB -x "$GDBMACROS" "$@"
 else
 	echo "*** $GDBMACROS does not exist ***"
