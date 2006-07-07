@@ -640,6 +640,45 @@ that happens to follow @func{fail} in memory, which in this case happens
 to be @func{pass}.
 
 @xref{Backtraces}, for more information.
+
+@item How do interrupts get re-enabled in the new thread following @func{schedule}?
+
+Every path into @func{schedule} disables interrupts.  They eventually
+get re-enabled by the next thread to be scheduled.  Consider the
+possibilities: the new thread is running in @func{switch_thread} (but
+see below), which is called by @func{schedule}, which is called by one
+of a few possible functions:
+
+@itemize @bullet
+@item
+@func{thread_exit}, but we'll never switch back into such a thread, so
+it's uninteresting.
+
+@item
+@func{thread_yield}, which immediately restores the interrupt level upon
+return from @func{schedule}.
+
+@item
+@func{thread_block}, which is called from multiple places:
+
+@itemize @minus
+@item
+@func{sema_down}, which restores the interrupt level before returning.
+
+@item
+@func{idle}, which enables interrupts with an explicit assembly STI
+instruction.
+
+@item
+@func{wait} in @file{devices/intq.c}, whose callers are responsible for
+re-enabling interrupts.
+@end itemize
+@end itemize
+
+There is a special case when a newly created thread runs for the first
+time.  Such a thread calls @func{intr_enable} as the first action in
+@func{kernel_thread}, which is at the bottom of the call stack for every
+kernel thread but the first.
 @end table
 
 @menu
