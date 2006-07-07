@@ -360,6 +360,8 @@ that links the elements.
 Example: @code{dumplist all_list thread all_elem} prints all elements of
 @struct{thread} that are linked in @code{struct list all_list} using the
 @code{struct list_elem all_elem} which is part of @struct{thread}.
+(This assumes that you have added @code{all_list} and @code{all_elem}
+yourself.)
 @end deffn
 
 @deffn {GDB Macro} btthread thread
@@ -380,6 +382,8 @@ Example: @code{btthreadlist all_list all_elem} shows the backtraces of
 all threads contained in @code{struct list all_list}, linked together by
 @code{all_elem}.  This command is useful to determine where your threads
 are stuck when a deadlock occurs.  Please see the example scenario below.
+(This assumes that you have added @code{all_list} and @code{all_elem}
+yourself.)
 @end deffn
 
 @deffn {GDB Macro} btpagefault
