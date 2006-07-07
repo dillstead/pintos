@@ -243,8 +243,7 @@ scheduler.  It is not a complete description of scheduler requirements.
 Every thread has a @var{nice} value between -20 and 20 directly under
 its control.  Each thread also has a priority, between 0
 (@code{PRI_MIN}) through 63 (@code{PRI_MAX}), which is recalculated
-using the following formula whenever the value of either variable term
-changes:
+using the following formula every fourth tick:
 
 @center @t{@var{priority} = @code{PRI_MAX} - (@var{recent_cpu} / 4) - (@var{nice} * 2)}.
 
