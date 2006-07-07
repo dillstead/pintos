@@ -492,7 +492,8 @@ make your code self-consistent at the very least.  There should not be a
 patchwork of different styles that makes it obvious that three different
 people wrote the code.  Use horizontal and vertical white space to make
 code readable.  Add a brief comment on every structure, structure
-member, global or static variable, and function definition.  Update
+member, global or static variable, typedef, enumeration, and function
+definition.  Update
 existing comments as you modify code.  Don't comment out or use the
 preprocessor to ignore blocks of code (instead, remove it entirely).
 Use assertions to document key invariants.  Decompose code into
