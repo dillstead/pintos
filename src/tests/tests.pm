@@ -112,6 +112,8 @@ sub check_for_triple_fault {
     print <<EOF;
 \u$run spontaneously rebooted $reboots times.
 This is most often caused by unhandled page faults.
+Read the Triple Faults section in the Debugging chapter
+of the Pintos manual for more information.
 EOF
 
     fail;
