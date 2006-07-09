@@ -86,7 +86,7 @@ The initial thread starts with a @var{nice} value of zero.  Other
 threads start with a @var{nice} value inherited from their parent
 thread.  You must implement the functions described below, which are for
 use by test programs.  We have provided skeleton definitions for them in
-@file{threads/thread.c}.  by test programs
+@file{threads/thread.c}.
 
 @deftypefun int thread_get_nice (void)
 Returns the current thread's @var{nice} value.
