@@ -55,8 +55,8 @@ sema_init (struct semaphore *sema, unsigned value)
 
    This function may sleep, so it must not be called within an
    interrupt handler.  This function may be called with
-   interrupts disabled, but interrupts will be turned back on if
-   we need to sleep. */
+   interrupts disabled, but if it sleeps then the next scheduled
+   thread will probably turn interrupts back on. */
 void
 sema_down (struct semaphore *sema) 
 {
