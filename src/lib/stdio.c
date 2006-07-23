@@ -515,7 +515,7 @@ format_integer (uintmax_t value, bool is_signed, bool negative,
   /* Append enough zeros to match precision.
      If requested precision is 0, then a value of zero is
      rendered as a null string, otherwise as "0".
-     If the # flag is used with base 0, the result must always
+     If the # flag is used with base 8, the result must always
      begin with a zero. */
   precision = c->precision < 0 ? 1 : c->precision;
   while (cp - buf < precision && cp < buf + sizeof buf - 1)
