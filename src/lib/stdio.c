@@ -463,7 +463,7 @@ parse_conversion (const char *format, struct printf_conversion *c,
    auxiliary data AUX.  The integer converted has absolute value
    VALUE.  If IS_SIGNED is true, does a signed conversion with
    NEGATIVE indicating a negative value; otherwise does an
-   unsigned conversion and ignores IS_SIGNED.  The output is done
+   unsigned conversion and ignores NEGATIVE.  The output is done
    according to the provided base B.  Details of the conversion
    are in C. */
 static void
