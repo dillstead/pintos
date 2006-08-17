@@ -50,7 +50,7 @@ make_tar_archive (const char *archive_name, char *files[], size_t file_cnt)
 {
   static const char zeros[512];
   int archive_fd;
-  bool success;
+  bool success = true;
   bool write_error = false;
   size_t i;
   
