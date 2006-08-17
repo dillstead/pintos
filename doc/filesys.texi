@@ -259,8 +259,8 @@ false if it represents an ordinary file.
 @end deftypefn
 
 @deftypefn {System Call} int inumber (int @var{fd})
-Returns the @dfn{inode number} of the inode associated with @var{fd}.
-Applicable to file descriptors for both files and directories.
+Returns the @dfn{inode number} of the inode associated with @var{fd},
+which may represent an ordinary file or a directory.
 
 An inode number persistently identifies a file or directory.  It is
 unique during the file's existence.  In Pintos, the sector number of the
