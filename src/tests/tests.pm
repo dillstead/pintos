@@ -510,12 +510,12 @@ sub flatten_hierarchy {
 sub read_tar {
     my ($archive) = @_;
     my (%content);
-    open (ARCHIVE, '<', $archive) or die "$archive: open: $1\n";
+    open (ARCHIVE, '<', $archive) or fail "$archive: open: $1\n";
     for (;;) {
 	my ($header);
 	if ((my $retval = sysread (ARCHIVE, $header, 512)) != 512) {
-	    die "$archive: unexpected end of file\n" if $retval >= 0;
-	    die "$archive: read: $!\n";
+	    fail "$archive: unexpected end of file\n" if $retval >= 0;
+	    fail "$archive: read: $!\n";
 	}
 
 	last if $header eq "\0" x 512;
@@ -523,33 +523,33 @@ sub read_tar {
 	# Verify magic numbers.
 	if (substr ($header, 257, 6) ne "ustar\0"
 	    || substr ($header, 263, 2) ne '00') {
-	    die "$archive: corrupt ustar header\n";
+	    fail "$archive: corrupt ustar header\n";
 	}
 
 	# Verify checksum.
 	my ($chksum) = oct (unpack ("Z*", substr ($header, 148, 8, ' ' x 8)));
 	my ($correct_chksum) = unpack ("%32a*", $header);
-	die "$archive: bad header checksum\n" if $chksum != $correct_chksum;
+	fail "$archive: bad header checksum\n" if $chksum != $correct_chksum;
 
 	# Get file name.
 	my ($name) = unpack ("Z100", $header);
 	my ($prefix) = unpack ("Z*", substr ($header, 345));
 	$name = "$prefix/$name" if $prefix ne '';
-	die "$archive: contains file with empty name" if $name eq '';
+	fail "$archive: contains file with empty name" if $name eq '';
 
 	# Get type.
 	my ($typeflag) = substr ($header, 156, 1);
 	$typeflag = '0' if $typeflag eq "\0";
-	die "unknown file type '$typeflag'\n" if $typeflag !~ /[05]/;
+	fail "unknown file type '$typeflag'\n" if $typeflag !~ /[05]/;
 
 	# Get size.
 	my ($size) = oct (unpack ("Z*", substr ($header, 124, 12)));
-	die "bad size $size\n" if $size < 0;
+	fail "bad size $size\n" if $size < 0;
 	$size = 0 if $typeflag eq '5';
 
 	# Store content.
 	if (exists $content{$name}) {
-	    die "$archive: contains multiple entries for $name\n";
+	    fail "$archive: contains multiple entries for $name\n";
 	}
 	if ($typeflag eq '5') {
 	    $content{$name} = 'directory';
