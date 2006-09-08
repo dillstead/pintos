@@ -237,8 +237,8 @@ nearest integer.
 @node 4.4BSD Scheduler Summary
 @section Summary
 
-This section summarizes the calculations required to implement the
-scheduler.  It is not a complete description of scheduler requirements.
+The following formulas summarize the calculations required to implement the
+scheduler.  They are not a complete description of scheduler requirements.
 
 Every thread has a @var{nice} value between -20 and 20 directly under
 its control.  Each thread also has a priority, between 0
