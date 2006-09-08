@@ -168,15 +168,17 @@ paging_init (void)
 {
   uint32_t *pd, *pt;
   size_t page;
+  extern char _start, _end_kernel_text;
 
   pd = base_page_dir = palloc_get_page (PAL_ASSERT | PAL_ZERO);
   pt = NULL;
   for (page = 0; page < ram_pages; page++) 
     {
       uintptr_t paddr = page * PGSIZE;
-      void *vaddr = ptov (paddr);
+      char *vaddr = ptov (paddr);
       size_t pde_idx = pd_no (vaddr);
       size_t pte_idx = pt_no (vaddr);
+      bool in_kernel_text = &_start <= vaddr && vaddr < &_end_kernel_text;
 
       if (pd[pde_idx] == 0)
         {
@@ -184,7 +186,7 @@ paging_init (void)
           pd[pde_idx] = pde_create (pt);
         }
 
-      pt[pte_idx] = pte_create_kernel (vaddr, true);
+      pt[pte_idx] = pte_create_kernel (vaddr, !in_kernel_text);
     }
 
   /* Store the physical address of the page directory into CR3

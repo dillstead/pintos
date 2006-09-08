@@ -12,7 +12,8 @@ SECTIONS
 
   /* Kernel starts with code, followed by read-only data and writable data. */
   .text : { *(.start) *(.text) } = 0x90
-  .rodata : { *(.rodata) *(.rodata.*) }
+  .rodata : { *(.rodata) *(.rodata.*) . = ALIGN(0x1000); }
+  _end_kernel_text = .;
   .data : { *(.data) }
 
   /* BSS (zero-initialized data) is after everything else. */
