@@ -228,7 +228,7 @@ list_push_back (struct list *list, struct list_elem *elem)
    that a naive loop to remove the elements in a list will fail:
 
    ** DON'T DO THIS **
-   for (e = list_begin (&list); e != list_end (&list); e = list_next (&list))
+   for (e = list_begin (&list); e != list_end (&list); e = list_next (e))
      {
        ...do something with e...
        list_remove (e);
