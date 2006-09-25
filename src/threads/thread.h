@@ -101,6 +101,13 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
   };
 
+/* If false (default), use round-robin scheduler.
+   If true, use multi-level feedback queue scheduler.
+   Controlled by kernel command-line options "-o mlfqs".
+   Note that the command line is not parsed until well after
+   thread_init() is called. */
+extern bool thread_mlfqs;
+
 void thread_init (void);
 void thread_start (void);
 

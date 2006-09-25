@@ -19,7 +19,7 @@ test_priority_condvar (void)
   int i;
   
   /* This test does not work with the MLFQS. */
-  ASSERT (!enable_mlfqs);
+  ASSERT (!thread_mlfqs);
 
   lock_init (&lock);
   cond_init (&condition);

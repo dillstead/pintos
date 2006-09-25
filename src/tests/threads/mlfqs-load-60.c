@@ -116,7 +116,7 @@ test_mlfqs_load_60 (void)
 {
   int i;
   
-  ASSERT (enable_mlfqs);
+  ASSERT (thread_mlfqs);
 
   start_time = timer_ticks ();
   msg ("Starting %d niced load threads...", THREAD_CNT);

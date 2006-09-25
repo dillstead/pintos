@@ -112,7 +112,7 @@ test_mlfqs_recent_1 (void)
   int64_t start_time;
   int last_elapsed = 0;
   
-  ASSERT (enable_mlfqs);
+  ASSERT (thread_mlfqs);
 
   msg ("Sleeping 10 seconds to allow recent_cpu to decay, please wait...");
   start_time = timer_ticks ();

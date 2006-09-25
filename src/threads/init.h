@@ -12,11 +12,6 @@ extern size_t ram_pages;
 /* Page directory with kernel mappings only. */
 extern uint32_t *base_page_dir;
 
-/* -o mlfqs:
-   If false (default), use round-robin scheduler.
-   If true, use multi-level feedback queue scheduler. */
-extern bool enable_mlfqs;
-
 /* -q: Power off when kernel tasks complete? */
 extern bool power_off_when_done;
 

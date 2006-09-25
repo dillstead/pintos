@@ -24,7 +24,7 @@ test_priority_donate_multiple (void)
   struct lock a, b;
 
   /* This test does not work with the MLFQS. */
-  ASSERT (!enable_mlfqs);
+  ASSERT (!thread_mlfqs);
 
   /* Make sure our priority is the default. */
   ASSERT (thread_get_priority () == PRI_DEFAULT);

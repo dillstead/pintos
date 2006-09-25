@@ -18,7 +18,7 @@ test_priority_sema (void)
   int i;
   
   /* This test does not work with the MLFQS. */
-  ASSERT (!enable_mlfqs);
+  ASSERT (!thread_mlfqs);
 
   sema_init (&sema, 0);
   thread_set_priority (PRI_MIN);

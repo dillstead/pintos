@@ -41,11 +41,6 @@ size_t ram_pages;
 /* Page directory with kernel mappings only. */
 uint32_t *base_page_dir;
 
-/* -mlfqs:
-   If false (default), use round-robin scheduler.
-   If true, use multi-level feedback queue scheduler. */
-bool enable_mlfqs;
-
 #ifdef FILESYS
 /* -f: Format the file system? */
 static bool format_filesys;
@@ -254,7 +249,7 @@ parse_options (char **argv)
       else if (!strcmp (name, "-rs"))
         random_init (atoi (value));
       else if (!strcmp (name, "-mlfqs"))
-        enable_mlfqs = true;
+        thread_mlfqs = true;
 #ifdef USERPROG
       else if (!strcmp (name, "-ul"))
         user_page_limit = atoi (value);

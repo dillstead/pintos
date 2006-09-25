@@ -522,7 +522,7 @@ policy at Pintos startup time.  By default, the priority scheduler
 must be active, but we must be able to choose the 4.4@acronym{BSD}
 scheduler
 with the @option{-mlfqs} kernel option.  Passing this
-option sets @code{enable_mlfqs}, declared in @file{threads/init.h}, to
+option sets @code{thread_mlfqs}, declared in @file{threads/thread.h}, to
 true when the options are parsed by @func{parse_options}, which happens
 midway through @func{main}.
 

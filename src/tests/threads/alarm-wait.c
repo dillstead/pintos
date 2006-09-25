@@ -57,7 +57,7 @@ test_sleep (int thread_cnt, int iterations)
   int i;
 
   /* This test does not work with the MLFQS. */
-  ASSERT (!enable_mlfqs);
+  ASSERT (!thread_mlfqs);
 
   msg ("Creating %d threads to sleep %d times each.", thread_cnt, iterations);
   msg ("Thread 0 sleeps 10 ticks each time,");

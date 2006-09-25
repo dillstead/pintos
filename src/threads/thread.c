@@ -50,6 +50,13 @@ static long long user_ticks;    /* # of timer ticks in user programs. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
 
+/* If false (default), use round-robin scheduler.
+   If true, use multi-level feedback queue scheduler.
+   Controlled by kernel command-line options "-o mlfqs".
+   Note that the command line is not parsed until well after
+   thread_init() is called. */
+bool thread_mlfqs;
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -71,7 +78,14 @@ static tid_t allocate_tid (void);
 
    After calling this function, be sure to initialize the page
    allocator before trying to create any threads with
-   thread_create(). */
+   thread_create().
+
+   The kernel command line is not parsed until *after* this
+   function returns, so that when this function runs,
+   thread_mlfqs is always false.
+
+   It is not safe to call thread_current() until this function
+   finishes. */
 void
 thread_init (void) 
 {
@@ -88,12 +102,28 @@ thread_init (void)
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
-   Also creates the idle thread. */
+   Also creates the idle thread.
+
+   By the time this function runs, thread_mlfqs has been properly
+   initialized to its final value. */
 void
 thread_start (void) 
 {
-  thread_create ("idle", PRI_MIN, idle, NULL);
+  /* Create the idle thread with maximum priority.  This ensures
+     that it will be scheduled soon after interrupts are enabled.
+     The idle thread will block almost immediately upon
+     scheduling, and subsequently it will never appear on the
+     ready list, so the priority here is otherwise
+     unimportant. */
+  struct semaphore idle_started;
+  sema_init (&idle_started, 0);
+  thread_create ("idle", PRI_MAX, idle, &idle_started);
+
+  /* Start preemptive thread scheduling. */
   intr_enable ();
+
+  /* Wait for the idle thread to initialize idle_thread. */
+  sema_down (&idle_started);
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -278,7 +308,8 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  list_push_back (&ready_list, &cur->elem);
+  if (cur != idle_thread) 
+    list_push_back (&ready_list, &cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -333,21 +364,17 @@ thread_get_recent_cpu (void)
 
    The idle thread is initially put on the ready list by
    thread_start().  It will be scheduled once initially, at which
-   point it initializes idle_thread and immediately blocks.
-   After that, the idle thread never appears in the ready list.
-   It is returned by next_thread_to_run() as a special case when
-   the ready list is empty. */
+   point it initializes idle_thread, "up"s the semaphore passed
+   to it to enable thread_start() to continue, and immediately
+   blocks.  After that, the idle thread never appears in the
+   ready list.  It is returned by next_thread_to_run() as a
+   special case when the ready list is empty. */
 static void
-idle (void *aux UNUSED) 
+idle (void *idle_started_ UNUSED) 
 {
-  /* Initialize idle_thread.
-
-     Until we run for the first time, idle_thread remains a null
-     pointer.  That's okay because we know that, at that point,
-     the ready list has at least one element (the idle thread),
-     so next_thread_to_run() will not attempt to return the idle
-     thread. */
+  struct semaphore *idle_started = idle_started_;
   idle_thread = thread_current ();
+  sema_up (idle_started);
 
   for (;;) 
     {
