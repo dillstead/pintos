@@ -552,7 +552,7 @@ synchronization primitives to help out.
 * Semaphores::                  
 * Locks::                       
 * Monitors::                    
-* Memory Barriers::             
+* Optimization Barriers::             
 @end menu
 
 @node Disabling Interrupts
@@ -844,8 +844,8 @@ char get (void) @{
 @}
 @end example
 
-@node Memory Barriers
-@subsection Memory Barriers
+@node Optimization Barriers
+@subsection Optimization Barriers
 
 @c We should try to come up with a better example.
 @c Perhaps something with a linked list?
@@ -912,11 +912,11 @@ and restricts its latitude for optimization.  However, the semantics of
 @samp{volatile} are not well-defined, so it is not a good general
 solution.
 
-Usually, the best solution is to use a compiler feature called a
-@dfn{memory barrier}, a special statement that prevents the compiler
-from reordering memory operations across the barrier.  In Pintos,
-@file{threads/synch.h} defines the @code{barrier()} macro as a memory
-barrier.  Here's how we would use a memory barrier to fix this code:
+Usually, the best solution is to use a compiler feature called an
+@dfn{optimization barrier}, a special statement that prevents the compiler
+from reordering operations across the barrier.  In Pintos,
+@file{threads/synch.h} defines the @code{barrier()} macro as an optimization
+barrier.  Here's how we would use a optimization barrier to fix this code:
 
 @example
 timer_put_char = 'x';
@@ -925,7 +925,7 @@ timer_do_put = true;
 @end example
 
 The compiler also treats invocation of any function defined externally,
-that is, in another source file, as a limited form of a memory barrier.
+that is, in another source file, as a limited form of a optimization barrier.
 Specifically, the compiler assumes that any externally defined function
 may access any statically or dynamically allocated data and any local
 variable whose address is taken.  This often means that explicit
@@ -933,7 +933,7 @@ barriers can be omitted, and, indeed, this is why the base Pintos code
 does not need any barriers.
 
 A function defined in the same source file, or in a header included by
-the source file, cannot be relied upon as a memory barrier.
+the source file, cannot be relied upon as a optimization barrier.
 This applies even to invocation of a function before its
 definition, because the compiler may read and parse the entire source
 file before performing optimization.
