@@ -314,11 +314,6 @@ the running process.  However, even in the kernel, an attempt to
 access memory at an unmapped user virtual address
 will cause a page fault.
 
-You must handle memory fragmentation gracefully, that is, a process that
-needs @var{N} pages of user virtual memory must not require those pages
-to be contiguous in physical memory (or, equivalently, in kernel virtual
-memory).
-
 @menu
 * Typical Memory Layout::       
 @end menu

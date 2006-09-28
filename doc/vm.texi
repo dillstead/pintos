@@ -73,7 +73,7 @@ memory and storage.  Some of these terms should be familiar from project
 @node Pages
 @subsubsection Pages
 
-A @dfn{page}, sometimes called a @dfn{virtual page}, is a contiguous
+A @dfn{page}, sometimes called a @dfn{virtual page}, is a continuous
 region of virtual memory 4,096 bytes (the @dfn{page size}) in length.  A
 page must be @dfn{page-aligned}, that is, start on a virtual address
 evenly divisible by the page size.  Thus, a 32-bit virtual address can
@@ -105,7 +105,7 @@ addresses.  @xref{Virtual Addresses}, for details.
 @subsubsection Frames
 
 A @dfn{frame}, sometimes called a @dfn{physical frame} or a @dfn{page
-frame}, is a contiguous region of physical memory.  Like pages, frames
+frame}, is a continuous region of physical memory.  Like pages, frames
 must be page-size and page-aligned.  Thus, a 32-bit physical address can
 be divided into a 20-bit @dfn{frame number} and a 12-bit @dfn{frame
 offset} (or just @dfn{offset}), like this:
@@ -162,7 +162,7 @@ address, on the right.
 @node Swap Slots
 @subsubsection Swap Slots
 
-A @dfn{swap slot} is a contiguous, page-size region of disk space on the
+A @dfn{swap slot} is a continuous, page-size region of disk space on the
 swap disk.  Although hardware limitations dictating the placement of
 slots are looser than for pages and frames, swap slots should be
 page-aligned because there is no downside in doing so.
