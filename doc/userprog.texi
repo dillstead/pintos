@@ -571,13 +571,13 @@ word is the program name, the second word is the first argument, and so
 on.  That is, @code{process_execute("grep foo bar")} should run
 @command{grep} passing two arguments @code{foo} and @code{bar}.
 
-Within a command line, multiple spaces are equivalent to a single space,
-so that @code{process_execute("grep foo bar")} is equivalent to our
-original example.  You can impose a reasonable limit on the length of
-the command line arguments.  For example, you could limit the arguments
-to those that will fit in a single page (4 kB).  (There is an unrelated
-limit of 128 bytes on command-line arguments that the @command{pintos}
-utility can pass to the kernel.)
+Within a command line, multiple spaces are equivalent to a single
+space, so that @code{process_execute("grep @w{ }foo @w{ }@w{ }bar")}
+is equivalent to our original example.  You can impose a reasonable
+limit on the length of the command line arguments.  For example, you
+could limit the arguments to those that will fit in a single page (4
+kB).  (There is an unrelated limit of 128 bytes on command-line
+arguments that the @command{pintos} utility can pass to the kernel.)
 
 You can parse argument strings any way you like.  If you're lost,
 look at @func{strtok_r}, prototyped in @file{lib/string.h} and
