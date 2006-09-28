@@ -355,16 +355,23 @@ intr_handler (struct intr_frame *frame)
       yield_on_return = false;
     }
 
-  /* Invoke the interrupt's handler.
-     If there is no handler, invoke the unexpected interrupt
-     handler. */
+  /* Invoke the interrupt's handler. */
   handler = intr_handlers[frame->vec_no];
-  if (handler == NULL)
+  if (handler != NULL)
+    handler (frame);
+  else if (frame->vec_no == 0x27 || frame->vec_no == 0x2f)
     {
-      intr_dump_frame (frame);
-      PANIC ("Unexpected interrupt");
+      /* There is no handler, but this interrupt can trigger
+         spuriously due to a hardware fault or hardware race
+         condition.  Ignore it. */
     }
-  handler (frame);
+  else 
+    {
+      /* No handler and not spurious.  Invoke the unexpected
+         interrupt handler. */
+      intr_dump_frame (frame);
+      PANIC ("Unexpected interrupt"); 
+    }
 
   /* Complete the processing of an external interrupt. */
   if (external) 
