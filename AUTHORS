@@ -16,9 +16,16 @@ src							-*- text -*-
 projects
 --------
 
-* The projects are derived from those designed for Nachos by current
-  and former CS140 teaching assistants at Stanford University,
-  including at least the following people: 
+* The projects are primarily the creation of Ben Pfaff
+  <blp@cs.stanford.edu>.
+
+* Godmar Back <godmar@gmail.com> made significant contributions to
+  project design.
+
+* Although little remains unchanged, the projects were originally
+  derived from those designed for Nachos by current and former CS140
+  teaching assistants at Stanford University, including at least the
+  following people:
 	
 	- Yu Ping <yph@cs.stanford.edu>
 
@@ -33,8 +40,6 @@ projects
 	- John Rector
 
   If you're not on this list but should be, please let me know.
-
-* Updates for Pintos by Ben Pfaff <blp@cs.stanford.edu>.
 
 * Example code for condition variables is from classroom slides
   originally by Dawson Engler and updated by Mendel Roseblum.
