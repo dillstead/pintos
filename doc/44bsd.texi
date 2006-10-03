@@ -175,9 +175,9 @@ using this formula:
 threads ready to run (see below).  If @var{load_avg} is 1, indicating
 that a single thread, on average, is competing for the CPU, then the
 current value of @var{recent_cpu} decays to a weight of .1 in
-@am{\log_{2/3}.1 \approx 6, ln(2/3)/ln(.1) = approx. 6} seconds; if
+@am{\log_{2/3}.1 \approx 6, ln(.1)/ln(2/3) = approx. 6} seconds; if
 @var{load_avg} is 2, then decay to a weight of .1 takes @am{\log_{3/4}.1
-\approx 8, ln(3/4)/ln(.1) = approx. 8} seconds.  The effect is that
+\approx 8, ln(.1)/ln(3/4) = approx. 8} seconds.  The effect is that
 @var{recent_cpu} estimates the amount of CPU time the thread has
 received ``recently,'' with the rate of decay inversely proportional to
 the number of threads competing for the CPU.
