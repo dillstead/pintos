@@ -37,6 +37,7 @@ lib_SRC += lib/random.c			# Pseudo-random numbers.
 lib_SRC += lib/stdio.c			# I/O library.
 lib_SRC += lib/stdlib.c			# Utility functions.
 lib_SRC += lib/string.c			# String functions.
+lib_SRC += lib/arithmetic.c
 
 # Kernel-specific library code.
 lib/kernel_SRC  = lib/kernel/debug.c	# Debug helpers.
@@ -72,7 +73,7 @@ threads/kernel.lds.s: CPPFLAGS += -P
 threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
 
 kernel.o: threads/kernel.lds.s $(OBJECTS) 
-	$(LD) -T $< -o $@ $(OBJECTS) `$(CC) -print-libgcc-file-name`
+	$(LD) -T $< -o $@ $(OBJECTS)
 
 kernel.bin: kernel.o
 	$(OBJCOPY) -O binary -R .note -R .comment -S $< $@.tmp
