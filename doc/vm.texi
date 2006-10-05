@@ -313,10 +313,12 @@ implementation, be sure to retain the distinction between the two pools.
 
 The most important operation on the frame table is obtaining an unused
 frame.  This is easy when a frame is free.  When none is free, a frame
-must be made free by evicting some page from its frame.  If no frame can
-be evicted without allocating a swap slot, but swap is full, some
-process must be killed to free memory (the choice of process to kill is
-up to you).
+must be made free by evicting some page from its frame.
+
+If no frame can be evicted without allocating a swap slot, but swap is
+full, panic the kernel.  Real OSes apply a wide range of policies to
+recover from or prevent such situations, but these policies are beyond
+the scope of this project.
 
 The process of eviction comprises roughly the following steps:
 
