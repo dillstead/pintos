@@ -791,4 +791,32 @@ scheduler at the same time.
 
 Yes.  In general, your implementation may differ from the description,
 as long as its behavior is the same.
+
+@item Some scheduler tests fail and I don't understand why.  Help!
+
+If your implementation mysteriously fails some of the advanced
+scheduler tests, try the following:
+
+@itemize
+@item
+Read the source files for the tests that you're failing, to make sure
+that you understand what's going on.  Each one has a comment at the
+top that explains its purpose and expected results.
+
+@item
+Double-check your fixed-point arithmetic routines and your use of them
+in the scheduler routines.
+
+@item
+Consider how much work your implementation does in the timer
+interrupt.  If the timer interrupt handler takes too long, then it
+will take away most of a timer tick from the thread that the timer
+interrupt preempted.  When it returns control to that thread, it
+therefore won't get to do much work before the next timer interrupt
+arrives.  That thread will therefore get blamed for a lot more CPU
+time than it actually got a chance to use.  This raises the
+interrupted thread's recent CPU count, thereby lowering its priority.
+It can cause scheduling decisions to change.  It also raises the load
+average.
+@end itemize
 @end table

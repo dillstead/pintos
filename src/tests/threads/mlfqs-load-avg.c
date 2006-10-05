@@ -4,7 +4,17 @@
    seconds, starting 10 seconds in, the main thread prints the
    load average.
 
-   The expected output is this (some margin of error is allowed):
+   The expected output is listed below.  Some margin of error is
+   allowed.
+
+   If your implementation fails this test but passes most other
+   tests, then consider whether you are doing too much work in
+   the timer interrupt.  If the timer interrupt handler takes too
+   long, then the test's main thread will not have enough time to
+   do its own work (printing a message) and go back to sleep
+   before the next tick arrives.  Then the main thread will be
+   ready, instead of sleeping, when the tick arrives,
+   artificially driving up the load average.
 
    After 0 seconds, load average=0.00.
    After 2 seconds, load average=0.05.
