@@ -192,5 +192,5 @@ compare_bytes (const void *read_data_, const void *expected_data_, size_t size,
   msg ("Expected data:");
   hex_dump (ofs + i, expected_data + i, show_cnt, true);
   fail ("%zu bytes read starting at offset %zu in \"%s\" differ "
-        "from expected", j - i, ofs, file_name);
+        "from expected", j - i, ofs + i, file_name);
 }
