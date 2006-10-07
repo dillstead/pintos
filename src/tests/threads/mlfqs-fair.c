@@ -2,7 +2,8 @@
 
    The "fair" tests run either 2 or 20 threads all niced to 0.
    The threads should all receive approximately the same number
-   of ticks.
+   of ticks.  Each test runs for 30 seconds, so the ticks should
+   also sum to approximately 30 * 100 == 3000 ticks.
 
    The mlfqs-nice-2 test runs 2 threads, one with nice 0, the
    other with nice 5, which should receive 1,904 and 1,096 ticks,
