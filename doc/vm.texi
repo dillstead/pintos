@@ -582,11 +582,13 @@ by a user program, you can retrieve it from @code{esp} member of the
 accessing them (@pxref{Accessing User Memory}), these are the only cases
 you need to handle.  On the other hand, if you depend on page faults to
 detect invalid memory access, you will need to handle another case,
-where a page fault occurs in the kernel.  Reading @code{esp} out of the
-@struct{intr_frame} passed to @func{page_fault} in that case will obtain
-the kernel stack pointer, not the user stack pointer.  You will need to
-arrange another way, e.g.@: by saving @code{esp} into @struct{thread} on
-the initial transition from user to kernel mode.
+where a page fault occurs in the kernel.  Since the processor only 
+saves the stack pointer when an exception causes a switch from user
+to kernel mode, reading @code{esp} out of the @struct{intr_frame} 
+passed to @func{page_fault} would yield an undefined value, not the 
+user stack pointer.  You will need to arrange another way, such as 
+saving @code{esp} into @struct{thread} on the initial transition 
+from user to kernel mode.
 
 You may impose some absolute limit on stack size, as do most OSes.
 Some OSes make the limit user-adjustable, e.g.@: with the
