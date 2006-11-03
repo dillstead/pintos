@@ -318,7 +318,7 @@ sub get_scratch_file {
 
     # Copy file data.
     my ($get_handle);
-    sysopen ($get_handle, $get_file_name, O_WRONLY | O_CREAT | O_EXCL, 0666)
+    sysopen ($get_handle, $get_file_name, O_WRONLY | O_CREAT, 0666)
       or die "$get_file_name: create: $!\n";
     copy_file ($disk_handle, $disk_file_name, $get_handle, $get_file_name,
 	       $size);
