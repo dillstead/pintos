@@ -48,3 +48,10 @@ tests/filesys/extended/%.output: os.dsk
 	$(TESTCMD)
 	$(GETCMD)
 	rm -f tmp.dsk
+
+TARS = $(addsuffix .tar,$(tests/filesys/extended_TESTS))
+GET_OUTPUTS = $(addsuffix .get-output,$(tests/filesys/extended_TESTS))
+GET_ERRORS = $(addsuffix .get-errors,$(tests/filesys/extended_TESTS))
+
+clean::
+	rm -f $(TARS) $(GET_OUTPUTS) $(GET_ERRORS)
