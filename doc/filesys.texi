@@ -311,11 +311,8 @@ blocks back to disk.  The cache should also be written back to disk in
 @func{filesys_done}, so that halting Pintos flushes the cache.
 
 If you have @func{timer_sleep} from the first project working, write-behind is
-an excellent application.  If you're still using the base
-implementation of @func{timer_sleep}, be aware that it busy-waits, which
-is not acceptable here (or elsewhere).  If @func{timer_sleep}'s delays seem too
-short or too long, reread the explanation of the @option{-r} option to
-@command{pintos} (@pxref{Debugging versus Testing}).
+an excellent application.  Otherwise, you may implement a less general
+facility, but make sure that it does not exhibit busy-waiting.
 
 You should also implement @dfn{read-ahead}, that is,
 automatically fetch the next block of a file
