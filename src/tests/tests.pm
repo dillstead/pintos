@@ -154,7 +154,7 @@ sub compare_output {
     my $ignore_exit_codes = exists $options{IGNORE_EXIT_CODES};
     if ($ignore_exit_codes) {
 	delete $options{IGNORE_EXIT_CODES};
-	@output = grep (!/^[a-zA-Z0-9-_]+: exit\(\d+\)$/, @output);
+	@output = grep (!/^[a-zA-Z0-9-_]+: exit\(\-?\d+\)$/, @output);
     }
     my $ignore_user_faults = exists $options{IGNORE_USER_FAULTS};
     if ($ignore_user_faults) {
