@@ -162,7 +162,7 @@ too_many_loops (unsigned loops)
    differently in different places the results would be difficult
    to predict. */
 static void NO_INLINE
-busy_wait (int64_t loops) 
+busy_wait (volatile int64_t loops) 
 {
   while (loops-- > 0)
     continue;
