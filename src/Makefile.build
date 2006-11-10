@@ -95,6 +95,7 @@ clean::
 	rm -f kernel.o kernel.lds.s
 	rm -f kernel.bin loader.bin os.dsk
 	rm -f bochsout.txt bochsrc.txt
+	rm -f results grade
 
 Makefile: $(SRCDIR)/Makefile.build
 	cp $< $@
