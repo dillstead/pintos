@@ -850,36 +850,91 @@ char get (void) @{
 @c We should try to come up with a better example.
 @c Perhaps something with a linked list?
 
-Suppose we add a ``feature'' that, whenever a timer interrupt
-occurs, the character in global variable @code{timer_put_char} is
-printed on the console, but only if global Boolean variable
-@code{timer_do_put} is true.
+An @dfn{optimization barrier} is a special statement that prevents the
+compiler from making assumptions about the state of memory across the
+barrier.  The compiler will not reorder reads or writes of variables
+across the barrier or assume that a variable's value is unmodified
+across the barrier, except for local variables whose address is never
+taken.  In Pintos, @file{threads/synch.h} defines the @code{barrier()}
+macro as an optimization barrier.
 
-If interrupts are enabled, this code for setting up @samp{x} to be
-printed is clearly incorrect, because the timer interrupt could intervene
-between the two assignments:
+One reason to use an optimization barrier is when data can change
+asynchronously, without the compiler's knowledge, e.g.@: by another
+thread or an interrupt handler.  The @func{too_many_loops} function in
+@file{devices/timer.c} is an example.  This function starts out by
+busy-waiting in a loop until a timer tick occurs:
 
 @example
-timer_do_put = true;            /* INCORRECT CODE */
-timer_put_char = 'x';
+/* Wait for a timer tick. */
+int64_t start = ticks;
+while (ticks == start)
+  barrier ();
 @end example
 
-It might not be as obvious that the following code is just as
-incorrect:
+@noindent
+Without an optimization barrier in the loop, the compiler could
+conclude that the loop would never terminate, because @code{start} and
+@code{ticks} start out equal and the loop itself never changes them.
+It could then ``optimize'' the function into an infinite loop, which
+would definitely be undesirable.
+
+Optimization barriers can be used to avoid other compiler
+optimizations.  The @func{busy_wait} function, also in
+@file{devices/timer.c}, is an example.  It contains this loop:
 
 @example
-timer_put_char = 'x';           /* INCORRECT CODE */
+while (loops-- > 0)
+  barrier ();
+@end example
+
+@noindent
+The goal of this loop is to busy-wait by counting @code{loops} down
+from its original value to 0.  Without the barrier, the compiler could
+delete the loop entirely, because it produces no useful output and has
+no side effects.  The barrier forces the compiler to pretend that the
+loop body has an important effect.
+
+Finally, optimization barriers can be used to force the ordering of
+memory reads or writes.  For example, suppose we add a ``feature''
+that, whenever a timer interrupt occurs, the character in global
+variable @code{timer_put_char} is printed on the console, but only if
+global Boolean variable @code{timer_do_put} is true.  The best way to
+set up @samp{x} to be printed is then to use an optimization barrier,
+like this:
+
+@example
+timer_put_char = 'x';
+barrier ();
 timer_do_put = true;
 @end example
 
-The reason this second example might be a problem is that the compiler
-is, in general, free to reorder operations when it doesn't have a
-visible reason to keep them in the same order.  In this case, the
-compiler doesn't know that the order of assignments is important, so its
-optimization pass is permitted to exchange their order.
-There's no telling whether it will actually do this, and it is possible
-that passing the compiler different optimization flags or changing
-compiler versions will produce different behavior.
+Without the barrier, the code is buggy because the compiler is free to
+reorder operations when it doesn't see a reason to keep them in the
+same order.  In this case, the compiler doesn't know that the order of
+assignments is important, so its optimizer is permitted to exchange
+their order.  There's no telling whether it will actually do this, and
+it is possible that passing the compiler different optimization flags
+or using a different version of the compiler will produce different
+behavior.
+
+Another solution is to disable interrupts around the assignments.
+This does not prevent reordering, but it prevents the interrupt
+handler from intervening between the assignments.  It also has the
+extra runtime cost of disabling and re-enabling interrupts:
+
+@example
+enum intr_level old_level = intr_disable ();
+timer_put_char = 'x';
+timer_do_put = true;
+intr_set_level (old_level);
+@end example
+
+A second solution is to mark the declarations of
+@code{timer_put_char} and @code{timer_do_put} as @samp{volatile}.  This
+keyword tells the compiler that the variables are externally observable
+and restricts its latitude for optimization.  However, the semantics of
+@samp{volatile} are not well-defined, so it is not a good general
+solution.  The base Pintos code does not use @samp{volatile} at all.
 
 The following is @emph{not} a solution, because locks neither prevent
 interrupts nor prevent the compiler from reordering the code within the
@@ -892,45 +947,13 @@ timer_do_put = true;
 lock_release (&timer_lock);
 @end example
 
-Fortunately, real solutions do exist.  One possibility is to
-disable interrupts around the assignments.  This does not prevent
-reordering, but it makes the assignments atomic as observed by the
-interrupt handler.  It also has the extra runtime cost of disabling and
-re-enabling interrupts:
-
-@example
-enum intr_level old_level = intr_disable ();
-timer_put_char = 'x';
-timer_do_put = true;
-intr_set_level (old_level);
-@end example
-
-A second possibility is to mark the declarations of
-@code{timer_put_char} and @code{timer_do_put} as @samp{volatile}.  This
-keyword tells the compiler that the variables are externally observable
-and restricts its latitude for optimization.  However, the semantics of
-@samp{volatile} are not well-defined, so it is not a good general
-solution.
-
-Usually, the best solution is to use a compiler feature called an
-@dfn{optimization barrier}, a special statement that prevents the compiler
-from reordering operations across the barrier.  In Pintos,
-@file{threads/synch.h} defines the @code{barrier()} macro as an optimization
-barrier.  Here's how we would use a optimization barrier to fix this code:
-
-@example
-timer_put_char = 'x';
-barrier ();
-timer_do_put = true;
-@end example
-
-The compiler also treats invocation of any function defined externally,
-that is, in another source file, as a limited form of a optimization barrier.
-Specifically, the compiler assumes that any externally defined function
-may access any statically or dynamically allocated data and any local
-variable whose address is taken.  This often means that explicit
-barriers can be omitted, and, indeed, this is why the base Pintos code
-does not need any barriers.
+The compiler treats invocation of any function defined externally,
+that is, in another source file, as a limited form of optimization
+barrier.  Specifically, the compiler assumes that any externally
+defined function may access any statically or dynamically allocated
+data and any local variable whose address is taken.  This often means
+that explicit barriers can be omitted.  It is one reason that Pintos
+contains few explicit barriers.
 
 A function defined in the same source file, or in a header included by
 the source file, cannot be relied upon as a optimization barrier.

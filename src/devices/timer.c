@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "threads/interrupt.h"
 #include "threads/io.h"
+#include "threads/synch.h"
 #include "threads/thread.h"
   
 /* See [8254] for hardware details of the 8254 timer chip. */
@@ -17,7 +18,7 @@
 #endif
 
 /* Number of timer ticks since OS booted. */
-static volatile int64_t ticks;
+static int64_t ticks;
 
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
@@ -79,6 +80,7 @@ timer_ticks (void)
   enum intr_level old_level = intr_disable ();
   int64_t t = ticks;
   intr_set_level (old_level);
+  barrier ();
   return t;
 }
 
@@ -142,18 +144,17 @@ timer_interrupt (struct intr_frame *args UNUSED)
 static bool
 too_many_loops (unsigned loops) 
 {
-  int64_t start;
-
   /* Wait for a timer tick. */
-  start = ticks;
+  int64_t start = ticks;
   while (ticks == start)
-    continue;
+    barrier ();
 
   /* Run LOOPS loops. */
   start = ticks;
   busy_wait (loops);
 
   /* If the tick count changed, we iterated too long. */
+  barrier ();
   return start != ticks;
 }
 
@@ -165,10 +166,10 @@ too_many_loops (unsigned loops)
    differently in different places the results would be difficult
    to predict. */
 static void NO_INLINE
-busy_wait (volatile int64_t loops) 
+busy_wait (int64_t loops) 
 {
   while (loops-- > 0)
-    continue;
+    barrier ();
 }
 
 /* Sleep for approximately NUM/DENOM seconds. */
