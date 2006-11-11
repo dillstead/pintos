@@ -382,7 +382,7 @@ power_off (void)
 
   for (p = s; *p != '\0'; p++)
     outb (0x8900, *p);
-  asm ("cli; hlt");
+  asm volatile ("cli; hlt" : : : "memory");
   printf ("still running...\n");
   for (;;);
 }

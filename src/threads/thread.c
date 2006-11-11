@@ -389,7 +389,7 @@ idle (void *idle_started_ UNUSED)
 
          See [IA32-v2a] "HLT", [IA32-v2b] "STI", and [IA32-v3a]
          7.11.1 "HLT Instruction". */
-      asm ("sti; hlt");
+      asm volatile ("sti; hlt" : : : "memory");
     }
 }
 

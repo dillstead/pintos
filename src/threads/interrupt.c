@@ -95,7 +95,7 @@ intr_disable (void)
   /* Disable interrupts by clearing the interrupt flag.
      See [IA32-v2b] "CLI" and [IA32-v3a] 5.8.1 "Masking Maskable
      Hardware Interrupts". */
-  asm volatile ("cli");
+  asm volatile ("cli" : : : "memory");
 
   return old_level;
 }
