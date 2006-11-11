@@ -89,6 +89,5 @@ tests/vm/page-merge-par.output: TIMEOUT = 600
 tests/vm/zeros:
 	dd if=/dev/zero of=$@ bs=1024 count=6
 
-
-
-
+clean::
+	rm -f tests/vm/zeros
