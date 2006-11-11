@@ -32,6 +32,11 @@ define compile
 cd $@/src/$(PROJECT) && $(MAKE)
 endef
 
+define test-clean
+cd $@/src/$(PROJECT)/build && $(MAKE) clean
+cd $@/src/$(PROJECT)/build && set `find -type f` > /dev/null && test $$# = 1
+endef
+
 define clean
 rm -rf $@
 endef
@@ -51,8 +56,14 @@ threads::
 	$(mk-sandbox)
 	$(compile)
 	$(run-tests) TESTS=tests/threads/alarm-single
+	$(test-clean)
 	$(clean)
-examples userprog vm filesys::
+userprog vm filesys::
+	$(mk-sandbox)
+	$(compile)
+	$(test-clean)
+	$(clean)
+examples::
 	$(mk-sandbox)
 	$(compile)
 	$(clean)
@@ -63,4 +74,5 @@ p1 p2 p3 p4::
 	$(apply-patch)
 	$(run-tests)
 	$(grade-tests)
+	$(test-clean)
 	$(clean)
