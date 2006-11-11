@@ -118,7 +118,7 @@ intr_init (void)
      See [IA32-v2a] "LIDT" and [IA32-v3a] 5.10 "Interrupt
      Descriptor Table (IDT)". */
   idtr_operand = make_idtr_operand (sizeof idt - 1, idt);
-  asm volatile ("lidt %0" :: "m" (idtr_operand));
+  asm volatile ("lidt %0" : : "m" (idtr_operand));
 
   /* Initialize intr_names. */
   for (i = 0; i < INTR_CNT; i++)

@@ -16,5 +16,5 @@ test_main (void)
      "andl $0xfffff000, %%esp;"  /* Move stack pointer to bottom of page. */
      "pushal;"                   /* Push 32 bytes on stack at once. */
      "movl %%eax, %%esp"         /* Restore copied stack pointer. */
-     ::: "eax");                 /* Tell GCC we destroyed eax. */
+     : : : "eax");               /* Tell GCC we destroyed eax. */
 }

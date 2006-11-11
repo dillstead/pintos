@@ -189,7 +189,7 @@ paging_init (void)
      new page tables immediately.  See [IA32-v2a] "MOV--Move
      to/from Control Registers" and [IA32-v3a] 3.7.5 "Base Address
      of the Page Directory". */
-  asm volatile ("movl %0, %%cr3" :: "r" (vtop (base_page_dir)));
+  asm volatile ("movl %0, %%cr3" : : "r" (vtop (base_page_dir)));
 }
 
 /* Breaks the kernel command line into words and returns them as
