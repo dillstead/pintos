@@ -44,7 +44,8 @@ void cond_broadcast (struct condition *, struct lock *);
 /* Optimization barrier.
 
    The compiler will not reorder operations across an
-   optimization barrier. */
+   optimization barrier.  See "Optimization Barriers" in the
+   reference guide for more information.*/
 #define barrier() asm volatile ("" : : : "memory")
 
 #endif /* threads/synch.h */
