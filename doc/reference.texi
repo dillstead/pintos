@@ -844,6 +844,11 @@ char get (void) @{
 @}
 @end example
 
+Note that @code{BUF_SIZE} must divide evenly into @code{SIZE_MAX + 1}
+for the above code to be completely correct.  Otherwise, it will fail
+the first time @code{head} wraps around to 0.  In practice,
+@code{BUF_SIZE} would ordinarily be a power of 2.
+
 @node Optimization Barriers
 @subsection Optimization Barriers
 
