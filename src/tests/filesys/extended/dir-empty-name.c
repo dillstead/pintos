@@ -8,5 +8,5 @@
 void
 test_main (void) 
 {
-  CHECK (!create ("", 0), "create \"\" (must return false)");
+  CHECK (!mkdir (""), "mkdir \"\" (must return false)");
 }
