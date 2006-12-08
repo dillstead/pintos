@@ -1,7 +1,6 @@
 #include "bitmap.h"
 #include <debug.h>
 #include <limits.h>
-#include <random.h>
 #include <round.h>
 #include <stdio.h>
 #include "threads/malloc.h"
@@ -290,7 +289,7 @@ bitmap_all (const struct bitmap *b, size_t start, size_t cnt)
 
 /* Finding set or unset bits. */
 
-/* Finds and returns the starting index of a group of CNT
+/* Finds and returns the starting index of the first group of CNT
    consecutive bits in B at or after START that are all set to
    VALUE.
    If there is no such group, returns BITMAP_ERROR. */
@@ -303,20 +302,15 @@ bitmap_scan (const struct bitmap *b, size_t start, size_t cnt, bool value)
   if (cnt <= b->bit_cnt) 
     {
       size_t last = b->bit_cnt - cnt;
-      size_t middle = start + random_ulong () % (last - start + 1); 
-      size_t i = middle;
-      do
-        {
-          if (!bitmap_contains (b, i, cnt, !value))
-            return i; 
-          i = i != last ? i + 1 : start;
-        }
-      while (i != middle);
+      size_t i;
+      for (i = start; i <= last; i++)
+        if (!bitmap_contains (b, i, cnt, !value))
+          return i; 
     }
   return BITMAP_ERROR;
 }
 
-/* Finds a group of CNT consecutive bits in B at or after
+/* Finds the first group of CNT consecutive bits in B at or after
    START that are all set to VALUE, flips them all to !VALUE,
    and returns the index of the first bit in the group.
    If there is no such group, returns BITMAP_ERROR.
