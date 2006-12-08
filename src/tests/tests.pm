@@ -510,7 +510,7 @@ sub flatten_hierarchy {
 sub read_tar {
     my ($archive) = @_;
     my (%content);
-    open (ARCHIVE, '<', $archive) or fail "$archive: open: $1\n";
+    open (ARCHIVE, '<', $archive) or fail "$archive: open: $!\n";
     for (;;) {
 	my ($header);
 	if ((my $retval = sysread (ARCHIVE, $header, 512)) != 512) {
