@@ -268,7 +268,15 @@ sub finish_scratch_disk {
     }
 
     # Read each file.
-    get_scratch_file (defined ($_->[1]) ? $_->[1] : $_->[0]) foreach @gets;
+    # If reading fails, delete that file and all subsequent files.
+    my ($ok) = 1;
+    foreach my $get (@gets) {
+	my ($name) = defined ($get->[1]) ? $get->[1] : $get->[0];
+	$ok &&= get_scratch_file ($name);
+	if (!$ok) {
+	    die "$name: unlink: $!\n" if !unlink ($name) && !$!{ENOENT};
+	}
+    }
 }
 
 # put_scratch_file($file).
@@ -303,6 +311,7 @@ sub put_scratch_file {
 # get_scratch_file($file).
 #
 # Copies from the scratch disk to $file.
+# Returns 1 if successful, 0 on failure.
 sub get_scratch_file {
     my ($get_file_name) = @_;
     my ($disk_handle, $disk_file_name) = open_disk ($disks{SCRATCH});
@@ -313,8 +322,9 @@ sub get_scratch_file {
     # the file size.
     my ($metadata) = read_fully ($disk_handle, $disk_file_name, 512);
     my ($signature, $size) = unpack ("a4 V", $metadata);
-    die "bad signature reading scratch disk--did Pintos run correctly?\n"
-      if $signature ne "GET\0";
+    (print STDERR "bad signature on scratch disk--did Pintos run fail?\n"),
+      return 0
+	if $signature ne "GET\0";
 
     # Copy file data.
     my ($get_handle);
@@ -327,6 +337,8 @@ sub get_scratch_file {
     # Skip forward in disk up to beginning of next sector.
     read_fully ($disk_handle, $disk_file_name, 512 - $size % 512)
       if $size % 512;
+
+    return 1;
 }
 
 # Prepares the arguments to pass to the Pintos kernel,
