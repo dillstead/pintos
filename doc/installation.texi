@@ -172,6 +172,16 @@ harmless elsewhere.
 Needed for Bochs to compile in terminal support on Solaris
 hosts.  Probably harmless elsewhere.
 
+@item bochs-2.2.6-page-fault-segv.patch
+
+Makes the GDB stub report a SIGSEGV to the debugger when a page-fault
+exception occurs, instead of ``signal 0.''  The former can be ignored
+with @code{handle SIGSEGV nostop} but the latter cannot.
+
+@item bochs-2.2.6-paranoia.patch
+
+Fixes compile error with modern versions of GCC.
+
 @item bochs-2.2.6-solaris-link.patch
 
 Needed on Solaris hosts.  Do not apply it elsewhere.
@@ -185,6 +195,8 @@ patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-jitter.patch
 patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-triple-fault.patch
 patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-ms-extensions.patch
 patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-solaris-tty.patch
+patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-page-fault-segv.patch
+patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-paranoia.patch
 patch -p1 < $PINTOSDIR/src/misc/bochs-2.2.6-solaris-link.patch
 @end example
 @noindent

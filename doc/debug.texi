@@ -444,6 +444,10 @@ in your kernel, because your kernel should never crash.  Starting with
 Project 3, the situation will change if you use @func{get_user} and
 @func{put_user} strategy to verify user memory accesses
 (@pxref{Accessing User Memory}).
+
+If you don't want GDB to stop for page faults, then issue the command
+@code{handle SIGSEGV nostop}.  GDB will still print a message for
+every page fault, but it will not come back to a command prompt.
 @end deffn
 
 @node Example GDB Session
