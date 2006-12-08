@@ -16,6 +16,7 @@ to 5% extra credit if you do enable VM.
 
 @menu
 * Project 4 Background::        
+* Project 4 Suggested Order of Implementation::  
 * Project 4 Requirements::      
 * Project 4 FAQ::               
 @end menu
@@ -107,6 +108,33 @@ Incidentally, as you may have surmised, the file format used for copying
 out the file system contents is the standard Unix ``tar'' format.  You
 can use the Unix @command{tar} program to examine them.  The tar file
 for test @var{t} is named @file{@var{t}.tar}.
+
+@node Project 4 Suggested Order of Implementation
+@section Suggested Order of Implementation
+
+We suggest implementing the parts of this project in the following
+order to make your job easier:
+
+@enumerate
+@item
+Buffer cache (@pxref{Buffer Cache}).  Implement the buffer cache and
+integrate it into the existing file system.  At this point all the
+tests from project 2 (and project 3, if you're building on it) should
+still pass.
+
+@item
+Extensible files (@pxref{Indexed and Extensible Files}).  After this
+step, your project should pass the file growth tests.
+
+@item
+Subdirectories (@pxref{Subdirectories}).  Afterward, your project
+should pass the directory tests.
+
+@item
+Remaining miscellaneous items.
+@end enumerate
+
+You should think about synchronization throughout.
 
 @node Project 4 Requirements
 @section Requirements
