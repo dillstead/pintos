@@ -394,6 +394,10 @@ if B's data is all nonzero bytes, A is not allowed to see any zeros.
 Operations on different directories should take place concurrently.
 Operations on the same directory may wait for one another.
 
+Keep in mind that only data shared by multiple threads needs to be
+synchronized.  In the base file system, @struct{file} and @struct{dir}
+are accessed only by a single thread.
+
 @node Project 4 FAQ
 @section FAQ
 
