@@ -287,11 +287,12 @@ disk.  Otherwise, fetch the block from disk into cache, evicting an
 older entry if necessary.  You are limited to a cache no greater than 64
 sectors in size.
 
-Be sure to choose an intelligent cache replacement algorithm.
-Experiment to see what combination of accessed, dirty, and other
-information results in the best performance, as measured by the number
-of disk accesses.  For example, metadata is generally more valuable to
-cache than data.
+You must implement a cache replacement algorithm that is at least as
+good as the ``clock'' algorithm.  Your algorithm must also account for
+the generally greater value of metadata compared to data.  Experiment
+to see what combination of accessed, dirty, and other information
+results in the best performance, as measured by the number of disk
+accesses.
 
 You can keep a cached copy of the free map permanently in memory if you
 like.  It doesn't have to count against the cache size.
