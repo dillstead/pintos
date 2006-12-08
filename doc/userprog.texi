@@ -674,6 +674,12 @@ as explicitly described below.
 
 Each process has an independent set of file descriptors.  File
 descriptors are not inherited by child processes.
+
+When a single file is opened more than once, whether by a single
+process or different processes, each @code{open} returns a new file
+descriptor.  Different file descriptors for a single file are closed
+independently in separate calls to @code{close} and they do not share
+a file position.
 @end deftypefn
 
 @deftypefn {System Call} int filesize (int @var{fd})
