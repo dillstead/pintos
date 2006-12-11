@@ -136,30 +136,17 @@ just use @func{memset} to zero it out.  The other task of
 the loader stored it and put it into the @code{ram_pages} variable for
 later use.
 
-Next, @func{thread_init} initializes the thread system.  We will defer
-full discussion to our discussion of Pintos threads below.  It is
-called so early in initialization because the console, initialized
-just afterward, tries to use locks, and locks in turn require there to be a
-running thread.
-
-Then we initialize the console so that @func{printf} will work.
-@func{main} calls @func{vga_init}, which initializes the VGA text
-display and clears the screen.  It also calls @func{serial_init_poll}
-to initialize the first serial port in ``polling mode,'' that is,
-where the kernel busy-waits for the port to be ready for each
-character to be output.  (We use polling mode until we're ready to enable
-interrupts, later.)  Finally we initialize the console device and
-print a startup message to the console.
-
-@func{main} calls @func{read_command_line} to break the kernel command
+Next, @func{main} calls @func{read_command_line} to break the kernel command
 line into arguments, then @func{parse_options} to read any options at
 the beginning of the command line.  (Actions specified on the
 command line execute later.)
 
-@func{main} calls @func{random_init} to initialize the kernel random
-number generator.  If the user specified @option{-rs} on the
-@command{pintos} command line, @func{parse_options} already did
-this, but calling it a second time is harmless.
+@func{thread_init} initializes the thread system.  We will defer full
+discussion to our discussion of Pintos threads below.  It is called so
+early in initialization because a valid thread structure is a
+prerequisite for acquiring a lock, and lock acquisition in turn is
+important to other Pintos subsystems.  Then we initialize the console
+and print a startup message to the console.
 
 The next block of functions we call initialize the kernel's memory
 system.  @func{palloc_init} sets up the kernel page allocator, which

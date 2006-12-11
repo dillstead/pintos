@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "devices/serial.h"
 #include "devices/vga.h"
+#include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 
@@ -15,6 +16,19 @@ static void putchar_have_lock (uint8_t c);
    But this lock is useful to prevent simultaneous printf() calls
    from mixing their output, which looks confusing. */
 static struct lock console_lock;
+
+/* True in ordinary circumstances: we want to use the console
+   lock to avoid mixing output between threads, as explained
+   above.
+
+   False in early boot before the point that locks are functional
+   or the console lock has been initialized, or after a kernel
+   panics.  In the former case, taking the lock would cause an
+   assertion failure, which in turn would cause a panic, turning
+   it into the latter case.  In the latter case, if it is a buggy
+   lock_acquire() implementation that caused the panic, we'll
+   likely just recurse. */
+static bool use_console_lock;
 
 /* It's possible, if you add enough debug output to Pintos, to
    try to recursively grab console_lock from a single thread.  As
@@ -45,11 +59,21 @@ static int console_lock_depth;
 /* Number of characters written to console. */
 static int64_t write_cnt;
 
-/* Initializes the console. */
+/* Enable console locking. */
 void
 console_init (void) 
 {
   lock_init (&console_lock);
+  use_console_lock = true;
+}
+
+/* Notifies the console that a kernel panic is underway,
+   which warns it to avoid trying to take the console lock from
+   now on. */
+void
+console_panic (void) 
+{
+  use_console_lock = false;
 }
 
 /* Prints console statistics. */
@@ -63,7 +87,7 @@ console_print_stats (void)
 static void
 acquire_console (void) 
 {
-  if (!intr_context ()) 
+  if (!intr_context () && use_console_lock) 
     {
       if (lock_held_by_current_thread (&console_lock)) 
         console_lock_depth++; 
@@ -76,7 +100,7 @@ acquire_console (void)
 static void
 release_console (void) 
 {
-  if (!intr_context ()) 
+  if (!intr_context () && use_console_lock) 
     {
       if (console_lock_depth > 0)
         console_lock_depth--;
@@ -90,7 +114,9 @@ release_console (void)
 static bool
 console_locked_by_current_thread (void) 
 {
-  return intr_context () || lock_held_by_current_thread (&console_lock);
+  return (intr_context ()
+          || !use_console_lock
+          || lock_held_by_current_thread (&console_lock));
 }
 
 /* The standard vprintf() function,

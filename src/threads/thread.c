@@ -52,9 +52,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
-   Controlled by kernel command-line options "-o mlfqs".
-   Note that the command line is not parsed until well after
-   thread_init() is called. */
+   Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
 static void kernel_thread (thread_func *, void *aux);
@@ -80,10 +78,6 @@ static tid_t allocate_tid (void);
    allocator before trying to create any threads with
    thread_create().
 
-   The kernel command line is not parsed until *after* this
-   function returns, so that when this function runs,
-   thread_mlfqs is always false.
-
    It is not safe to call thread_current() until this function
    finishes. */
 void
@@ -102,10 +96,7 @@ thread_init (void)
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
-   Also creates the idle thread.
-
-   By the time this function runs, thread_mlfqs has been properly
-   initialized to its final value. */
+   Also creates the idle thread. */
 void
 thread_start (void) 
 {

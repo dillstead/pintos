@@ -71,23 +71,17 @@ main (void)
   /* Clear BSS and get machine's RAM size. */  
   ram_init ();
 
-  /* Initialize ourselves as a thread so we can use locks. */
-  thread_init ();
-
-  /* Initialize the console so we can use printf(). */
-  vga_init ();
-  serial_init_poll ();
-  console_init ();
-
-  /* Greet user. */
-  printf ("Pintos booting with %'zu kB RAM...\n", ram_pages * PGSIZE / 1024);
-
   /* Break command line into arguments and parse options. */
   argv = read_command_line ();
   argv = parse_options (argv);
 
-  /* Set random seed if parse_options() didn't. */
-  random_init (0);
+  /* Initialize ourselves as a thread so we can use locks,
+     then enable console locking. */
+  thread_init ();
+  console_init ();  
+
+  /* Greet user. */
+  printf ("Pintos booting with %'zu kB RAM...\n", ram_pages * PGSIZE / 1024);
 
   /* Initialize memory system. */
   palloc_init ();

@@ -63,8 +63,8 @@ static intr_handler_func serial_interrupt;
    Polling mode busy-waits for the serial port to become free
    before writing to it.  It's slow, but until interrupts have
    been initialized it's all we can do. */
-void
-serial_init_poll (void) 
+static void
+init_poll (void) 
 {
   ASSERT (mode == UNINIT);
   outb (IER_REG, 0);                    /* Turn off all interrupts. */
@@ -83,6 +83,8 @@ serial_init_queue (void)
 {
   enum intr_level old_level;
 
+  if (mode == UNINIT)
+    init_poll ();
   ASSERT (mode == POLL);
 
   intr_register_ext (0x20 + 4, serial_interrupt, "serial");
@@ -98,10 +100,12 @@ serial_putc (uint8_t byte)
 {
   enum intr_level old_level = intr_disable ();
 
-  if (mode == POLL)
+  if (mode != QUEUE)
     {
       /* If we're not set up for interrupt-driven I/O yet,
          use dumb polling to transmit a byte. */
+      if (mode == UNINIT)
+        init_poll ();
       putc_poll (byte); 
     }
   else 

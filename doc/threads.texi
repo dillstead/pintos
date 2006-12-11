@@ -524,7 +524,7 @@ scheduler
 with the @option{-mlfqs} kernel option.  Passing this
 option sets @code{thread_mlfqs}, declared in @file{threads/thread.h}, to
 true when the options are parsed by @func{parse_options}, which happens
-midway through @func{main}.
+early in @func{main}.
 
 When the 4.4@acronym{BSD} scheduler is enabled, threads no longer
 directly control their own priorities.  The @var{priority} argument to
@@ -768,14 +768,6 @@ becomes the higher of the newly set priority or the highest donated
 priority.  When the donations are released, the thread's priority
 becomes the one set through the function call.  This behavior is checked
 by the @code{priority-donate-lower} test.
-
-@item Calling @func{printf} in @func{sema_up} or @func{sema_down} reboots!
-
-@anchor{printf Reboots}
-Yes.  These functions are called before @func{printf} is ready to go.
-You could add a global flag initialized to false and set it to true
-just before the first @func{printf} in @func{main}.  Then modify
-@func{printf} itself to return immediately if the flag isn't set.
 @end table
 
 @node Advanced Scheduler FAQ

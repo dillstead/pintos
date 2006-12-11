@@ -29,8 +29,7 @@ swap_byte (uint8_t *a, uint8_t *b)
   *b = t;
 }
 
-/* Initializes the PRNG with the given SEED.
-   Does nothing if the PRNG has already been initialized. */
+/* Initializes or reinitializes the PRNG with the given SEED. */
 void
 random_init (unsigned seed)
 {
@@ -38,9 +37,6 @@ random_init (unsigned seed)
   int i;
   uint8_t j;
 
-  if (inited)
-    return;
-  
   for (i = 0; i < 256; i++) 
     s[i] = i;
   for (i = j = 0; i < 256; i++) 
@@ -59,7 +55,9 @@ random_bytes (void *buf_, size_t size)
 {
   uint8_t *buf;
 
-  ASSERT (inited);
+  if (!inited)
+    random_init (0);
+
   for (buf = buf_; size-- > 0; buf++)
     {
       uint8_t s_k;

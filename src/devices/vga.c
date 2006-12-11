@@ -29,13 +29,20 @@ static void clear_row (size_t y);
 static void cls (void);
 static void newline (void);
 static void move_cursor (void);
+static void find_cursor (size_t *x, size_t *y);
 
-/* Initializes the VGA text display and clears the screen. */
-void
-vga_init (void)
+/* Initializes the VGA text display. */
+static void
+init (void)
 {
-  fb = ptov (0xb8000);
-  cls ();
+  /* Already initialized? */
+  static bool inited;
+  if (!inited)
+    {
+      fb = ptov (0xb8000);
+      find_cursor (&cx, &cy);
+      inited = true; 
+    }
 }
 
 /* Writes C to the VGA text display, interpreting control
@@ -47,6 +54,8 @@ vga_putc (int c)
      that might write to the console. */
   enum intr_level old_level = intr_disable ();
 
+  init ();
+  
   switch (c) 
     {
     case '\n':
@@ -138,3 +147,19 @@ move_cursor (void)
   outw (0x3d4, 0x0f | (cp << 8));
 }
 
+/* Reads the current hardware cursor position into (*X,*Y). */
+static void
+find_cursor (size_t *x, size_t *y) 
+{
+  /* See [FREEVGA] under "Manipulating the Text-mode Cursor". */
+  uint16_t cp;
+
+  outb (0x3d4, 0x0e);
+  cp = inb (0x3d5) << 8;
+
+  outb (0x3d4, 0x0f);
+  cp |= inb (0x3d5);
+
+  *x = cp % COL_CNT;
+  *y = cp / COL_CNT;
+}

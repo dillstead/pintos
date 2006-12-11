@@ -1,4 +1,5 @@
 #include <debug.h>
+#include <console.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -18,6 +19,7 @@ debug_panic (const char *file, int line, const char *function,
   va_list args;
 
   intr_disable ();
+  console_panic ();
 
   level++;
   if (level == 1) 
