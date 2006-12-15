@@ -192,8 +192,8 @@ write_header (const char *file_name,
 
   memset (header, 0, sizeof header);
 
-/* Drop confusing and possibly dangerous prefixes from
-   FILE_NAME. */
+  /* Drop confusing and possibly dangerous prefixes from
+     FILE_NAME. */
   while (*file_name == '/'
          || !memcmp (file_name, "./", 2)
          || !memcmp (file_name, "../", 3))
