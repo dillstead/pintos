@@ -444,6 +444,7 @@ sub print_fs {
 	}
 	print "\n";
     }
+    print "(empty)\n" if !@_;
 }
 
 # normalize_fs (%FS)
