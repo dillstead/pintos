@@ -134,6 +134,9 @@ should pass the directory tests.
 Remaining miscellaneous items.
 @end enumerate
 
+You can implement extensible files and subdirectories in parallel if
+you temporarily make the number of entries in new directories fixed.
+
 You should think about synchronization throughout.
 
 @node Project 4 Requirements
@@ -316,7 +319,7 @@ older entry if necessary.  You are limited to a cache no greater than 64
 sectors in size.
 
 You must implement a cache replacement algorithm that is at least as
-good as the ``clock'' algorithm.  Your algorithm must also account for
+good as the ``clock'' algorithm.  We encourage you to account for
 the generally greater value of metadata compared to data.  Experiment
 to see what combination of accessed, dirty, and other information
 results in the best performance, as measured by the number of disk
