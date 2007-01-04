@@ -11,6 +11,8 @@ Functionality of virtual memory subsystem:
 3	page-shuffle
 5	page-merge-seq
 5	page-merge-par
+5	page-merge-mm
+5	page-merge-stk
 
 - Test "mmap" system call.
 2	mmap-read
