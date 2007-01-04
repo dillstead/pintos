@@ -8,5 +8,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (dir-under-file) mkdir "abc" (must return false)
 (dir-under-file) end
 EOF
-check_archive ({"abc" => ['']});
 pass;

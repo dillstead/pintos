@@ -44,6 +44,8 @@ EOF
 (dir-rm-cwd) verify "/a" is empty
 (dir-rm-cwd) end
 EOF
-  
-check_archive ($cwd_removable eq 'YES' ? {} : {"a" => {}});
+open (CAN_RMDIR_CWD, ">tests/filesys/extended/can-rmdir-cwd")
+  or die "tests/filesys/extended/can-rmdir-cwd: create: $!\n";
+print CAN_RMDIR_CWD "$cwd_removable";
+close (CAN_RMDIR_CWD);
 pass;

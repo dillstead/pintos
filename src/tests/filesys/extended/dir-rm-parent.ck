@@ -11,5 +11,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (dir-rm-parent) remove "/a" (must fail)
 (dir-rm-parent) end
 EOF
-check_archive ({"a" => {"b" => {}}});
 pass;

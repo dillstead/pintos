@@ -9,5 +9,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (dir-rmdir) chdir "a" (must return false)
 (dir-rmdir) end
 EOF
-check_archive ({});
 pass;

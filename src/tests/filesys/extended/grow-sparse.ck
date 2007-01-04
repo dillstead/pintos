@@ -14,5 +14,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-sparse) close "testfile"
 (grow-sparse) end
 EOF
-check_archive ({"testfile" => ["\0" x 76543]});
 pass;

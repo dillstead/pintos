@@ -4,10 +4,11 @@ include $(patsubst %,$(SRCDIR)/%/Make.tests,$(TEST_SUBDIRS))
 
 PROGS = $(foreach subdir,$(TEST_SUBDIRS),$($(subdir)_PROGS))
 TESTS = $(foreach subdir,$(TEST_SUBDIRS),$($(subdir)_TESTS))
+EXTRA_GRADES = $(foreach subdir,$(TEST_SUBDIRS),$($(subdir)_EXTRA_GRADES))
 
-OUTPUTS = $(addsuffix .output,$(TESTS))
-ERRORS = $(addsuffix .errors,$(TESTS))
-RESULTS = $(addsuffix .result,$(TESTS))
+OUTPUTS = $(addsuffix .output,$(TESTS) $(EXTRA_GRADES))
+ERRORS = $(addsuffix .errors,$(TESTS) $(EXTRA_GRADES))
+RESULTS = $(addsuffix .result,$(TESTS) $(EXTRA_GRADES))
 
 ifdef PROGS
 include ../../Makefile.userprog
@@ -33,7 +34,7 @@ check:: results
 	fi
 
 results: $(RESULTS)
-	@for d in $(TESTS); do					\
+	@for d in $(TESTS) $(EXTRA_GRADES); do			\
 		if echo PASS | cmp -s $$d.result -; then	\
 			echo "pass $$d";			\
 		else						\

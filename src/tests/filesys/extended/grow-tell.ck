@@ -14,5 +14,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-tell) close "foobar"
 (grow-tell) end
 EOF
-check_archive ({"foobar" => [random_bytes (2134)]});
 pass;

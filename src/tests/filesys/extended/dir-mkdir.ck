@@ -10,5 +10,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (dir-mkdir) open "b"
 (dir-mkdir) end
 EOF
-check_archive ({'a' => {'b' => ["\0" x 512]}});
 pass;

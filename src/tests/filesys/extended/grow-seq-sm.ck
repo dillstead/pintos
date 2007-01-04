@@ -14,5 +14,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-seq-sm) close "testme"
 (grow-seq-sm) end
 EOF
-check_archive ({"testme" => [random_bytes (5678)]});
 pass;

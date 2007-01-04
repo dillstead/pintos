@@ -17,6 +17,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (syn-rw) wait for child 4 of 4 returned 3 (expected 3)
 (syn-rw) end
 EOF
-check_archive ({"child-syn-rw" => "tests/filesys/extended/child-syn-rw",
-		"logfile" => [random_bytes (8 * 512)]});
 pass;

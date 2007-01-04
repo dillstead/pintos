@@ -8,5 +8,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (dir-over-file) create "abc" (must return false)
 (dir-over-file) end
 EOF
-check_archive ({"abc" => {}});
 pass;

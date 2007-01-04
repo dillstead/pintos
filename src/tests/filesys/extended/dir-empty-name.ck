@@ -7,5 +7,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (dir-empty-name) mkdir "" (must return false)
 (dir-empty-name) end
 EOF
-check_archive ({});
 pass;

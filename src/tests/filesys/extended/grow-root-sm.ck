@@ -27,7 +27,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-root-sm) creating and checking "file19"
 (grow-root-sm) end
 EOF
-my ($fs);
-$fs->{"file$_"} = [random_bytes (512)] foreach 0...19;
-check_archive ($fs);
 pass;

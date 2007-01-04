@@ -8,5 +8,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (dir-rm-root) create "/a"
 (dir-rm-root) end
 EOF
-check_archive ({"a" => ["\0" x 243]});
 pass;

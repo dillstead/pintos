@@ -10,6 +10,15 @@ sub pass;
 die if @ARGV != 2;
 our ($test, $src_dir) = @ARGV;
 
+our (@prereq_tests) = ();
+if ($test =~ /^(.*)-persistence$/) {
+    push (@prereq_tests, $1);
+}
+for my $prereq_test (@prereq_tests) {
+    my (@result) = read_text_file ("$prereq_test.result");
+    fail "Prerequisite test $prereq_test failed.\n" if $result[0] ne 'PASS';
+}
+
 my ($msg_file) = tempfile ();
 select ($msg_file);
 
@@ -235,7 +244,8 @@ sub compare_output {
 #         recursively.
 sub check_archive {
     my ($expected_hier) = @_;
-    my (@output) = read_text_file ("$test.get-output");
+
+    my (@output) = read_text_file ("$test.output");
     common_checks ("file system extraction run", @output);
 
     @output = get_core_output ("file system extraction run", @output);
@@ -244,11 +254,12 @@ sub check_archive {
 
     my ($test_base_name) = $test;
     $test_base_name =~ s%.*/%%;
-    $expected_hier->{$test_base_name} = $test;
+    $test_base_name =~ s%-persistence$%%;
+    $expected_hier->{$test_base_name} = $prereq_tests[0];
     $expected_hier->{'tar'} = 'tests/filesys/extended/tar';
 
     my (%expected) = normalize_fs (flatten_hierarchy ($expected_hier, ""));
-    my (%actual) = read_tar ("$test.tar");
+    my (%actual) = read_tar ("$prereq_tests[0].tar");
 
     my ($errors) = 0;
     foreach my $name (sort keys %expected) {
@@ -273,7 +284,7 @@ sub check_archive {
 		my ($esc_name) = $name;
 		$esc_name =~ s/[^[:print:]]/./g;
 		print <<EOF;
-$esc_name exists in the file system but should not.  (The expected name
+$esc_name exists in the file system but should not.  (The name
 of this file contains unusual characters that were printed as `.'.)
 EOF
 	    }

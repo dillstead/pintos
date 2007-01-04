@@ -58,7 +58,4 @@ check_expected (IGNORE_EXIT_CODES => 1, [<<'EOF']);
 (grow-dir-lg) creating and checking "/x/file49"
 (grow-dir-lg) end
 EOF
-my ($fs);
-$fs->{'x'}{"file$_"} = [random_bytes (512)] foreach 0...49;
-check_archive ($fs);
 pass;

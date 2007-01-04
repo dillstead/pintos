@@ -5,9 +5,12 @@
 # all the previous functionality should work too.  It's not too easy
 # to screw it up, thus the emphasis.
 
-# 75% for file system.
-33.3%	tests/filesys/extended/Rubric.functionality
+# 50% for extended file system features.
+16.7%	tests/filesys/extended/Rubric.functionality
 16.7%	tests/filesys/extended/Rubric.robustness
+16.6%	tests/filesys/extended/Rubric.persistence
+
+# 25% to not break the provided file system features.
 25%	tests/filesys/base/Rubric
 
 # 25% for the rest.
