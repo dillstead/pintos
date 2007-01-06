@@ -24,6 +24,7 @@ static const struct test tests[] =
     {"priority-donate-nest", test_priority_donate_nest},
     {"priority-donate-sema", test_priority_donate_sema},
     {"priority-donate-lower", test_priority_donate_lower},
+    {"priority-donate-chain", test_priority_donate_chain},
     {"priority-fifo", test_priority_fifo},
     {"priority-preempt", test_priority_preempt},
     {"priority-sema", test_priority_sema},

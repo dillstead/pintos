@@ -18,6 +18,7 @@ extern test_func test_priority_donate_multiple2;
 extern test_func test_priority_donate_sema;
 extern test_func test_priority_donate_nest;
 extern test_func test_priority_donate_lower;
+extern test_func test_priority_donate_chain;
 extern test_func test_priority_fifo;
 extern test_func test_priority_preempt;
 extern test_func test_priority_sema;

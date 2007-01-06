@@ -1,6 +1,6 @@
 # Percentage of the testing point total designated for each set of
 # tests.
 
-33.3%	tests/threads/Rubric.alarm
-33.3%	tests/threads/Rubric.priority
-33.4%	tests/threads/Rubric.mlfqs
+20.0%	tests/threads/Rubric.alarm
+40.0%	tests/threads/Rubric.priority
+40.0%	tests/threads/Rubric.mlfqs
