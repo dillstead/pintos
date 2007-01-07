@@ -72,7 +72,7 @@ while (<GRADING>) {
     push (@rubrics, '');
 
     my ($pct) = ($score / $possible) * $max_pct;
-    push (@summary, sprintf ("%-40s %3d/%3d %5.1f%%/%5.1f%%",
+    push (@summary, sprintf ("%-45s %3d/%3d %5.1f%%/%5.1f%%",
 			     $rubric_suffix,
 			     $score, $possible,
 			     $pct, $max_pct));
@@ -82,16 +82,16 @@ while (<GRADING>) {
 close GRADING;
 
 my ($sum_line)
-  = "---------------------------------------- --- --- ------ ------";
+  = "--------------------------------------------- --- --- ------ ------";
 unshift (@summary,
 	 "SUMMARY BY TEST SET",
 	 '',
-	 sprintf ("%-40s %3s %3s %6s %6s",
+	 sprintf ("%-45s %3s %3s %6s %6s",
 		  "Test Set", "Pts", "Max", "% Ttl", "% Max"),
 	 $sum_line);
 push (@summary,
       $sum_line,
-      sprintf ("%-40s %3s %3s %5.1f%%/%5.1f%%",
+      sprintf ("%-45s %3s %3s %5.1f%%/%5.1f%%",
 	       'Total', '', '', $pct_actual, $pct_possible));
 
 unshift (@rubrics,
