@@ -11,11 +11,11 @@ Robustness of system calls:
 2	multi-child-fd
 
 - Test robustness of pointer handling.
-5	create-bad-ptr
-5	exec-bad-ptr
-5	open-bad-ptr
-5	read-bad-ptr
-5	write-bad-ptr
+3	create-bad-ptr
+3	exec-bad-ptr
+3	open-bad-ptr
+3	read-bad-ptr
+3	write-bad-ptr
 
 - Test robustness of buffer copying across page boundaries.
 3	create-bound
@@ -29,8 +29,8 @@ Robustness of system calls:
 2	open-empty
 
 - Test robustness of system call implementation.
-5	sc-bad-arg
-5	sc-bad-sp
+3	sc-bad-arg
+3	sc-bad-sp
 5	sc-boundary
 5	sc-boundary-2
 

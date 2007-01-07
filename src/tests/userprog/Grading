@@ -6,6 +6,6 @@
 # should come "for free".  Thus, the points emphasis below.
 
 35%	tests/userprog/Rubric.functionality
-35%	tests/userprog/Rubric.robustness
- 5%	tests/userprog/no-vm/Rubric
-25%	tests/filesys/base/Rubric
+25%	tests/userprog/Rubric.robustness
+10%	tests/userprog/no-vm/Rubric
+30%	tests/filesys/base/Rubric
