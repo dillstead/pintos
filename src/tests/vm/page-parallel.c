@@ -1,10 +1,10 @@
-/* Runs 3 child-linear processes at once. */
+/* Runs 4 child-linear processes at once. */
 
 #include <syscall.h>
 #include "tests/lib.h"
 #include "tests/main.h"
 
-#define CHILD_CNT 3
+#define CHILD_CNT 4
 
 void
 test_main (void)

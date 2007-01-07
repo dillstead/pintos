@@ -1,5 +1,5 @@
 /* Child process of page-parallel.
-   Encrypts 128 kB of zeros, then decrypts it, and ensures that
+   Encrypts 1 MB of zeros, then decrypts it, and ensures that
    the zeros are back. */
 
 #include <string.h>
@@ -9,7 +9,7 @@
 
 const char *test_name = "child-linear";
 
-#define SIZE (128 * 1024)
+#define SIZE (1024 * 1024)
 static char buf[SIZE];
 
 int
