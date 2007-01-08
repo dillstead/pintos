@@ -11,8 +11,8 @@ Functionality of extended file system:
 - Test file growth.
 1	grow-create
 1	grow-seq-sm
-2	grow-seq-lg
-2	grow-sparse
+3	grow-seq-lg
+3	grow-sparse
 3	grow-two-files
 1	grow-tell
 1	grow-file-size
@@ -23,4 +23,4 @@ Functionality of extended file system:
 1	grow-root-lg
 
 - Test writing from multiple processes.
-3	syn-rw
+5	syn-rw
