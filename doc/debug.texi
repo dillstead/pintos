@@ -21,13 +21,12 @@ introduces you to a few of them.
 Don't underestimate the value of @func{printf}.  The way
 @func{printf} is implemented in Pintos, you can call it from
 practically anywhere in the kernel, whether it's in a kernel thread or
-an interrupt handler, almost regardless of what locks are held (but see
-@ref{printf Reboots} for a counterexample).
+an interrupt handler, almost regardless of what locks are held.
 
 @func{printf} is useful for more than just examining data.
 It can also help figure out when and where something goes wrong, even
 when the kernel crashes or panics without a useful error message.  The
-strategy is to sprinkle calls to @func{print} with different strings
+strategy is to sprinkle calls to @func{printf} with different strings
 (e.g.@: @code{"<1>"}, @code{"<2>"}, @dots{}) throughout the pieces of
 code you suspect are failing.  If you don't even see @code{<1>} printed,
 then something bad happened before that point, if you see @code{<1>}
