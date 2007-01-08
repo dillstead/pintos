@@ -590,16 +590,14 @@ user stack pointer.  You will need to arrange another way, such as
 saving @code{esp} into @struct{thread} on the initial transition 
 from user to kernel mode.
 
-You may impose some absolute limit on stack size, as do most OSes.
+You should impose some absolute limit on stack size, as do most OSes.
 Some OSes make the limit user-adjustable, e.g.@: with the
 @command{ulimit} command on many Unix systems.  On many GNU/Linux systems,
 the default limit is 8 MB.
 
-The first stack page need not be allocated lazily.  You can initialize
-it with the command line arguments at load time, with no need to wait
-for it to be faulted in.  (Even if you did wait, the very first
-instruction in the user program is likely to be one that faults in the
-page.)
+The first stack page need not be allocated lazily.  You can allocate
+and initialize it with the command line arguments at load time, with 
+no need to wait for it to be faulted in.
 
 All stack pages should be candidates for eviction.  An evicted stack
 page should be written to swap.
