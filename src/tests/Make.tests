@@ -48,6 +48,9 @@ $(foreach prog,$(PROGS),$(eval $(prog).output: $(prog)))
 $(foreach test,$(TESTS),$(eval $(test).output: $($(test)_PUTFILES)))
 $(foreach test,$(TESTS),$(eval $(test).output: TEST = $(test)))
 
+# Prevent an environment variable VERBOSE from surprising us.
+VERBOSE =
+
 TESTCMD = pintos -v -k -T $(TIMEOUT)
 TESTCMD += $(SIMULATOR)
 TESTCMD += $(PINTOSOPTS)
