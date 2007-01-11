@@ -51,7 +51,7 @@ tests/filesys/extended/%.output: os.dsk
 	$(TESTCMD)
 	$(GETCMD)
 	rm -f tmp.dsk
-$(foreach raw_test,$(raw_tests),$(eval tests/filesys/extended/$(raw_test)-persistence.output: tests/filesys/extended/$(raw_test).output; ))
+$(foreach raw_test,$(raw_tests),$(eval tests/filesys/extended/$(raw_test)-persistence.output: tests/filesys/extended/$(raw_test).output))
 $(foreach raw_test,$(raw_tests),$(eval tests/filesys/extended/$(raw_test)-persistence.result: tests/filesys/extended/$(raw_test).result))
 
 TARS = $(addsuffix .tar,$(tests/filesys/extended_TESTS))
