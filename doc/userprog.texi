@@ -301,7 +301,7 @@ regardless of what user process or kernel thread is running.  In
 Pintos, kernel virtual memory is mapped one-to-one to physical
 memory, starting at @code{PHYS_BASE}.  That is, virtual address
 @code{PHYS_BASE} accesses physical
-address 0, virtual address @code{PHYS_BASE} + @t{0x1234} access
+address 0, virtual address @code{PHYS_BASE} + @t{0x1234} accesses
 physical address @t{0x1234}, and so on up to the size of the machine's
 physical memory.
 
