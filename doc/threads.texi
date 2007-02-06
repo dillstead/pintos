@@ -740,11 +740,9 @@ to thread @var{B} (with priority 3), then @var{B}'s new priority is 5, not 8.
 
 @item Can a thread's priority change while it is on the ready queue?
 
-Yes.  Consider this case: low-priority thread @var{L} holds a
-lock that high-priority thread @var{H} wants, so @var{H} donates its
-priority to @var{L}.  @var{L} releases the lock and
-thus loses the CPU and is moved to the ready queue.  Now @var{L}'s
-old priority is restored while it is in the ready queue.
+Yes.  Consider a ready, low-priority thread @var{L} that holds a lock.
+High-priority thread @var{H} attempts to acquire the lock and blocks,
+thereby donating its priority to ready thread @var{L}.
 
 @item Can a thread's priority change while it is blocked?
 
