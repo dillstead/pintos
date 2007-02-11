@@ -619,10 +619,11 @@ the program cannot load or run for any reason.
 @end deftypefn
 
 @deftypefn {System Call} int wait (pid_t @var{pid})
-Waits for process @var{pid} to die and returns the status it passed to
-@code{exit}.  Returns -1 if @var{pid}
-was terminated by the kernel (e.g.@: killed due to an exception).  If
-@var{pid} is does not refer to a child of the
+If process @var{pid} is still alive, waits until it dies.
+Then, returns the status that @var{pid} passed to @code{exit},
+or -1 if @var{pid}
+was terminated by the kernel (e.g.@: killed due to an exception).=  If
+@var{pid} does not refer to a child of the
 calling thread, or if @code{wait} has already been successfully
 called for the given @var{pid}, returns -1 immediately, without
 waiting.
