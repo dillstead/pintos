@@ -182,7 +182,7 @@ current value of @var{recent_cpu} decays to a weight of .1 in
 received ``recently,'' with the rate of decay inversely proportional to
 the number of threads competing for the CPU.
 
-Assumptions made by some of the tests require that updates to
+Assumptions made by some of the tests require that these recalculations of
 @var{recent_cpu} be made exactly when the system tick counter reaches a
 multiple of a second, that is, when @code{timer_ticks () % TIMER_FREQ ==
 0}, and not at any other time.
