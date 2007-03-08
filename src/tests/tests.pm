@@ -10,6 +10,9 @@ sub pass;
 die if @ARGV != 2;
 our ($test, $src_dir) = @ARGV;
 
+my ($msg_file) = tempfile ();
+select ($msg_file);
+
 our (@prereq_tests) = ();
 if ($test =~ /^(.*)-persistence$/) {
     push (@prereq_tests, $1);
@@ -19,8 +22,6 @@ for my $prereq_test (@prereq_tests) {
     fail "Prerequisite test $prereq_test failed.\n" if $result[0] ne 'PASS';
 }
 
-my ($msg_file) = tempfile ();
-select ($msg_file);
 
 # Generic testing.
 
