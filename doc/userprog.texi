@@ -616,6 +616,9 @@ Runs the executable whose name is given in @var{cmd_line}, passing any
 given arguments, and returns the new process's program id (pid).  Must
 return pid -1, which otherwise should not be a valid pid, if
 the program cannot load or run for any reason.
+Thus, the parent process cannot return from the @code{exec} until it
+knows whether the child process successfully loaded its executable.
+You must use appropriate synchronization to ensure this.
 @end deftypefn
 
 @deftypefn {System Call} int wait (pid_t @var{pid})
@@ -975,6 +978,18 @@ or the machine shuts down.
 You may modify the stack setup code to allocate more than one page of
 stack space for each process.  In the next project, you will implement a
 better solution.
+
+@item What should happen if an @code{exec} fails midway through loading?
+
+@code{exec} should return -1 if the child process fails to load for
+any reason.  This includes the case where the load fails part of the
+way through the process (e.g.@: where it runs out of memory in the
+@code{multi-oom} test).  Therefore, the parent process cannot return
+from the @code{exec} system call until it is established whether the
+load was successful or not.  The child must communicate this
+information to its parent using appropriate synchronization, such as a
+semaphore (@pxref{Semaphores}), to ensure that the information is
+communicated without race conditions.
 @end table
 
 @node 80x86 Calling Convention
