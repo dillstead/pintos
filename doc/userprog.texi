@@ -655,11 +655,15 @@ of the rest.
 @deftypefn {System Call} bool create (const char *@var{file}, unsigned @var{initial_size})
 Creates a new file called @var{file} initially @var{initial_size} bytes
 in size.  Returns true if successful, false otherwise.
+Opening the new file is a separate operation using the @code{open}
+system call.
 @end deftypefn
 
 @deftypefn {System Call} bool remove (const char *@var{file})
 Deletes the file called @var{file}.  Returns true if successful, false
 otherwise.
+A file may be removed regardless of whether it is open or closed
+(@pxref{Removing an Open File}, for more information).
 @end deftypefn
 
 @deftypefn {System Call} int open (const char *@var{file})
