@@ -117,7 +117,8 @@ process_exit (void)
 }
 
 /* Sets up the CPU for running user code in the current
-   thread. */
+   thread.
+   This function is called on every context switch. */
 void
 process_activate (void)
 {
