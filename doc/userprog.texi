@@ -705,13 +705,13 @@ than end of file).  Fd 0 reads from the keyboard using
 
 @deftypefn {System Call} int write (int @var{fd}, const void *@var{buffer}, unsigned @var{size})
 Writes @var{size} bytes from @var{buffer} to the open file @var{fd}.
-Returns the number of bytes actually written, or -1 if the file could
-not be written.
+Returns the number of bytes actually written, which may be less than
+@var{size} if some bytes could not be written.
 
 Writing past end-of-file would normally extend the file, but file growth
 is not implemented by the basic file system.  The expected behavior is
 to write as many bytes as possible up to end-of-file and return the
-actual number written, or -1 if no bytes could be written at all.
+actual number written, or 0 if no bytes could be written at all.
 
 Fd 1 writes to the console.  Your code to write to the console should
 write all of @var{buffer} in one call to @func{putbuf}, at least as
