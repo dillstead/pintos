@@ -15,7 +15,7 @@ diff -urp bochs-2.2.6/iodev/pit82c54.cc bochs-2.2.6.orig/iodev/pit82c54.cc
  	  if(thisctr.triggerGATE || thisctr.first_pass) {
 -	    set_count(thisctr, thisctr.inlatch);
 +            unsigned n = thisctr.inlatch;
-+            if (jitter) {
++            if (jitter && n > 5) {
 +                n *= (double) rand() / RAND_MAX;
 +                if (n < 5)
 +                    n = 5;
