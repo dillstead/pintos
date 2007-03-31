@@ -57,7 +57,7 @@ sub parse_command_line {
 		    "gdb" => sub { set_debug ("gdb") },
 
 		    "m|memory=i" => \$mem,
-		    "j|jitter=i" => sub { set_jitter (@_) },
+		    "j|jitter=i" => sub { set_jitter ($_[1]) },
 		    "r|realtime" => sub { set_realtime () },
 
 		    "T|timeout=i" => \$timeout,
@@ -410,7 +410,7 @@ panic: action=fatal
 EOF
     print BOCHSRC "gdbstub: enabled=1\n" if $debug eq 'gdb';
     print BOCHSRC "clock: sync=", $realtime ? 'realtime' : 'none',
-      " time0=0\n";
+      ", time0=0\n";
     print_bochs_disk_line ("ata0-master", 0);
     print_bochs_disk_line ("ata0-slave", 1);
     if (defined ($disks_by_iface[2]{FILE_NAME})
