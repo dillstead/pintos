@@ -129,7 +129,7 @@ process_activate (void)
 
   /* Set thread's kernel stack for use in processing
      interrupts. */
-  tss_set_esp0 ((uint8_t *) t + PGSIZE);
+  tss_update ();
 }
 
 /* We load ELF binaries.  The following definitions are taken
