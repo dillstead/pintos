@@ -27,9 +27,10 @@ pintos.pdf: $(TEXIS)
 	sed < $< > $@ 's/\([{}@]\)/\@\1/g;'
 
 clean:
-	rm -f *.info *.html
+	rm -f *.info* *.html
 	rm -f *.dvi *.pdf *.ps *.log *~
 	rm -rf WWW
+	rm -f sample.tmpl.texi
 
 dist: pintos.html pintos.pdf
 	rm -rf WWW
