@@ -633,7 +633,7 @@ does not actually mean that @func{pass} called @func{debug_panic}.  In
 fact, @func{fail} called @func{debug_panic} (via the @func{PANIC}
 macro).  GCC knows that @func{debug_panic} does not return, because it
 is declared @code{NO_RETURN} (@pxref{Function and Parameter
-Attributes}), so it doesn't include any code in @func{pass} to take
+Attributes}), so it doesn't include any code in @func{fail} to take
 control when @func{debug_panic} returns.  This means that the return
 address on the stack looks like it is at the beginning of the function
 that happens to follow @func{fail} in memory, which in this case happens
