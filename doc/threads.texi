@@ -364,13 +364,7 @@ with each other, requiring lots of last-minute debugging.  Some groups
 who have done this have turned in code that did not even compile or
 boot, much less pass any tests.
 
-Instead, we recommend integrating your team's changes early and often,
-using a source code control system such as CVS (@pxref{CVS}) or a
-group collaboration site such as SourceForge (@pxref{SourceForge}).
-This is less likely to produce surprises, because everyone can see
-everyone else's code as it is written, instead of just when it is
-finished.  These systems also make it possible to review changes and,
-when a change introduces a bug, drop back to working versions of code.
+@localcvspolicy{}
 
 You should expect to run into bugs that you simply don't understand
 while working on this and subsequent projects.  When you do,
@@ -480,9 +474,9 @@ priority.  If necessary, you may impose a reasonable limit on depth of
 nested priority donation, such as 8 levels.
 
 You must implement priority donation for locks.  You need not
-implement priority donation for semaphores or condition variables
-(but you are welcome to do so).  You do need to implement
-priority scheduling in all cases.
+implement priority donation for the other Pintos synchronization
+constructs.  You do need to implement priority scheduling in all
+cases.
 
 Finally, implement the following functions that allow a thread to
 examine and modify its own priority.  Skeletons for these functions are
@@ -696,7 +690,7 @@ kernel thread but the first.
 Don't worry about the possibility of timer values overflowing.  Timer
 values are expressed as signed 64-bit numbers, which at 100 ticks per
 second should be good for almost 2,924,712,087 years.  By then, we
-expect Pintos to have been phased out of the CS 140 curriculum.
+expect Pintos to have been phased out of the @value{coursenumber} curriculum.
 @end table
 
 @node Priority Scheduling FAQ

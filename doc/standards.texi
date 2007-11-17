@@ -1,12 +1,7 @@
 @node Coding Standards
 @appendix Coding Standards
 
-All of you should have taken a class like CS 107, so we expect you to be
-familiar with some set of coding standards such as
-@uref{http://www.stanford.edu/class/cs140/projects/misc/CodingStandards.pdf,
-, CS 107 Coding Standards}. Even if you've taken 107, we recommend
-reviewing that document.  We expect code at the ``Peer-Review Quality''
-level described there.
+@localcodingstandards{}
 
 Our standards for coding are most important for grading.  We want to
 stress that aside from the fact that we are explicitly basing part of

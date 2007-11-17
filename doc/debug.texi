@@ -724,14 +724,15 @@ In a case like this, you might appreciate being able to make Bochs
 print out more debug information, such as the exact type of fault that
 occurred.  It's not very hard.  You start by retrieving the source
 code for Bochs 2.2.6 from @uref{http://bochs.sourceforge.net} and
-extracting it into a directory.  Then read
-@file{pintos/src/misc/bochs-2.2.6.README} and apply the patches needed.
-Then run @file{./configure}, supplying the options you want (some
-suggestions are in the patch file).  Finally, run @command{make}.
-This will compile Bochs and eventually produce a new binary
-@file{bochs}.  To use your @file{bochs} binary with @command{pintos},
+saving the file @file{bochs-2.2.6.tar.gz} into a directory.  
+The script @file{pintos/src/misc/bochs-2.2.6-build.sh}
+applies a number of patches contained in @file{pintos/src/misc}
+to the Bochs tree, then builds Bochs and installs it in a directory
+of your choice.
+Run this script without arguments to learn usage instructions.
+To use your @file{bochs} binary with @command{pintos},
 put it in your @env{PATH}, and make sure that it is earlier than
-@file{/usr/class/cs140/`uname -m`/bochs}.
+@file{@value{localpintosbindir}/bochs}.
 
 Of course, to get any good out of this you'll have to actually modify
 Bochs.  Instructions for doing this are firmly out of the scope of

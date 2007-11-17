@@ -105,6 +105,12 @@ Interface---DRAFT---24 April 2001}.  A draft of a revised version of
 @node Operating System Design References
 @section Operating System Design References
 
+@bibdfn{Christopher}
+W.@: A.@: Christopher, S.@: J.@: Procter, T.@: E.@: Anderson,
+@cite{The Nachos instructional operating system}.
+Proceedings of the @acronym{USENIX} Winter 1993 Conference.
+@uref{http://portal.acm.org/citation.cfm?id=1267307}.
+
 @bibdfn{Dijkstra}
 E.@: W.@: Dijkstra, @cite{The structure of the ``THE''
 multiprogramming system}.  Communications of the ACM 11(5):341--346,

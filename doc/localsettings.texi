@@ -1,0 +1,73 @@
+@c Local settings
+
+@set coursenumber CS 140
+@set localpintostarpath /usr/class/cs140/pintos/pintos.tar.gz
+@set localpintoshttppath http://@/www.stanford.edu/@/class/@/cs140/@/pintos/@/pintos.@/tar.gz
+@set localpintosbindir /usr/class/cs140/`uname -m`/bin
+
+@macro localmachines{}
+The CS 140 ``officially supported'' Pintos development machines are
+the machines in Sweet Hall managed by Stanford ITSS, as described on
+the @uref{http://www.stanford.edu/services/cluster/environs/sweet/, ,
+ITSS webpage}.  You may use the Solaris or Linux machines.
+@end macro
+
+@macro localpathsetup{}
+Under @command{csh}, Stanford's login shell, you can do so
+with this command:@footnote{The term @samp{`uname -m`} expands to either
+@file{sun4u} or @file{i686} according to the type of computer you're
+logged into.}
+@example
+set path = ( @value{localpintosbindir} $path )
+@end example
+@noindent
+@strong{Notice that both @samp{`} are left single quotes or
+``backticks,'' not apostrophes (@samp{'}).}
+It is a good idea to add this line to the @file{.cshrc} file
+in your home directory.  Otherwise, you'll have to type it every time
+you log in.
+@end macro
+
+@macro localcrossbuild{}
+Watch the commands executed during the build.  On the Linux machines,
+the ordinary system tools are used.  On a SPARC machine, special build
+tools are used, whose names begin with @samp{i386-elf-}, e.g.@:
+@code{i386-elf-gcc}, @code{i386-elf-ld}.  These are ``cross-compiler''
+tools.  That is, the build is running on a SPARC machine (called the
+@dfn{host}), but the result will run on a simulated 80@var{x}86 machine
+(called the @dfn{target}).  The @samp{i386-elf-@var{program}} tools are
+specially built for this configuration.
+@end macro
+
+@macro localhonorcodepolicy{}
+In the context of Stanford's CS 140 course, please respect the spirit
+and the letter of the honor code by refraining from reading any homework
+solutions available online or elsewhere.  Reading the source code for
+other operating system kernels, such as Linux or FreeBSD, is allowed,
+but do not copy code from them literally.  Please cite the code that
+inspired your own in your design documentation.
+@end macro
+
+@macro localcredits{}
+@c none needed
+@end macro
+
+@macro localcvspolicy{}
+Instead, we recommend integrating your team's changes early and often,
+using a source code control system such as CVS (@pxref{CVS}) or a
+group collaboration site such as SourceForge (@pxref{SourceForge}).
+This is less likely to produce surprises, because everyone can see
+everyone else's code as it is written, instead of just when it is
+finished.  These systems also make it possible to review changes and,
+when a change introduces a bug, drop back to working versions of code.
+@end macro
+
+@macro localcodingstandards{}
+All of you should have taken a class like CS 107, so we expect you to be
+familiar with some set of coding standards such as
+@uref{http://www.stanford.edu/class/cs140/projects/misc/CodingStandards.pdf,
+, CS 107 Coding Standards}. Even if you've taken 107, we recommend
+reviewing that document.  We expect code at the ``Peer-Review Quality''
+level described there.
+@end macro
+

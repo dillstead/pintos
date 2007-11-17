@@ -714,6 +714,12 @@ process.  If you carefully designed your data structures,
 sharing of read-only pages should not make this part significantly
 harder.
 
+@item How do we resume a process after we have handled a page fault?
+
+Returning from @func{page_fault} resumes the current user process
+(@pxref{Internal Interrupt Handling}).
+It will then retry the instruction to which the instruction pointer points.
+
 @item Does the virtual memory system need to support data segment growth?
 
 No.  The size of the data segment is determined by the linker.  We still

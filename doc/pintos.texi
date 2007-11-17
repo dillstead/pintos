@@ -1,4 +1,5 @@
 \input texinfo                          @c -*- texinfo -*-
+
 @c %**start of header
 @setfilename pintos.info
 @settitle Pintos Projects
@@ -65,6 +66,9 @@
 * Bibliography::
 * License::
 @end menu
+
+@c institution-local settings
+@include localsettings.texi
 
 @include intro.texi
 @include threads.texi

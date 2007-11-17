@@ -9,7 +9,7 @@ project team will strengthen its support in all three of these areas.
 You will also add a virtual memory implementation.
 
 Pintos could, theoretically, run on a regular IBM-compatible PC.
-Unfortunately, it is impractical to supply every CS 140 student
+Unfortunately, it is impractical to supply every @value{coursenumber} student
 a dedicated PC for use with Pintos.  Therefore, we will run Pintos projects
 in a system simulator, that is, a program that simulates an 80@var{x}86
 CPU and its peripheral devices accurately enough that unmodified operating
@@ -19,7 +19,7 @@ systems and software can run under it.  In class we will use the
 QEMU} simulators.  Pintos has also been tested with
 @uref{http://www.vmware.com/, , VMware Player}.
 
-These projects are hard.  CS 140 has a reputation of taking a lot of
+These projects are hard.  @value{coursenumber} has a reputation of taking a lot of
 time, and deservedly so.  We will do what we can to reduce the workload, such
 as providing a lot of support material, but there is plenty of
 hard work that needs to be done.  We welcome your
@@ -43,31 +43,17 @@ projects.
 @section Getting Started
 
 To get started, you'll have to log into a machine that Pintos can be
-built on.  The CS140 ``officially supported''
-Pintos development machines are the machines in Sweet Hall managed by
-Stanford ITSS, as described on the
-@uref{http://www.stanford.edu/services/cluster/environs/sweet/, , ITSS
-webpage}.  You may use the Solaris or Linux machines.  We will test your
-code on these machines, and the instructions given here assume this
-environment.  We cannot provide support for installing and working on
-Pintos on your own machine, but we provide instructions for doing so
-nonetheless (@pxref{Installing Pintos}).
+built on.  
+@localmachines{}
+We will test your code on these machines, and the instructions given
+here assume this environment.  We cannot provide support for installing
+and working on Pintos on your own machine, but we provide instructions
+for doing so nonetheless (@pxref{Installing Pintos}).
 
 Once you've logged into one of these machines, either locally or
 remotely, start out by adding our binaries directory to your @env{PATH}
-environment.  Under @command{csh}, Stanford's login shell, you can do so
-with this command:@footnote{The term @samp{`uname -m`} expands to either
-@file{sun4u} or @file{i686} according to the type of computer you're
-logged into.}
-@example
-set path = ( /usr/class/cs140/`uname -m`/bin $path )
-@end example
-@noindent
-@strong{Notice that both @samp{`} are left single quotes or
-``backticks,'' not apostrophes (@samp{'}).}
-It is a good idea to add this line to the @file{.cshrc} file
-in your home directory.  Otherwise, you'll have to type it every time
-you log in.
+environment.  
+@localpathsetup{}
 
 @menu
 * Source Tree Overview::        
@@ -82,10 +68,10 @@ you log in.
 Now you can extract the source for Pintos into a directory named
 @file{pintos/src}, by executing
 @example
-zcat /usr/class/cs140/pintos/pintos.tar.gz | tar x
+zcat @value{localpintostarpath} | tar x
 @end example
 Alternatively, fetch
-@uref{http://@/www.stanford.edu/@/class/@/cs140/@/pintos/@/pintos.@/tar.gz}
+@uref{@value{localpintoshttppath}}
 and extract it in a similar way.
 
 Let's take a look at what's inside.  Here's the directory structure
@@ -145,7 +131,7 @@ Example user programs for use starting with project 2.
 @item misc/
 @itemx utils/
 These files may come in handy if you decide to try working with Pintos
-away from the ITSS machines.  Otherwise, you can ignore them.
+on your own machine.  Otherwise, you can ignore them.
 @end table
 
 @node Building Pintos
@@ -158,14 +144,7 @@ directory.  Then, issue the @samp{make} command.  This will create a
 @file{Makefile} and a few subdirectories, and then build the kernel
 inside.  The entire build should take less than 30 seconds.
 
-Watch the commands executed during the build.  On the Linux machines,
-the ordinary system tools are used.  On a SPARC machine, special build
-tools are used, whose names begin with @samp{i386-elf-}, e.g.@:
-@code{i386-elf-gcc}, @code{i386-elf-ld}.  These are ``cross-compiler''
-tools.  That is, the build is running on a SPARC machine (called the
-@dfn{host}), but the result will run on a simulated 80@var{x}86 machine
-(called the @dfn{target}).  The @samp{i386-elf-@var{program}} tools are
-specially built for this configuration.
+@localcrossbuild{}
 
 Following the build, the following are the interesting files in the
 @file{build} directory:
@@ -515,12 +494,7 @@ Pintos comes with NO WARRANTY, not even for MERCHANTABILITY or FITNESS
 FOR A PARTICULAR PURPOSE.
 @xref{License}, for details of the license and lack of warranty.
 
-In the context of Stanford's CS 140 course, please respect the spirit
-and the letter of the honor code by refraining from reading any homework
-solutions available online or elsewhere.  Reading the source code for
-other operating system kernels, such as Linux or FreeBSD, is allowed,
-but do not copy code from them literally.  Please cite the code that
-inspired your own in your design documentation.
+@localhonorcodepolicy{}
 
 @node Acknowledgements
 @section Acknowledgements
@@ -534,7 +508,7 @@ work.
 
 The original structure and form of Pintos was inspired by the Nachos
 instructional operating system from the University of California,
-Berkeley.
+Berkeley (@bibref{Christopher}).
 
 A few of the Pintos source files are derived from code used in the
 Massachusetts Institute of Technology's 6.828 advanced operating systems
@@ -548,6 +522,8 @@ Twohey, Sameer Qureshi, and John Rector.
 Example code for monitors (@pxref{Monitors}) is
 from classroom slides originally by Dawson Engler and updated by Mendel
 Rosenblum.
+
+@localcredits{}
 
 @node Trivia
 @section Trivia

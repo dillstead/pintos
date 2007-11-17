@@ -1,7 +1,7 @@
 TEXIS = pintos.texi intro.texi threads.texi userprog.texi vm.texi	\
 filesys.texi license.texi reference.texi 44bsd.texi standards.texi	\
 doc.texi sample.tmpl.texi devel.texi debug.texi installation.texi	\
-bibliography.texi
+bibliography.texi localsettings.texi
 
 all: pintos.html pintos.info pintos.dvi pintos.ps pintos.pdf
 
