@@ -5,6 +5,10 @@
 @set localpintoshttppath http://@/www.stanford.edu/@/class/@/cs140/@/pintos/@/pintos.@/tar.gz
 @set localpintosbindir /usr/class/cs140/`uname -m`/bin
 
+@set recommendsourceforge
+@set recommendvnc
+@clear recommendcygwin
+
 @macro localmachines{}
 The CS 140 ``officially supported'' Pintos development machines are
 the machines in Sweet Hall managed by Stanford ITSS, as described on
@@ -71,3 +75,6 @@ reviewing that document.  We expect code at the ``Peer-Review Quality''
 level described there.
 @end macro
 
+@macro localdevelopmenttools{}
+@c Descriptions of additional, local development tools can be inserted here
+@end macro
