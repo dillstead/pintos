@@ -683,7 +683,7 @@ implementation in @file{lib/kernel/list.c}.
 
 A @dfn{lock} is like a semaphore with an initial value of 1
 (@pxref{Semaphores}).  A lock's equivalent of ``up'' is called
-``acquire'', and the ``down'' operation is called ``release''.
+``release'', and the ``down'' operation is called ``acquire''.
 
 Compared to a semaphore, a lock has one added restriction: only the
 thread that acquires a lock, called the lock's ``owner'', is allowed to
