@@ -100,7 +100,7 @@ arranged to begin with the assembly module
 @func{main}, which never returns.
 
 There's one more trick: the Pintos kernel command line
-is in stored the boot loader.  The @command{pintos} program actually
+is stored in the boot loader.  The @command{pintos} program actually
 modifies a copy of the boot loader on disk each time it runs the kernel,
 putting
 in whatever command line arguments the user supplies to the kernel,
@@ -148,7 +148,7 @@ prerequisite for acquiring a lock, and lock acquisition in turn is
 important to other Pintos subsystems.  Then we initialize the console
 and print a startup message to the console.
 
-The next block of functions we call initialize the kernel's memory
+The next block of functions we call initializes the kernel's memory
 system.  @func{palloc_init} sets up the kernel page allocator, which
 doles out memory one or more pages at a time (@pxref{Page Allocator}).
 @func{malloc_init} sets
