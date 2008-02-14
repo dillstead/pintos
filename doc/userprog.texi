@@ -406,7 +406,7 @@ The second method is to check only that a user
 pointer points below @code{PHYS_BASE}, then dereference it.
 An invalid user pointer will cause a ``page fault'' that you can
 handle by modifying the code for @func{page_fault} in
-@file{userprog/exception.cc}.  This technique is normally faster
+@file{userprog/exception.c}.  This technique is normally faster
 because it takes advantage of the processor's MMU, so it tends to be
 used in real kernels (including Linux).
 
@@ -872,7 +872,7 @@ call handler just prints @samp{system call!} and terminates the program.
 Until then, you can use @func{hex_dump} to convince yourself that
 argument passing is implemented correctly (@pxref{Program Startup Details}).
 
-@item How can I can disassemble user programs?
+@item How can I disassemble user programs?
 
 The @command{objdump} (80@var{x}86) or @command{i386-elf-objdump}
 (SPARC) utility can disassemble entire user
@@ -1090,7 +1090,7 @@ pointers.
 
 Then, push the address of each string plus a null pointer sentinel, on
 the stack, in right-to-left order.  These are the elements of
-@code{argv}.  The order ensure that @code{argv[0]} is at the lowest
+@code{argv}.  The order ensures that @code{argv[0]} is at the lowest
 virtual address.  Word-aligned accesses are faster than unaligned
 accesses, so for best performance round the stack pointer down to a
 multiple of 4 before the first push.
@@ -1100,7 +1100,7 @@ in that order.  Finally, push a fake ``return address'': although the
 entry function will never return, its stack frame must have the same
 structure as any other.
 
-The table below show the state of the stack and the relevant registers
+The table below shows the state of the stack and the relevant registers
 right before the beginning of the user program, assuming
 @code{PHYS_BASE} is @t{0xc0000000}:
 
