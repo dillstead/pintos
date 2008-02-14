@@ -1090,10 +1090,11 @@ pointers.
 
 Then, push the address of each string plus a null pointer sentinel, on
 the stack, in right-to-left order.  These are the elements of
-@code{argv}.  The order ensures that @code{argv[0]} is at the lowest
-virtual address.  Word-aligned accesses are faster than unaligned
-accesses, so for best performance round the stack pointer down to a
-multiple of 4 before the first push.
+@code{argv}.  The null pointer sentinel ensures that @code{argv[argc]}
+is a null pointer, as required by the C standard.  The order ensures
+that @code{argv[0]} is at the lowest virtual address.  Word-aligned
+accesses are faster than unaligned accesses, so for best performance
+round the stack pointer down to a multiple of 4 before the first push.
 
 Then, push @code{argv} (the address of @code{argv[0]}) and @code{argc},
 in that order.  Finally, push a fake ``return address'': although the
