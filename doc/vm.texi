@@ -260,7 +260,7 @@ page fault might only indicate that the page must be brought in from a
 file or swap.  You will have to implement a more sophisticated page
 fault handler to handle these cases.  Your page fault handler, which you
 should implement by modifying @func{page_fault} in
-@file{threads/exception.c}, needs to do roughly the following:
+@file{userprog/exception.c}, needs to do roughly the following:
 
 @enumerate 1
 @item
