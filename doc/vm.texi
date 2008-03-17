@@ -576,7 +576,7 @@ bytes below the stack pointer.
 
 You will need to be able to obtain the current value of the user
 program's stack pointer.  Within a system call or a page fault generated
-by a user program, you can retrieve it from @code{esp} member of the
+by a user program, you can retrieve it from the @code{esp} member of the
 @struct{intr_frame} passed to @func{syscall_handler} or
 @func{page_fault}, respectively.  If you verify user pointers before
 accessing them (@pxref{Accessing User Memory}), these are the only cases
@@ -613,7 +613,7 @@ space.  The entire file is mapped into consecutive virtual pages
 starting at @var{addr}.
 
 Your VM system must lazily load pages in @code{mmap} regions and use the
-@code{mmap}'d file itself as backing store for the mapping.  That is,
+@code{mmap}ed file itself as backing store for the mapping.  That is,
 evicting a page mapped by @code{mmap} writes it back to the file it was
 mapped from.
 

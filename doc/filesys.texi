@@ -112,8 +112,8 @@ for test @var{t} is named @file{@var{t}.tar}.
 @node Project 4 Suggested Order of Implementation
 @section Suggested Order of Implementation
 
-We suggest implementing the parts of this project in the following
-order to make your job easier:
+To make your job easier, we suggest implementing the parts of this
+project in the following order:
 
 @enumerate
 @item
@@ -314,7 +314,7 @@ extra effort on your part.
 Modify the file system to keep a cache of file blocks.  When a request
 is made to read or write a block, check to see if it is in the
 cache, and if so, use the cached data without going to
-disk.  Otherwise, fetch the block from disk into cache, evicting an
+disk.  Otherwise, fetch the block from disk into the cache, evicting an
 older entry if necessary.  You are limited to a cache no greater than 64
 sectors in size.
 
@@ -519,7 +519,7 @@ corresponding sector from disk when it's created.  Keeping extra
 copies of inodes would subvert the 64-block limitation that we place
 on your cache.
 
-You can store a pointer to inode data in @struct{inode}, but it you do
+You can store a pointer to inode data in @struct{inode}, but if you do
 so you should carefully make sure that this does not limit your OS to 64
 simultaneously open files.
 You can also store other information to help you find the inode when you
