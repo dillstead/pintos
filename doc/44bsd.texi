@@ -113,7 +113,9 @@ the formula
 
 @noindent where @var{recent_cpu} is an estimate of the CPU time the
 thread has used recently (see below) and @var{nice} is the thread's
-@var{nice} value.  The coefficients @math{1/4} and 2 on @var{recent_cpu}
+@var{nice} value.  The result should be rounded down to the nearest
+integer (truncated).
+The coefficients @math{1/4} and 2 on @var{recent_cpu}
 and @var{nice}, respectively, have been found to work well in practice
 but lack deeper meaning.  The calculated @var{priority} is always
 adjusted to lie in the valid range @code{PRI_MIN} to @code{PRI_MAX}.
