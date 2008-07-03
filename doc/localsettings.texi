@@ -5,7 +5,6 @@
 @set localpintoshttppath http://@/www.stanford.edu/@/class/@/cs140/@/pintos/@/pintos.@/tar.gz
 @set localpintosbindir /usr/class/cs140/`uname -m`/bin
 
-@set recommendsourceforge
 @set recommendvnc
 @clear recommendcygwin
 
@@ -58,8 +57,7 @@ inspired your own in your design documentation.
 
 @macro localcvspolicy{}
 Instead, we recommend integrating your team's changes early and often,
-using a source code control system such as CVS (@pxref{CVS}) or a
-group collaboration site such as SourceForge (@pxref{SourceForge}).
+using a source code control system such as CVS (@pxref{CVS}).
 This is less likely to produce surprises, because everyone can see
 everyone else's code as it is written, instead of just when it is
 finished.  These systems also make it possible to review changes and,
