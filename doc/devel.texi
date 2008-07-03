@@ -6,12 +6,16 @@ Here are some tools that you might find useful while developing code.
 @menu
 * Tags::
 * cscope::
-* CVS:: @ifset recommendsourceforge 
-* SourceForge:: @end ifset 
+* CVS::
+@ifset recommendsourceforge 
+* SourceForge::
+@end ifset 
 @ifset recommendvnc
-* VNC:: @end ifset 
+* VNC::
+@end ifset 
 @ifset recommendcygwin
-* Cygwin:: @end ifset
+* Cygwin::
+@end ifset
 @end menu
 
 @node Tags
