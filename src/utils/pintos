@@ -46,12 +46,12 @@ sub parse_command_line {
 	while ((my $arg = shift (@kernel_args)) ne '--') {
 	    push (@ARGV, $arg);
 	}
-	GetOptions ("sim=s" => sub { set_sim (@_) },
+	GetOptions ("sim=s" => sub { set_sim ($_[1]) },
 		    "bochs" => sub { set_sim ("bochs") },
 		    "qemu" => sub { set_sim ("qemu") },
 		    "player" => sub { set_sim ("player") },
 
-		    "debug=s" => sub { set_debug (@_) },
+		    "debug=s" => sub { set_debug ($_[1]) },
 		    "no-debug" => sub { set_debug ("none") },
 		    "monitor" => sub { set_debug ("monitor") },
 		    "gdb" => sub { set_debug ("gdb") },
