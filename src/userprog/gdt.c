@@ -50,7 +50,7 @@ gdt_init (void)
      6.2.4 "Task Register".  */
   gdtr_operand = make_gdtr_operand (sizeof gdt - 1, gdt);
   asm volatile ("lgdt %0" : : "m" (gdtr_operand));
-  asm volatile ("ltr %w0" : : "r" (SEL_TSS));
+  asm volatile ("ltr %w0" : : "q" (SEL_TSS));
 }
 
 /* System segment or code/data segment? */
