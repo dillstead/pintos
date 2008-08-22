@@ -1,17 +1,16 @@
 src							-*- text -*-
 ---
 
-* Most code written by Ben Pfaff <blp@cs.stanford.edu>.
+* Pintos core originally written by Ben Pfaff <blp@cs.stanford.edu>.
+
+* Support for PCI, USB, GRUB, partitions, UHCI, and other features
+  contributed by Anthony Romano <chz@vt.edu>.
 
 * The original structure and form of this operating system is inspired
   by the Nachos system from the University of California, Berkeley.  A
   few of the source files are more-or-less literal translations of the
   Nachos C++ code into C.  These files bear the original UCB license
   notice.
-
-* Some of the source code is derived from code used in the
-  Massachusetts Institute of Technology's 6.828 advanced operating
-  systems course.  These files bear the original MIT license notice.
 
 projects
 --------

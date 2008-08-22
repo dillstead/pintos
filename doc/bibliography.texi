@@ -67,6 +67,10 @@ Datasheet for PC timer chip.
 @uref{specs/8259A.pdf, , Intel 8259A Programmable Interrupt Controller
 (8259A/8259A-2)}.  Datasheet for PC interrupt controller chip.
 
+@bibdfn{MC146818A}
+@uref{specs/mc146818a.pdf, , Motorola MC146818A Real Time Clock Plus
+Ram (RTC)}.  Datasheet for PC real-time clock chip.
+
 @node Software References
 @section Software References
 
@@ -101,6 +105,18 @@ Edition}.  80@var{x}86-specific parts of the Unix interface.
 @uref{specs/sysv-abi-update.html/contents.html, , System V Application Binary
 Interface---DRAFT---24 April 2001}.  A draft of a revised version of
 @bibref{SysV-ABI} which was never completed.
+
+@bibdfn{Partitions}
+A.@: E.@: Brouwer, @uref{specs/partitions/partition_tables.html, ,
+Minimal partition table specification}, 1999.
+
+@bibdfn{IntrList}
+R.@: Brown, @uref{http://www.ctyme.com/rbrown.htm, , Ralf Brown's
+Interrupt List}, 2000.
+
+@bibdfn{SUSv3}
+The Open Group, @uref{http://www.unix.org/single_unix_specification/,
+, Single UNIX Specification V3}, 2001.
 
 @node Operating System Design References
 @section Operating System Design References

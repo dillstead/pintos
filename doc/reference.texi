@@ -1,12 +1,11 @@
 @node Reference Guide
 @appendix Reference Guide
 
-This chapter is a reference for the Pintos code.  It covers the
-entire code base, but you'll only be using Pintos one part at a time,
-so you may find that you want to read each part as you work on the
+This chapter is a reference for the Pintos code.  The reference guide
+does not cover all of the code in Pintos, but it does cover those
+pieces that students most often find troublesome.  You may find that
+you want to read each part of the reference guide as you work on the
 project where it becomes important.
-
-(Actually, the reference guide is currently incomplete.)
 
 We recommend using ``tags'' to follow along with references to function
 and variable names (@pxref{Tags}).
@@ -30,7 +29,9 @@ initialization.
 
 @menu
 * Pintos Loader::               
-* Kernel Initialization::       
+* Low-Level Kernel Initialization::
+* High-Level Kernel Initialization::
+* Physical Memory Map::
 @end menu
 
 @node Pintos Loader
@@ -124,17 +125,14 @@ These are usually named @func{@var{module}_init}, where
 module's source code, and @file{@var{module}.h} is the module's
 header.
 
-First we initialize kernel RAM in @func{ram_init}.  The first step
-is to clear out the kernel's so-called ``BSS'' segment.  The BSS is a
+The first step in @func{main} is to call @func{bss_init}, which clears
+out the kernel's ``BSS'', which is the traditional name for a
 segment that should be initialized to all zeros.  In most C
 implementations, whenever you
 declare a variable outside a function without providing an
 initializer, that variable goes into the BSS.  Because it's all zeros, the
 BSS isn't stored in the image that the loader brought into memory.  We
-just use @func{memset} to zero it out.  The other task of
-@func{ram_init} is to read out the machine's memory size from where
-the loader stored it and put it into the @code{ram_pages} variable for
-later use.
+just use @func{memset} to zero it out.
 
 Next, @func{main} calls @func{read_command_line} to break the kernel command
 line into arguments, then @func{parse_options} to read any options at
@@ -179,7 +177,7 @@ possible, so we use
 @func{timer_calibrate} calibrates the timer for accurate short delays.
 
 If the file system is compiled in, as it will starting in project 2, we
-initialize the disks with @func{disk_init}, then the
+initialize the IDE disks with @func{ide_init}, then the
 file system with @func{filesys_init}.
 
 Boot is complete, so we print a message.
@@ -192,6 +190,34 @@ Finally, if @option{-q} was specified on the kernel command line, we
 call @func{power_off} to terminate the machine simulator.  Otherwise,
 @func{main} calls @func{thread_exit}, which allows any other running
 threads to continue running.
+
+@node Physical Memory Map
+@subsection Physical Memory Map
+
+@multitable {@t{00000000}--@t{00000000}} {Hardware} {Some much longer explanatory text}
+@headitem Memory Range
+@tab Owner
+@tab Contents
+
+@item @t{00000000}--@t{000003ff} @tab CPU @tab Real mode interrupt table.
+@item @t{00000400}--@t{000005ff} @tab BIOS @tab Miscellaneous data area.
+@item @t{00000600}--@t{00007bff} @tab --- @tab ---
+@item @t{00007c00}--@t{00007dff} @tab Pintos @tab Loader.
+@item @t{0000e000}--@t{0000efff} @tab Pintos 
+@tab Stack for loader; kernel stack and @struct{thread} for initial
+kernel thread.
+@item @t{0000f000}--@t{0000ffff} @tab Pintos
+@tab Page directory for startup code.
+@item @t{00010000}--@t{00020000} @tab Pintos
+@tab Page tables for startup code.
+@item @t{00020000}--@t{0009ffff} @tab Pintos
+@tab Kernel code, data, and uninitialized data segments.
+@item @t{000a0000}--@t{000bffff} @tab Video @tab VGA display memory.
+@item @t{000c0000}--@t{000effff} @tab Hardware 
+@tab Reserved for expansion card RAM and ROM.
+@item @t{000f0000}--@t{000fffff} @tab BIOS @tab ROM BIOS.
+@item @t{00100000}--@t{03ffffff} @tab Pintos @tab Dynamic memory allocation.
+@end multitable
 
 @node Threads
 @section Threads
@@ -539,7 +565,7 @@ synchronization primitives to help out.
 * Semaphores::                  
 * Locks::                       
 * Monitors::                    
-* Optimization Barriers::             
+* Optimization Barriers::
 @end menu
 
 @node Disabling Interrupts
@@ -1219,7 +1245,8 @@ at once.
 
 The page allocator divides the memory it allocates into two pools,
 called the kernel and user pools.  By default, each pool gets half of
-system memory, but this can be changed with the @option{-ul} kernel
+system memory above @w{1 MB}, but the division can be changed with the
+@option{-ul} kernel
 command line
 option (@pxref{Why PAL_USER?}).  An allocation request draws from one
 pool or the other.  If one pool becomes empty, the other may still

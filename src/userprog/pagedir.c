@@ -74,7 +74,7 @@ lookup_page (uint32_t *pd, const void *vaddr, bool create)
           if (pt == NULL) 
             return NULL; 
       
-          *pde = pde_create (pt);
+          *pde = pde_create_user (pt);
         }
       else
         return NULL;

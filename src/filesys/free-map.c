@@ -6,15 +6,15 @@
 #include "filesys/inode.h"
 
 static struct file *free_map_file;   /* Free map file. */
-static struct bitmap *free_map;      /* Free map, one bit per disk sector. */
+static struct bitmap *free_map;      /* Free map, one bit per sector. */
 
 /* Initializes the free map. */
 void
 free_map_init (void) 
 {
-  free_map = bitmap_create (disk_size (filesys_disk));
+  free_map = bitmap_create (block_size (fs_device));
   if (free_map == NULL)
-    PANIC ("bitmap creation failed--disk is too large");
+    PANIC ("bitmap creation failed--file system device is too large");
   bitmap_mark (free_map, FREE_MAP_SECTOR);
   bitmap_mark (free_map, ROOT_DIR_SECTOR);
 }
@@ -24,9 +24,9 @@ free_map_init (void)
    Returns true if successful, false if all sectors were
    available. */
 bool
-free_map_allocate (size_t cnt, disk_sector_t *sectorp) 
+free_map_allocate (size_t cnt, block_sector_t *sectorp)
 {
-  disk_sector_t sector = bitmap_scan_and_flip (free_map, 0, cnt, false);
+  block_sector_t sector = bitmap_scan_and_flip (free_map, 0, cnt, false);
   if (sector != BITMAP_ERROR
       && free_map_file != NULL
       && !bitmap_write (free_map, free_map_file))
@@ -41,7 +41,7 @@ free_map_allocate (size_t cnt, disk_sector_t *sectorp)
 
 /* Makes CNT sectors starting at SECTOR available for use. */
 void
-free_map_release (disk_sector_t sector, size_t cnt)
+free_map_release (block_sector_t sector, size_t cnt)
 {
   ASSERT (bitmap_all (free_map, sector, cnt));
   bitmap_set_multiple (free_map, sector, cnt, false);
