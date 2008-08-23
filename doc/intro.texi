@@ -499,8 +499,11 @@ FOR A PARTICULAR PURPOSE.
 @node Acknowledgements
 @section Acknowledgements
 
-Pintos and this documentation were written by Ben Pfaff
-@email{blp@@cs.stanford.edu}.
+The Pintos core and this documentation were originally written by Ben
+Pfaff @email{blp@@cs.stanford.edu}.
+
+Additional features were contributed by Anthony Romano
+@email{chz@@vt.edu}.
 
 The GDB macros supplied with Pintos were written by Godmar Back
 @email{gback@@cs.vt.edu}, and their documentation is adapted from his

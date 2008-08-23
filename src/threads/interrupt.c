@@ -10,6 +10,14 @@
 #include "threads/vaddr.h"
 #include "devices/timer.h"
 
+/* Programmable Interrupt Controller (PIC) registers.
+   A PC has two PICs, called the master and slave PICs, with the
+   slave attached ("cascaded") to the master IRQ line 2. */
+#define PIC0_CTRL	0x20    /* Master PIC control register address. */
+#define PIC0_DATA	0x21    /* Master PIC data register address. */
+#define PIC1_CTRL	0xa0    /* Slave PIC control register address. */
+#define PIC1_DATA	0xa1    /* Slave PIC data register address. */
+
 /* Number of x86 interrupts. */
 #define INTR_CNT 256
 
@@ -214,42 +222,35 @@ intr_yield_on_return (void)
 
 /* 8259A Programmable Interrupt Controller. */
 
-/* Every PC has two 8259A Programmable Interrupt Controller (PIC)
-   chips.  One is a "master" accessible at ports 0x20 and 0x21.
-   The other is a "slave" cascaded onto the master's IRQ 2 line
-   and accessible at ports 0xa0 and 0xa1.  Accesses to port 0x20
-   set the A0 line to 0 and accesses to 0x21 set the A1 line to
-   1.  The situation is similar for the slave PIC.
+/* Initializes the PICs.  Refer to [8259A] for details.
 
    By default, interrupts 0...15 delivered by the PICs will go to
-   interrupt vectors 0...15.  Unfortunately, those vectors are
-   also used for CPU traps and exceptions.  We reprogram the PICs
-   so that interrupts 0...15 are delivered to interrupt vectors
-   32...47 (0x20...0x2f) instead. */
-
-/* Initializes the PICs.  Refer to [8259A] for details. */
+   interrupt vectors 0...15.  Those vectors are also used for CPU
+   traps and exceptions, so we reprogram the PICs so that
+   interrupts 0...15 are delivered to interrupt vectors 32...47
+   (0x20...0x2f) instead. */
 static void
 pic_init (void)
 {
   /* Mask all interrupts on both PICs. */
-  outb (0x21, 0xff);
-  outb (0xa1, 0xff);
+  outb (PIC0_DATA, 0xff);
+  outb (PIC1_DATA, 0xff);
 
   /* Initialize master. */
-  outb (0x20, 0x11); /* ICW1: single mode, edge triggered, expect ICW4. */
-  outb (0x21, 0x20); /* ICW2: line IR0...7 -> irq 0x20...0x27. */
-  outb (0x21, 0x04); /* ICW3: slave PIC on line IR2. */
-  outb (0x21, 0x01); /* ICW4: 8086 mode, normal EOI, non-buffered. */
+  outb (PIC0_CTRL, 0x11); /* ICW1: single mode, edge triggered, expect ICW4. */
+  outb (PIC0_DATA, 0x20); /* ICW2: line IR0...7 -> irq 0x20...0x27. */
+  outb (PIC0_DATA, 0x04); /* ICW3: slave PIC on line IR2. */
+  outb (PIC0_DATA, 0x01); /* ICW4: 8086 mode, normal EOI, non-buffered. */
 
   /* Initialize slave. */
-  outb (0xa0, 0x11); /* ICW1: single mode, edge triggered, expect ICW4. */
-  outb (0xa1, 0x28); /* ICW2: line IR0...7 -> irq 0x28...0x2f. */
-  outb (0xa1, 0x02); /* ICW3: slave ID is 2. */
-  outb (0xa1, 0x01); /* ICW4: 8086 mode, normal EOI, non-buffered. */
+  outb (PIC1_CTRL, 0x11); /* ICW1: single mode, edge triggered, expect ICW4. */
+  outb (PIC1_DATA, 0x28); /* ICW2: line IR0...7 -> irq 0x28...0x2f. */
+  outb (PIC1_DATA, 0x02); /* ICW3: slave ID is 2. */
+  outb (PIC1_DATA, 0x01); /* ICW4: 8086 mode, normal EOI, non-buffered. */
 
   /* Unmask all interrupts. */
-  outb (0x21, 0x00);
-  outb (0xa1, 0x00);
+  outb (PIC0_DATA, 0x00);
+  outb (PIC1_DATA, 0x00);
 }
 
 /* Sends an end-of-interrupt signal to the PIC for the given IRQ.
