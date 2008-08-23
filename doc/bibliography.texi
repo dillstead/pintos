@@ -67,6 +67,10 @@ Datasheet for PC timer chip.
 @uref{specs/8259A.pdf, , Intel 8259A Programmable Interrupt Controller
 (8259A/8259A-2)}.  Datasheet for PC interrupt controller chip.
 
+@bibdfn{MC146818A}
+@uref{specs/mc146818a.pdf, , Motorola MC146818A Real Time Clock Plus
+Ram (RTC)}.  Datasheet for PC real-time clock chip.
+
 @node Software References
 @section Software References
 

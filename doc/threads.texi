@@ -240,6 +240,12 @@ serial drivers.
 Interrupt queue, for managing a circular queue that both kernel
 threads and interrupt handlers want to access.  Used by the keyboard
 and serial drivers.
+
+@item rtc.c
+@itemx rtc.h
+Real-time clock driver, to enable the kernel to determine the current
+date and time.  By default, this is only used by @file{thread/init.c}
+to choose an initial seed for the random number generator.
 @end table
 
 @node lib files
@@ -277,7 +283,11 @@ more information.
 
 @item random.c
 @itemx random.h
-Pseudo-random number generator.
+Pseudo-random number generator.  The actual sequence of random values
+will not vary from one Pintos run to another, unless you do one of
+three things: specify a new random seed value on the @option{-rs}
+kernel command-line option on each run, or use a simulator other than
+Bochs, or specify the @option{-r} option to @command{pintos}.
 
 @item round.h
 Macros for rounding.

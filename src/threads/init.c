@@ -13,6 +13,7 @@
 #include "devices/serial.h"
 #include "devices/timer.h"
 #include "devices/vga.h"
+#include "devices/rtc.h"
 #include "threads/interrupt.h"
 #include "threads/io.h"
 #include "threads/loader.h"
@@ -251,6 +252,16 @@ parse_options (char **argv)
       else
         PANIC ("unknown option `%s' (use -h for help)", name);
     }
+
+  /* Initialize the random number generator based on the system
+     time.  This has no effect if an "-rs" option was specified.
+
+     When running under Bochs, this is not enough by itself to
+     get a good seed value, because the pintos script sets the
+     initial time to a predictable value, not to the local time,
+     for reproducibility.  To fix this, give the "-r" option to
+     the pintos script to request real-time execution. */
+  random_init (rtc_get_time ());
   
   return argv;
 }

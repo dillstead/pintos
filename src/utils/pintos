@@ -409,8 +409,11 @@ log: bochsout.txt
 panic: action=fatal
 EOF
     print BOCHSRC "gdbstub: enabled=1\n" if $debug eq 'gdb';
-    print BOCHSRC "clock: sync=", $realtime ? 'realtime' : 'none',
-      ", time0=0\n";
+    if ($realtime) {
+	print BOCHSRC "clock: sync=realtime\n";
+    } else {
+	print BOCHSRC "clock: sync=none, time0=0\n";
+    }
     print_bochs_disk_line ("ata0-master", 0);
     print_bochs_disk_line ("ata0-slave", 1);
     if (defined ($disks_by_iface[2]{FILE_NAME})
