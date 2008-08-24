@@ -303,7 +303,7 @@ are straightforward once the above syscalls are implemented.
 We have also provided @command{pwd}, which is not so straightforward.
 The @command{shell} program implements @command{cd} internally.
 
-The @code{pintos} @option{put} and @option{get} commands should now
+The @code{pintos} @option{extract} and @option{append} commands should now
 accept full path names, assuming that the directories used in the
 paths have already been created.  This should not require any significant
 extra effort on your part.

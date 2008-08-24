@@ -302,8 +302,8 @@ run_actions (char **argv)
       {"ls", 1, fsutil_ls},
       {"cat", 2, fsutil_cat},
       {"rm", 2, fsutil_rm},
-      {"put", 2, fsutil_put},
-      {"get", 2, fsutil_get},
+      {"extract", 1, fsutil_extract},
+      {"append", 2, fsutil_append},
 #endif
       {NULL, 0, NULL},
     };
@@ -351,8 +351,8 @@ usage (void)
           "  cat FILE           Print FILE to the console.\n"
           "  rm FILE            Delete FILE.\n"
           "Use these actions indirectly via `pintos' -g and -p options:\n"
-          "  put FILE           Put FILE into file system from scratch disk.\n"
-          "  get FILE           Get FILE from file system into scratch disk.\n"
+          "  extract            Untar from scratch disk into file system.\n"
+          "  append FILE        Append FILE to tar file on scratch disk.\n"
 #endif
           "\nOptions:\n"
           "  -h                 Print this help message and power off.\n"

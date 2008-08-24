@@ -106,6 +106,10 @@ Edition}.  80@var{x}86-specific parts of the Unix interface.
 Interface---DRAFT---24 April 2001}.  A draft of a revised version of
 @bibref{SysV-ABI} which was never completed.
 
+@bibdfn{SUSv3}
+The Open Group, @uref{http://www.unix.org/single_unix_specification/,
+, Single UNIX Specification V3}, 2001.
+
 @node Operating System Design References
 @section Operating System Design References
 

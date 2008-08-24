@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ustar.h>
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -66,85 +67,103 @@ fsutil_rm (char **argv)
     PANIC ("%s: delete failed\n", file_name);
 }
 
-/* Copies from the "scratch" disk, hdc or hd1:0 to file ARGV[1]
-   in the file system.
-
-   The current sector on the scratch disk must begin with the
-   string "PUT\0" followed by a 32-bit little-endian integer
-   indicating the file size in bytes.  Subsequent sectors hold
-   the file content.
-
-   The first call to this function will read starting at the
-   beginning of the scratch disk.  Later calls advance across the
-   disk.  This disk position is independent of that used for
-   fsutil_get(), so all `put's should precede all `get's. */
+/* Extracts a ustar-format tar archive from the scratch disk, hdc
+   or hd1:0, into the Pintos file system. */
 void
-fsutil_put (char **argv) 
+fsutil_extract (char **argv UNUSED) 
 {
   static disk_sector_t sector = 0;
 
-  const char *file_name = argv[1];
   struct disk *src;
-  struct file *dst;
-  off_t size;
-  void *buffer;
+  void *header, *data;
 
-  printf ("Putting '%s' into the file system...\n", file_name);
+  /* Allocate buffers. */
+  header = malloc (DISK_SECTOR_SIZE);
+  data = malloc (DISK_SECTOR_SIZE);
+  if (header == NULL || data == NULL)
+    PANIC ("couldn't allocate buffers");
 
-  /* Allocate buffer. */
-  buffer = malloc (DISK_SECTOR_SIZE);
-  if (buffer == NULL)
-    PANIC ("couldn't allocate buffer");
-
-  /* Open source disk and read file size. */
+  /* Open source disk. */
   src = disk_get (1, 0);
   if (src == NULL)
-    PANIC ("couldn't open source disk (hdc or hd1:0)");
+    PANIC ("couldn't open scratch disk (hdc or hd1:0)");
 
-  /* Read file size. */
-  disk_read (src, sector++, buffer);
-  if (memcmp (buffer, "PUT", 4))
-    PANIC ("%s: missing PUT signature on scratch disk", file_name);
-  size = ((int32_t *) buffer)[1];
-  if (size < 0)
-    PANIC ("%s: invalid file size %d", file_name, size);
-  
-  /* Create destination file. */
-  if (!filesys_create (file_name, size))
-    PANIC ("%s: create failed", file_name);
-  dst = filesys_open (file_name);
-  if (dst == NULL)
-    PANIC ("%s: open failed", file_name);
+  printf ("Extracting ustar archive from scratch disk into file system...\n");
 
-  /* Do copy. */
-  while (size > 0)
+  for (;;)
     {
-      int chunk_size = size > DISK_SECTOR_SIZE ? DISK_SECTOR_SIZE : size;
-      disk_read (src, sector++, buffer);
-      if (file_write (dst, buffer, chunk_size) != chunk_size)
-        PANIC ("%s: write failed with %"PROTd" bytes unwritten",
-               file_name, size);
-      size -= chunk_size;
+      const char *file_name;
+      const char *error;
+      enum ustar_type type;
+      int size;
+
+      /* Read and parse ustar header. */
+      disk_read (src, sector++, header);
+      error = ustar_parse_header (header, &file_name, &type, &size);
+      if (error != NULL)
+        PANIC ("bad ustar header in sector %"PRDSNu" (%s)", sector - 1, error);
+
+      if (type == USTAR_EOF)
+        {
+          /* End of archive. */
+          break;
+        }
+      else if (type == USTAR_DIRECTORY)
+        printf ("ignoring directory %s\n", file_name);
+      else if (type == USTAR_REGULAR)
+        {
+          struct file *dst;
+
+          printf ("Putting '%s' into the file system...\n", file_name);
+
+          /* Create destination file. */
+          if (!filesys_create (file_name, size))
+            PANIC ("%s: create failed", file_name);
+          dst = filesys_open (file_name);
+          if (dst == NULL)
+            PANIC ("%s: open failed", file_name);
+
+          /* Do copy. */
+          while (size > 0)
+            {
+              int chunk_size = (size > DISK_SECTOR_SIZE
+                                ? DISK_SECTOR_SIZE
+                                : size);
+              disk_read (src, sector++, data);
+              if (file_write (dst, data, chunk_size) != chunk_size)
+                PANIC ("%s: write failed with %d bytes unwritten",
+                       file_name, size);
+              size -= chunk_size;
+            }
+
+          /* Finish up. */
+          file_close (dst);
+        }
     }
 
-  /* Finish up. */
-  file_close (dst);
-  free (buffer);
+  /* Erase the ustar header from the start of the disk, so that
+     the extraction operation is idempotent.  We erase two blocks
+     because two blocks of zeros are the ustar end-of-archive
+     marker. */
+  printf ("Erasing ustar archive...\n");
+  memset (header, 0, DISK_SECTOR_SIZE);
+  disk_write (src, 0, header);
+  disk_write (src, 1, header);
+
+  free (data);
+  free (header);
 }
 
-/* Copies file FILE_NAME from the file system to the scratch disk.
-
-   The current sector on the scratch disk will receive "GET\0"
-   followed by the file's size in bytes as a 32-bit,
-   little-endian integer.  Subsequent sectors receive the file's
-   data.
+/* Copies file FILE_NAME from the file system to the scratch
+   disk, in ustar format.
 
    The first call to this function will write starting at the
    beginning of the scratch disk.  Later calls advance across the
-   disk.  This disk position is independent of that used for
-   fsutil_put(), so all `put's should precede all `get's. */
+   disk.  This position is independent of that used for
+   fsutil_extract(), so `extract' should precede all
+   `append's. */
 void
-fsutil_get (char **argv)
+fsutil_append (char **argv)
 {
   static disk_sector_t sector = 0;
 
@@ -154,7 +173,7 @@ fsutil_get (char **argv)
   struct disk *dst;
   off_t size;
 
-  printf ("Getting '%s' from the file system...\n", file_name);
+  printf ("Appending '%s' to ustar archive on scratch disk...\n", file_name);
 
   /* Allocate buffer. */
   buffer = malloc (DISK_SECTOR_SIZE);
@@ -172,12 +191,11 @@ fsutil_get (char **argv)
   if (dst == NULL)
     PANIC ("couldn't open target disk (hdc or hd1:0)");
   
-  /* Write size to sector 0. */
-  memset (buffer, 0, DISK_SECTOR_SIZE);
-  memcpy (buffer, "GET", 4);
-  ((int32_t *) buffer)[1] = size;
+  /* Write ustar header to first sector. */
+  if (!ustar_make_header (file_name, USTAR_REGULAR, size, buffer))
+    PANIC ("%s: name too long for ustar format", file_name);
   disk_write (dst, sector++, buffer);
-  
+
   /* Do copy. */
   while (size > 0) 
     {
@@ -190,6 +208,13 @@ fsutil_get (char **argv)
       disk_write (dst, sector++, buffer);
       size -= chunk_size;
     }
+
+  /* Write ustar end-of-archive marker, which is two consecutive
+     sectors full of zeros.  Don't advance our position past
+     them, though, in case we have more files to append. */
+  memset (buffer, 0, DISK_SECTOR_SIZE);
+  disk_write (dst, sector, buffer);
+  disk_write (dst, sector, buffer + 1);
 
   /* Finish up. */
   file_close (src);

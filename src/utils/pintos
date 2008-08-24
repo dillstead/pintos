@@ -252,8 +252,15 @@ sub find_disks {
 
 # Prepare the scratch disk for gets and puts.
 sub prepare_scratch_disk {
-    # Copy the files to put onto the scratch disk.
-    put_scratch_file ($_->[0]) foreach @puts;
+    if (@puts) {
+	# Write ustar header and data for each file.
+	put_scratch_file ($_->[0],
+			  defined $_->[1] ? $_->[1] : $_->[0])
+	  foreach @puts;
+
+	# Write end-of-archive marker.
+	print { $disks{SCRATCH}{HANDLE} } "\0" x 1024;
+    }
 
     # Make sure the scratch disk is big enough to get big files.
     extend_disk ($disks{SCRATCH}, @gets * 1024 * 1024) if @gets;
@@ -272,35 +279,86 @@ sub finish_scratch_disk {
     my ($ok) = 1;
     foreach my $get (@gets) {
 	my ($name) = defined ($get->[1]) ? $get->[1] : $get->[0];
-	$ok &&= get_scratch_file ($name);
-	if (!$ok) {
+	my ($error) = get_scratch_file ($name);
+	if ($error) {
+	    print STDERR "getting $name failed ($error)\n";
 	    die "$name: unlink: $!\n" if !unlink ($name) && !$!{ENOENT};
+	    $ok = 0;
 	}
     }
 }
 
-# put_scratch_file($file).
+# mk_ustar_field($number, $size)
 #
-# Copies $file into the scratch disk.
+# Returns $number in a $size-byte numeric field in the format used by
+# the standard ustar archive header.
+sub mk_ustar_field {
+    my ($number, $size) = @_;
+    my ($len) = $size - 1;
+    my ($out) = sprintf ("%0${len}o", $number) . "\0";
+    die "$number: too large for $size-byte octal ustar field\n"
+      if length ($out) != $size;
+    return $out;
+}
+
+# calc_ustar_chksum($s)
+#
+# Calculates and returns the ustar checksum of 512-byte ustar archive
+# header $s.
+sub calc_ustar_chksum {
+    my ($s) = @_;
+    die if length ($s) != 512;
+    substr ($s, 148, 8, ' ' x 8);
+    return unpack ("%32a*", $s);
+}
+
+# put_scratch_file($src_file_name, $dst_file_name).
+#
+# Copies $src_file_name into the scratch disk for extraction as
+# $dst_file_name.
 sub put_scratch_file {
-    my ($put_file_name) = @_;
+    my ($src_file_name, $dst_file_name) = @_;
     my ($disk_handle, $disk_file_name) = open_disk ($disks{SCRATCH});
 
-    print "Copying $put_file_name into $disk_file_name...\n";
+    print "Copying $src_file_name to scratch partition...\n";
 
-    # Write metadata sector, which consists of a 4-byte signature
-    # followed by the file size.
-    stat $put_file_name or die "$put_file_name: stat: $!\n";
+    # ustar format supports up to 100 characters for a file name, and
+    # even longer names given some common properties, but our code in
+    # the Pintos kernel only supports at most 99 characters.
+    die "$dst_file_name: name too long (max 99 characters)\n"
+      if length ($dst_file_name) > 99;
+
+    # Compose and write ustar header.
+    stat $src_file_name or die "$src_file_name: stat: $!\n";
     my ($size) = -s _;
-    my ($metadata) = pack ("a4 V x504", "PUT\0", $size);
-    write_fully ($disk_handle, $disk_file_name, $metadata);
+    my ($header) = (pack ("a100", $dst_file_name)	# name
+		    . mk_ustar_field (0644, 8)		# mode
+		    . mk_ustar_field (0, 8)		# uid
+		    . mk_ustar_field (0, 8)		# gid
+		    . mk_ustar_field ($size, 12)	# size
+		    . mk_ustar_field (1136102400, 12)	# mtime
+		    . (' ' x 8)				# chksum
+		    . '0'				# typeflag
+		    . ("\0" x 100)			# linkname
+		    . "ustar\0"				# magic
+		    . "00"				# version
+		    . "root" . ("\0" x 28)		# uname
+		    . "root" . ("\0" x 28)		# gname
+		    . "\0" x 8				# devmajor
+		    . "\0" x 8				# devminor
+		    . ("\0" x 155))			# prefix
+                    . "\0" x 12;			# pad to 512 bytes
+    substr ($header, 148, 8) = mk_ustar_field (calc_ustar_chksum ($header), 8);
+    write_fully ($disk_handle, $disk_file_name, $header);
 
     # Copy file data.
     my ($put_handle);
-    sysopen ($put_handle, $put_file_name, O_RDONLY)
-      or die "$put_file_name: open: $!\n";
-    copy_file ($put_handle, $put_file_name, $disk_handle, $disk_file_name,
+    sysopen ($put_handle, $src_file_name, O_RDONLY)
+      or die "$src_file_name: open: $!\n";
+    copy_file ($put_handle, $src_file_name, $disk_handle, $disk_file_name,
 	       $size);
+    die "$src_file_name: changed size while being read\n"
+      if $size != -s $put_handle;
     close ($put_handle);
 
     # Round up disk data to beginning of next sector.
@@ -318,13 +376,27 @@ sub get_scratch_file {
 
     print "Copying $get_file_name out of $disk_file_name...\n";
 
-    # Read metadata sector, which has a 4-byte signature followed by
-    # the file size.
-    my ($metadata) = read_fully ($disk_handle, $disk_file_name, 512);
-    my ($signature, $size) = unpack ("a4 V", $metadata);
-    (print STDERR "bad signature on scratch disk--did Pintos run fail?\n"),
-      return 0
-	if $signature ne "GET\0";
+    # Read ustar header sector.
+    my ($header) = read_fully ($disk_handle, $disk_file_name, 512);
+    return "scratch disk tar archive ends unexpectedly"
+      if $header eq ("\0" x 512);
+
+    # Verify magic numbers.
+    return "corrupt ustar signature" if substr ($header, 257, 6) ne "ustar\0";
+    return "invalid ustar version" if substr ($header, 263, 2) ne '00';
+
+    # Verify checksum.
+    my ($chksum) = oct (unpack ("Z*", substr ($header, 148, 8)));
+    my ($correct_chksum) = calc_ustar_chksum ($header);
+    return "checksum mismatch" if $chksum != $correct_chksum;
+
+    # Get type.
+    my ($typeflag) = substr ($header, 156, 1);
+    return "not a regular file" if $typeflag ne '0' && $typeflag ne "\0";
+
+    # Get size.
+    my ($size) = oct (unpack ("Z*", substr ($header, 124, 12)));
+    return "bad size $size\n" if $size < 0;
 
     # Copy file data.
     my ($get_handle);
@@ -338,7 +410,7 @@ sub get_scratch_file {
     read_fully ($disk_handle, $disk_file_name, 512 - $size % 512)
       if $size % 512;
 
-    return 1;
+    return 0;
 }
 
 # Prepares the arguments to pass to the Pintos kernel,
@@ -347,9 +419,9 @@ sub prepare_arguments {
     my (@args);
     push (@args, shift (@kernel_args))
       while @kernel_args && $kernel_args[0] =~ /^-/;
-    push (@args, 'put', defined $_->[1] ? $_->[1] : $_->[0]) foreach @puts;
+    push (@args, 'extract') if @puts;
     push (@args, @kernel_args);
-    push (@args, 'get', $_->[0]) foreach @gets;
+    push (@args, 'append', $_->[0]) foreach @gets;
     write_cmd_line ($disks{OS}, @args);
 }
 

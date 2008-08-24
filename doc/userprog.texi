@@ -204,7 +204,7 @@ commands for copying files out of a VM are similar, but substitute
 @option{-g} for @option{-p}.
 
 Incidentally, these commands work by passing special commands
-@command{put} and @command{get} on the kernel's command line and copying
+@command{extract} and @command{append} on the kernel's command line and copying
 to and from a special simulated ``scratch'' disk.  If you're very
 curious, you can look at the @command{pintos} script as well as
 @file{filesys/fsutil.c} to learn the implementation details.
