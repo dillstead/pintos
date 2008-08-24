@@ -50,6 +50,9 @@ static bool format_filesys;
 /* -q: Power off after kernel tasks complete? */
 bool power_off_when_done;
 
+/* -r: Reboot after kernel tasks complete? */
+static bool reboot_when_done;
+
 static void ram_init (void);
 static void paging_init (void);
 
@@ -122,6 +125,9 @@ main (void)
   run_actions (argv);
 
   /* Finish up. */
+  if (reboot_when_done)
+    reboot ();
+
   if (power_off_when_done)
     power_off ();
   thread_exit ();
@@ -237,6 +243,8 @@ parse_options (char **argv)
         usage ();
       else if (!strcmp (name, "-q"))
         power_off_when_done = true;
+      else if (!strcmp (name, "-r"))
+        reboot_when_done = true;
 #ifdef FILESYS
       else if (!strcmp (name, "-f"))
         format_filesys = true;
@@ -357,6 +365,7 @@ usage (void)
           "\nOptions:\n"
           "  -h                 Print this help message and power off.\n"
           "  -q                 Power off VM after actions or on panic.\n"
+          "  -r                 Reboot after actions.\n"
           "  -f                 Format file system disk during startup.\n"
           "  -rs=SEED           Set random number seed to SEED.\n"
           "  -mlfqs             Use multi-level feedback queue scheduler.\n"
@@ -367,6 +376,37 @@ usage (void)
   power_off ();
 }
 
+
+/* Reboots the machine we're running on. */
+void
+reboot (void)
+{
+    int i;
+
+    printf ("Rebooting...\n");
+
+    /* based on reboot.c code by Osamu Tomita <tomita@cinet.co.jp>
+     * See http://www.win.tue.nl/~aeb/linux/kbd/scancodes-11.html */
+    for (i = 0; i < 100; i++) {
+        int j;
+
+        /* Poll keyboard controller's status byte until 
+         * 'input buffer empty' is reported, so it's ok to write */
+        for (j = 0; j < 0x10000; j++) 
+          {
+            if ((inb (0x64) & 0x02) == 0)   
+              break;
+            timer_usleep (2);
+          }
+
+        timer_usleep (50);
+
+        /* Pulse bit 0 of the output port P2 of the keyboard controller. 
+         * This will reset the CPU. */
+        outb (0x64, 0xfe);
+        timer_usleep (50);
+    }
+}
 
 /* Powers down the machine we're running on,
    as long as we're running on Bochs or QEMU. */
