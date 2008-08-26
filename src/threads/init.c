@@ -396,15 +396,15 @@ reboot (void)
           {
             if ((inb (0x64) & 0x02) == 0)   
               break;
-            timer_usleep (2);
+            timer_udelay (2);
           }
 
-        timer_usleep (50);
+        timer_udelay (50);
 
         /* Pulse bit 0 of the output port P2 of the keyboard controller. 
          * This will reset the CPU. */
         outb (0x64, 0xfe);
-        timer_usleep (50);
+        timer_udelay (50);
     }
 }
 
