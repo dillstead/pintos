@@ -472,7 +472,7 @@ sub run_bochs {
     # Write bochsrc.txt configuration file.
     open (BOCHSRC, ">", "bochsrc.txt") or die "bochsrc.txt: create: $!\n";
     print BOCHSRC <<EOF;
-romimage: file=\$BXSHARE/BIOS-bochs-latest, address=0xf0000
+romimage: file=\$BXSHARE/BIOS-bochs-latest
 vgaromimage: file=\$BXSHARE/VGABIOS-lgpl-latest
 boot: disk
 cpu: ips=1000000
