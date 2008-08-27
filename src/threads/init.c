@@ -376,35 +376,38 @@ usage (void)
   power_off ();
 }
 
+/* Keyboard control register port. */
+#define CONTROL_REG 0x64
 
-/* Reboots the machine we're running on. */
+/* Reboots the machine via the keyboard controller. */
 void
 reboot (void)
 {
-    int i;
+  int i;
 
-    printf ("Rebooting...\n");
+  printf ("Rebooting...\n");
 
-    /* based on reboot.c code by Osamu Tomita <tomita@cinet.co.jp>
-     * See http://www.win.tue.nl/~aeb/linux/kbd/scancodes-11.html */
-    for (i = 0; i < 100; i++) {
-        int j;
+    /* See [kbd] for details on how to program the keyboard
+     * controller. */
+  for (i = 0; i < 100; i++) 
+    {
+      int j;
 
-        /* Poll keyboard controller's status byte until 
-         * 'input buffer empty' is reported, so it's ok to write */
-        for (j = 0; j < 0x10000; j++) 
-          {
-            if ((inb (0x64) & 0x02) == 0)   
-              break;
-            timer_udelay (2);
-          }
+      /* Poll keyboard controller's status byte until 
+       * 'input buffer empty' is reported. */
+      for (j = 0; j < 0x10000; j++) 
+        {
+          if ((inb (CONTROL_REG) & 0x02) == 0)   
+            break;
+          timer_udelay (2);
+        }
 
-        timer_udelay (50);
+      timer_udelay (50);
 
-        /* Pulse bit 0 of the output port P2 of the keyboard controller. 
-         * This will reset the CPU. */
-        outb (0x64, 0xfe);
-        timer_udelay (50);
+      /* Pulse bit 0 of the output port P2 of the keyboard controller. 
+       * This will reset the CPU. */
+      outb (CONTROL_REG, 0xfe);
+      timer_udelay (50);
     }
 }
 
