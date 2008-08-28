@@ -173,6 +173,7 @@ start:
 	mov %ax, %gs
 	mov %ax, %ss
 	addl $LOADER_PHYS_BASE, %esp
+    movl $0, %ebp
 
 #### Call main().
 
