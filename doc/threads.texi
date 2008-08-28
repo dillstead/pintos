@@ -121,7 +121,7 @@ this code or modify it.
 @item start.S
 Does basic setup needed for memory protection and 32-bit
 operation on 80@var{x}86 CPUs.  Unlike the loader, this code is
-actually part of the kernel.  @xref{Low-Level Kernel Initialization},
+actually part of the kernel.  @xref{Kernel Initialization},
 for details.
 
 @item kernel.lds.S
@@ -136,7 +136,7 @@ or modify it, but it's here in case you're curious.
 Kernel initialization, including @func{main}, the kernel's ``main
 program.''  You should look over @func{main} at least to see what
 gets initialized.  You might want to add your own initialization code
-here.  @xref{High-Level Kernel Initialization}, for details.
+here.  @xref{Kernel Initialization}, for details.
 
 @item thread.c
 @itemx thread.h

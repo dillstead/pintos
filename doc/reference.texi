@@ -29,8 +29,7 @@ initialization.
 
 @menu
 * Pintos Loader::               
-* Low-Level Kernel Initialization::
-* High-Level Kernel Initialization::
+* Kernel Initialization::
 * Physical Memory Map::
 @end menu
 
