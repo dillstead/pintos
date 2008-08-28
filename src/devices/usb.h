@@ -185,6 +185,7 @@ struct usb_setup_pkt
 #pragma pack()
 
 void usb_init (void);
+void usb_storage_init (void);
 
 void usb_register_host (struct usb_host *, host_info info);
 int usb_unregister_host (struct usb_host *, host_info info);

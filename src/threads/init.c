@@ -59,6 +59,9 @@ static const char *swap_bdev_name;
 /* -q: Power off after kernel tasks complete? */
 bool power_off_when_done;
 
+/* -r: Reboot after kernel tasks complete? */
+static bool reboot_when_done;
+
 static void bss_init (void);
 static void paging_init (void);
 static void pci_zone_init (void);
@@ -141,6 +144,9 @@ main (void)
   run_actions (argv);
 
   /* Finish up. */
+  if (reboot_when_done)
+    reboot ();
+ 
   if (power_off_when_done)
     power_off ();
   thread_exit ();
@@ -268,6 +274,8 @@ parse_options (char **argv)
         usage ();
       else if (!strcmp (name, "-q"))
         power_off_when_done = true;
+      else if (!strcmp (name, "-r"))
+        reboot_when_done = true;
 #ifdef FILESYS
       else if (!strcmp (name, "-f"))
         format_filesys = true;
@@ -391,11 +399,12 @@ usage (void)
           "  rm FILE            Delete FILE.\n"
           "Use these actions indirectly via `pintos' -g and -p options:\n"
           "  extract            Untar from scratch disk into file system.\n"
-          "  get FILE           Get FILE from file system into scratch disk.\n"
+          "  append FILE        Append FILE to tar file on scratch disk.\n"
 #endif
           "\nOptions:\n"
           "  -h                 Print this help message and power off.\n"
           "  -q                 Power off VM after actions or on panic.\n"
+          "  -r                 Reboot after actions.\n"
 #ifdef FILESYS
           "  -f                 Format file system disk during startup.\n"
           "  -filesys=BDEV      Use BDEV for file system instead of default.\n"
@@ -454,6 +463,41 @@ locate_block_device (enum block_type role, const char *name)
     }
 }
 #endif
+
+/* Keyboard control register port. */
+#define CONTROL_REG 0x64
+
+/* Reboots the machine via the keyboard controller. */
+void
+reboot (void)
+{
+  int i;
+
+  printf ("Rebooting...\n");
+
+    /* See [kbd] for details on how to program the keyboard
+     * controller. */
+  for (i = 0; i < 100; i++) 
+    {
+      int j;
+
+      /* Poll keyboard controller's status byte until 
+       * 'input buffer empty' is reported. */
+      for (j = 0; j < 0x10000; j++) 
+        {
+          if ((inb (CONTROL_REG) & 0x02) == 0)   
+            break;
+          timer_udelay (2);
+        }
+
+      timer_udelay (50);
+
+      /* Pulse bit 0 of the output port P2 of the keyboard controller. 
+       * This will reset the CPU. */
+      outb (CONTROL_REG, 0xfe);
+      timer_udelay (50);
+    }
+}
 
 /* Powers down the machine we're running on,
    as long as we're running on Bochs or QEMU. */

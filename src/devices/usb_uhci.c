@@ -225,7 +225,7 @@ static void qh_free (struct uhci_info *ui, struct queue_head *qh);
 static struct queue_head *qh_alloc (struct uhci_info *ui);
 
 static struct uhci_info *uhci_create_info (struct pci_io *io);
-static void uhci_destroy_info (struct uhci_info *ui);
+static void uhci_destroy_info (struct uhci_info *ui) UNUSED;
 static host_eop_info uhci_create_eop (host_dev_info hd, int eop, int maxpkt);
 static void uhci_remove_eop (host_eop_info hei);
 static host_dev_info uhci_create_chan (host_info hi, int dev_addr, int ver);
@@ -253,7 +253,7 @@ static void uhci_irq (void *uhci_data);
 static void uhci_detect_ports (struct uhci_info *ui);
 
 static int uhci_remove_stalled (struct uhci_info *ui);
-static void uhci_stall_watchdog (struct uhci_info *ui);
+static void uhci_stall_watchdog (struct uhci_info *ui) UNUSED;
 
 static void dump_all_qh (struct uhci_info *ui);
 static void dump_qh (struct queue_head *qh);
@@ -261,7 +261,6 @@ static void dump_qh (struct queue_head *qh);
 static void dump_regs (struct uhci_info *ui);
 
 void uhci_init (void);
-
 
 static struct usb_host uhci_host = {
   .name = "UHCI",
@@ -433,7 +432,6 @@ dump_regs (struct uhci_info *ui)
     }
 }
 
-
 static void
 uhci_destroy_info (struct uhci_info *ui)
 {
@@ -586,7 +584,7 @@ token_to_pid (int token)
 
 static void
 uhci_setup_td (struct tx_descriptor *td, int dev_addr, int token,
-	       int eop, void *pkt, int sz, int toggle, bool ls)
+	       int eop, void *pkt, int sz, int toggle, bool ls UNUSED)
 {
   td->buf_ptr = (sz == 0) ? 0 : vtop (pkt);
 
@@ -643,7 +641,6 @@ uhci_tx_pkt_wait (struct uhci_eop_info *ue, int token, void *pkt,
   struct usb_wait w;
   int err;
   struct uhci_dev_info *ud;
-  int n;
 
   ud = ue->ud;
 

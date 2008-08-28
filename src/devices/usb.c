@@ -260,7 +260,8 @@ usb_configure_default (struct host *h)
   host_dev_info hi;
   host_eop_info cfg_eop;
   bool ignore_device = false;
-  int err, sz, txed;
+  int err, sz; 
+  unsigned txed;
   int config_val;
 
   hi = h->dev->create_dev_channel (h->info, ADDR_DEFAULT, USB_VERSION_1_1);
@@ -431,7 +432,7 @@ usb_load_config (struct usb_dev *dev, int idx, void *data, int dsz)
 
   sz = usb_tx_all (&dev->cfg_eop, cd, dsz,
 		   sizeof (struct config_descriptor), true);
-  if (sz < sizeof (struct config_descriptor))
+  if (sz < (int) sizeof (struct config_descriptor))
     {
       printf ("USB: Did not rx GET descriptor (%d bytes, expected %d)\n", sz,
 	      sizeof (struct config_descriptor));

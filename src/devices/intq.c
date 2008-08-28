@@ -32,9 +32,8 @@ intq_full (const struct intq *q)
 }
 
 /* Removes a byte from Q and returns it.
-   Q must not be empty if called from an interrupt handler.
-   Otherwise, if Q is empty, first sleeps until a byte is
-   added. */
+   If Q is empty, sleeps until a byte is added.
+   When called from an interrupt handler, Q must not be empty. */
 uint8_t
 intq_getc (struct intq *q) 
 {
@@ -56,9 +55,8 @@ intq_getc (struct intq *q)
 }
 
 /* Adds BYTE to the end of Q.
-   Q must not be full if called from an interrupt handler.
-   Otherwise, if Q is full, first sleeps until a byte is
-   removed. */
+   If Q is full, sleeps until a byte is removed.
+   When called from an interrupt handler, Q must not be full. */
 void
 intq_putc (struct intq *q, uint8_t byte) 
 {

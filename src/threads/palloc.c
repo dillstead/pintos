@@ -42,7 +42,6 @@ size_t user_page_limit = SIZE_MAX;
 static void init_pool (struct pool *, void *base, size_t page_cnt,
                        const char *name);
 static bool page_from_pool (const struct pool *, void *page);
-static void page_set_cache(void* page, bool enable_cache);
 
 /* Initializes the page allocator. */
 void

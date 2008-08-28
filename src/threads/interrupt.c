@@ -20,6 +20,14 @@
 #define IRQ_CASCADE0   2
 #define IRQ_CASCADE1   9
 
+/* Programmable Interrupt Controller (PIC) registers.
+   A PC has two PICs, called the master and slave PICs, with the
+   slave attached ("cascaded") to the master IRQ line 2. */
+#define PIC0_CTRL	0x20    /* Master PIC control register address. */
+#define PIC0_DATA	0x21    /* Master PIC data register address. */
+#define PIC1_CTRL	0xa0    /* Slave PIC control register address. */
+#define PIC1_DATA	0xa1    /* Slave PIC data register address. */
+
 /* Number of x86 interrupts. */
 #define INTR_CNT 256
 
