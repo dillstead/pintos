@@ -597,8 +597,12 @@ usb_get_string (struct usb_dev *udev, int ndx)
   sp.value = (SETUP_DESC_STRING << 8) | ndx;
   sp.index = 0;
   sp.length = MAX_USB_STR;
-  udev->host->dev->tx_pkt (udev->h_cfg_eop, USB_TOKEN_SETUP,
-			   &sp, 0, sizeof (sp), NULL, false);
+
+  if (udev->host->dev->tx_pkt (udev->h_cfg_eop, USB_TOKEN_SETUP,
+			       &sp, 0, sizeof (sp), NULL, true) 
+                           != USB_HOST_ERR_NONE) 
+    return NULL;
+
   sz = usb_tx_all (&udev->cfg_eop, &str, MAX_USB_STR, 2, true);
   sz +=
     usb_tx_all (&udev->cfg_eop, str + sz, (uint8_t) (str[0]) - sz, 0, true);
