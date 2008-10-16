@@ -259,7 +259,8 @@ sub prepare_scratch_disk {
 	  foreach @puts;
 
 	# Write end-of-archive marker.
-	print { $disks{SCRATCH}{HANDLE} } "\0" x 1024;
+	write_fully ($disks{SCRATCH}{HANDLE}, $disks{SCRATCH}{FILE_NAME},
+		     "\0" x 1024);
     }
 
     # Make sure the scratch disk is big enough to get big files.
