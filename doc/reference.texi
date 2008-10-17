@@ -325,6 +325,13 @@ Pintos as provided ignores thread priorities, but you will implement
 priority scheduling in project 1 (@pxref{Priority Scheduling}).
 @end deftypecv
 
+@deftypecv {Member} {@struct{thread}} {@struct{list_elem}} allelem
+This ``list element'' is used to link the thread into the list of all
+threads.  Each thread is inserted into this list when it is created
+and removed when it exits.  The @func{thread_foreach} function should 
+be used to iterate over all threads.
+@end deftypecv
+
 @deftypecv {Member} {@struct{thread}} {@struct{list_elem}} elem
 A ``list element'' used to put the thread into doubly linked lists,
 either @code{ready_list} (the list of threads ready to run) or a list of
@@ -444,6 +451,16 @@ Yields the CPU to the scheduler, which picks a new thread to run.  The
 new thread might be the current thread, so you can't depend on this
 function to keep this thread from running for any particular length of
 time.
+@end deftypefun
+
+@deftypefun void thread_foreach (thread_action_func *@var{action}, void *@var{aux})
+Iterates over all threads @var{t} and invokes @code{action(t, aux)} on each.
+@var{action} must refer to a function that matches the signature 
+given by @func{thread_action_func}:
+
+@deftp {Type} {void thread_action_func (struct thread *@var{thread}, void *@var{aux})}
+Performs some action on a thread, given @var{aux}.
+@end deftp
 @end deftypefun
 
 @deftypefun int thread_get_priority (void)

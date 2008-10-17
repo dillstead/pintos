@@ -99,6 +99,8 @@ of how your program got where it is, as a list of addresses inside the
 functions that were running at the time of the panic.  You can also
 insert a call to @func{debug_backtrace}, prototyped in
 @file{<debug.h>}, to print a backtrace at any point in your code.
+@func{debug_backtrace_all}, also declared in @file{<debug.h>}, 
+prints backtraces of all threads.
 
 The addresses in a backtrace are listed as raw hexadecimal numbers,
 which are difficult to interpret.  We provide a tool called
