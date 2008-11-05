@@ -639,8 +639,8 @@ following conditions is true:
 @item
 @var{pid} does not refer to a direct child of the calling process.
 @var{pid} is a direct child of the calling process if and
-only if the calling process received @var{pid} as a return value 
-from a successful call to @code{exec}.  
+only if the calling process received @var{pid} as a return value
+from a successful call to @code{exec}.
 
 Note that children are not inherited: if @var{A} spawns child @var{B}
 and @var{B} spawns child process @var{C}, then @var{A} cannot wait for
@@ -650,11 +650,11 @@ a new parent if their parent process exits before they do.
 
 @item
 The process that calls @code{wait} has already called @code{wait} on
-@var{pid}.  That is, a process may wait for any given child at most 
+@var{pid}.  That is, a process may wait for any given child at most
 once.
 @end itemize
 
-Processes may spawn any number of children, wait for them in any order, 
+Processes may spawn any number of children, wait for them in any order,
 and may even exit without having waited for some or all of their children.
 Your design should consider all the ways in which waits can occur.
 All of a process's resources, including its @struct{thread}, must be
