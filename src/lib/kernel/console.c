@@ -37,17 +37,17 @@ static bool use_console_lock;
 
    lock_console()
    vprintf()
-   printf()             - palloc() tries to grab the lock again
+   printf()               - palloc() tries to grab the lock again
    palloc_free()        
-   schedule_tail()      - another thread dying as we switch threads
+   thread_schedule_tail() - another thread dying as we switch threads
    schedule()
    thread_yield()
-   intr_handler()       - timer interrupt
+   intr_handler()         - timer interrupt
    intr_set_level()
    serial_putc()
    putchar_have_lock()
    putbuf()
-   sys_write()          - one process writing to the console
+   sys_write()            - one process writing to the console
    syscall_handler()
    intr_handler()
 

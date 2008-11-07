@@ -42,7 +42,7 @@
        not in use, so we can always use that.  Thus, when the
        scheduler switches threads, it also changes the TSS's
        stack pointer to point to the new thread's kernel stack.
-       (The call is in schedule_tail() in thread.c.)
+       (The call is in thread_schedule_tail() in thread.c.)
 
    See [IA32-v3a] 6.2.1 "Task-State Segment (TSS)" for a
    description of the TSS.  See [IA32-v3a] 5.12.1 "Exception- or

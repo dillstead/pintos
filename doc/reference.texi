@@ -501,7 +501,7 @@ CPU's current stack pointer in the current @struct{thread}'s @code{stack}
 member, restores the new thread's @code{stack} into the CPU's stack
 pointer, restores registers from the stack, and returns.
 
-The rest of the scheduler is implemented in @func{schedule_tail}.  It
+The rest of the scheduler is implemented in @func{thread_schedule_tail}.  It
 marks the new thread as running.  If the thread we just switched from
 is in the dying state, then it also frees the page that contained the
 dying thread's @struct{thread} and stack.  These couldn't be freed
@@ -530,8 +530,8 @@ pointer,@footnote{This is because @func{switch_threads} takes
 arguments on the stack and the 80@var{x}86 SVR4 calling convention
 requires the caller, not the called function, to remove them when the
 call is complete.  See @bibref{SysV-i386} chapter 3 for details.}
-calls @func{schedule_tail} (this special case is why
-@func{schedule_tail} is separate from @func{schedule}), and returns.
+calls @func{thread_schedule_tail} (this special case is why
+@func{thread_schedule_tail} is separate from @func{schedule}), and returns.
 We fill in its stack frame so that it returns into
 @func{kernel_thread}, a function in @file{threads/thread.c}.
 
