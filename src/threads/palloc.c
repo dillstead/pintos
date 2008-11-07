@@ -35,7 +35,7 @@ struct pool
   };
 
 /* Two pools: one for kernel data, one for user pages. */
-struct pool kernel_pool, user_pool;
+static struct pool kernel_pool, user_pool;
 
 /* Maximum number of pages to put in user pool. */
 size_t user_page_limit = SIZE_MAX;
