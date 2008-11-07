@@ -53,6 +53,9 @@ bool power_off_when_done;
 /* -r: Reboot after kernel tasks complete? */
 static bool reboot_when_done;
 
+/* -ul: Maximum number of pages to put into palloc's user pool. */
+static size_t user_page_limit = SIZE_MAX;
+
 static void ram_init (void);
 static void paging_init (void);
 
@@ -88,7 +91,7 @@ main (void)
   printf ("Pintos booting with %'zu kB RAM...\n", ram_pages * PGSIZE / 1024);
 
   /* Initialize memory system. */
-  palloc_init ();
+  palloc_init (user_page_limit);
   malloc_init ();
   paging_init ();
 

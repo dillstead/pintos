@@ -11,10 +11,7 @@ enum palloc_flags
     PAL_USER = 004              /* User page. */
   };
 
-/* Maximum number of pages to put in user pool. */
-extern size_t user_page_limit;
-
-void palloc_init (void);
+void palloc_init (size_t user_page_limit);
 void *palloc_get_page (enum palloc_flags);
 void *palloc_get_multiple (enum palloc_flags, size_t page_cnt);
 void palloc_free_page (void *);

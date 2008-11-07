@@ -37,16 +37,14 @@ struct pool
 /* Two pools: one for kernel data, one for user pages. */
 static struct pool kernel_pool, user_pool;
 
-/* Maximum number of pages to put in user pool. */
-size_t user_page_limit = SIZE_MAX;
-
 static void init_pool (struct pool *, void *base, size_t page_cnt,
                        const char *name);
 static bool page_from_pool (const struct pool *, void *page);
 
-/* Initializes the page allocator. */
+/* Initializes the page allocator.  At most USER_PAGE_LIMIT
+   pages are put into the user pool. */
 void
-palloc_init (void) 
+palloc_init (size_t user_page_limit)
 {
   /* End of the kernel as recorded by the linker.
      See kernel.lds.S. */
