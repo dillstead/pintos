@@ -111,7 +111,6 @@ intr_stubs:
    or `REAL', if the CPU pushes an error code for us. */
 #define STUB(NUMBER, TYPE)                      \
 	.text;                                  \
-.globl intr##NUMBER##_stub;                     \
 .func intr##NUMBER##_stub;			\
 intr##NUMBER##_stub:                            \
 	TYPE;                                   \
