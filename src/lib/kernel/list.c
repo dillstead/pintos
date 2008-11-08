@@ -222,21 +222,13 @@ list_push_back (struct list *list, struct list_elem *elem)
 /* Removes ELEM from its list and returns the element that
    followed it.  Undefined behavior if ELEM is not in a list.
 
-   It's not safe to treat ELEM as an element in a list after
-   removing it.  In particular, using list_next() or list_prev()
-   on ELEM after removal yields undefined behavior.  This means
-   that a naive loop to remove the elements in a list will fail:
+   A list element must be treated very carefully after removing
+   it from its list.  Calling list_next() or list_prev() on ELEM
+   will return the item that was previously before or after ELEM,
+   but, e.g., list_prev(list_next(ELEM)) is no longer ELEM!
 
-   ** DON'T DO THIS **
-   for (e = list_begin (&list); e != list_end (&list); e = list_next (e))
-     {
-       ...do something with e...
-       list_remove (e);
-     }
-   ** DON'T DO THIS **
-
-   Here is one correct way to iterate and remove elements from a
-   list:
+   The list_remove() return value provides a convenient way to
+   iterate and remove elements from a list:
 
    for (e = list_begin (&list); e != list_end (&list); e = list_remove (e))
      {
