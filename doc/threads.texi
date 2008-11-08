@@ -770,6 +770,28 @@ becomes the higher of the newly set priority or the highest donated
 priority.  When the donations are released, the thread's priority
 becomes the one set through the function call.  This behavior is checked
 by the @code{priority-donate-lower} test.
+
+@item Doubled test names in output make them fail.
+
+Suppose you are seeing output in which some test names are doubled,
+like this:
+
+@example
+(alarm-priority) begin
+(alarm-priority) (alarm-priority) Thread priority 30 woke up.
+Thread priority 29 woke up.
+(alarm-priority) Thread priority 28 woke up.
+@end example
+
+What is happening is that output from two threads is being
+interleaved.  That is, one thread is printing @code{"(alarm-priority)
+Thread priority 29 woke up.\n"} and another thread is printing
+@code{"(alarm-priority) Thread priority 30 woke up.\n"}, but the first
+thread is being interrupted by the second in the middle of its output.
+
+This problem indicates a bug in your priority scheduler.  After all, a
+thread with priority 29 should not be able to run while a thread with
+priority 30 has work to do.
 @end table
 
 @node Advanced Scheduler FAQ
