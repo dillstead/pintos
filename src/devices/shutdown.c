@@ -23,19 +23,17 @@ static void print_stats (void);
 void
 shutdown_reboot (void)
 {
-  int i;
-
   printf ("Rebooting...\n");
 
     /* See [kbd] for details on how to program the keyboard
      * controller. */
-  for (i = 0; i < 100; i++)
+  for (;;)
     {
-      int j;
+      int i;
 
       /* Poll keyboard controller's status byte until
        * 'input buffer empty' is reported. */
-      for (j = 0; j < 0x10000; j++)
+      for (i = 0; i < 0x10000; i++)
         {
           if ((inb (CONTROL_REG) & 0x02) == 0)
             break;
