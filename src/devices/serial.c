@@ -69,7 +69,7 @@ init_poll (void)
   ASSERT (mode == UNINIT);
   outb (IER_REG, 0);                    /* Turn off all interrupts. */
   outb (FCR_REG, 0);                    /* Disable FIFO. */
-  set_serial (115200);                  /* 115.2 kbps, N-8-1. */
+  set_serial (9600);                    /* 9.6 kbps, N-8-1. */
   outb (MCR_REG, MCR_OUT2);             /* Required to enable interrupts. */
   intq_init (&txq);
   mode = POLL;
