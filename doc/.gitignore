@@ -9,6 +9,9 @@
 *.toc
 *.tp
 *.vr
+/pintos.fns
+/pintos.tps
+/pintos.vrs
 mlfqs1.pdf
 mlfqs1.png
 mlfqs2.pdf
