@@ -52,7 +52,7 @@ palloc_init (size_t user_page_limit)
 
   /* Free memory. */
   uint8_t *free_start = pg_round_up (&_end);
-  uint8_t *free_end = ptov (ram_pages * PGSIZE);
+  uint8_t *free_end = ptov (init_ram_pages * PGSIZE);
   size_t free_pages = (free_end - free_start) / PGSIZE;
   size_t user_pages = free_pages / 2;
   size_t kernel_pages;

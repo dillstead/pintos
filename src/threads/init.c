@@ -38,7 +38,7 @@
 #endif
 
 /* Amount of physical memory, in 4 kB pages. */
-size_t ram_pages;
+size_t init_ram_pages;
 
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
@@ -80,7 +80,8 @@ main (void)
   console_init ();  
 
   /* Greet user. */
-  printf ("Pintos booting with %'zu kB RAM...\n", ram_pages * PGSIZE / 1024);
+  printf ("Pintos booting with %'zu kB RAM...\n",
+          init_ram_pages * PGSIZE / 1024);
 
   /* Initialize memory system. */
   palloc_init (user_page_limit);
@@ -138,7 +139,7 @@ ram_init (void)
   memset (&_start_bss, 0, &_end_bss - &_start_bss);
 
   /* Get RAM size from loader.  See loader.S. */
-  ram_pages = *(uint32_t *) ptov (LOADER_RAM_PGS);
+  init_ram_pages = *(uint32_t *) ptov (LOADER_RAM_PGS);
 }
 
 /* Populates the base page directory and page table with the
@@ -159,7 +160,7 @@ paging_init (void)
 
   pd = init_page_dir = palloc_get_page (PAL_ASSERT | PAL_ZERO);
   pt = NULL;
-  for (page = 0; page < ram_pages; page++)
+  for (page = 0; page < init_ram_pages; page++)
     {
       uintptr_t paddr = page * PGSIZE;
       char *vaddr = ptov (paddr);

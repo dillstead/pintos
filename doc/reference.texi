@@ -133,7 +133,7 @@ initializer, that variable goes into the BSS.  Because it's all zeros, the
 BSS isn't stored in the image that the loader brought into memory.  We
 just use @func{memset} to zero it out.  The other task of
 @func{ram_init} is to read out the machine's memory size from where
-the loader stored it and put it into the @code{ram_pages} variable for
+the loader stored it and put it into the @code{init_ram_pages} variable for
 later use.
 
 Next, @func{main} calls @func{read_command_line} to break the kernel command
