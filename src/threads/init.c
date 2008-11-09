@@ -11,6 +11,7 @@
 #include "devices/kbd.h"
 #include "devices/input.h"
 #include "devices/serial.h"
+#include "devices/shutdown.h"
 #include "devices/timer.h"
 #include "devices/vga.h"
 #include "devices/rtc.h"
@@ -63,9 +64,6 @@ static char **read_command_line (void);
 static char **parse_options (char **argv);
 static void run_actions (char **argv);
 static void usage (void);
-
-static void print_stats (void);
-
 
 int main (void) NO_RETURN;
 
@@ -129,10 +127,10 @@ main (void)
 
   /* Finish up. */
   if (reboot_when_done)
-    reboot ();
+    shutdown_reboot ();
 
   if (power_off_when_done)
-    power_off ();
+    shutdown_power_off ();
   thread_exit ();
 }
 
@@ -376,80 +374,5 @@ usage (void)
           "  -ul=COUNT          Limit user memory to COUNT pages.\n"
 #endif
           );
-  power_off ();
-}
-
-/* Keyboard control register port. */
-#define CONTROL_REG 0x64
-
-/* Reboots the machine via the keyboard controller. */
-void
-reboot (void)
-{
-  int i;
-
-  printf ("Rebooting...\n");
-
-    /* See [kbd] for details on how to program the keyboard
-     * controller. */
-  for (i = 0; i < 100; i++) 
-    {
-      int j;
-
-      /* Poll keyboard controller's status byte until 
-       * 'input buffer empty' is reported. */
-      for (j = 0; j < 0x10000; j++) 
-        {
-          if ((inb (CONTROL_REG) & 0x02) == 0)   
-            break;
-          timer_udelay (2);
-        }
-
-      timer_udelay (50);
-
-      /* Pulse bit 0 of the output port P2 of the keyboard controller. 
-       * This will reset the CPU. */
-      outb (CONTROL_REG, 0xfe);
-      timer_udelay (50);
-    }
-}
-
-/* Powers down the machine we're running on,
-   as long as we're running on Bochs or QEMU. */
-void
-power_off (void) 
-{
-  const char s[] = "Shutdown";
-  const char *p;
-
-#ifdef FILESYS
-  filesys_done ();
-#endif
-
-  print_stats ();
-
-  printf ("Powering off...\n");
-  serial_flush ();
-
-  for (p = s; *p != '\0'; p++)
-    outb (0x8900, *p);
-  asm volatile ("cli; hlt" : : : "memory");
-  printf ("still running...\n");
-  for (;;);
-}
-
-/* Print statistics about Pintos execution. */
-static void
-print_stats (void) 
-{
-  timer_print_stats ();
-  thread_print_stats ();
-#ifdef FILESYS
-  disk_print_stats ();
-#endif
-  console_print_stats ();
-  kbd_print_stats ();
-#ifdef USERPROG
-  exception_print_stats ();
-#endif
+  shutdown_power_off ();
 }
