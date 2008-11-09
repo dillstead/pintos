@@ -8,6 +8,9 @@
 	
 .globl start
 .func start
+	# Terminate the backtrace that debug_backtrace() would output.
+	movl $0, %ebp
+
 	# Call main.
 start:	call main
 
