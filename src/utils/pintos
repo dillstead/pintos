@@ -480,6 +480,7 @@ cpu: ips=1000000
 megs: $mem
 log: bochsout.txt
 panic: action=fatal
+user_shortcut: keys=ctrlaltdel
 EOF
     print BOCHSRC "gdbstub: enabled=1\n" if $debug eq 'gdb';
     if ($realtime) {
