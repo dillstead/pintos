@@ -17,7 +17,40 @@
 /* Keyboard control register port. */
 #define CONTROL_REG 0x64
 
+/* How to shut down when shutdown() is called. */
+static enum shutdown_type how = SHUTDOWN_NONE;
+
 static void print_stats (void);
+
+/* Shuts down the machine in the way configured by
+   shutdown_configure().  If the shutdown type is SHUTDOWN_NONE
+   (which is the default), returns without doing anything. */
+void
+shutdown (void)
+{
+  switch (how)
+    {
+    case SHUTDOWN_POWER_OFF:
+      shutdown_power_off ();
+      break;
+
+    case SHUTDOWN_REBOOT:
+      shutdown_reboot ();
+      break;
+
+    default:
+      /* Nothing to do. */
+      break;
+    }
+}
+
+/* Sets TYPE as the way that machine will shut down when Pintos
+   execution is complete. */
+void
+shutdown_configure (enum shutdown_type type)
+{
+  how = type;
+}
 
 /* Reboots the machine via the keyboard controller. */
 void

@@ -48,12 +48,6 @@ uint32_t *init_page_dir;
 static bool format_filesys;
 #endif
 
-/* -q: Power off after kernel tasks complete? */
-bool power_off_when_done;
-
-/* -r: Reboot after kernel tasks complete? */
-static bool reboot_when_done;
-
 /* -ul: Maximum number of pages to put into palloc's user pool. */
 static size_t user_page_limit = SIZE_MAX;
 
@@ -126,11 +120,7 @@ main (void)
   run_actions (argv);
 
   /* Finish up. */
-  if (reboot_when_done)
-    shutdown_reboot ();
-
-  if (power_off_when_done)
-    shutdown_power_off ();
+  shutdown ();
   thread_exit ();
 }
 
@@ -169,7 +159,7 @@ paging_init (void)
 
   pd = init_page_dir = palloc_get_page (PAL_ASSERT | PAL_ZERO);
   pt = NULL;
-  for (page = 0; page < ram_pages; page++) 
+  for (page = 0; page < ram_pages; page++)
     {
       uintptr_t paddr = page * PGSIZE;
       char *vaddr = ptov (paddr);
@@ -243,9 +233,9 @@ parse_options (char **argv)
       if (!strcmp (name, "-h"))
         usage ();
       else if (!strcmp (name, "-q"))
-        power_off_when_done = true;
+        shutdown_configure (SHUTDOWN_POWER_OFF);
       else if (!strcmp (name, "-r"))
-        reboot_when_done = true;
+        shutdown_configure (SHUTDOWN_REBOOT);
 #ifdef FILESYS
       else if (!strcmp (name, "-f"))
         format_filesys = true;
