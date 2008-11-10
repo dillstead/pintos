@@ -17,7 +17,7 @@ debug_backtrace (void)
   
   printf ("Call stack:");
   for (frame = __builtin_frame_address (0);
-       frame != NULL && frame[0] != NULL;
+       (uintptr_t) frame >= 0x1000 && frame[0] != NULL;
        frame = frame[0]) 
     printf (" %p", frame[1]);
   printf (".\n");
