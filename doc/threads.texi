@@ -246,6 +246,16 @@ and serial drivers.
 Real-time clock driver, to enable the kernel to determine the current
 date and time.  By default, this is only used by @file{thread/init.c}
 to choose an initial seed for the random number generator.
+
+@item speaker.c
+@itemx speaker.h
+Driver that can produce tones on the PC speaker.
+
+@item pit.c
+@itemx pit.h
+Code to configure the 8254 Programmable Interrupt Timer.  This code is
+used by both @file{devices/timer.c} and @file{devices/speaker.c}
+because each device uses one of the PIT's output channel.
 @end table
 
 @node lib files
