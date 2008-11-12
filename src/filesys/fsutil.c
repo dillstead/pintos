@@ -7,7 +7,6 @@
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
-#include "devices/disk.h"
 #include "threads/malloc.h"
 #include "threads/palloc.h"
 #include "threads/vaddr.h"
@@ -67,28 +66,29 @@ fsutil_rm (char **argv)
     PANIC ("%s: delete failed\n", file_name);
 }
 
-/* Extracts a ustar-format tar archive from the scratch disk, hdc
-   or hd1:0, into the Pintos file system. */
+/* Extracts a ustar-format tar archive from the scratch block
+   device into the Pintos file system. */
 void
 fsutil_extract (char **argv UNUSED) 
 {
-  static disk_sector_t sector = 0;
+  static block_sector_t sector = 0;
 
-  struct disk *src;
+  struct block *src;
   void *header, *data;
 
   /* Allocate buffers. */
-  header = malloc (DISK_SECTOR_SIZE);
-  data = malloc (DISK_SECTOR_SIZE);
+  header = malloc (BLOCK_SECTOR_SIZE);
+  data = malloc (BLOCK_SECTOR_SIZE);
   if (header == NULL || data == NULL)
     PANIC ("couldn't allocate buffers");
 
-  /* Open source disk. */
-  src = disk_get (1, 0);
+  /* Open source block device. */
+  src = block_get_role (BLOCK_SCRATCH);
   if (src == NULL)
-    PANIC ("couldn't open scratch disk (hdc or hd1:0)");
+    PANIC ("couldn't open scratch device");
 
-  printf ("Extracting ustar archive from scratch disk into file system...\n");
+  printf ("Extracting ustar archive from scratch device "
+          "into file system...\n");
 
   for (;;)
     {
@@ -98,7 +98,7 @@ fsutil_extract (char **argv UNUSED)
       int size;
 
       /* Read and parse ustar header. */
-      disk_read (src, sector++, header);
+      block_read (src, sector++, header);
       error = ustar_parse_header (header, &file_name, &type, &size);
       if (error != NULL)
         PANIC ("bad ustar header in sector %"PRDSNu" (%s)", sector - 1, error);
@@ -126,10 +126,10 @@ fsutil_extract (char **argv UNUSED)
           /* Do copy. */
           while (size > 0)
             {
-              int chunk_size = (size > DISK_SECTOR_SIZE
-                                ? DISK_SECTOR_SIZE
+              int chunk_size = (size > BLOCK_SECTOR_SIZE
+                                ? BLOCK_SECTOR_SIZE
                                 : size);
-              disk_read (src, sector++, data);
+              block_read (src, sector++, data);
               if (file_write (dst, data, chunk_size) != chunk_size)
                 PANIC ("%s: write failed with %d bytes unwritten",
                        file_name, size);
@@ -141,42 +141,42 @@ fsutil_extract (char **argv UNUSED)
         }
     }
 
-  /* Erase the ustar header from the start of the disk, so that
-     the extraction operation is idempotent.  We erase two blocks
-     because two blocks of zeros are the ustar end-of-archive
-     marker. */
+  /* Erase the ustar header from the start of the block device,
+     so that the extraction operation is idempotent.  We erase
+     two blocks because two blocks of zeros are the ustar
+     end-of-archive marker. */
   printf ("Erasing ustar archive...\n");
-  memset (header, 0, DISK_SECTOR_SIZE);
-  disk_write (src, 0, header);
-  disk_write (src, 1, header);
+  memset (header, 0, BLOCK_SECTOR_SIZE);
+  block_write (src, 0, header);
+  block_write (src, 1, header);
 
   free (data);
   free (header);
 }
 
 /* Copies file FILE_NAME from the file system to the scratch
-   disk, in ustar format.
+   device, in ustar format.
 
    The first call to this function will write starting at the
-   beginning of the scratch disk.  Later calls advance across the
-   disk.  This position is independent of that used for
+   beginning of the scratch device.  Later calls advance across
+   the device.  This position is independent of that used for
    fsutil_extract(), so `extract' should precede all
    `append's. */
 void
 fsutil_append (char **argv)
 {
-  static disk_sector_t sector = 0;
+  static block_sector_t sector = 0;
 
   const char *file_name = argv[1];
   void *buffer;
   struct file *src;
-  struct disk *dst;
+  struct block *dst;
   off_t size;
 
-  printf ("Appending '%s' to ustar archive on scratch disk...\n", file_name);
+  printf ("Appending '%s' to ustar archive on scratch device...\n", file_name);
 
   /* Allocate buffer. */
-  buffer = malloc (DISK_SECTOR_SIZE);
+  buffer = malloc (BLOCK_SECTOR_SIZE);
   if (buffer == NULL)
     PANIC ("couldn't allocate buffer");
 
@@ -186,35 +186,35 @@ fsutil_append (char **argv)
     PANIC ("%s: open failed", file_name);
   size = file_length (src);
 
-  /* Open target disk. */
-  dst = disk_get (1, 0);
+  /* Open target block device. */
+  dst = block_get_role (BLOCK_SCRATCH);
   if (dst == NULL)
-    PANIC ("couldn't open target disk (hdc or hd1:0)");
+    PANIC ("couldn't open scratch device");
   
   /* Write ustar header to first sector. */
   if (!ustar_make_header (file_name, USTAR_REGULAR, size, buffer))
     PANIC ("%s: name too long for ustar format", file_name);
-  disk_write (dst, sector++, buffer);
+  block_write (dst, sector++, buffer);
 
   /* Do copy. */
   while (size > 0) 
     {
-      int chunk_size = size > DISK_SECTOR_SIZE ? DISK_SECTOR_SIZE : size;
-      if (sector >= disk_size (dst))
-        PANIC ("%s: out of space on scratch disk", file_name);
+      int chunk_size = size > BLOCK_SECTOR_SIZE ? BLOCK_SECTOR_SIZE : size;
+      if (sector >= block_size (dst))
+        PANIC ("%s: out of space on scratch device", file_name);
       if (file_read (src, buffer, chunk_size) != chunk_size)
         PANIC ("%s: read failed with %"PROTd" bytes unread", file_name, size);
-      memset (buffer + chunk_size, 0, DISK_SECTOR_SIZE - chunk_size);
-      disk_write (dst, sector++, buffer);
+      memset (buffer + chunk_size, 0, BLOCK_SECTOR_SIZE - chunk_size);
+      block_write (dst, sector++, buffer);
       size -= chunk_size;
     }
 
   /* Write ustar end-of-archive marker, which is two consecutive
      sectors full of zeros.  Don't advance our position past
      them, though, in case we have more files to append. */
-  memset (buffer, 0, DISK_SECTOR_SIZE);
-  disk_write (dst, sector, buffer);
-  disk_write (dst, sector, buffer + 1);
+  memset (buffer, 0, BLOCK_SECTOR_SIZE);
+  block_write (dst, sector, buffer);
+  block_write (dst, sector, buffer + 1);
 
   /* Finish up. */
   file_close (src);

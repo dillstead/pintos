@@ -10,7 +10,7 @@
 #include "userprog/exception.h"
 #endif
 #ifdef FILESYS
-#include "devices/disk.h"
+#include "devices/block.h"
 #include "filesys/filesys.h"
 #endif
 
@@ -121,7 +121,7 @@ print_stats (void)
   timer_print_stats ();
   thread_print_stats ();
 #ifdef FILESYS
-  disk_print_stats ();
+  block_print_stats ();
 #endif
   console_print_stats ();
   kbd_print_stats ();

@@ -161,21 +161,17 @@ single object file.  It contains debug information, so you can run
 GDB (@pxref{GDB}) or @command{backtrace} (@pxref{Backtraces}) on it.
 
 @item kernel.bin
-Memory image of the kernel.  These are the exact bytes loaded into
-memory to run the Pintos kernel.  To simplify loading, it is always
-padded out with zero bytes up to an exact multiple of 4 kB in
-size.
+Memory image of the kernel, that is, the exact bytes loaded into
+memory to run the Pintos kernel.  This is just @file{kernel.o} with
+debug information stripped out, which saves a lot of space, which in
+turn keeps the kernel from bumping up against a @w{512 kB} size limit
+imposed by the kernel loader's design.
 
 @item loader.bin
 Memory image for the kernel loader, a small chunk of code written in
 assembly language that reads the kernel from disk into memory and
 starts it up.  It is exactly 512 bytes long, a size fixed by the
 PC BIOS.
-
-@item os.dsk
-Disk image for the kernel, which is just @file{loader.bin} followed by
-@file{kernel.bin}.  This file is used as a ``virtual disk'' by the
-simulator.
 @end table
 
 Subdirectories of @file{build} contain object files (@file{.o}) and
@@ -207,8 +203,7 @@ right corner, or rerun the whole process by clicking on the ``Reset''
 button just to its left.  The other buttons are not very useful for our
 purposes.
 
-(If no window appeared at all, and you just got a terminal full of
-corrupt-looking text, then you're probably logged in remotely and X
+(If no window appeared at all, then you're probably logged in remotely and X
 forwarding is not set up correctly.  In this case, you can fix your X
 setup, or you can use the @option{-v} option to disable X output:
 @code{pintos -v -- run alarm-multiple}.)
@@ -512,10 +507,6 @@ work.
 The original structure and form of Pintos was inspired by the Nachos
 instructional operating system from the University of California,
 Berkeley (@bibref{Christopher}).
-
-A few of the Pintos source files are derived from code used in the
-Massachusetts Institute of Technology's 6.828 advanced operating systems
-course.  These files bear the original MIT license notice.
 
 The Pintos projects and documentation originated with those designed for
 Nachos by current and former CS 140 teaching assistants at Stanford

@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "threads/init.h"
 #include "threads/loader.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
@@ -46,12 +45,8 @@ static bool page_from_pool (const struct pool *, void *page);
 void
 palloc_init (size_t user_page_limit)
 {
-  /* End of the kernel as recorded by the linker.
-     See kernel.lds.S. */
-  extern char _end;
-
-  /* Free memory. */
-  uint8_t *free_start = pg_round_up (&_end);
+  /* Free memory starts at 1 MB and runs to the end of RAM. */
+  uint8_t *free_start = ptov (1024 * 1024);
   uint8_t *free_end = ptov (init_ram_pages * PGSIZE);
   size_t free_pages = (free_end - free_start) / PGSIZE;
   size_t user_pages = free_pages / 2;

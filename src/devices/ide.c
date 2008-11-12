@@ -1,8 +1,10 @@
-#include "devices/disk.h"
+#include "devices/ide.h"
 #include <ctype.h>
 #include <debug.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "devices/block.h"
+#include "devices/partition.h"
 #include "devices/timer.h"
 #include "threads/io.h"
 #include "threads/interrupt.h"
@@ -49,24 +51,19 @@
 #define CMD_WRITE_SECTOR_RETRY 0x30     /* WRITE SECTOR with retries. */
 
 /* An ATA device. */
-struct disk 
+struct ata_disk
   {
-    char name[8];               /* Name, e.g. "hd0:1". */
-    struct channel *channel;    /* Channel disk is on. */
+    char name[8];               /* Name, e.g. "hda". */
+    struct channel *channel;    /* Channel that disk is attached to. */
     int dev_no;                 /* Device 0 or 1 for master or slave. */
-
-    bool is_ata;                /* 1=This device is an ATA disk. */
-    disk_sector_t capacity;     /* Capacity in sectors (if is_ata). */
-
-    long long read_cnt;         /* Number of sectors read. */
-    long long write_cnt;        /* Number of sectors written. */
+    bool is_ata;                /* Is device an ATA disk? */
   };
 
 /* An ATA channel (aka controller).
    Each channel can control up to two disks. */
-struct channel 
+struct channel
   {
-    char name[8];               /* Name, e.g. "hd0". */
+    char name[8];               /* Name, e.g. "ide0". */
     uint16_t reg_base;          /* Base I/O port. */
     uint8_t irq;                /* Interrupt in use. */
 
@@ -75,32 +72,34 @@ struct channel
                                    any interrupt would be spurious. */
     struct semaphore completion_wait;   /* Up'd by interrupt handler. */
 
-    struct disk devices[2];     /* The devices on this channel. */
+    struct ata_disk devices[2];     /* The devices on this channel. */
   };
 
 /* We support the two "legacy" ATA channels found in a standard PC. */
 #define CHANNEL_CNT 2
 static struct channel channels[CHANNEL_CNT];
 
-static void reset_channel (struct channel *);
-static bool check_device_type (struct disk *);
-static void identify_ata_device (struct disk *);
+static struct block_operations ide_operations;
 
-static void select_sector (struct disk *, disk_sector_t);
+static void reset_channel (struct channel *);
+static bool check_device_type (struct ata_disk *);
+static void identify_ata_device (struct ata_disk *);
+
+static void select_sector (struct ata_disk *, block_sector_t);
 static void issue_pio_command (struct channel *, uint8_t command);
 static void input_sector (struct channel *, void *);
 static void output_sector (struct channel *, const void *);
 
-static void wait_until_idle (const struct disk *);
-static bool wait_while_busy (const struct disk *);
-static void select_device (const struct disk *);
-static void select_device_wait (const struct disk *);
+static void wait_until_idle (const struct ata_disk *);
+static bool wait_while_busy (const struct ata_disk *);
+static void select_device (const struct ata_disk *);
+static void select_device_wait (const struct ata_disk *);
 
 static void interrupt_handler (struct intr_frame *);
 
 /* Initialize the disk subsystem and detect disks. */
 void
-disk_init (void) 
+ide_init (void) 
 {
   size_t chan_no;
 
@@ -110,7 +109,7 @@ disk_init (void)
       int dev_no;
 
       /* Initialize channel. */
-      snprintf (c->name, sizeof c->name, "hd%zu", chan_no);
+      snprintf (c->name, sizeof c->name, "ide%zu", chan_no);
       switch (chan_no) 
         {
         case 0:
@@ -131,15 +130,12 @@ disk_init (void)
       /* Initialize devices. */
       for (dev_no = 0; dev_no < 2; dev_no++)
         {
-          struct disk *d = &c->devices[dev_no];
-          snprintf (d->name, sizeof d->name, "%s:%d", c->name, dev_no);
+          struct ata_disk *d = &c->devices[dev_no];
+          snprintf (d->name, sizeof d->name,
+                    "hd%c", 'a' + chan_no * 2 + dev_no); 
           d->channel = c;
           d->dev_no = dev_no;
-
           d->is_ata = false;
-          d->capacity = 0;
-
-          d->read_cnt = d->write_cnt = 0;
         }
 
       /* Register interrupt handler. */
@@ -158,112 +154,10 @@ disk_init (void)
           identify_ata_device (&c->devices[dev_no]);
     }
 }
-
-/* Prints disk statistics. */
-void
-disk_print_stats (void) 
-{
-  int chan_no;
-
-  for (chan_no = 0; chan_no < CHANNEL_CNT; chan_no++) 
-    {
-      int dev_no;
-
-      for (dev_no = 0; dev_no < 2; dev_no++) 
-        {
-          struct disk *d = disk_get (chan_no, dev_no);
-          if (d != NULL && d->is_ata) 
-            printf ("%s: %lld reads, %lld writes\n",
-                    d->name, d->read_cnt, d->write_cnt);
-        }
-    }
-}
-
-/* Returns the disk numbered DEV_NO--either 0 or 1 for master or
-   slave, respectively--within the channel numbered CHAN_NO.
-
-   Pintos uses disks this way:
-        0:0 - boot loader, command line args, and operating system kernel
-        0:1 - file system
-        1:0 - scratch
-        1:1 - swap
-*/
-struct disk *
-disk_get (int chan_no, int dev_no) 
-{
-  ASSERT (dev_no == 0 || dev_no == 1);
-
-  if (chan_no < (int) CHANNEL_CNT) 
-    {
-      struct disk *d = &channels[chan_no].devices[dev_no];
-      if (d->is_ata)
-        return d; 
-    }
-  return NULL;
-}
-
-/* Returns the size of disk D, measured in DISK_SECTOR_SIZE-byte
-   sectors. */
-disk_sector_t
-disk_size (struct disk *d) 
-{
-  ASSERT (d != NULL);
-  
-  return d->capacity;
-}
-
-/* Reads sector SEC_NO from disk D into BUFFER, which must have
-   room for DISK_SECTOR_SIZE bytes.
-   Internally synchronizes accesses to disks, so external
-   per-disk locking is unneeded. */
-void
-disk_read (struct disk *d, disk_sector_t sec_no, void *buffer) 
-{
-  struct channel *c;
-  
-  ASSERT (d != NULL);
-  ASSERT (buffer != NULL);
-
-  c = d->channel;
-  lock_acquire (&c->lock);
-  select_sector (d, sec_no);
-  issue_pio_command (c, CMD_READ_SECTOR_RETRY);
-  sema_down (&c->completion_wait);
-  if (!wait_while_busy (d))
-    PANIC ("%s: disk read failed, sector=%"PRDSNu, d->name, sec_no);
-  input_sector (c, buffer);
-  d->read_cnt++;
-  lock_release (&c->lock);
-}
-
-/* Write sector SEC_NO to disk D from BUFFER, which must contain
-   DISK_SECTOR_SIZE bytes.  Returns after the disk has
-   acknowledged receiving the data.
-   Internally synchronizes accesses to disks, so external
-   per-disk locking is unneeded. */
-void
-disk_write (struct disk *d, disk_sector_t sec_no, const void *buffer)
-{
-  struct channel *c;
-  
-  ASSERT (d != NULL);
-  ASSERT (buffer != NULL);
-
-  c = d->channel;
-  lock_acquire (&c->lock);
-  select_sector (d, sec_no);
-  issue_pio_command (c, CMD_WRITE_SECTOR_RETRY);
-  if (!wait_while_busy (d))
-    PANIC ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
-  output_sector (c, buffer);
-  sema_down (&c->completion_wait);
-  d->write_cnt++;
-  lock_release (&c->lock);
-}
 
 /* Disk detection and identification. */
 
-static void print_ata_string (char *string, size_t size);
+static char *descramble_ata_string (char *, int size);
 
 /* Resets an ATA channel and waits for any devices present on it
    to finish the reset. */
@@ -277,7 +171,7 @@ reset_channel (struct channel *c)
      so we start by detecting device presence. */
   for (dev_no = 0; dev_no < 2; dev_no++)
     {
-      struct disk *d = &c->devices[dev_no];
+      struct ata_disk *d = &c->devices[dev_no];
 
       select_device (d);
 
@@ -333,7 +227,7 @@ reset_channel (struct channel *c)
    channel.  If D is device 1 (slave), the return value is not
    meaningful. */
 static bool
-check_device_type (struct disk *d) 
+check_device_type (struct ata_disk *d) 
 {
   struct channel *c = d->channel;
   uint8_t error, lbam, lbah, status;
@@ -360,13 +254,17 @@ check_device_type (struct disk *d)
 }
 
 /* Sends an IDENTIFY DEVICE command to disk D and reads the
-   response.  Initializes D's capacity member based on the result
-   and prints a message describing the disk to the console. */
+   response.  Registers the disk with the block device
+   layer. */
 static void
-identify_ata_device (struct disk *d) 
+identify_ata_device (struct ata_disk *d) 
 {
   struct channel *c = d->channel;
-  uint16_t id[DISK_SECTOR_SIZE / 2];
+  char id[BLOCK_SECTOR_SIZE];
+  block_sector_t capacity;
+  char *model, *serial;
+  char extra_info[128];
+  struct block *block;
 
   ASSERT (d->is_ata);
 
@@ -383,57 +281,115 @@ identify_ata_device (struct disk *d)
     }
   input_sector (c, id);
 
-  /* Calculate capacity. */
-  d->capacity = id[60] | ((uint32_t) id[61] << 16);
+  /* Calculate capacity.
+     Read model name and serial number. */
+  capacity = *(uint32_t *) &id[60 * 2];
+  model = descramble_ata_string (&id[10 * 2], 20);
+  serial = descramble_ata_string (&id[27 * 2], 40);
+  snprintf (extra_info, sizeof extra_info,
+            "model \"%s\", serial \"%s\"", model, serial);
 
-  /* Print identification message. */
-  printf ("%s: detected %'"PRDSNu" sector (", d->name, d->capacity);
-  if (d->capacity > 1024 / DISK_SECTOR_SIZE * 1024 * 1024)
-    printf ("%"PRDSNu" GB",
-            d->capacity / (1024 / DISK_SECTOR_SIZE * 1024 * 1024));
-  else if (d->capacity > 1024 / DISK_SECTOR_SIZE * 1024)
-    printf ("%"PRDSNu" MB", d->capacity / (1024 / DISK_SECTOR_SIZE * 1024));
-  else if (d->capacity > 1024 / DISK_SECTOR_SIZE)
-    printf ("%"PRDSNu" kB", d->capacity / (1024 / DISK_SECTOR_SIZE));
-  else
-    printf ("%"PRDSNu" byte", d->capacity * DISK_SECTOR_SIZE);
-  printf (") disk, model \"");
-  print_ata_string ((char *) &id[27], 40);
-  printf ("\", serial \"");
-  print_ata_string ((char *) &id[10], 20);
-  printf ("\"\n");
+  /* Disable access to IDE disks over 1 GB, which are likely
+     physical IDE disks rather than virtual ones.  If we don't
+     allow access to those, we're less likely to scribble on
+     someone's important data.  You can disable this check by
+     hand if you really want to do so. */
+  if (capacity >= 1024 * 1024 * 1024 / BLOCK_SECTOR_SIZE)
+    {
+      printf ("%s: ignoring ", d->name);
+      print_human_readable_size (capacity * 512);
+      printf ("disk for safety\n");
+      d->is_ata = false;
+      return;
+    }
+
+  /* Register. */
+  block = block_register (d->name, BLOCK_RAW, extra_info, capacity,
+                          &ide_operations, d);
+  partition_scan (block);
 }
 
-/* Prints STRING, which consists of SIZE bytes in a funky format:
-   each pair of bytes is in reverse order.  Does not print
-   trailing whitespace and/or nulls. */
-static void
-print_ata_string (char *string, size_t size) 
+/* Translates STRING, which consists of SIZE bytes in a funky
+   format, into a null-terminated string in-place.  Drops
+   trailing whitespace and null bytes.  Returns STRING.  */
+static char *
+descramble_ata_string (char *string, int size) 
 {
-  size_t i;
+  int i;
+
+  /* Swap all pairs of bytes. */
+  for (i = 0; i + 1 < size; i += 2)
+    {
+      char tmp = string[i];
+      string[i] = string[i + 1];
+      string[i + 1] = tmp;
+    }
 
   /* Find the last non-white, non-null character. */
-  for (; size > 0; size--)
+  for (size--; size > 0; size--)
     {
-      int c = string[(size - 1) ^ 1];
+      int c = string[size - 1];
       if (c != '\0' && !isspace (c))
         break; 
     }
+  string[size] = '\0';
 
-  /* Print. */
-  for (i = 0; i < size; i++)
-    printf ("%c", string[i ^ 1]);
+  return string;
 }
+
+/* Reads sector SEC_NO from disk D into BUFFER, which must have
+   room for BLOCK_SECTOR_SIZE bytes.
+   Internally synchronizes accesses to disks, so external
+   per-disk locking is unneeded. */
+static void
+ide_read (void *d_, block_sector_t sec_no, void *buffer)
+{
+  struct ata_disk *d = d_;
+  struct channel *c = d->channel;
+  lock_acquire (&c->lock);
+  select_sector (d, sec_no);
+  issue_pio_command (c, CMD_READ_SECTOR_RETRY);
+  sema_down (&c->completion_wait);
+  if (!wait_while_busy (d))
+    PANIC ("%s: disk read failed, sector=%"PRDSNu, d->name, sec_no);
+  input_sector (c, buffer);
+  lock_release (&c->lock);
+}
+
+/* Write sector SEC_NO to disk D from BUFFER, which must contain
+   BLOCK_SECTOR_SIZE bytes.  Returns after the disk has
+   acknowledged receiving the data.
+   Internally synchronizes accesses to disks, so external
+   per-disk locking is unneeded. */
+static void
+ide_write (void *d_, block_sector_t sec_no, const void *buffer)
+{
+  struct ata_disk *d = d_;
+  struct channel *c = d->channel;
+  lock_acquire (&c->lock);
+  select_sector (d, sec_no);
+  issue_pio_command (c, CMD_WRITE_SECTOR_RETRY);
+  if (!wait_while_busy (d))
+    PANIC ("%s: disk write failed, sector=%"PRDSNu, d->name, sec_no);
+  output_sector (c, buffer);
+  sema_down (&c->completion_wait);
+  lock_release (&c->lock);
+}
+
+static struct block_operations ide_operations =
+  {
+    ide_read,
+    ide_write
+  };
 
 /* Selects device D, waiting for it to become ready, and then
    writes SEC_NO to the disk's sector selection registers.  (We
    use LBA mode.) */
 static void
-select_sector (struct disk *d, disk_sector_t sec_no) 
+select_sector (struct ata_disk *d, block_sector_t sec_no)
 {
   struct channel *c = d->channel;
 
-  ASSERT (sec_no < d->capacity);
   ASSERT (sec_no < (1UL << 28));
   
   select_device_wait (d);
@@ -459,19 +415,19 @@ issue_pio_command (struct channel *c, uint8_t command)
 }
 
 /* Reads a sector from channel C's data register in PIO mode into
-   SECTOR, which must have room for DISK_SECTOR_SIZE bytes. */
+   SECTOR, which must have room for BLOCK_SECTOR_SIZE bytes. */
 static void
 input_sector (struct channel *c, void *sector) 
 {
-  insw (reg_data (c), sector, DISK_SECTOR_SIZE / 2);
+  insw (reg_data (c), sector, BLOCK_SECTOR_SIZE / 2);
 }
 
 /* Writes SECTOR to channel C's data register in PIO mode.
-   SECTOR must contain DISK_SECTOR_SIZE bytes. */
+   SECTOR must contain BLOCK_SECTOR_SIZE bytes. */
 static void
 output_sector (struct channel *c, const void *sector) 
 {
-  outsw (reg_data (c), sector, DISK_SECTOR_SIZE / 2);
+  outsw (reg_data (c), sector, BLOCK_SECTOR_SIZE / 2);
 }
 
 /* Low-level ATA primitives. */
@@ -482,7 +438,7 @@ output_sector (struct channel *c, const void *sector)
    As a side effect, reading the status register clears any
    pending interrupt. */
 static void
-wait_until_idle (const struct disk *d) 
+wait_until_idle (const struct ata_disk *d) 
 {
   int i;
 
@@ -501,7 +457,7 @@ wait_until_idle (const struct disk *d)
    The ATA standards say that a disk may take as long as that to
    complete its reset. */
 static bool
-wait_while_busy (const struct disk *d) 
+wait_while_busy (const struct ata_disk *d) 
 {
   struct channel *c = d->channel;
   int i;
@@ -525,7 +481,7 @@ wait_while_busy (const struct disk *d)
 
 /* Program D's channel so that D is now the selected disk. */
 static void
-select_device (const struct disk *d)
+select_device (const struct ata_disk *d)
 {
   struct channel *c = d->channel;
   uint8_t dev = DEV_MBS;
@@ -539,7 +495,7 @@ select_device (const struct disk *d)
 /* Select disk D in its channel, as select_device(), but wait for
    the channel to become idle before and after. */
 static void
-select_device_wait (const struct disk *d) 
+select_device_wait (const struct ata_disk *d) 
 {
   wait_until_idle (d);
   select_device (d);

@@ -6,9 +6,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Physical memory size, in 4 kB pages. */
-extern size_t init_ram_pages;
-
 /* Page directory with kernel mappings only. */
 extern uint32_t *init_page_dir;
 

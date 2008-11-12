@@ -79,8 +79,9 @@ described below (@pxref{Building Bochs for Pintos}).
 
 @item
 Install scripts from @file{src/utils}.  Copy @file{backtrace},
-@file{pintos}, @file{pintos-gdb}, @file{pintos-mkdisk} into the
-default @env{PATH}.
+@file{pintos}, @file{pintos-gdb}, @file{pintos-mkdisk},
+@file{pintos-set-cmdline}, and @file{Pintos.pm} into the default
+@env{PATH}.
 
 @item 
 Install @file{src/misc/gdb-macros} in a public location.  Then use a

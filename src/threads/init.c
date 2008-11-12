@@ -1,10 +1,10 @@
 #include "threads/init.h"
 #include <console.h>
 #include <debug.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <random.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,13 +32,11 @@
 #include "tests/threads/tests.h"
 #endif
 #ifdef FILESYS
-#include "devices/disk.h"
+#include "devices/block.h"
+#include "devices/ide.h"
 #include "filesys/filesys.h"
 #include "filesys/fsutil.h"
 #endif
-
-/* Amount of physical memory, in 4 kB pages. */
-size_t init_ram_pages;
 
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
@@ -46,18 +44,31 @@ uint32_t *init_page_dir;
 #ifdef FILESYS
 /* -f: Format the file system? */
 static bool format_filesys;
+
+/* -filesys, -scratch, -swap: Names of block devices to use,
+   overriding the defaults. */
+static const char *filesys_bdev_name;
+static const char *scratch_bdev_name;
+#ifdef VM
+static const char *swap_bdev_name;
 #endif
+#endif /* FILESYS */
 
 /* -ul: Maximum number of pages to put into palloc's user pool. */
 static size_t user_page_limit = SIZE_MAX;
 
-static void ram_init (void);
+static void bss_init (void);
 static void paging_init (void);
 
 static char **read_command_line (void);
 static char **parse_options (char **argv);
 static void run_actions (char **argv);
 static void usage (void);
+
+#ifdef FILESYS
+static void locate_block_devices (void);
+static void locate_block_device (enum block_type, const char *name);
+#endif
 
 int main (void) NO_RETURN;
 
@@ -66,9 +77,9 @@ int
 main (void)
 {
   char **argv;
-  
-  /* Clear BSS and get machine's RAM size. */  
-  ram_init ();
+
+  /* Clear BSS. */  
+  bss_init ();
 
   /* Break command line into arguments and parse options. */
   argv = read_command_line ();
@@ -80,7 +91,7 @@ main (void)
   console_init ();  
 
   /* Greet user. */
-  printf ("Pintos booting with %'zu kB RAM...\n",
+  printf ("Pintos booting with %'"PRIu32" kB RAM...\n",
           init_ram_pages * PGSIZE / 1024);
 
   /* Initialize memory system. */
@@ -111,7 +122,8 @@ main (void)
 
 #ifdef FILESYS
   /* Initialize file system. */
-  disk_init ();
+  ide_init ();
+  locate_block_devices ();
   filesys_init (format_filesys);
 #endif
 
@@ -125,32 +137,23 @@ main (void)
   thread_exit ();
 }
 
-/* Clear BSS and obtain RAM size from loader. */
-static void
-ram_init (void) 
-{
-  /* The "BSS" is a segment that should be initialized to zeros.
-     It isn't actually stored on disk or zeroed by the kernel
-     loader, so we have to zero it ourselves.
+/* Clear the "BSS", a segment that should be initialized to
+   zeros.  It isn't actually stored on disk or zeroed by the
+   kernel loader, so we have to zero it ourselves.
 
-     The start and end of the BSS segment is recorded by the
-     linker as _start_bss and _end_bss.  See kernel.lds. */
+   The start and end of the BSS segment is recorded by the
+   linker as _start_bss and _end_bss.  See kernel.lds. */
+static void
+bss_init (void) 
+{
   extern char _start_bss, _end_bss;
   memset (&_start_bss, 0, &_end_bss - &_start_bss);
-
-  /* Get RAM size from loader.  See loader.S. */
-  init_ram_pages = *(uint32_t *) ptov (LOADER_RAM_PGS);
 }
 
 /* Populates the base page directory and page table with the
    kernel virtual mapping, and then sets up the CPU to use the
    new page directory.  Points init_page_dir to the page
-   directory it creates.
-
-   At the time this function is called, the active page table
-   (set up by loader.S) only maps the first 4 MB of RAM, so we
-   should not try to use extravagant amounts of memory.
-   Fortunately, there is no need to do so. */
+   directory it creates. */
 static void
 paging_init (void)
 {
@@ -240,6 +243,14 @@ parse_options (char **argv)
 #ifdef FILESYS
       else if (!strcmp (name, "-f"))
         format_filesys = true;
+      else if (!strcmp (name, "-filesys"))
+        filesys_bdev_name = value;
+      else if (!strcmp (name, "-scratch"))
+        scratch_bdev_name = value;
+#ifdef VM
+      else if (!strcmp (name, "-swap"))
+        swap_bdev_name = value;
+#endif
 #endif
       else if (!strcmp (name, "-rs"))
         random_init (atoi (value));
@@ -351,14 +362,21 @@ usage (void)
           "  cat FILE           Print FILE to the console.\n"
           "  rm FILE            Delete FILE.\n"
           "Use these actions indirectly via `pintos' -g and -p options:\n"
-          "  extract            Untar from scratch disk into file system.\n"
-          "  append FILE        Append FILE to tar file on scratch disk.\n"
+          "  extract            Untar from scratch device into file system.\n"
+          "  append FILE        Append FILE to tar file on scratch device.\n"
 #endif
           "\nOptions:\n"
           "  -h                 Print this help message and power off.\n"
           "  -q                 Power off VM after actions or on panic.\n"
           "  -r                 Reboot after actions.\n"
-          "  -f                 Format file system disk during startup.\n"
+#ifdef FILESYS
+          "  -f                 Format file system device during startup.\n"
+          "  -filesys=BDEV      Use BDEV for file system instead of default.\n"
+          "  -scratch=BDEV      Use BDEV for scratch instead of default.\n"
+#ifdef VM
+          "  -swap=BDEV         Use BDEV for swap instead of default.\n"
+#endif
+#endif
           "  -rs=SEED           Set random number seed to SEED.\n"
           "  -mlfqs             Use multi-level feedback queue scheduler.\n"
 #ifdef USERPROG
@@ -367,3 +385,45 @@ usage (void)
           );
   shutdown_power_off ();
 }
+
+#ifdef FILESYS
+/* Figure out what block devices to cast in the various Pintos roles. */
+static void
+locate_block_devices (void)
+{
+  locate_block_device (BLOCK_FILESYS, filesys_bdev_name);
+  locate_block_device (BLOCK_SCRATCH, scratch_bdev_name);
+#ifdef VM
+  locate_block_device (BLOCK_SWAP, swap_bdev_name);
+#endif
+}
+
+/* Figures out what block device to use for the given ROLE: the
+   block device with the given NAME, if NAME is non-null,
+   otherwise the first block device in probe order of type
+   ROLE. */
+static void
+locate_block_device (enum block_type role, const char *name)
+{
+  struct block *block = NULL;
+
+  if (name != NULL)
+    {
+      block = block_get_by_name (name);
+      if (block == NULL)
+        PANIC ("No such block device \"%s\"", name);
+    }
+  else
+    {
+      for (block = block_first (); block != NULL; block = block_next (block))
+        if (block_type (block) == role)
+          break;
+    }
+
+  if (block != NULL)
+    {
+      printf ("%s: using %s\n", block_type_name (role), block_name (block));
+      block_set_role (role, block);
+    }
+}
+#endif

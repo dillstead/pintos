@@ -1,349 +1,257 @@
-/* This file is derived from source code used in MIT's 6.828
-   course.  The original copyright notice is reproduced in full
-   below. */
-
-/*
- * Copyright (C) 1997 Massachusetts Institute of Technology 
- *
- * This software is being provided by the copyright holders under the
- * following license. By obtaining, using and/or copying this software,
- * you agree that you have read, understood, and will comply with the
- * following terms and conditions:
- *
- * Permission to use, copy, modify, distribute, and sell this software
- * and its documentation for any purpose and without fee or royalty is
- * hereby granted, provided that the full text of this NOTICE appears on
- * ALL copies of the software and documentation or portions thereof,
- * including modifications, that you make.
- *
- * THIS SOFTWARE IS PROVIDED "AS IS," AND COPYRIGHT HOLDERS MAKE NO
- * REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED. BY WAY OF EXAMPLE,
- * BUT NOT LIMITATION, COPYRIGHT HOLDERS MAKE NO REPRESENTATIONS OR
- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR
- * THAT THE USE OF THE SOFTWARE OR DOCUMENTATION WILL NOT INFRINGE ANY
- * THIRD PARTY PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS. COPYRIGHT
- * HOLDERS WILL BEAR NO LIABILITY FOR ANY USE OF THIS SOFTWARE OR
- * DOCUMENTATION.
- *
- * The name and trademarks of copyright holders may NOT be used in
- * advertising or publicity pertaining to the software without specific,
- * written prior permission. Title to copyright in this software and any
- * associated documentation will at all times remain with copyright
- * holders. See the file AUTHORS which should have accompanied this software
- * for a list of all copyright holders.
- *
- * This file may be derived from previously copyrighted software. This
- * copyright applies only to those changes made by the copyright
- * holders listed in the AUTHORS file. The rest of this file is covered by
- * the copyright notices, if any, listed below.
- */
-
 #include "threads/loader.h"
-	
+
 #### Kernel loader.
 
-#### This code should be stored in the first sector of the hard disk.
+#### This code should be stored in the first sector of a hard disk.
 #### When the BIOS runs, it loads this code at physical address
-#### 0x7c00-0x7e00 (512 bytes).  Then it jumps to the beginning of it,
-#### in real mode.  This code switches into protected mode (32-bit
-#### mode) so that all of memory can accessed, loads the kernel into
-#### memory, and jumps to the first byte of the kernel, where start.S
-#### is linked.
-	
-/* Flags in control register 0. */
-#define CR0_PE 0x00000001      /* Protection Enable. */
-#define CR0_EM 0x00000004      /* (Floating-point) Emulation. */
-#define CR0_PG 0x80000000      /* Paging. */
-#define CR0_WP 0x00010000      /* Write-Protect enable in kernel mode. */
+#### 0x7c00-0x7e00 (512 bytes) and jumps to the beginning of it,
+#### in real mode.  The loader loads the kernel into memory and jumps
+#### to its entry point, which is the start function in start.S.
+####
+#### The BIOS passes in the drive that the loader was read from as
+#### DL, with floppy drives numbered 0x00, 0x01, ... and hard drives
+#### numbered 0x80, 0x81, ...  We want to support booting a kernel on
+#### a different drive from the loader, so we don't take advantage of
+#### this.
 
-
-.globl start
-start:
-	
-# Code runs in real mode, which is a 16-bit segment.
+# Runs in real mode, which is a 16-bit segment.
 	.code16
 
-# Disable interrupts, because we will not be prepared to handle them
-# in protected mode until much later.
-# String instructions go upward (e.g. for "rep stosl" below).
+# Set up segment registers.
+# Set stack to grow downward from 60 kB (after boot, the kernel
+# continues to use this stack for its initial thread).
 
-	cli
-	cld
+	sub %ax, %ax
+	mov %ax, %ds
+	mov %ax, %ss
+	mov $0xf000, %esp
 
-# Set up data segments.
+# Configure serial port so we can report progress without connected VGA.
+# See [IntrList] for details.
+	sub %dx, %dx			# Serial port 0.
+	mov $0x00e3, %ax		# 9600 bps, N-8-1.
+	int $0x14			# Destroys AX.
 
-	subw %ax, %ax
-	movw %ax, %es
-	movw %ax, %ds
+	call puts
+	.string "Pintos loader"
 
-# Set up stack segment.
-# Stack grows downward starting from us.
-# We don't ever use the stack, but we call into the BIOS,
-# which might.
+#### Read the partition table on each system hard disk and scan for a
+#### partition of type 0x20, which is the type that we use for a
+#### Pintos kernel.
+####
+#### Read [Partitions] for a description of the partition table format
+#### that we parse.
+####
+#### We print out status messages to show the disk and partition being
+#### scanned, e.g. hda1234 as we scan four partitions on the first
+#### hard disk.
 
-	movw %ax, %ss
-	movw $0x7c00, %sp
-	
-#### Enable A20.  Address line 20 is tied to low when the machine
-#### boots, which prevents addressing memory about 1 MB.  This code
-#### fixes it.
-	
-# Poll status register while busy.
-
-1:	inb $0x64, %al
-	testb $0x2, %al
-	jnz 1b
-
-# Send command for writing output port.
-
-	movb $0xd1, %al
-	outb %al, $0x64
-
-# Poll status register while busy.
-
-1:	inb $0x64, %al
-	testb $0x2, %al
-	jnz 1b
-
-# Enable A20 line.
-
-	movb $0xdf, %al
-	outb %al, $0x60
-
-#### Get memory size, via interrupt 15h function 88h.  Returns CF
-#### clear if successful, with AX = (kB of physical memory) - 1024.
-#### This only works for memory sizes <= 65 MB, which should be fine
-#### for our purposes.  We cap memory at 64 MB because that's all we
-#### prepare page tables for, below.
-	
-	movb $0x88, %ah
-	int $0x15
-	jc panic
-	cli			# BIOS might have enabled interrupts
-	addl $1024, %eax	# Total kB memory
-	cmp $0x10000, %eax	# Cap at 64 MB
-	jbe 1f
-	mov $0x10000, %eax
-1:	shrl $2, %eax		# Total 4 kB pages
-	movl %eax, ram_pgs
-	
-#### Create temporary page directory and page table and set page
-#### directory base register.
-
-# Create page directory at 64 kB and fill with zeroes.
-	mov $0x1000, %ax
+	mov $0x80, %dl			# Hard disk 0.
+read_mbr:
+	sub %ebx, %ebx			# Sector 0.
+	mov $0x2000, %ax		# Use 0x20000 for buffer.
 	mov %ax, %es
-	subl %eax, %eax
-	subl %edi, %edi
-	movl $0x400, %ecx
-	rep stosl
+	call read_sector
+	jc no_such_drive
 
-# Add PDEs to point to PTEs for the first 64 MB of RAM.
-# Also add identical PDEs starting at LOADER_PHYS_BASE.
-# See [IA32-v3a] section 3.7.6 "Page-Directory and Page-Table Entries"
-# for a description of the bits in %eax.
-	
+	# Print hd[a-z].
+	call puts
+	.string " hd"
+	mov %dl, %al
+	add $'a' - 0x80, %al
+	call putc
 
-	movl $0x11007, %eax
-	movl $0x11, %ecx
-	subl %edi, %edi
-1:	movl %eax, %es:(%di)
-	movl %eax, %es:LOADER_PHYS_BASE >> 20(%di)
-	addw $4, %di
-	addl $0x1000, %eax
-	loop 1b
+	# Check for MBR signature--if not present, it's not a
+	# partitioned hard disk.
+	cmpw $0xaa55, %es:510
+	jne next_drive
 
-# Set up one-to-map linear to physical map for the first 64 MB of RAM.
-# See [IA32-v3a] section 3.7.6 "Page-Directory and Page-Table Entries"
-# for a description of the bits in %eax.
+	mov $446, %si			# Offset of partition table entry 1.
+	mov $'1', %al
+check_partition:
+	# Is it an unused partition?
+	cmpl $0, %es:(%si)
+	je next_partition
 
-	movw $0x1100, %ax
-	movw %ax, %es
-	movl $0x7, %eax
-	movl $0x4000, %ecx
-	subl %edi, %edi
-1:	movl %eax, %es:(%di)
-	addw $4, %di
-	addl $0x1000, %eax
-	loop 1b
+	# Print [1-4].
+	call putc
 
-# Set page directory base register.
+	# Is it a Pintos kernel partition?
+	cmpb $0x20, %es:4(%si)
+	jne next_partition
 
-	movl $0x10000, %eax
-	movl %eax, %cr3
-	
-#### Switch to protected mode.
+	# Is it a bootable partition?
+	cmpb $0x80, %es:(%si)
+	je load_kernel
 
-# Note that interrupts are still off.
+next_partition:
+	# No match for this partition, go on to the next one.
+	add $16, %si			# Offset to next partition table entry.
+	inc %al
+	cmp $510, %si
+	jb check_partition
 
-# Point the GDTR to our GDT.  Protected mode requires a GDT.
-# We need a data32 prefix to ensure that all 32 bits of the GDT
-# descriptor are loaded (default is to load only 24 bits).
+next_drive:
+	# No match on this drive, go on to the next one.
+	inc %dl
+	jnc read_mbr
 
-	data32 lgdt gdtdesc
+no_such_drive:
+no_boot_partition:
+	# Didn't find a Pintos kernel partition anywhere, give up.
+	call puts
+	.string "\rNot found\r"
 
-# Then we turn on the following bits in CR0:
-#    PE (Protect Enable): this turns on protected mode.
-#    PG (Paging): turns on paging.
-#    WP (Write Protect): if unset, ring 0 code ignores
-#       write-protect bits in page tables (!).
-#    EM (Emulation): forces floating-point instructions to trap.
-#       We don't support floating point. 
-	
-	movl %cr0, %eax
-	orl $CR0_PE | CR0_PG | CR0_WP | CR0_EM, %eax
-	movl %eax, %cr0
-	
-# We're now in protected mode in a 16-bit segment.  The CPU still has
-# the real-mode code segment cached in %cs's segment descriptor.  We
-# need to reload %cs, and the easiest way is to use a far jump.
-# Because we're not in a 32-bit segment the data32 prefix is needed to
-# jump to a 32-bit offset.
+	# Notify BIOS that boot failed.  See [IntrList].
+	int $0x18
 
-	data32 ljmp $SEL_KCSEG, $1f + LOADER_PHYS_BASE
-	
-# We're now in protected mode in a 32-bit segment.
+#### We found a kernel.  The kernel's drive is in DL.  The partition
+#### table entry for the kernel's partition is at ES:SI.  Our job now
+#### is to read the kernel from disk and jump to its start address.
 
-	.code32
+load_kernel:
+	call puts
+	.string "\rLoading"
 
-# Reload all the other segment registers and the stack pointer to
-# point into our new GDT.
+	# Figure out number of sectors to read.  A Pintos kernel is
+	# just an ELF format object, which doesn't have an
+	# easy-to-read field to identify its own size (see [ELF1]).
+	# But we limit Pintos kernels to 512 kB for other reasons, so
+	# it's easy enough to just read the entire contents of the
+	# partition or 512 kB from disk, whichever is smaller.
+	mov %es:12(%si), %ecx		# EBP = number of sectors
+	cmp $1024, %ecx			# Cap size at 512 kB
+	jbe 1f
+	mov $1024, %cx
+1:
 
-1:	movw $SEL_KDSEG, %ax
-	movw %ax, %ds		
-	movw %ax, %es		
-	movw %ax, %fs		
-	movw %ax, %gs		
-	movw %ax, %ss
-	movl $LOADER_PHYS_BASE + 0x30000, %esp
+	mov %es:8(%si), %ebx		# EBX = first sector
+	mov $0x2000, %ax		# Start load address: 0x20000
 
-#### Load kernel starting at physical address LOADER_KERN_BASE by
-#### frobbing the IDE controller directly.
+next_sector:
+	# Read one sector into memory.
+	mov %ax, %es			# ES:0000 -> load address
+	call read_sector
+	jc read_failed
 
-	movl $1, %ebx
-	movl $LOADER_KERN_BASE + LOADER_PHYS_BASE, %edi
+	# Print '.' as progress indicator once every 16 sectors == 8 kB.
+	test $15, %bl
+	jnz 1f
+	call puts
+	.string "."
+1:
 
-# Disable interrupt delivery by IDE controller, because we will be
-# polling for data.
-# (If we don't do this, Bochs 2.2.6 will never deliver any IDE
-# interrupt to us later after we reset the interrupt controller during
-# boot, even if we also reset the IDE controller.)
+	# Advance memory pointer and disk sector.
+	add $0x20, %ax
+	inc %bx
+	loop next_sector
 
-	movw $0x3f6, %dx
-	movb $0x02, %al
-	outb %al, %dx
-	
-read_sector:
+	call puts
+	.string "\r"
 
-# Poll status register while controller busy.
+#### Transfer control to the kernel that we loaded.  We read the start
+#### address out of the ELF header (see [ELF1]) and convert it from a
+#### 32-bit linear address into a 16:16 segment:offset address for
+#### real mode, then jump to the converted address.  The 80x86 doesn't
+#### have an instruction to jump to an absolute segment:offset kept in
+#### registers, so in fact we store the address in a temporary memory
+#### location, then jump indirectly through that location.  To save 4
+#### bytes in the loader, we reuse 4 bytes of the loader's code for
+#### this temporary pointer.
 
-	movl $0x1f7, %edx
-1:	inb %dx, %al
-	testb $0x80, %al
-	jnz 1b
+	mov $0x2000, %ax
+	mov %ax, %es
+	mov %es:0x18, %dx
+	mov %dx, start
+	movw $0x2000, start + 2
+	ljmp *start
 
-# Read a single sector.
+read_failed:
+start:
+	# Disk sector read failed.
+	call puts
+1:	.string "\rBad read\r"
 
-	movl $0x1f2, %edx
-	movb $1, %al
-	outb %al, %dx
+	# Notify BIOS that boot failed.  See [IntrList].
+	int $0x18
 
-# Sector number to write in low 28 bits.
-# LBA mode, device 0 in top 4 bits.
+#### Print string subroutine.  To save space in the loader, this
+#### subroutine takes its null-terminated string argument from the
+#### code stream just after the call, and then returns to the byte
+#### just after the terminating null.  This subroutine preserves all
+#### general-purpose registers.
 
-	movl %ebx, %eax
-	andl $0x0fffffff, %eax
-	orl $0xe0000000, %eax
-
-# Dump %eax to ports 0x1f3...0x1f6.
-
-	movl $4, %ecx
-1:	incw %dx
-	outb %al, %dx
-	shrl $8, %eax
-	loop 1b
-
-# READ command to command register.
-
-	incw %dx
-	movb $0x20, %al
-	outb %al, %dx
-
-# Poll status register while controller busy.
-
-1:	inb %dx, %al
-	testb $0x80, %al
-	jnz 1b
-
-# Poll status register until data ready.
-
-1:	inb %dx, %al
-	testb $0x08, %al
-	jz 1b
-
-# Transfer sector.
-
-	movl $256, %ecx
-	movl $0x1f0, %edx
-	rep insw
-
-# Next sector.
-
-	incl %ebx
-	cmpl $KERNEL_LOAD_PAGES*8 + 1, %ebx
-	jnz read_sector
-
-#### Jump to kernel entry point.
-
-	movl $LOADER_PHYS_BASE + LOADER_KERN_BASE, %eax
-	call *%eax
-	jmp panic
-
-#### GDT
-
-gdt:
-	.quad 0x0000000000000000	# null seg
-	.quad 0x00cf9a000000ffff	# code seg
-	.quad 0x00cf92000000ffff        # data seg
-	
-gdtdesc:
-	.word	0x17			# sizeof (gdt) - 1
-	.long	gdt + LOADER_PHYS_BASE	# address gdt
-
-#### Fatal error.
-#### Print panic_message (with help from the BIOS) and spin.
-
-panic:  .code16			# We only panic in real mode.
-	movw $panic_message, %si
-	movb $0xe, %ah
-	subb %bh, %bh
-1:	lodsb
+puts:	xchg %si, %ss:(%esp)
+	push %ax
+next_char:
+	mov %cs:(%si), %al
+	inc %si
 	test %al, %al
-2:	jz 2b			# Spin.
+	jz 1f
+	call putc
+	jmp next_char
+1:	pop %ax
+	xchg %si, %ss:(%esp)
+	ret
+
+#### Character output subroutine.  Prints the character in AL to the
+#### VGA display and serial port 0, using BIOS services (see
+#### [IntrList]).  Preserves all general-purpose registers.
+####
+#### If called upon to output a carriage return, this subroutine
+#### automatically supplies the following line feed.
+
+putc:	pusha
+
+1:	sub %bh, %bh			# Page 0.
+	mov $0x0e, %ah			# Teletype output service.
 	int $0x10
+
+	mov $0x01, %ah			# Serial port output service.
+	sub %dx, %dx			# Serial port 0.
+	int $0x14			# Destroys AH.
+
+	cmp $'\r', %al
+	jne popa_ret
+	mov $'\n', %al
 	jmp 1b
 
-panic_message:
-	.ascii "Panic!"
-	.byte 0
+#### Sector read subroutine.  Takes a drive number in DL (0x80 = hard
+#### disk 0, 0x81 = hard disk 1, ...) and a sector number in EBX, and
+#### reads the specified sector into memory at ES:0000.  Returns with
+#### carry set on error, clear otherwise.  Preserves all
+#### general-purpose registers.
 
-#### Physical memory size in 4 kB pages.
-#### This is initialized by the loader and read by the kernel.
-	.org LOADER_RAM_PGS - LOADER_BASE
-ram_pgs:
-	.long 0
+read_sector:
+	pusha
+	sub %eax, %eax
+	push %eax			# LBA sector number [32:63]
+	push %ebx			# LBA sector number [0:31]
+	push %es			# Buffer segment
+	push %ax			# Buffer offset (always 0)
+	push $1				# Number of sectors to read
+	push $16			# Packet size
+	mov $0x42, %ah			# Extended read
+	mov %sp, %si			# DS:SI -> packet
+	int $0x13			# Error code in CF
+	popa				# Pop 16 bytes, preserve flags
+popa_ret:
+	popa
+	ret				# Error code still in CF
 
 #### Command-line arguments and their count.
 #### This is written by the `pintos' utility and read by the kernel.
 #### The loader itself does not do anything with the command line.
 	.org LOADER_ARG_CNT - LOADER_BASE
-arg_cnt:
-	.long 0
-	.org LOADER_ARGS - LOADER_BASE
-args:
-	.fill 0x80, 1, 0
+	.fill LOADER_ARG_CNT_LEN, 1, 0
 
-#### Boot-sector signature.
-#### The BIOS checks that this is set properly.
+	.org LOADER_ARGS - LOADER_BASE
+	.fill LOADER_ARGS_LEN, 1, 0
+
+#### Partition table.
+	.org LOADER_PARTS - LOADER_BASE
+	.fill LOADER_PARTS_LEN, 1, 0
+
+#### Boot-sector signature for BIOS inspection.
 	.org LOADER_SIG - LOADER_BASE
 	.word 0xaa55

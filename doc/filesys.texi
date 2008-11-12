@@ -174,8 +174,9 @@ rationale for it in your design documentation, and as long as it does
 not suffer from external fragmentation (as does the extent-based file
 system we provide).
 
-You can assume that the disk will not be larger than 8 MB.  You must
-support files as large as the disk (minus metadata).  Each inode is
+You can assume that the file system partition will not be larger than
+8 MB.  You must
+support files as large as the partition (minus metadata).  Each inode is
 stored in one disk sector, limiting the number of block pointers that it
 can contain.  Supporting 8 MB files will require you to implement
 doubly-indirect blocks.
@@ -189,7 +190,7 @@ every time a write is made off the end of the file.  Your file system
 must allow this.
 
 There should be no predetermined limit on the size of a file, except
-that a file cannot exceed the size of the disk (minus metadata).  This
+that a file cannot exceed the size of the file system (minus metadata).  This
 also applies to the root directory file, which should now be allowed
 to expand beyond its initial limit of 16 files.
 
@@ -456,10 +457,12 @@ modified by the reference solution.
  30 files changed, 2721 insertions(+), 286 deletions(-)
 @end verbatim
 
-@item Can @code{DISK_SECTOR_SIZE} change?
+@item Can @code{BLOCk_SECTOR_SIZE} change?
 
-No, @code{DISK_SECTOR_SIZE} is fixed at 512.  This is a fixed property
-of IDE disk hardware.
+No, @code{BLOCK_SECTOR_SIZE} is fixed at 512.  For IDE disks, this
+value is a fixed property of the hardware.  Other disks do not
+necessarily have a 512-byte sector, but for simplicity Pintos only
+supports those that do.
 @end table
 
 @menu
@@ -474,9 +477,10 @@ of IDE disk hardware.
 @table @b
 @item What is the largest file size that we are supposed to support?
 
-The disk we create will be 8 MB or smaller.  However, individual files
-will have to be smaller than the disk to accommodate the metadata.
-You'll need to consider this when deciding your inode organization.
+The file system partition we create will be 8 MB or smaller.  However,
+individual files will have to be smaller than the partition to
+accommodate the metadata.  You'll need to consider this when deciding
+your inode organization.
 @end table
 
 @node Subdirectories FAQ

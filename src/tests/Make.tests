@@ -55,13 +55,13 @@ TESTCMD = pintos -v -k -T $(TIMEOUT)
 TESTCMD += $(SIMULATOR)
 TESTCMD += $(PINTOSOPTS)
 ifeq ($(filter userprog, $(KERNEL_SUBDIRS)), userprog)
-TESTCMD += --fs-disk=$(FSDISK)
+TESTCMD += $(FILESYSSOURCE)
 TESTCMD += $(foreach file,$(PUTFILES),-p $(file) -a $(notdir $(file)))
 endif
 ifeq ($(filter vm, $(KERNEL_SUBDIRS)), vm)
-TESTCMD += --swap-disk=4
+TESTCMD += --swap-size=4
 endif
-TESTCMD += -- -q 
+TESTCMD += -- -q
 TESTCMD += $(KERNELFLAGS)
 ifeq ($(filter userprog, $(KERNEL_SUBDIRS)), userprog)
 TESTCMD += -f
@@ -69,7 +69,7 @@ endif
 TESTCMD += $(if $($(TEST)_ARGS),run '$(*F) $($(TEST)_ARGS)',run $(*F))
 TESTCMD += < /dev/null
 TESTCMD += 2> $(TEST).errors $(if $(VERBOSE),|tee,>) $(TEST).output
-%.output: os.dsk
+%.output: kernel.bin loader.bin
 	$(TESTCMD)
 
 %.result: %.ck %.output

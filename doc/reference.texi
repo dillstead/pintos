@@ -1,12 +1,11 @@
 @node Reference Guide
 @appendix Reference Guide
 
-This chapter is a reference for the Pintos code.  It covers the
-entire code base, but you'll only be using Pintos one part at a time,
-so you may find that you want to read each part as you work on the
+This chapter is a reference for the Pintos code.  The reference guide
+does not cover all of the code in Pintos, but it does cover those
+pieces that students most often find troublesome.  You may find that
+you want to read each part of the reference guide as you work on the
 project where it becomes important.
-
-(Actually, the reference guide is currently incomplete.)
 
 We recommend using ``tags'' to follow along with references to function
 and variable names (@pxref{Tags}).
@@ -30,7 +29,9 @@ initialization.
 
 @menu
 * Pintos Loader::               
-* Kernel Initialization::       
+* Low-Level Kernel Initialization::
+* High-Level Kernel Initialization::
+* Physical Memory Map::
 @end menu
 
 @node Pintos Loader
@@ -38,78 +39,94 @@ initialization.
 
 The first part of Pintos that runs is the loader, in
 @file{threads/loader.S}.  The PC BIOS loads the loader into memory.
-The loader, in turn, is responsible for initializing the CPU, loading
-the rest of Pintos into memory, and then jumping to its start.  It's
-not important to understand exactly what the loader does, but if
+The loader, in turn, is responsible for finding the kernel on disk,
+loading it into memory, and then jumping to its start.  It's
+not important to understand exactly how the loader works, but if
 you're interested, read on.  You should probably read along with the
 loader's source.  You should also understand the basics of the
 80@var{x}86 architecture as described by chapter 3, ``Basic Execution
 Environment,'' of @bibref{IA32-v1}.
 
-Because the PC BIOS loads the loader, the loader has to play by the
-BIOS's rules.  In particular, the BIOS only loads 512 bytes (one disk
-sector) into memory.  This is a severe restriction and it means that,
-practically speaking, the loader has to be written in assembly
-language.
+The PC BIOS loads the loader from the first sector of the first hard
+disk, called the @dfn{master boot record} (MBR).  PC conventions
+reserve 64 bytes of the MBR for the partition table, and Pintos uses
+about 128 additional bytes for kernel command-line arguments.  This
+leaves a little over 300 bytes for the loader's own code.  This is a
+severe restriction that means, practically speaking, the loader must
+be written in assembly language.
 
-The Pintos loader first initializes the CPU.  The first important part of
-this is to enable the A20 line, that is, the CPU's address line
-numbered 20.  For historical reasons, PCs boot with this address
-line fixed at 0, which means that attempts to access memory beyond the
-first 1 MB (2 raised to the 20th power) will fail.  Pintos wants to
-access more memory than this, so we have to enable it.
+The Pintos loader and kernel don't have to be on the same disk, nor
+does is the kernel required to be in any particular location on a
+given disk.  The loader's first job, then, is to find the kernel by
+reading the partition table on each hard disk, looking for a bootable
+partition of the type used for a Pintos kernel.
 
-Next, the loader asks the BIOS for the PC's memory size.  Again for
-historical reasons, the function that we call in the BIOS to do this
-can only detect up to 64 MB of RAM, so that's the practical limit that
-Pintos can support.  The memory size is stashed away in a location in
-the loader that the kernel can read after it boots.
+When the loader finds a bootable kernel partition, it reads the
+partition's contents into memory at physical address @w{128 kB}.  The
+kernel is at the beginning of the partition, which might be larger
+than necessary due to partition boundary alignment conventions, so the
+loader reads no more than @w{512 kB} (and the Pintos build process
+will refuse to produce kernels larger than that).  Reading more data
+than this would cross into the region from @w{640 kB} to @w{1 MB} that
+the PC architecture reserves for hardware and the BIOS, and a standard
+PC BIOS does not provide any means to load the kernel above @w{1 MB}.
 
-Third, the loader creates a basic page table.  This page table maps
+The loader's final job is to extract the entry point from the loaded
+kernel image and transfer control to it.  The entry point is not at a
+predictable location, but the kernel's ELF header contains a pointer
+to it.  The loader extracts the pointer and jumps to the location it
+points to.
+
+The Pintos kernel command line
+is stored in the boot loader.  The @command{pintos} program actually
+modifies a copy of the boot loader on disk each time it runs the kernel,
+inserting whatever command-line arguments the user supplies to the kernel,
+and then the kernel at boot time reads those arguments out of the boot
+loader in memory.  This is not an elegant solution, but it is simple
+and effective.
+
+@node Low-Level Kernel Initialization
+@subsection Low-Level Kernel Initialization
+
+The loader's last action is to transfer control to the kernel's entry
+point, which is @func{start} in @file{threads/start.S}.  The job of
+this code is to switch the CPU from legacy 16-bit ``real mode'' into
+the 32-bit ``protected mode'' used by all modern 80@var{x}86 operating
+systems.
+
+The startup code's first task is actually to obtain the machine's
+memory size, by asking the BIOS for the PC's memory size.  The
+simplest BIOS function to do this can only detect up to 64 MB of RAM,
+so that's the practical limit that Pintos can support.  The function
+stores the memory size, in pages, in global variable
+@code{init_ram_pages}.
+
+The first part of CPU initialization is to enable the A20 line, that
+is, the CPU's address line numbered 20.  For historical reasons, PCs
+boot with this address line fixed at 0, which means that attempts to
+access memory beyond the first 1 MB (2 raised to the 20th power) will
+fail.  Pintos wants to access more memory than this, so we have to
+enable it.
+
+Next, the loader creates a basic page table.  This page table maps
 the 64 MB at the base of virtual memory (starting at virtual address
 0) directly to the identical physical addresses.  It also maps the
 same physical memory starting at virtual address
 @code{LOADER_PHYS_BASE}, which defaults to @t{0xc0000000} (3 GB).  The
 Pintos kernel only wants the latter mapping, but there's a
 chicken-and-egg problem if we don't include the former: our current
-virtual address is roughly @t{0x7c00}, the location where the BIOS
-loaded us, and we can't jump to @t{0xc0007c00} until we turn on the
+virtual address is roughly @t{0x20000}, the location where the loader
+put us, and we can't jump to @t{0xc0020000} until we turn on the
 page table, but if we turn on the page table without jumping there,
 then we've just pulled the rug out from under ourselves.
 
 After the page table is initialized, we load the CPU's control
-registers to turn on protected mode and paging, and then we set up the
-segment registers.  We aren't yet equipped to handle interrupts in
-protected mode, so we disable interrupts.
+registers to turn on protected mode and paging, and set up the segment
+registers.  We aren't yet equipped to handle interrupts in protected
+mode, so we disable interrupts.  The final step is to call @func{main}.
 
-Finally it's time to load the kernel from disk.  We use a simple but
-inflexible method to do this: we program the IDE disk
-controller directly.  We assume that the kernel is stored starting
-from the second sector of the first IDE disk (the first sector normally
-contains the boot loader).  We also assume that the BIOS has
-already set up the IDE controller for us.  We read
-@code{KERNEL_LOAD_PAGES} pages of data (4 kB per page) from the disk directly
-into virtual memory, starting @code{LOADER_KERN_BASE} bytes past
-@code{LOADER_PHYS_BASE}, which by default means that we load the
-kernel starting 1 MB into physical memory.
-
-Then we jump to the start of the compiled kernel image.  Using the
-``linker script'' in @file{threads/kernel.lds.S}, the kernel has
-arranged to begin with the assembly module
-@file{threads/start.S}.  This assembly module just calls
-@func{main}, which never returns.
-
-There's one more trick: the Pintos kernel command line
-is stored in the boot loader.  The @command{pintos} program actually
-modifies a copy of the boot loader on disk each time it runs the kernel,
-putting
-in whatever command line arguments the user supplies to the kernel,
-and then the kernel at boot time reads those arguments out of the boot
-loader in memory.  This is not an elegant solution, but it is simple
-and effective.
-
-@node Kernel Initialization
-@subsection Kernel Initialization
+@node High-Level Kernel Initialization
+@subsection High-Level Kernel Initialization
 
 The kernel proper starts with the @func{main} function.  The
 @func{main} function is written in C, as will be most of the code we
@@ -124,17 +141,14 @@ These are usually named @func{@var{module}_init}, where
 module's source code, and @file{@var{module}.h} is the module's
 header.
 
-First we initialize kernel RAM in @func{ram_init}.  The first step
-is to clear out the kernel's so-called ``BSS'' segment.  The BSS is a
+The first step in @func{main} is to call @func{bss_init}, which clears
+out the kernel's ``BSS'', which is the traditional name for a
 segment that should be initialized to all zeros.  In most C
 implementations, whenever you
 declare a variable outside a function without providing an
 initializer, that variable goes into the BSS.  Because it's all zeros, the
 BSS isn't stored in the image that the loader brought into memory.  We
-just use @func{memset} to zero it out.  The other task of
-@func{ram_init} is to read out the machine's memory size from where
-the loader stored it and put it into the @code{init_ram_pages} variable for
-later use.
+just use @func{memset} to zero it out.
 
 Next, @func{main} calls @func{read_command_line} to break the kernel command
 line into arguments, then @func{parse_options} to read any options at
@@ -179,7 +193,7 @@ possible, so we use
 @func{timer_calibrate} calibrates the timer for accurate short delays.
 
 If the file system is compiled in, as it will starting in project 2, we
-initialize the disks with @func{disk_init}, then the
+initialize the IDE disks with @func{ide_init}, then the
 file system with @func{filesys_init}.
 
 Boot is complete, so we print a message.
@@ -192,6 +206,34 @@ Finally, if @option{-q} was specified on the kernel command line, we
 call @func{power_off} to terminate the machine simulator.  Otherwise,
 @func{main} calls @func{thread_exit}, which allows any other running
 threads to continue running.
+
+@node Physical Memory Map
+@subsection Physical Memory Map
+
+@multitable {@t{00000000}--@t{00000000}} {Hardware} {Some much longer explanatory text}
+@headitem Memory Range
+@tab Owner
+@tab Contents
+
+@item @t{00000000}--@t{000003ff} @tab CPU @tab Real mode interrupt table.
+@item @t{00000400}--@t{000005ff} @tab BIOS @tab Miscellaneous data area.
+@item @t{00000600}--@t{00007bff} @tab --- @tab ---
+@item @t{00007c00}--@t{00007dff} @tab Pintos @tab Loader.
+@item @t{0000e000}--@t{0000efff} @tab Pintos 
+@tab Stack for loader; kernel stack and @struct{thread} for initial
+kernel thread.
+@item @t{0000f000}--@t{0000ffff} @tab Pintos
+@tab Page directory for startup code.
+@item @t{00010000}--@t{00020000} @tab Pintos
+@tab Page tables for startup code.
+@item @t{00020000}--@t{0009ffff} @tab Pintos
+@tab Kernel code, data, and uninitialized data segments.
+@item @t{000a0000}--@t{000bffff} @tab Video @tab VGA display memory.
+@item @t{000c0000}--@t{000effff} @tab Hardware 
+@tab Reserved for expansion card RAM and ROM.
+@item @t{000f0000}--@t{000fffff} @tab BIOS @tab ROM BIOS.
+@item @t{00100000}--@t{03ffffff} @tab Pintos @tab Dynamic memory allocation.
+@end multitable
 
 @node Threads
 @section Threads
@@ -556,7 +598,7 @@ synchronization primitives to help out.
 * Semaphores::                  
 * Locks::                       
 * Monitors::                    
-* Optimization Barriers::             
+* Optimization Barriers::
 @end menu
 
 @node Disabling Interrupts
@@ -1236,7 +1278,8 @@ at once.
 
 The page allocator divides the memory it allocates into two pools,
 called the kernel and user pools.  By default, each pool gets half of
-system memory, but this can be changed with the @option{-ul} kernel
+system memory above @w{1 MB}, but the division can be changed with the
+@option{-ul} kernel
 command line
 option (@pxref{Why PAL_USER?}).  An allocation request draws from one
 pool or the other.  If one pool becomes empty, the other may still

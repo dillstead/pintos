@@ -5,6 +5,10 @@ use POSIX;
 use Fcntl;
 use File::Temp 'tempfile';
 use Getopt::Long qw(:config bundling);
+use Fcntl qw(SEEK_SET SEEK_CUR);
+
+# Read Pintos.pm from the same directory as this program.
+BEGIN { my $self = $0; $self =~ s%/+[^/]*$%%; require "$self/Pintos.pm"; }
 
 # Command-line options.
 our ($start_time) = time ();
@@ -21,16 +25,17 @@ our (@puts);			# Files to copy into the VM.
 our (@gets);			# Files to copy out of the VM.
 our ($as_ref);			# Reference to last addition to @gets or @puts.
 our (@kernel_args);		# Arguments to pass to kernel.
-our (%disks) = (OS => {DEF_FN => 'os.dsk'},		# Disks to give VM.
-		FS => {DEF_FN => 'fs.dsk'},
-		SCRATCH => {DEF_FN => 'scratch.dsk'},
-		SWAP => {DEF_FN => 'swap.dsk'});
-our (@disks_by_iface) = @disks{qw (OS FS SCRATCH SWAP)};
+our (%parts);			# Partitions.
+our ($make_disk);		# Name of disk to create.
+our ($tmp_disk) = 1;		# Delete $make_disk after run?
+our (@disks);			# Extra disk images to pass to simulator.
+our ($loader_fn);		# Bootstrap loader.
+our (%geometry);		# IDE disk geometry.
+our ($align);			# Partition alignment.
 
 parse_command_line ();
-find_disks ();
 prepare_scratch_disk ();
-prepare_arguments ();
+find_disks ();
 run_vm ();
 finish_scratch_disk ();
 
@@ -39,7 +44,7 @@ exit 0;
 # Parses the command line.
 sub parse_command_line {
     usage (0) if @ARGV == 0 || (@ARGV == 1 && $ARGV[0] eq '--help');
-    
+
     @kernel_args = @ARGV;
     if (grep ($_ eq '--', @kernel_args)) {
 	@ARGV = ();
@@ -73,27 +78,41 @@ sub parse_command_line {
 
 		    "h|help" => sub { usage (0); },
 
-		    "os-disk=s" => \$disks{OS}{FILE_NAME},
-		    "fs-disk=s" => \$disks{FS}{FILE_NAME},
-		    "scratch-disk=s" => \$disks{SCRATCH}{FILE_NAME},
-		    "swap-disk=s" => \$disks{SWAP}{FILE_NAME},
+		    "kernel=s" => \&set_part,
+		    "filesys=s" => \&set_part,
+		    "swap=s" => \&set_part,
 
-		    "0|disk-0|hda=s" => \$disks_by_iface[0]{FILE_NAME},
-		    "1|disk-1|hdb=s" => \$disks_by_iface[1]{FILE_NAME},
-		    "2|disk-2|hdc=s" => \$disks_by_iface[2]{FILE_NAME},
-		    "3|disk-3|hdd=s" => \$disks_by_iface[3]{FILE_NAME})
+		    "filesys-size=s" => \&set_part,
+		    "scratch-size=s" => \&set_part,
+		    "swap-size=s" => \&set_part,
+
+		    "kernel-from=s" => \&set_part,
+		    "filesys-from=s" => \&set_part,
+		    "swap-from=s" => \&set_part,
+
+		    "make-disk=s" => sub { $make_disk = $_[1];
+					   $tmp_disk = 0; },
+		    "disk=s" => sub { set_disk ($_[1]); },
+		    "loader=s" => \$loader_fn,
+
+		    "geometry=s" => \&set_geometry,
+		    "align=s" => \&set_align)
 	  or exit 1;
     }
 
     $sim = "bochs" if !defined $sim;
     $debug = "none" if !defined $debug;
-    $vga = "window" if !defined $vga;
+    $vga = exists ($ENV{DISPLAY}) ? "window" : "none" if !defined $vga;
 
     undef $timeout, print "warning: disabling timeout with --$debug\n"
       if defined ($timeout) && $debug ne 'none';
 
     print "warning: enabling serial port for -k or --kill-on-failure\n"
       if $kill_on_failure && !$serial;
+
+    $align = "bochs",
+      print STDERR "warning: setting --align=bochs for Bochs support\n"
+	if $sim eq 'bochs' && defined ($align) && $align eq 'none';
 }
 
 # usage($exitcode).
@@ -128,15 +147,27 @@ Testing options:
                            panic, test failure, or triple fault
 Configuration options:
   -m, --mem=N              Give Pintos N MB physical RAM (default: 4)
-File system commands (for `run' command):
+File system commands:
   -p, --put-file=HOSTFN    Copy HOSTFN into VM, by default under same name
   -g, --get-file=GUESTFN   Copy GUESTFN out of VM, by default under same name
   -a, --as=FILENAME        Specifies guest (for -p) or host (for -g) file name
-Disk options: (name an existing FILE or specify SIZE in MB for a temp disk)
-  --os-disk=FILE           Set OS disk file (default: os.dsk)
-  --fs-disk=FILE|SIZE      Set FS disk file (default: fs.dsk)
-  --scratch-disk=FILE|SIZE Set scratch disk (default: scratch.dsk)
-  --swap-disk=FILE|SIZE    Set swap disk file (default: swap.dsk)
+Partition options: (where PARTITION is one of: kernel filesys scratch swap)
+  --PARTITION=FILE         Use a copy of FILE for the given PARTITION
+  --PARTITION-size=SIZE    Create an empty PARTITION of the given SIZE in MB
+  --PARTITION-from=DISK    Use of a copy of the given PARTITION in DISK
+  (There is no --kernel-size, --scratch, or --scratch-from option.)
+Disk configuration options:
+  --make-disk=DISK         Name the new DISK and don't delete it after the run
+  --disk=DISK              Also use existing DISK (may be used multiple times)
+Advanced disk configuration options:
+  --loader=FILE            Use FILE as bootstrap loader (default: loader.bin)
+  --geometry=H,S           Use H head, S sector geometry (default: 16,63)
+  --geometry=zip           Use 64 head, 32 sector geometry for USB-ZIP boot
+                           (see http://syslinux.zytor.com/usbkey.php)
+  --align=bochs            Pad out disk to cylinder to support Bochs (default)
+  --align=full             Align partition boundaries to cylinder boundary to
+                           let fdisk guess correct geometry and quiet warnings
+  --align=none             Don't align partitions at all, to save space
 Other options:
   -h, --help               Display this help message.
 EOF
@@ -201,91 +232,170 @@ sub set_as {
       if defined $as_ref->[1];
     $as_ref->[1] = $as;
 }
+
+# Sets $disk as a disk to be included in the VM to run.
+sub set_disk {
+    my ($disk) = @_;
+
+    push (@disks, $disk);
+
+    my (%pt) = read_partition_table ($disk);
+    for my $role (keys %pt) {
+	die "can't have two sources for \L$role\E partition"
+	  if exists $parts{$role};
+	$parts{$role}{DISK} = $disk;
+	$parts{$role}{START} = $pt{$role}{START};
+	$parts{$role}{SECTORS} = $pt{$role}{SECTORS};
+    }
+}
 
 # Locates the files used to back each of the virtual disks,
 # and creates temporary disks.
 sub find_disks {
-    for my $disk (values %disks) {
-	# If there's no assigned file name but the default file exists,
-	# try to assign a default file name.
-	if (!defined ($disk->{FILE_NAME})) {
-	    for my $try_fn ($disk->{DEF_FN}, "build/" . $disk->{DEF_FN}) {
-		$disk->{FILE_NAME} = $try_fn, last
-		  if -e $try_fn;
-	    }
-	}
-
-	# If there's no file name, we're done.
-	next if !defined ($disk->{FILE_NAME});
-
-	if ($disk->{FILE_NAME} =~ /^\d+(\.\d+)?|\.\d+$/) {
-	    # Create a temporary disk of approximately the specified
-	    # size in megabytes.
-	    die "OS disk can't be temporary\n" if $disk == $disks{OS};
-
-	    my ($mb) = $disk->{FILE_NAME};
-	    undef $disk->{FILE_NAME};
-
-	    my ($cyl_size) = 512 * 16 * 63;
-	    extend_disk ($disk, ceil ($mb * 2) * $cyl_size);
-	} else {
-	    # The file must exist and have nonzero size.
-	    -e $disk->{FILE_NAME} or die "$disk->{FILE_NAME}: stat: $!\n";
-	    -s _ or die "$disk->{FILE_NAME}: disk has zero size\n";
-	}
+    # Find kernel, if we don't already have one.
+    if (!exists $parts{KERNEL}) {
+	my $name = find_file ('kernel.bin');
+	die "Cannot find kernel\n" if !defined $name;
+	do_set_part ('KERNEL', 'file', $name);
     }
 
-    # Warn about (potentially) missing disks.
-    die "Cannot find OS disk\n" if !defined $disks{OS}{FILE_NAME};
+    # Try to find file system and swap disks, if we don't already have
+    # partitions.
+    if (!exists $parts{FILESYS}) {
+	my $name = find_file ('filesys.dsk');
+	set_disk ($name) if defined $name;
+    }
+    if (!exists $parts{SWAP}) {
+	my $name = find_file ('swap.dsk');
+	set_disk ($name) if defined $name;
+    }
+
+    # Warn about (potentially) missing partitions.
     if (my ($project) = `pwd` =~ /\b(threads|userprog|vm|filesys)\b/) {
 	if ((grep ($project eq $_, qw (userprog vm filesys)))
-	    && !defined ($disks{FS}{FILE_NAME})) {
+	    && !defined $parts{FILESYS}) {
 	    print STDERR "warning: it looks like you're running the $project ";
-	    print STDERR "project, but no file system disk is present\n";
+	    print STDERR "project, but no file system partition is present\n";
 	}
-	if ($project eq 'vm' && !defined $disks{SWAP}{FILE_NAME}) {
+	if ($project eq 'vm' && !defined $parts{SWAP}) {
 	    print STDERR "warning: it looks like you're running the $project ";
-	    print STDERR "project, but no swap disk is present\n";
+	    print STDERR "project, but no swap partition is present\n";
 	}
     }
+
+    # Open disk handle.
+    my ($handle);
+    if (!defined $make_disk) {
+	($handle, $make_disk) = tempfile (UNLINK => $tmp_disk,
+					  SUFFIX => '.dsk');
+    } else {
+	die "$make_disk: already exists\n" if -e $make_disk;
+	open ($handle, '>', $make_disk) or die "$make_disk: create: $!\n";
+    }
+
+    # Prepare the arguments to pass to the Pintos kernel.
+    my (@args);
+    push (@args, shift (@kernel_args))
+      while @kernel_args && $kernel_args[0] =~ /^-/;
+    push (@args, 'extract') if @puts;
+    push (@args, @kernel_args);
+    push (@args, 'append', $_->[0]) foreach @gets;
+
+    # Make disk.
+    my (%disk);
+    our (@role_order);
+    for my $role (@role_order) {
+	my $p = $parts{$role};
+	next if !defined $p;
+	next if exists $p->{DISK};
+	$disk{$role} = $p;
+    }
+    $disk{DISK} = $make_disk;
+    $disk{HANDLE} = $handle;
+    $disk{ALIGN} = $align;
+    $disk{GEOMETRY} = %geometry;
+    $disk{FORMAT} = 'partitioned';
+    $disk{LOADER} = read_loader ($loader_fn);
+    $disk{ARGS} = \@args;
+    assemble_disk (%disk);
+
+    # Put the disk at the front of the list of disks.
+    unshift (@disks, $make_disk);
+    die "can't use more than " . scalar (@disks) . "disks\n" if @disks > 4;
 }
 
 # Prepare the scratch disk for gets and puts.
 sub prepare_scratch_disk {
-    if (@puts) {
-	# Write ustar header and data for each file.
-	put_scratch_file ($_->[0],
-			  defined $_->[1] ? $_->[1] : $_->[0])
-	  foreach @puts;
+    return if !@gets && !@puts;
 
-	# Write end-of-archive marker.
-	write_fully ($disks{SCRATCH}{HANDLE}, $disks{SCRATCH}{FILE_NAME},
-		     "\0" x 1024);
+    my ($p) = $parts{SCRATCH};
+    # Create temporary partition and write the files to put to it,
+    # then write an end-of-archive marker.
+    my ($part_handle, $part_fn) = tempfile (UNLINK => 1, SUFFIX => '.part');
+    put_scratch_file ($_->[0], defined $_->[1] ? $_->[1] : $_->[0],
+		      $part_handle, $part_fn)
+      foreach @puts;
+    write_fully ($part_handle, $part_fn, "\0" x 1024);
+
+    # Make sure the scratch disk is big enough to get big files
+    # and at least as big as any requested size.
+    my ($size) = round_up (max (@gets * 1024 * 1024, $p->{BYTES} || 0), 512);
+    extend_file ($part_handle, $part_fn, $size);
+    close ($part_handle);
+
+    if (exists $p->{DISK}) {
+	# Copy the scratch partition to the disk.
+	die "$p->{DISK}: scratch partition too small\n"
+	  if $p->{SECTORS} * 512 < $size;
+
+	my ($disk_handle);
+	open ($part_handle, '<', $part_fn) or die "$part_fn: open: $!\n";
+	open ($disk_handle, '+<', $p->{DISK}) or die "$p->{DISK}: open: $!\n";
+	my ($start) = $p->{START} * 512;
+	sysseek ($disk_handle, $start, SEEK_SET) == $start
+	  or die "$p->{DISK}: seek: $!\n";
+	copy_file ($part_handle, $part_fn, $disk_handle, $p->{DISK}, $size);
+	close ($disk_handle) or die "$p->{DISK}: close: $!\n";
+	close ($part_handle) or die "$part_fn: close: $!\n";
+    } else {
+	# Set $part_fn as the source for the scratch partition.
+	do_set_part ('SCRATCH', 'file', $part_fn);
     }
-
-    # Make sure the scratch disk is big enough to get big files.
-    extend_disk ($disks{SCRATCH}, @gets * 1024 * 1024) if @gets;
 }
 
 # Read "get" files from the scratch disk.
 sub finish_scratch_disk {
-    # We need to start reading the scratch disk from the beginning again.
-    if (@gets) {
-	close ($disks{SCRATCH}{HANDLE});
-	undef ($disks{SCRATCH}{HANDLE});
-    }
+    return if !@gets;
+
+    # Open scratch partition.
+    my ($p) = $parts{SCRATCH};
+    my ($part_handle);
+    my ($part_fn) = $p->{DISK};
+    open ($part_handle, '<', $part_fn) or die "$part_fn: open: $!\n";
+    sysseek ($part_handle, $p->{START} * 512, SEEK_SET) == $p->{START} * 512
+      or die "$part_fn: seek: $!\n";
 
     # Read each file.
-    # If reading fails, delete that file and all subsequent files.
+    # If reading fails, delete that file and all subsequent files, but
+    # don't die with an error, because that's a guest error not a host
+    # error.  (If we do exit with an error code, it fouls up the
+    # grading process.)  Instead, just make sure that the host file(s)
+    # we were supposed to retrieve is unlinked.
     my ($ok) = 1;
+    my ($part_end) = ($p->{START} + $p->{SECTORS}) * 512;
     foreach my $get (@gets) {
 	my ($name) = defined ($get->[1]) ? $get->[1] : $get->[0];
-	my ($error) = get_scratch_file ($name);
-	if ($error) {
-	    print STDERR "getting $name failed ($error)\n";
-	    die "$name: unlink: $!\n" if !unlink ($name) && !$!{ENOENT};
-	    $ok = 0;
+	if ($ok) {
+	    my ($error) = get_scratch_file ($name, $part_handle, $part_fn);
+	    if (!$error && sysseek ($part_handle, 0, SEEK_CUR) > $part_end) {
+		$error = "$part_fn: scratch data overflows partition";
+	    }
+	    if ($error) {
+		print STDERR "getting $name failed ($error)\n";
+		$ok = 0;
+	    }
 	}
+	die "$name: unlink: $!\n" if !$ok && !unlink ($name) && !$!{ENOENT};
     }
 }
 
@@ -313,13 +423,13 @@ sub calc_ustar_chksum {
     return unpack ("%32a*", $s);
 }
 
-# put_scratch_file($src_file_name, $dst_file_name).
+# put_scratch_file($src_file_name, $dst_file_name,
+#                  $disk_handle, $disk_file_name).
 #
-# Copies $src_file_name into the scratch disk for extraction as
-# $dst_file_name.
+# Copies $src_file_name into $disk_handle for extraction as
+# $dst_file_name.  $disk_file_name is used for error messages.
 sub put_scratch_file {
-    my ($src_file_name, $dst_file_name) = @_;
-    my ($disk_handle, $disk_file_name) = open_disk ($disks{SCRATCH});
+    my ($src_file_name, $dst_file_name, $disk_handle, $disk_file_name) = @_;
 
     print "Copying $src_file_name to scratch partition...\n";
 
@@ -367,13 +477,13 @@ sub put_scratch_file {
       if $size % 512;
 }
 
-# get_scratch_file($file).
+# get_scratch_file($get_file_name, $disk_handle, $disk_file_name)
 #
-# Copies from the scratch disk to $file.
+# Copies from $disk_handle to $get_file_name (which is created).
+# $disk_file_name is used for error messages.
 # Returns 1 if successful, 0 on failure.
 sub get_scratch_file {
-    my ($get_file_name) = @_;
-    my ($disk_handle, $disk_file_name) = open_disk ($disks{SCRATCH});
+    my ($get_file_name, $disk_handle, $disk_file_name) = @_;
 
     print "Copying $get_file_name out of $disk_file_name...\n";
 
@@ -412,35 +522,6 @@ sub get_scratch_file {
       if $size % 512;
 
     return 0;
-}
-
-# Prepares the arguments to pass to the Pintos kernel,
-# and then write them into Pintos bootloader.
-sub prepare_arguments {
-    my (@args);
-    push (@args, shift (@kernel_args))
-      while @kernel_args && $kernel_args[0] =~ /^-/;
-    push (@args, 'extract') if @puts;
-    push (@args, @kernel_args);
-    push (@args, 'append', $_->[0]) foreach @gets;
-    write_cmd_line ($disks{OS}, @args);
-}
-
-# Writes @args into the Pintos bootloader at the beginning of $disk.
-sub write_cmd_line {
-    my ($disk, @args) = @_;
-
-    # Figure out command line to write.
-    my ($arg_cnt) = pack ("V", scalar (@args));
-    my ($args) = join ('', map ("$_\0", @args));
-    die "command line exceeds 128 bytes" if length ($args) > 128;
-    $args .= "\0" x (128 - length ($args));
-
-    # Write command line.
-    my ($handle, $file_name) = open_disk_copy ($disk);
-    print "Writing command line to $file_name...\n";
-    sysseek ($handle, 0x17a, 0) == 0x17a or die "$file_name: seek: $!\n";
-    syswrite ($handle, "$arg_cnt$args") or die "$file_name: write: $!\n";
 }
 
 # Running simulators.
@@ -483,20 +564,14 @@ panic: action=fatal
 user_shortcut: keys=ctrlaltdel
 EOF
     print BOCHSRC "gdbstub: enabled=1\n" if $debug eq 'gdb';
-    if ($realtime) {
-	print BOCHSRC "clock: sync=realtime\n";
-    } else {
-	print BOCHSRC "clock: sync=none, time0=0\n";
-    }
-    print_bochs_disk_line ("ata0-master", 0);
-    print_bochs_disk_line ("ata0-slave", 1);
-    if (defined ($disks_by_iface[2]{FILE_NAME})
-	|| defined ($disks_by_iface[3]{FILE_NAME})) {
-	print BOCHSRC "ata1: enabled=1, ioaddr1=0x170, ",
-	  "ioaddr2=0x370, irq=15\n";
-	print_bochs_disk_line ("ata1-master", 2);
-	print_bochs_disk_line ("ata1-slave", 3);
-    }
+    print BOCHSRC "clock: sync=", $realtime ? 'realtime' : 'none',
+      ", time0=0\n";
+    print BOCHSRC "ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15\n"
+      if @disks > 2;
+    print_bochs_disk_line ("ata0-master", $disks[0]);
+    print_bochs_disk_line ("ata0-slave", $disks[1]);
+    print_bochs_disk_line ("ata1-master", $disks[2]);
+    print_bochs_disk_line ("ata1-slave", $disks[3]);
     if ($vga ne 'terminal') {
 	if ($serial) {
 	    my $mode = defined ($squish_pty) ? "term" : "file";
@@ -527,17 +602,11 @@ EOF
     }
 }
 
-# print_bochs_disk_line($device, $iface)
-#
-# If IDE interface $iface has a disk attached, prints a bochsrc.txt
-# line for attaching it to $device.
 sub print_bochs_disk_line {
-    my ($device, $iface) = @_;
-    my ($disk) = $disks_by_iface[$iface];
-    my ($file) = $disk->{FILE_NAME};
-    if (defined $file) {
+    my ($device, $disk) = @_;
+    if (defined $disk) {
 	my (%geom) = disk_geometry ($disk);
-	print BOCHSRC "$device: type=disk, path=$file, mode=flat, ";
+	print BOCHSRC "$device: type=disk, path=$disk, mode=flat, ";
 	print BOCHSRC "cylinders=$geom{C}, heads=$geom{H}, spt=$geom{S}, ";
 	print BOCHSRC "translation=none\n";
     }
@@ -550,11 +619,11 @@ sub run_qemu {
     print "warning: qemu doesn't support jitter\n"
       if defined $jitter;
     my (@cmd) = ('qemu');
-    for my $iface (0...3) {
-	my ($option) = ('-hda', '-hdb', '-hdc', '-hdd')[$iface];
-	push (@cmd, $option, $disks_by_iface[$iface]{FILE_NAME})
-	  if defined $disks_by_iface[$iface]{FILE_NAME};
-    }
+    push (@cmd, '-no-kqemu');
+    push (@cmd, '-hda', $disks[0]) if defined $disks[0];
+    push (@cmd, '-hdb', $disks[1]) if defined $disks[1];
+    push (@cmd, '-hdc', $disks[2]) if defined $disks[2];
+    push (@cmd, '-hdd', $disks[3]) if defined $disks[3];
     push (@cmd, '-m', $mem);
     push (@cmd, '-net', 'none');
     push (@cmd, '-nographic') if $vga eq 'none';
@@ -583,8 +652,7 @@ sub run_player {
     player_unsup ("--kill-on-failure"), undef $kill_on_failure
       if defined $kill_on_failure;
 
-    # Memory size must be multiple of 4.
-    $mem = int (($mem + 3) / 4) * 4;
+    $mem = round_up ($mem, 4);	# Memory must be multiple of 4 MB.
 
     open (VMX, ">", "pintos.vmx") or die "pintos.vmx: create: $!\n";
     chmod 0777 & ~umask, "pintos.vmx";
@@ -601,8 +669,6 @@ gui.exitOnCLIHLT = TRUE
 gui.powerOnAtStartUp = TRUE
 EOF
 
-
-
     print VMX <<EOF if $serial;
 serial0.present = TRUE
 serial0.fileType = "pipe"
@@ -612,9 +678,8 @@ serial0.tryNoRxLoss = "TRUE"
 EOF
 
     for (my ($i) = 0; $i < 4; $i++) {
-	my ($disk) = $disks_by_iface[$i];
-	my ($dsk) = $disk->{FILE_NAME};
-	next if !defined $dsk;
+	my ($dsk) = $disks[$i];
+	last if !defined $dsk;
 
 	my ($device) = "ide" . int ($i / 2) . ":" . ($i % 2);
 	my ($pln) = "$device.pln";
@@ -631,7 +696,7 @@ EOF
 	close (URANDOM);
 	my ($cid) = unpack ("L", $bytes);
 
-	my (%geom) = disk_geometry ($disk);
+	my (%geom) = disk_geometry ($dsk);
 	open (PLN, ">", $pln) or die "$pln: create: $!\n";
 	print PLN <<EOF;
 version=1
@@ -671,45 +736,8 @@ EOF
 
 # Disk utilities.
 
-# open_disk($disk)
-#
-# Opens $disk, if it is not already open, and returns its file handle
-# and file name.
-sub open_disk {
-    my ($disk) = @_;
-    if (!defined ($disk->{HANDLE})) {
-	if ($disk->{FILE_NAME}) {
-	    sysopen ($disk->{HANDLE}, $disk->{FILE_NAME}, O_RDWR)
-	      or die "$disk->{FILE_NAME}: open: $!\n";
-	} else {
-	    ($disk->{HANDLE}, $disk->{FILE_NAME}) = tempfile (UNLINK => 1,
-							     SUFFIX => '.dsk');
-	}
-    }
-    return ($disk->{HANDLE}, $disk->{FILE_NAME});
-}
-
-# open_disk_copy($disk)
-#
-# Makes a temporary copy of $disk and returns its file handle and file name.
-sub open_disk_copy {
-    my ($disk) = @_;
-    die if !$disk->{FILE_NAME};
-
-    my ($orig_handle, $orig_file_name) = open_disk ($disk);
-    my ($cp_handle, $cp_file_name) = tempfile (UNLINK => 1, SUFFIX => '.dsk');
-    copy_file ($orig_handle, $orig_file_name, $cp_handle, $cp_file_name,
-	       -s $orig_handle);
-    return ($disk->{HANDLE}, $disk->{FILE_NAME}) = ($cp_handle, $cp_file_name);
-}
-
-# extend_disk($disk, $size)
-#
-# Extends $disk, if necessary, so that it is at least $size bytes
-# long.
-sub extend_disk {
-    my ($disk, $size) = @_;
-    my ($handle, $file_name) = open_disk ($disk);
+sub extend_file {
+    my ($handle, $file_name, $size) = @_;
     if (-s ($handle) < $size) {
 	sysseek ($handle, $size - 1, 0) == $size - 1
 	  or die "$file_name: seek: $!\n";
@@ -723,60 +751,17 @@ sub extend_disk {
 # Examines $file and returns a valid IDE disk geometry for it, as a
 # hash.
 sub disk_geometry {
-    my ($disk) = @_;
-    my ($file) = $disk->{FILE_NAME};
+    my ($file) = @_;
     my ($size) = -s $file;
     die "$file: stat: $!\n" if !defined $size;
-    die "$file: size not a multiple of 512 bytes\n" if $size % 512;
+    die "$file: size $size not a multiple of 512 bytes\n" if $size % 512;
     my ($cyl_size) = 512 * 16 * 63;
     my ($cylinders) = ceil ($size / $cyl_size);
-    extend_disk ($disk, $cylinders * $cyl_size) if $size % $cyl_size;
 
     return (CAPACITY => $size / 512,
 	    C => $cylinders,
 	    H => 16,
 	    S => 63);
-}
-
-# copy_file($from_handle, $from_file_name, $to_handle, $to_file_name, $size)
-#
-# Copies $size bytes from $from_handle to $to_handle.
-# $from_file_name and $to_file_name are used in error messages.
-sub copy_file {
-    my ($from_handle, $from_file_name, $to_handle, $to_file_name, $size) = @_;
-
-    while ($size > 0) {
-	my ($chunk_size) = 4096;
-	$chunk_size = $size if $chunk_size > $size;
-	$size -= $chunk_size;
-
-	my ($data) = read_fully ($from_handle, $from_file_name, $chunk_size);
-	write_fully ($to_handle, $to_file_name, $data);
-    }
-}
-
-# read_fully($handle, $file_name, $bytes)
-#
-# Reads exactly $bytes bytes from $handle and returns the data read.
-# $file_name is used in error messages.
-sub read_fully {
-    my ($handle, $file_name, $bytes) = @_;
-    my ($data);
-    my ($read_bytes) = sysread ($handle, $data, $bytes);
-    die "$file_name: read: $!\n" if !defined $read_bytes;
-    die "$file_name: unexpected end of file\n" if $read_bytes != $bytes;
-    return $data;
-}
-
-# write_fully($handle, $file_name, $data)
-#
-# Write $data to $handle.
-# $file_name is used in error messages.
-sub write_fully {
-    my ($handle, $file_name, $data) = @_;
-    my ($written_bytes) = syswrite ($handle, $data);
-    die "$file_name: write: $!\n" if !defined $written_bytes;
-    die "$file_name: short write\n" if $written_bytes != length $data;
 }
 
 # Subprocess utilities.

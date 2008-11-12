@@ -183,14 +183,16 @@ threads that have it open, until the last one closes it.  @xref{Removing
 an Open File}, for more information.
 @end itemize
 
-You need to be able to create simulated disks.  The
-@command{pintos-mkdisk} program provides this functionality.  From the
-@file{userprog/build} directory, execute @code{pintos-mkdisk fs.dsk@tie{}2}.
-This command creates a 2 MB simulated disk named @file{fs.dsk}.  Then
-format the disk by passing @option{-f -q} on the kernel's command
-line: @code{pintos -f -q}.  The @option{-f} option causes the disk to be
-formatted, and @option{-q} causes Pintos to exit as soon as the format
-is done.
+You need to be able to create a simulated disk with a file system
+partition.  The @command{pintos-mkdisk} program provides this
+functionality.  From the @file{userprog/build} directory, execute
+@code{pintos-mkdisk filesys.dsk --filesys-size=2}.  This command
+creates a simulated disk named @file{filesys.dsk} that contains a @w{2
+MB} Pintos file system partition.  Then format the file system
+partition by passing @option{-f -q} on the kernel's command line:
+@code{pintos -f -q}.  The @option{-f} option causes the file system to
+be formatted, and @option{-q} causes Pintos to exit as soon as the
+format is done.
 
 You'll need a way to copy files in and out of the simulated file system.
 The @code{pintos} @option{-p} (``put'') and @option{-g} (``get'')
@@ -205,20 +207,19 @@ commands for copying files out of a VM are similar, but substitute
 
 Incidentally, these commands work by passing special commands
 @command{extract} and @command{append} on the kernel's command line and copying
-to and from a special simulated ``scratch'' disk.  If you're very
+to and from a special simulated ``scratch'' partition.  If you're very
 curious, you can look at the @command{pintos} script as well as
 @file{filesys/fsutil.c} to learn the implementation details.
 
-Here's a summary of how to create and format a disk, copy the
-@command{echo} program into the new disk, and then run @command{echo},
-passing argument @code{x}.  (Argument passing won't work until
-you implemented it.)  It assumes
-that you've already built the
-examples in @file{examples} and that the current directory is
-@file{userprog/build}:
+Here's a summary of how to create a disk with a file system partition,
+format the file system, copy the @command{echo} program into the new
+disk, and then run @command{echo}, passing argument @code{x}.
+(Argument passing won't work until you implemented it.)  It assumes
+that you've already built the examples in @file{examples} and that the
+current directory is @file{userprog/build}:
 
 @example
-pintos-mkdisk fs.dsk 2
+pintos-mkdisk filesys.dsk --filesys-size=2
 pintos -f -q
 pintos -p ../../examples/echo -a echo -- -q
 pintos -q run 'echo x'
@@ -227,19 +228,20 @@ pintos -q run 'echo x'
 The three final steps can actually be combined into a single command:
 
 @example
-pintos-mkdisk fs.dsk 2
+pintos-mkdisk filesys.dsk --filesys-size=2
 pintos -p ../../examples/echo -a echo -- -f -q run 'echo x'
 @end example
 
 If you don't want to keep the file system disk around for later use or
 inspection, you can even combine all four steps into a single command.
-The @code{--fs-disk=@var{n}} option creates a temporary disk
+The @code{--filesys-size=@var{n}} option creates a temporary file
+system partition
 approximately @var{n} megabytes in size just for the duration of the
 @command{pintos} run.  The Pintos automatic test suite makes extensive
 use of this syntax:
 
 @example
-pintos --fs-disk=2 -p ../../examples/echo -a echo -- -f -q run 'echo x'
+pintos --filesys-size=2 -p ../../examples/echo -a echo -- -f -q run 'echo x'
 @end example
 
 You can delete a file from the Pintos file system using the @code{rm
@@ -272,11 +274,11 @@ for Pintos.  (We've provided compilers and linkers that should do just
 fine.)
 
 You should realize immediately that, until you copy a
-test program to the simulated disk, Pintos will be unable to do
+test program to the simulated file system, Pintos will be unable to do
 useful work.  You won't be able to do
-interesting things until you copy a variety of programs to the disk.
-You might want to create a clean reference disk and copy that
-over whenever you trash your @file{fs.dsk} beyond a useful state,
+interesting things until you copy a variety of programs to the file system.
+You might want to create a clean reference file system disk and copy that
+over whenever you trash your @file{filesys.dsk} beyond a useful state,
 which may happen occasionally while debugging.
 
 @node Virtual Memory Layout
@@ -852,7 +854,7 @@ modified by the reference solution.
 
 @item The kernel always panics when I run @code{pintos -p @var{file} -- -q}.
 
-Did you format the disk (with @samp{pintos -f})?
+Did you format the file system (with @samp{pintos -f})?
 
 Is your file name too long?  The file system limits file names to 14
 characters.  A command like @samp{pintos -p ../../examples/echo -- -q}
@@ -872,6 +874,8 @@ space for your file.
 Files are written under the name you refer to them, by default, so in
 this case the file copied in would be named @file{../file}.  You
 probably want to run @code{pintos -p ../file -a file --} instead.
+
+You can list the files in your file system with @code{pintos -q ls}.
 
 @item All my user programs die with page faults.
 

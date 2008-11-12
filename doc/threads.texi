@@ -113,27 +113,30 @@ code to look at.
 @item loader.S
 @itemx loader.h
 The kernel loader.  Assembles to 512 bytes of code and data that the
-PC BIOS loads into memory and which in turn loads the kernel into
-memory, does basic processor initialization, and jumps to the
-beginning of the kernel.  @xref{Pintos Loader}, for details. You should
-not need to look at this code or modify it.
+PC BIOS loads into memory and which in turn finds the kernel on disk,
+loads it into memory, and jumps to @func{start} in @file{start.S}.
+@xref{Pintos Loader}, for details.  You should not need to look at
+this code or modify it.
+
+@item start.S
+Does basic setup needed for memory protection and 32-bit
+operation on 80@var{x}86 CPUs.  Unlike the loader, this code is
+actually part of the kernel.  @xref{Low-Level Kernel Initialization},
+for details.
 
 @item kernel.lds.S
 The linker script used to link the kernel.  Sets the load address of
-the kernel and arranges for @file{start.S} to be at the very beginning
+the kernel and arranges for @file{start.S} to be near the beginning
 of the kernel image.  @xref{Pintos Loader}, for details. Again, you
 should not need to look at this code
 or modify it, but it's here in case you're curious.
-
-@item start.S
-Jumps to @func{main}.
 
 @item init.c
 @itemx init.h
 Kernel initialization, including @func{main}, the kernel's ``main
 program.''  You should look over @func{main} at least to see what
 gets initialized.  You might want to add your own initialization code
-here.  @xref{Kernel Initialization}, for details.
+here.  @xref{High-Level Kernel Initialization}, for details.
 
 @item thread.c
 @itemx thread.h
@@ -220,10 +223,23 @@ Serial port driver.  Again, @func{printf} calls this code for you,
 so you don't need to do so yourself.
 It handles serial input by passing it to the input layer (see below).
 
-@item disk.c
-@itemx disk.h
-Supports reading and writing sectors on up to 4 IDE disks.  This won't
-actually be used until project 2.
+@item block.c
+@itemx block.h
+An abstraction layer for @dfn{block devices}, that is, random-access,
+disk-like devices that are organized as arrays of fixed-size blocks.
+Out of the box, Pintos supports two types of block devices: IDE disks
+and partitions.  Block devices, regardless of type, won't actually be
+used until project 2.
+
+@item ide.c
+@itemx ide.h
+Supports reading and writing sectors on up to 4 IDE disks.
+
+@item partition.c
+@itemx partition.h
+Understands the structure of partitions on disks, allowing a single
+disk to be carved up into multiple regions (partitions) for
+independent use.
 
 @item kbd.c
 @itemx kbd.h

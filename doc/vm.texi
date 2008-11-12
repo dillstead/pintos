@@ -49,10 +49,10 @@ files or in files introduced in earlier projects.
 You will probably be encountering just a few files for the first time:
 
 @table @file
-@item devices/disk.h
-@itemx devices/disk.c
-Provides access to the physical disk, abstracting away the rather awful
-IDE interface.  You will use this interface to access the swap disk.
+@item devices/block.h
+@itemx devices/block.c
+Provides sector-based read and write access to block device.  You will
+use this interface to access the swap partition as a block device.
 @end table
 
 @node Memory Terminology
@@ -162,8 +162,8 @@ address, on the right.
 @node Swap Slots
 @subsubsection Swap Slots
 
-A @dfn{swap slot} is a continuous, page-size region of disk space on the
-swap disk.  Although hardware limitations dictating the placement of
+A @dfn{swap slot} is a continuous, page-size region of disk space in the
+swap partition.  Although hardware limitations dictating the placement of
 slots are looser than for pages and frames, swap slots should be
 page-aligned because there is no downside in doing so.
 
@@ -377,17 +377,19 @@ to work with accessed and dirty bits.
 
 The swap table tracks in-use and free swap slots.  It should allow
 picking an unused swap slot for evicting a page from its frame to the
-swap disk.  It should allow freeing a swap slot when its page is read
+swap partition.  It should allow freeing a swap slot when its page is read
 back or the process whose page was swapped is terminated.
 
-You may use the disk on interface @code{hd1:1} as the swap disk, using
-the disk interface prototyped in @code{devices/disk.h}.  From the
+You may use the @code{BLOCK_SWAP} block device for swapping, obtaining
+the @struct{block} that represents it by calling @func{block_get_role}.
+From the
 @file{vm/build} directory, use the command @code{pintos-mkdisk swap.dsk
-@var{n}} to create an @var{n} MB swap disk named @file{swap.dsk}.
-Afterward, @file{swap.dsk} will automatically be attached as
-@code{hd1:1} when you run @command{pintos}.  Alternatively, you can tell
+--swap-size=@var{n}} to create an disk named @file{swap.dsk} that
+contains a @var{n}-MB swap partition.
+Afterward, @file{swap.dsk} will automatically be attached as an extra disk
+when you run @command{pintos}.  Alternatively, you can tell
 @command{pintos} to use a temporary @var{n}-MB swap disk for a single
-run with @option{--swap-disk=@var{n}}.
+run with @option{--swap-size=@var{n}}.
 
 Swap slots should be allocated lazily, that is, only when they are
 actually required by eviction.  Reading data pages from the executable
@@ -485,7 +487,7 @@ little as possible about how to do things.  Instead we will focus on
 what functionality we require your OS to support.  We will expect
 you to come up with a design that makes sense.  You will have the
 freedom to choose how to handle page faults, how to organize the swap
-disk, how to implement paging, etc.
+partition, how to implement paging, etc.
 
 @menu
 * Project 3 Design Document::   
@@ -534,7 +536,7 @@ variables' values:
 @itemize @bullet
 @item
 If @code{page_read_bytes} equals @code{PGSIZE}, the page should be demand
-paged from disk on its first access.
+paged from the underlying file on its first access.
 
 @item
 If @code{page_zero_bytes} equals @code{PGSIZE}, the page does not need to
@@ -545,7 +547,7 @@ first page fault.
 @item
 Otherwise, neither @code{page_read_bytes} nor @code{page_zero_bytes}
 equals @code{PGSIZE}.  In this case, an initial part of the page is to
-be read from disk and the remainder zeroed.
+be read from the underlying file and the remainder zeroed.
 @end itemize
 
 @node Stack Growth
@@ -619,7 +621,8 @@ mapped from.
 
 If the file's length is not a multiple of @code{PGSIZE}, then some
 bytes in the final mapped page ``stick out'' beyond the end of the
-file.  Set these bytes to zero when the page is faulted in from disk,
+file.  Set these bytes to zero when the page is faulted in from the
+file system,
 and discard them when the page is written back to disk.
 
 If successful, this function returns a ``mapping ID'' that
@@ -739,7 +742,7 @@ kernel functions need to obtain memory.
 You can layer some other allocator on top of @func{palloc_get_page} if
 you like, but it should be the underlying mechanism.
 
-Also, you can use the @option{-ul} option to @command{pintos} to limit
+Also, you can use the @option{-ul} kernel command-line option to limit
 the size of the user pool, which makes it easy to test your VM
 implementation with various user memory sizes.
 @end table

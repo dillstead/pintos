@@ -110,6 +110,14 @@ Interface---DRAFT---24 April 2001}.  A draft of a revised version of
 The Open Group, @uref{http://www.unix.org/single_unix_specification/,
 , Single UNIX Specification V3}, 2001.
 
+@bibdfn{Partitions}
+A.@: E.@: Brouwer, @uref{specs/partitions/partition_tables.html, ,
+Minimal partition table specification}, 1999.
+
+@bibdfn{IntrList}
+R.@: Brown, @uref{http://www.ctyme.com/rbrown.htm, , Ralf Brown's
+Interrupt List}, 2000.
+
 @node Operating System Design References
 @section Operating System Design References
 
