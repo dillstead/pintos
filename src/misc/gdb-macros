@@ -82,6 +82,14 @@ document btthreadlist
     invoke as btthreadlist name_of_list name_of_elem_in_list_struct
 end
 
+# print backtraces of all threads (based on 'all_list' all threads list)
+define btthreadall
+    btthreadlist all_list allelem
+end
+document btthreadall
+    Print backtraces of all threads
+end
+
 # print a correct backtrace by adjusting $eip
 # this works best right at intr0e_stub
 define btpagefault
@@ -110,6 +118,18 @@ define hook-stop
             btpagefault
         end
     end
+end
+
+# load symbols for a Pintos user program
+define loadusersymbols
+    shell objdump -h $arg0 | awk '/.text/ { print "add-symbol-file $arg0 0x"$4 }' > .loadsymbols
+    source .loadsymbols
+    shell rm -f .loadsymbols
+end
+document loadusersymbols
+    Load the symbols contained in a user program's executable.
+    Example:
+        loadusersymbols tests/userprog/exec-multiple
 end
 
 define debugpintos

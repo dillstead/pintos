@@ -924,7 +924,7 @@ Modify @file{src/examples/Makefile}, then run @command{make}.
 
 @item Can I run user programs under a debugger?
 
-Yes, with some limitations.  @xref{Debugging User Programs}.
+Yes, with some limitations.  @xref{GDB}.
 
 @item What's the difference between @code{tid_t} and @code{pid_t}?
 

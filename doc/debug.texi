@@ -293,7 +293,6 @@ can pause the process at any point with @key{Ctrl+C}.
 @menu
 * Using GDB::                   
 * Example GDB Session::         
-* Debugging User Programs::     
 * GDB FAQ::                     
 @end menu
 
@@ -358,11 +357,9 @@ that contains elements of the given @var{type} (without the word
 @code{struct}) in which @var{element} is the @struct{list_elem} member
 that links the elements.
 
-Example: @code{dumplist all_list thread all_elem} prints all elements of
+Example: @code{dumplist all_list thread allelem} prints all elements of
 @struct{thread} that are linked in @code{struct list all_list} using the
-@code{struct list_elem all_elem} which is part of @struct{thread}.
-(This assumes that you have added @code{all_list} and @code{all_elem}
-yourself.)
+@code{struct list_elem allelem} which is part of @struct{thread}.
 @end deffn
 
 @deffn {GDB Macro} btthread thread
@@ -379,18 +376,24 @@ which the threads are kept.  Specify @var{element} as the
 @struct{list_elem} field used inside @struct{thread} to link the threads
 together.
 
-Example: @code{btthreadlist all_list all_elem} shows the backtraces of
+Example: @code{btthreadlist all_list allelem} shows the backtraces of
 all threads contained in @code{struct list all_list}, linked together by
-@code{all_elem}.  This command is useful to determine where your threads
+@code{allelem}.  This command is useful to determine where your threads
 are stuck when a deadlock occurs.  Please see the example scenario below.
-(This assumes that you have added @code{all_list} and @code{all_elem}
-yourself.)
+@end deffn
+
+@deffn {GDB Macro} btthreadall
+Short-hand for @code{btthreadlist all_list allelem}.
 @end deffn
 
 @deffn {GDB Macro} btpagefault
 Print a backtrace of the current thread after a page fault exception.
 Normally, when a page fault exception occurs, GDB will stop
-with a message that might say:
+with a message that might say:@footnote{To be precise, GDB will stop
+only when running under Bochs.  When running under QEMU, you must
+set a breakpoint in the @code{page_fault} function to stop execution 
+when a page fault occurs. In that case, the @code{btpagefault} macro is
+unnecessary.}
 
 @example
 Program received signal 0, Signal 0.
@@ -401,8 +404,8 @@ In that case, the @code{bt} command might not give a useful
 backtrace.  Use @code{btpagefault} instead.
 
 You may also use @code{btpagefault} for page faults that occur in a user
-process.  In this case, you may also wish to load the user program's
-symbol table (@pxref{Debugging User Programs}).
+process.  In this case, you may wish to also load the user program's
+symbol table using the @code{loadusersymbols} macro, as described above.
 @end deffn
 
 @deffn {GDB Macro} hook-stop
@@ -442,13 +445,16 @@ followed by the output of the @code{btpagefault} command.
 
 Before Project 3, a page fault exception in kernel code is always a bug
 in your kernel, because your kernel should never crash.  Starting with
-Project 3, the situation will change if you use @func{get_user} and
+Project 3, the situation will change if you use the @func{get_user} and
 @func{put_user} strategy to verify user memory accesses
 (@pxref{Accessing User Memory}).
 
-If you don't want GDB to stop for page faults, then issue the command
-@code{handle SIGSEGV nostop}.  GDB will still print a message for
-every page fault, but it will not come back to a command prompt.
+@c ----
+@c Unfortunately, this does not work with Bochs's gdb stub.
+@c ----
+@c If you don't want GDB to stop for page faults, then issue the command
+@c @code{handle SIGSEGV nostop}.  GDB will still print a message for
+@c every page fault, but it will not come back to a command prompt.
 @end deffn
 
 @node Example GDB Session
@@ -561,12 +567,12 @@ thread.  If I run @code{backtrace}, it shows this backtrace:
 Not terribly useful.  What I really like to know is what's up with the
 other thread (or threads).  Since I keep all threads in a linked list
 called @code{all_list}, linked together by a @struct{list_elem} member
-named @code{all_elem}, I can use the @code{btthreadlist} macro from the
+named @code{allelem}, I can use the @code{btthreadlist} macro from the
 macro library I wrote.  @code{btthreadlist} iterates through the list of
 threads and prints the backtrace for each thread:
 
 @smallexample
-(gdb) @strong{btthreadlist all_list all_elem}
+(gdb) @strong{btthreadlist all_list allelem}
 pintos-debug: dumping backtrace of thread 'main' @@0xc002f000
 #0  0xc0101820 in schedule () at ../../threads/thread.c:722
 #1  0xc0100f8f in thread_block () at ../../threads/thread.c:324
@@ -597,26 +603,39 @@ is stuck in @func{timer_sleep}, called from @code{test_mlfqs_load_1}.
 Knowing where threads are stuck can be tremendously useful, for instance
 when diagnosing deadlocks or unexplained hangs.
 
-@node Debugging User Programs
-@subsection Debugging User Programs
+@deffn {GDB Macro} loadusersymbols
 
-You can also use GDB to debug a user program running under
-Pintos.  Start by issuing this GDB command to load the
-program's symbol table:
+You can also use GDB to debug a user program running under Pintos.  
+To do that, use the @code{loadusersymbols} macro to load the program's 
+symbol table:
 @example
-add-symbol-file @var{program}
+loadusersymbols @var{program}
 @end example
 @noindent
 where @var{program} is the name of the program's executable (in the host
-file system, not in the Pintos file system).  After this, you should be
+file system, not in the Pintos file system).  For example, you may issue:
+@smallexample
+(gdb) @strong{loadusersymbols tests/userprog/exec-multiple}
+add symbol table from file "tests/userprog/exec-multiple" at
+    .text_addr = 0x80480a0
+(gdb) 
+@end smallexample
+
+After this, you should be
 able to debug the user program the same way you would the kernel, by
 placing breakpoints, inspecting data, etc.  Your actions apply to every
 user program running in Pintos, not just to the one you want to debug,
-so be careful in interpreting the results.  Also, a name that appears in
+so be careful in interpreting the results:  GDB does not know
+which process is currently active (because that is an abstraction 
+the Pintos kernel creates).  Also, a name that appears in
 both the kernel and the user program will actually refer to the kernel
 name.  (The latter problem can be avoided by giving the user executable
 name on the GDB command line, instead of @file{kernel.o}, and then using
-@code{add-symbol-file} to load @file{kernel.o}.)
+@code{loadusersymbols} to load @file{kernel.o}.)
+@code{loadusersymbols} is implemented via GDB's @code{add-symbol-file}
+command.
+
+@end deffn
 
 @node GDB FAQ
 @subsection FAQ
