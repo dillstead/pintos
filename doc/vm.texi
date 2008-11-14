@@ -271,7 +271,8 @@ system, or in a swap slot, or it might simply be an all-zero page.  If
 you implement sharing, the page's data might even already be in a page
 frame, but not in the page table.
 
-If the page is unmapped, that is, if there's no data there, or if the
+If the supplemental page table indicates that the user process should
+not expect any data at the address it was trying to access, or if the
 page lies within kernel virtual memory, or if the access is an attempt
 to write to a read-only page, then the access is invalid.  Any invalid
 access terminates the process and thereby frees all of its resources.
@@ -517,8 +518,8 @@ Unmodified pages, including read-only pages, should never be written to
 swap because they can always be read back from the executable.
 
 Implement a global page replacement algorithm that approximates LRU.
-Your algorithm should perform at least as well as the ``second chance''
-or ``clock'' algorithm.
+Your algorithm should perform at least as well as the simple variant
+of the ``second chance'' or ``clock'' algorithm.
 
 Your design should allow for parallelism.  If one page fault requires
 I/O, in the meantime processes that do not fault should continue
@@ -654,13 +655,44 @@ are then removed from the process's list of virtual pages.
 Closing or removing a file does not unmap any of its mappings.  Once
 created, a mapping is valid until @code{munmap} is called or the process
 exits, following the Unix convention.  @xref{Removing an Open File}, for
-more information.
+more information.  You should use the @code{file_reopen} function to
+obtain a separate and independent reference to the file for each of
+its mappings.
 
 If two or more processes map the same file, there is no requirement that
 they see consistent data.  Unix handles this by making the two mappings
 share the same physical page, but the @code{mmap} system call also has
 an argument allowing the client to specify whether the page is shared or
 private (i.e.@: copy-on-write).
+
+@subsection Accessing User Memory
+You will need to adapt your code to access user memory (@pxref{Accessing
+User Memory}) while handling a system call.  Just as user processes may
+access pages whose content is currently in a file or in swap space, so
+can they pass addresses that refer to such non-resident pages to system
+calls.  Moreover, unless your kernel takes measures to prevent this,
+a page may be evicted from its frame even while it is being accessed
+by kernel code.  If kernel code accesses such non-resident user pages,
+a page fault will result.
+
+While accessing user memory, your kernel must either be prepared to handle
+such page faults, or it must prevent them from occurring.  The kernel 
+must prevent such page faults while it is holding resources it would 
+need to acquire to handle these faults.  In Pintos, such resources include
+locks acquired by the device driver(s) that control the device(s) containing 
+the file system and swap space.  As a concrete example, you must not 
+allow page faults to occur while a device driver accesses a user buffer
+passed to @code{file_read}, because you would not be able to invoke
+the driver while handling such faults.
+
+Preventing such page faults requires cooperation between the code within
+which the access occurs and your page eviction code.  For instance,
+you could extend your frame table to record when a page contained in
+a frame must not be evicted.  (This is also referred to as ``pinning''
+or ``locking'' the page in its frame.)  Pinning restricts your page
+replacement algorithm's choices when looking for pages to evict, so be
+sure to pin pages no longer than necessary, and avoid pinning pages when
+it is not necessary.
 
 @node Project 3 FAQ
 @section FAQ
@@ -722,6 +754,22 @@ harder.
 Returning from @func{page_fault} resumes the current user process
 (@pxref{Internal Interrupt Handling}).
 It will then retry the instruction to which the instruction pointer points.
+
+@item Why do user processes sometimes fault above the stack pointer?
+
+You might notice that, in the stack growth tests, the user program faults
+on an address that is above the user program's current stack pointer,
+even though the @code{PUSH} and @code{PUSHA} instructions would cause
+faults 4 and 32 bytes below the current stack pointer.
+
+This is not unusual.  The @code{PUSH} and @code{PUSHA} instructions are
+not the only instructions that can trigger user stack growth.
+For instance, a user program may allocate stack space by decrementing the 
+stack pointer using a @code{SUB $n, %esp} instruction, and then use a 
+@code{MOV ..., m(%esp)} instruction to write to a stack location within
+the allocated space that is @var{m} bytes above the current stack pointer.  
+Such accesses are perfectly valid, and your kernel must grow the 
+user program's stack to allow those accesses to succeed.
 
 @item Does the virtual memory system need to support data segment growth?
 
