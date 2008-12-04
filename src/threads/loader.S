@@ -29,11 +29,12 @@
 # Configure serial port so we can report progress without connected VGA.
 # See [IntrList] for details.
 	sub %dx, %dx			# Serial port 0.
-	mov $0x00e3, %ax		# 9600 bps, N-8-1.
+	mov $0xe3, %al			# 9600 bps, N-8-1.
+					# AH is already 0 (Initialize Port).
 	int $0x14			# Destroys AX.
 
 	call puts
-	.string "Pintos loader"
+	.string "PiLo"
 
 #### Read the partition table on each system hard disk and scan for a
 #### partition of type 0x20, which is the type that we use for a
@@ -209,8 +210,12 @@ putc:	pusha
 
 	mov $0x01, %ah			# Serial port output service.
 	sub %dx, %dx			# Serial port 0.
-	int $0x14			# Destroys AH.
+2:	int $0x14			# Destroys AH.
+	test $0x80, %ah			# Output timed out?
+	jz 3f
+	movw $0x9090, 2b		# Turn "int $0x14" above into NOPs.
 
+3:
 	cmp $'\r', %al
 	jne popa_ret
 	mov $'\n', %al
@@ -224,8 +229,9 @@ putc:	pusha
 
 read_sector:
 	pusha
-	sub %eax, %eax
-	push %eax			# LBA sector number [32:63]
+	sub %ax, %ax
+	push %ax			# LBA sector number [48:63]
+	push %ax			# LBA sector number [32:47]
 	push %ebx			# LBA sector number [0:31]
 	push %es			# Buffer segment
 	push %ax			# Buffer offset (always 0)
