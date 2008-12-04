@@ -11,10 +11,6 @@ src							-*- text -*-
   Nachos C++ code into C.  These files bear the original UCB license
   notice.
 
-* Some of the source code is derived from code used in the
-  Massachusetts Institute of Technology's 6.828 advanced operating
-  systems course.  These files bear the original MIT license notice.
-
 projects
 --------
 
