@@ -13,6 +13,7 @@
 #define USB_HOST_ERR_BUFFER	5
 #define USB_HOST_ERR_STALL	6
 #define USB_HOST_ERR_NODEV	7
+#define USB_HOST_ERR_NOMEM      8
 
 #define make_usb_pid(x)         ((x) | ((~(x)) << 4))
 
@@ -57,6 +58,7 @@
 
 struct class;
 struct host;
+struct usb_setup_pkt;
 typedef void *host_info;
 typedef void *host_eop_info;
 typedef void *host_dev_info;
@@ -88,6 +90,9 @@ struct usb_host
 {
   const char *name;
   int (*detect_change) (host_info);
+  int (*dev_control) (host_eop_info, struct usb_setup_pkt *,
+                      void *data, size_t *size);
+  int (*dev_bulk) (host_eop_info, bool out, void *data, size_t *size);
   int (*tx_pkt) (host_eop_info, int pid, void *pkt, 
 		 int min_sz, int max_sz, int *in_sz, bool wait);
 
@@ -189,9 +194,11 @@ int usb_unregister_host (struct usb_host *, host_info info);
 int usb_register_class (struct usb_class *);
 int usb_unregister_class (struct usb_class *);
 
+int usb_dev_control (struct usb_endpoint *, struct usb_setup_pkt *,
+                     void *data, size_t *size);
 int usb_dev_bulk (struct usb_endpoint *eop, void *buf, int sz, int *tx);
-int usb_dev_setup (struct usb_endpoint *eop, bool in,
-		   struct usb_setup_pkt *s, void *buf, int sz);
 int usb_dev_wait_int (struct usb_dev *);
+
+void usb_storage_init (void);
 
 #endif

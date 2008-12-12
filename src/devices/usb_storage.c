@@ -285,43 +285,47 @@ static void
 msc_get_geometry (struct msc_class_info *mci)
 {
   struct msc_cbw cbw;
-  struct scsi_capacity10 *cap;
-  uint8_t buf[sizeof (struct msc_csw) + sizeof (struct scsi_capacity10)];
+  struct scsi_capacity10 cap;
   struct scsi_cdb10 *cdb;
-  struct msc_csw *csw;
+  struct msc_csw csw;
   int tx;
 
-  /* cap + csw must be read in one shot, combine into a single buffer */
-  cap = (struct scsi_capacity10 *) (buf);
-  csw = (struct msc_csw *) (&buf[sizeof (struct scsi_capacity10)]);
-
+  memset (&cbw, 0, sizeof cbw);
   cbw.sig = CBW_SIG_MAGIC;
   cbw.tag = mci->tag++;
   cbw.tx_len = sizeof (struct scsi_capacity10);
   cbw.flags = CBW_FL_IN;
   cbw.lun = 0;
   cbw.cb_len = sizeof (struct scsi_cdb10);
-
   cdb = (void *) (&cbw.cb);
-  memset (cdb, 0, sizeof (struct scsi_cdb10));
   cdb->op = SCSI_OP_READ_CAPACITY10;
 
-  usb_dev_bulk (mci->eop_out, &cbw, sizeof (cbw), &tx);
-  usb_dev_bulk (mci->eop_in, &buf, sizeof (buf), &tx);
+  usb_dev_bulk (mci->eop_out, &cbw, sizeof cbw, &tx);
+  if (tx != sizeof cbw)
+    PANIC ("send cbw");
+  usb_dev_bulk (mci->eop_in, &cap, sizeof cap, &tx);
+  if (tx != sizeof cap)
+    PANIC ("recv cap");
+  usb_dev_bulk (mci->eop_in, &csw, sizeof csw, &tx);
+  if (tx != sizeof csw)
+    PANIC ("recv csw");
 
-  mci->blk_count = be32_to_machine (cap->blocks) + 1;
-  mci->blk_size = be32_to_machine (cap->block_len);
+  mci->blk_count = be32_to_machine (cap.blocks) + 1;
+  mci->blk_size = be32_to_machine (cap.block_len);
 
+#if 0
   /* did CSW stall?  */
   if (tx == sizeof (struct scsi_capacity10))
     {
+      PANIC ("foo");
       msc_reset_endpoint (mci->eop_in);
       usb_dev_bulk (mci->eop_in, csw, sizeof (*csw), &tx);
     }
+#endif
 
-  ASSERT (csw->sig == CSW_SIG_MAGIC);
+  ASSERT (csw.sig == CSW_SIG_MAGIC);
 
-  if (csw->status != CSW_STATUS_PASSED)
+  if (csw.status != CSW_STATUS_PASSED)
     {
       PANIC ("USB storage geometry read failure!\n");
     }
@@ -408,6 +412,7 @@ msc_reset_endpoint (struct usb_endpoint *eop)
 {
   struct usb_setup_pkt sp;
 
+  printf ("*** reset endpoint\n");
   sp.recipient = USB_SETUP_RECIP_ENDPT;
   sp.type = USB_SETUP_TYPE_STD;
   sp.direction = 0;
@@ -415,7 +420,7 @@ msc_reset_endpoint (struct usb_endpoint *eop)
   sp.value = 0;			/* 0 is ENDPOINT_HALT */
   sp.index = eop->eop;
   sp.length = 0;
-  usb_dev_setup (eop, true, &sp, NULL, 0);
+  usb_dev_control (eop, &sp, NULL, NULL);
 }
 
 static void
@@ -437,5 +442,5 @@ static void msc_bulk_reset(struct msc_class_info* mci)
   sp.value = 0;		 
   sp.index = mci->ui->iface_num;
   sp.length = 0;
-  usb_dev_setup (&mci->ui->dev->cfg_eop, true, &sp, NULL, 0);
+  usb_dev_control (&mci->ui->dev->cfg_eop, &sp, NULL, NULL);
 }

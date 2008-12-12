@@ -8,7 +8,6 @@
 #include <round.h>
 #include <stdio.h>
 #include <string.h>
-#include <kernel/bitmap.h>
 #include "threads/pte.h"
 #include "threads/malloc.h"
 #include "threads/palloc.h"
@@ -76,17 +75,14 @@
 #define ptr_to_flp(x)	(((uintptr_t)x) >> 4)
 #define flp_to_ptr(x)	(uintptr_t)(((uintptr_t)x) << 4)
 
-/* frame structures */
+#define UHCI_LP_POINTER         0xfffffff0 /* Pointer field. */
+#define UHCI_LP_TERMINATE       0x00000001 /* 1=pointer not valid */
+#define UHCI_LP_QUEUE_HEAD      0x00000002 /* 1=points to queue head,
+                                              0=points to tx descriptor. */
+#define UHCI_LP_DEPTH           0x00000004 /* Tx descriptor only:
+                                              1=execute depth first,
+                                              0=execute breadth first. */
 #pragma pack(1)
-struct frame_list_ptr
-{
-  uint32_t terminate:1;
-  uint32_t qh_select:1;
-  uint32_t depth_select:1;	/* only for TD */
-  uint32_t resv:1;		/* zero */
-  uint32_t flp:28;		/* frame list pointer */
-};
-
 struct td_token
 {
   uint32_t pid:8;		/* packet id */
@@ -126,20 +122,24 @@ struct td_control
 
 struct tx_descriptor
 {
-  struct frame_list_ptr flp;
+  uint32_t next_td;
   struct td_control control;
   struct td_token token;
   uint32_t buf_ptr;
 
-
-  struct frame_list_ptr *head;	/* for fast removal */
   uint32_t flags;
+  struct list_elem td_elem;     /* Element in queue_head's td_list. */
+  size_t offset;
 };
 
 struct queue_head
 {
-  struct frame_list_ptr qhlp;	/* queue head link pointer */
-  struct frame_list_ptr qelp;	/* queue elem link pointer */
+  uint32_t next_qh;             /* Queue head link pointer. */
+  uint32_t first_td;            /* Queue element link pointer. */
+
+  struct list_elem qh_elem;     /* Element in uhci_info's qh_list. */
+  struct list td_list;          /* List of tx_descriptor structures. */
+  struct semaphore completion;  /* Upped by interrupt on completion. */
 };
 #pragma pack()
 
@@ -148,21 +148,12 @@ struct uhci_info
   struct pci_dev *dev;
   struct pci_io *io;		/* pci io space */
   struct lock lock;
-  struct frame_list_ptr *frame_list;	/* page aligned frame list */
-
-  struct tx_descriptor *td_pool;
-  struct bitmap *td_used;
-  struct queue_head *qh_pool;
-  struct bitmap *qh_used;
+  uint32_t *frame_list;         /* Page-aligned list of 1024 frame pointers. */
+  struct list qh_list;          /* List of queue_head structuress. */
+  struct queue_head *term_qh;
 
   uint8_t num_ports;
   uint8_t attached_ports;
-
-  int timeouts;			/* number of timeouts */
-
-  struct semaphore td_sem;
-  struct list devices;		/* devices on host */
-  struct list waiting;		/* threads waiting */
 };
 
 struct usb_wait
@@ -181,7 +172,6 @@ struct uhci_dev_info
   int errors;			/* aggregate errors */
   struct list_elem peers;	/* next dev on host */
   struct lock lock;
-  struct queue_head *qh;
 };
 
 struct uhci_eop_info
@@ -200,29 +190,19 @@ struct uhci_eop_info
 
 static int token_to_pid (int token);
 
-static int uhci_tx_pkt (host_eop_info eop, int token, void *pkt,
-			int min_sz, int max_sz, int *in_sz, bool wait);
-
+static int uhci_dev_control (host_eop_info, struct usb_setup_pkt *,
+                             void *data, size_t *size);
+static int uhci_dev_bulk (host_eop_info, bool out, void *data, size_t *size);
 static int uhci_detect_change (host_info);
 
 
-static int uhci_tx_pkt_now (struct uhci_eop_info *ue, int token, void *pkt,
-			    int sz);
-static int uhci_tx_pkt_wait (struct uhci_eop_info *ue, int token, void *pkt,
-			     int max_sz, int *in_sz);
-static int uhci_tx_pkt_bulk (struct uhci_eop_info *ue, int token, void *buf,
-			     int sz, int *tx);
+static struct queue_head *allocate_queue_head (void);
+static struct tx_descriptor *allocate_transfer_descriptor (struct queue_head *);
 
 
-static int uhci_process_completed (struct uhci_info *ui);
-
-static struct tx_descriptor *uhci_acquire_td (struct uhci_info *);
-static void uhci_release_td (struct uhci_info *, struct tx_descriptor *);
-static void uhci_remove_qh (struct uhci_info *ui, struct queue_head *qh);
+static void uhci_process_completed (struct uhci_info *ui);
 
 
-static void qh_free (struct uhci_info *ui, struct queue_head *qh);
-static struct queue_head *qh_alloc (struct uhci_info *ui);
 
 static struct uhci_info *uhci_create_info (struct pci_io *io);
 static void uhci_destroy_info (struct uhci_info *ui);
@@ -232,30 +212,15 @@ static host_dev_info uhci_create_chan (host_info hi, int dev_addr, int ver);
 static void uhci_destroy_chan (host_dev_info);
 static void uhci_modify_chan (host_dev_info, int dev_addr, int ver);
 
-static struct tx_descriptor *td_from_pool (struct uhci_info *ui, int idx);
-
 static int check_and_flip_change (struct uhci_info *ui, int reg);
-static void uhci_stop (struct uhci_info *ui);
-static void uhci_run (struct uhci_info *ui);
-static void uhci_stop_unlocked (struct uhci_info *ui);
-static void uhci_run_unlocked (struct uhci_info *ui);
 #define uhci_is_stopped(x) 	(pci_reg_read16((x)->io, UHCI_REG_USBSTS) \
 				& USB_STATUS_HALTED)
 #define uhci_port_enabled(x, y) (pci_reg_read16((x)->io, (y)) & USB_PORT_ENABLE)
-static void uhci_add_td_to_qh (struct queue_head *qh,
-			       struct tx_descriptor *td);
-static void uhci_remove_error_td (struct tx_descriptor *td);
 static void uhci_setup_td (struct tx_descriptor *td, int dev_addr, int token,
 			   int eop, void *pkt, int sz, int toggle, bool ls);
 static int uhci_enable_port (struct uhci_info *ui, int port);
 static void uhci_irq (void *uhci_data);
 static void uhci_detect_ports (struct uhci_info *ui);
-
-static int uhci_remove_stalled (struct uhci_info *ui);
-static void uhci_stall_watchdog (struct uhci_info *ui);
-
-static void dump_all_qh (struct uhci_info *ui);
-static void dump_qh (struct queue_head *qh);
 
 static void dump_regs (struct uhci_info *ui);
 
@@ -264,7 +229,8 @@ void uhci_init (void);
 
 static struct usb_host uhci_host = {
   .name = "UHCI",
-  .tx_pkt = uhci_tx_pkt,
+  .dev_control = uhci_dev_control,
+  .dev_bulk = uhci_dev_bulk,
   .detect_change = uhci_detect_change,
   .create_dev_channel = uhci_create_chan,
   .remove_dev_channel = uhci_destroy_chan,
@@ -272,6 +238,14 @@ static struct usb_host uhci_host = {
   .create_eop = uhci_create_eop,
   .remove_eop = uhci_remove_eop
 };
+
+static uint32_t
+make_lp (void *p) 
+{
+  uint32_t q = vtop (p);
+  ASSERT ((q & UHCI_LP_POINTER) == q);
+  return q;
+}
 
 void
 uhci_init (void)
@@ -285,7 +259,6 @@ uhci_init (void)
     {
       struct pci_io *io;
       struct uhci_info *ui;
-      uint8_t sof;
       int i;
 
       dev_num++;
@@ -305,49 +278,44 @@ uhci_init (void)
       ui = uhci_create_info (io);
       ui->dev = pd;
 
-      sof = pci_reg_read8 (ui->io, UHCI_REG_SOFMOD);
+      //dump_regs (ui);
+
       uhci_detect_ports (ui);
 
-      /* reset devices */
-      pci_reg_write16 (ui->io, UHCI_REG_USBCMD, USB_CMD_GRESET);
-      timer_msleep (50);
-      pci_reg_write16 (ui->io, UHCI_REG_USBCMD, 0);
-      timer_msleep (1);
-
-      /* reset controller */
+      pci_write_config16 (ui->dev, UHCI_REG_LEGSUP, 0x8f00);
       pci_reg_write16 (ui->io, UHCI_REG_USBCMD, USB_CMD_HCRESET);
-      timer_msleep (1);
+      asm volatile ("mfence":::"memory");
+      timer_usleep (5);
       if (pci_reg_read16 (ui->io, UHCI_REG_USBCMD) & USB_CMD_HCRESET)
-	{
-	  printf ("UHCI: Reset timed out\n");
-	  uhci_destroy_info (ui);
-	  continue;
-	}
+        printf ("reset failed!\n");
       pci_reg_write16 (ui->io, UHCI_REG_USBINTR, 0);
       pci_reg_write16 (ui->io, UHCI_REG_USBCMD, 0);
 
-      for (i = 0; i < ui->num_ports; i++)
-	pci_reg_write16 (ui->io, UHCI_REG_PORTSC1 + i * 2, 0);
+      pci_reg_write16 (ui->io, UHCI_REG_PORTSC1, 0);
+      pci_reg_write16 (ui->io, UHCI_REG_PORTSC2, 0);
 
-      timer_msleep (100);
-      printf ("UHCI: Enabling %d root ports\n", ui->num_ports);
-      ui->attached_ports = 0;
-      for (i = 0; i < ui->num_ports; i++)
-	ui->attached_ports += uhci_enable_port (ui, i);
-
-      pci_reg_write8 (ui->io, UHCI_REG_SOFMOD, sof);
+      pci_reg_write8 (ui->io, UHCI_REG_SOFMOD, 64);
+      pci_reg_write32 (ui->io, UHCI_REG_FLBASEADD, make_lp (ui->frame_list));
       pci_reg_write16 (ui->io, UHCI_REG_FRNUM, 0);
-      pci_reg_write32 (ui->io, UHCI_REG_FLBASEADD, vtop (ui->frame_list));
-      pci_reg_write16 (ui->io, UHCI_REG_USBINTR,
-		       USB_INTR_SHORT | USB_INTR_IOC |
-		       USB_INTR_TIMEOUT | USB_INTR_RESUME);
+      asm volatile ("mfence":::"memory");
 
       /* deactivate SMM junk, only enable IRQ */
       pci_write_config16 (ui->dev, UHCI_REG_LEGSUP, 0x2000);
 
-      uhci_lock (ui);
-      uhci_run (ui);
-      uhci_unlock (ui);
+      asm volatile ("mfence":::"memory");
+
+      pci_reg_write16 (ui->io, UHCI_REG_USBCMD,
+                       USB_CMD_RS | USB_CMD_CONFIGURE | USB_CMD_MAX_PACKET);
+      pci_reg_write16 (ui->io, UHCI_REG_USBINTR,
+		       USB_INTR_SHORT | USB_INTR_IOC |
+		       USB_INTR_TIMEOUT | USB_INTR_RESUME);
+
+      asm volatile ("mfence":::"memory");
+
+      printf ("UHCI: Enabling %d root ports\n", ui->num_ports);
+      ui->attached_ports = 0;
+      for (i = 0; i < ui->num_ports; i++)
+	ui->attached_ports += uhci_enable_port (ui, i);
 
       pci_register_irq (pd, uhci_irq, ui);
 
@@ -357,42 +325,75 @@ uhci_init (void)
 
 #define UHCI_PORT_TIMEOUT	1000
 static int
-uhci_enable_port (struct uhci_info *ui, int port)
+uhci_enable_port (struct uhci_info *ui, int idx)
 {
   uint16_t status;
+  int time, stable_since;
   int count;
+  int port;
 
-  /* individual ports must be reset for QEMU to go into USB_STATE_DEFAULT */
-  pci_reg_write16 (ui->io, UHCI_REG_PORTSC1 + port * 2, USB_PORT_RESET);
-  timer_msleep (50);
+  port = UHCI_REG_PORTSC1 + idx * 2;
 
-  /* ACK disconnect from reset so we can see if port is connected */
-  pci_reg_write16 (ui->io, UHCI_REG_PORTSC1 + port * 2,
-		   USB_PORT_ENABLE | USB_PORT_CONNECTCHG);
-  timer_msleep (10);
-  status = pci_reg_read16 (ui->io, UHCI_REG_PORTSC1 + port * 2);
+  status = 0xffff;
+  stable_since = 0;
+  for (time = 0; ; time += 25) 
+    {
+      uint16_t new_status;
+      new_status = pci_reg_read16 (ui->io, port);
+      if (status != (new_status & USB_PORT_CONNECTSTATUS)
+          || new_status & USB_PORT_CONNECTCHG) 
+        {
+          if (new_status & USB_PORT_CONNECTCHG)
+            pci_reg_write16 (ui->io, port, (new_status & ~0xe80a) | USB_PORT_CONNECTCHG);
+          stable_since = time;
+          status = new_status & USB_PORT_CONNECTSTATUS;
+        }
+      else if (time - stable_since >= 100)
+        break;
+      else if (time >= 1500)
+        return 0;
+      timer_msleep (25);
+    }
+  //printf ("time=%d stable_since=%d\n", time, stable_since);
+
+  if (!(status & USB_PORT_CONNECTSTATUS))
+    return 0;
+
+  for (count = 0; count < 3; count++) 
+    {
+      status = pci_reg_read16 (ui->io, port) & ~0xe80a;
+      //printf ("read %x, write %x, ", status, status | USB_PORT_RESET);
+      pci_reg_write16 (ui->io, port, status | USB_PORT_RESET);
+      timer_msleep (50);
+
+      status = pci_reg_read16 (ui->io, port) & ~0xe80a;
+      //printf ("read %x, write %x, ", status, status & ~USB_PORT_RESET);
+      pci_reg_write16 (ui->io, port, status & ~USB_PORT_RESET);
+      timer_usleep (10);
+
+      status = pci_reg_read16 (ui->io, port) & ~0xe80a;
+      //printf ("read %x, write %x, ", status, status & ~(USB_PORT_CONNECTCHG | USB_PORT_CHANGE));
+      pci_reg_write16 (ui->io, port, status & ~(USB_PORT_CONNECTCHG | USB_PORT_CHANGE));
+
+      status = pci_reg_read16 (ui->io, port) & ~0xe80a;
+      //printf ("read %x, write %x, ", status, status | USB_PORT_ENABLE);
+      pci_reg_write16 (ui->io, port, status | USB_PORT_ENABLE);
+
+      status = pci_reg_read16 (ui->io, port);
+      //printf ("read %x\n", status);
+      if (status & USB_PORT_ENABLE)
+        break;
+    }
+
   if (!(status & USB_PORT_CONNECTSTATUS))
     {
+      //printf ("port %d not connected\n", idx);
+      pci_reg_write16 (ui->io, port, 0);
       return 0;
     }
 
-  /* ACK CONNECTCHG status so port can be enabled */
-  pci_reg_write16 (ui->io, UHCI_REG_PORTSC1 + port * 2,
-		   USB_PORT_ENABLE | USB_PORT_CONNECTCHG);
-  for (count = 0; count < UHCI_PORT_TIMEOUT; count++)
-    {
-      if (uhci_port_enabled (ui, UHCI_REG_PORTSC1 + port * 2))
-	{
-	  pci_reg_write16 (ui->io, UHCI_REG_PORTSC1 + port * 2,
-			   USB_PORT_ENABLE | USB_PORT_CONNECTCHG);
-	  return 1;
-	}
-    }
-
-  printf ("UHCI: Port %d enable timed out\n", port);
-  dump_regs (ui);
-
-  return 0;
+  //dump_regs (ui);
+  return 1;
 }
 
 
@@ -404,14 +405,16 @@ dump_regs (struct uhci_info *ui)
   char *name[] =
     { "cmd", "sts", "intr", "frnum", "base", "sofmod", "portsc1", "portsc2" };
   int i;
-  printf ("UHCI registers:\n");
+  printf ("UHCI registers: ");
   for (i = 0; i < 8; i++)
     {
-      printf ("%s: %x\n", name[i], (sz[i] == 2) ?
+      if (i)
+        printf (", ");
+      printf ("%s: %x", name[i], (sz[i] == 2) ?
 	      pci_reg_read16 (ui->io, regs[i]) :
 	      pci_reg_read32 (ui->io, regs[i]));
-
     }
+  printf (", legsup=%x\n", pci_read_config16 (ui->dev, UHCI_REG_LEGSUP));
 }
 
 
@@ -419,10 +422,6 @@ static void
 uhci_destroy_info (struct uhci_info *ui)
 {
   palloc_free_page (ui->frame_list);
-  palloc_free_page (ui->td_pool);
-  palloc_free_page (ui->qh_pool);
-  bitmap_destroy (ui->qh_used);
-  bitmap_destroy (ui->td_used);
   free (ui);
 }
 
@@ -430,6 +429,8 @@ static struct uhci_info *
 uhci_create_info (struct pci_io *io)
 {
   struct uhci_info *ui;
+  struct queue_head *qh1, *qh2;
+  struct tx_descriptor *td;
   int i;
 
   ui = malloc (sizeof (struct uhci_info));
@@ -437,116 +438,329 @@ uhci_create_info (struct pci_io *io)
   ui->io = io;
   lock_init (&ui->lock);
 
-  /* create an empty schedule */
-  ui->frame_list = palloc_get_page (PAL_ASSERT | PAL_NOCACHE);
-  memset (ui->frame_list, 0, PGSIZE);
-  for (i = 0; i < FRAME_LIST_ENTRIES; i++)
-    ui->frame_list[i].terminate = 1;
+  /* Create initial queue head and put on qh list. */
+  list_init (&ui->qh_list);
 
-  /* permit 3 timeouts */
-  ui->timeouts = 3;
+  qh1 = allocate_queue_head ();
+  list_push_back (&ui->qh_list, &qh1->qh_elem);
+
+  ui->term_qh = qh2 = allocate_queue_head ();
+  qh1->next_qh = make_lp (qh2) | UHCI_LP_QUEUE_HEAD;
+
+  td = allocate_transfer_descriptor (qh2);
+  td->token.maxlen = 0x7ff;
+  td->token.dev_addr = 0x7f;
+  td->token.pid = USB_TOKEN_IN;
+
+  /* Create an empty schedule */
+  ui->frame_list = palloc_get_page (PAL_ASSERT | PAL_NOCACHE);
+  for (i = 0; i < FRAME_LIST_ENTRIES; i++)
+    ui->frame_list[i] = make_lp (qh1) | UHCI_LP_QUEUE_HEAD;
+  //printf ("frame_list=%p: %08x\n", ui->frame_list, ui->frame_list[0]);
+
 //  thread_create ("uhci watchdog", PRI_MIN,
 //		 (thread_func *) uhci_stall_watchdog, ui);
-  ui->td_pool = palloc_get_page (PAL_ASSERT | PAL_NOCACHE);
-  ui->td_used = bitmap_create (TD_ENTRIES);
-  ui->qh_pool = palloc_get_page (PAL_ASSERT | PAL_NOCACHE);
-  ui->qh_used = bitmap_create (QH_ENTRIES);
-  sema_init (&ui->td_sem, TD_ENTRIES);
-
-  list_init (&ui->devices);
-  list_init (&ui->waiting);
 
   return ui;
 }
 
+static void
+print_td_list (struct queue_head *qh) 
+{
+  struct list_elem *e;
+  
+  for (e = list_begin (&qh->td_list); e != list_end (&qh->td_list);
+       e = list_next (e)) 
+    {
+      struct tx_descriptor *td = list_entry (e, struct tx_descriptor, td_elem);
+      printf ("  %08x: next_td=%08x control=%08x %d,%d,%d,%d,%x buf_ptr=%08x\n",
+              vtop (td), td->next_td, *(uint32_t *) &td->control,
+              (td->token.maxlen + 1) & 0x7ff, td->token.data_toggle,
+              td->token.end_point, td->token.dev_addr, td->token.pid,
+              td->buf_ptr);
+      hex_dump (0, ptov (td->buf_ptr), (td->token.maxlen + 1) & 0x7ff, true);
+    }
+}
+
+static void
+print_qh_list (struct uhci_info *ui) 
+{
+  struct list_elem *e;
+  
+  for (e = list_begin (&ui->qh_list); e != list_end (&ui->qh_list);
+       e = list_next (e)) 
+    {
+      struct queue_head *qh = list_entry (e, struct queue_head, qh_elem);
+      printf ("%08x: next_qh=%08x first_td=%08x\n",
+              vtop (qh), qh->next_qh, qh->first_td);
+      print_td_list (qh);
+    }
+}
+
+static struct tx_descriptor *
+execute_qh (struct uhci_info *ui, struct queue_head *qh) 
+{
+  struct queue_head *prev_qh;
+  struct tx_descriptor *last_td;
+  enum intr_level old_level;
+
+  /* Mark the final tx descriptor to interrupt us when it's
+     done. */
+  last_td = list_entry (list_back (&qh->td_list), struct tx_descriptor, td_elem);
+  last_td->control.ioc = 1;
+  
+  qh->next_qh = make_lp (ui->term_qh) | UHCI_LP_QUEUE_HEAD;
+
+  /* Add the queue head to the list of queue heads.
+     qh_list is accessed from uhci_irq so we need to disable
+     interrupts. */
+  old_level = intr_disable ();
+  list_push_back (&ui->qh_list, &qh->qh_elem);
+  prev_qh = list_entry (list_prev (&qh->qh_elem), struct queue_head, qh_elem);
+  prev_qh->next_qh = make_lp (qh) | UHCI_LP_QUEUE_HEAD;
+  print_qh_list (ui);
+  //dump_regs (ui);
+  intr_set_level (old_level);
+
+  /* Wait until the queue has been processed. */
+  //printf ("down...");
+  sema_down (&qh->completion);
+  //printf ("up\n");
+  
+
+  /* Return the descriptor that failed, or a null pointer on
+     success. */
+  return (qh->first_td & UHCI_LP_TERMINATE
+          ? NULL
+          : ptov (qh->first_td & UHCI_LP_POINTER));
+}
 
 static int
-uhci_tx_pkt (host_eop_info hei, int token, void *pkt, int min_sz,
-	     int max_sz, int *in_sz, bool wait)
+uhci_dev_control (host_eop_info hei, struct usb_setup_pkt *setup,
+                  void *data, size_t *size) 
 {
   struct uhci_eop_info *ue;
   struct uhci_dev_info *ud;
-
-  ASSERT (min_sz <= max_sz);
-
-  /* can't have page overlap */
-  if (pkt != NULL)
-    {
-      ASSERT (max_sz > 0);
-      ASSERT (pg_no (pkt + max_sz - 1) == pg_no (pkt));
-    }
+  struct queue_head *qh;
+  struct tx_descriptor *td;
+  size_t size_alloced;
+  int status_token;
+  int err;
 
   ue = hei;
   ud = ue->ud;
 
   /* don't bother if ports are down */
   if (ud->ui->attached_ports == 0)
+    return USB_HOST_ERR_NODEV;
+
+  qh = allocate_queue_head ();
+  if (qh == NULL)
+    return USB_HOST_ERR_NOMEM;
+
+  /* Setup stage: SETUP packet. */
+  td = allocate_transfer_descriptor (qh);
+  if (td == NULL)
+    return USB_HOST_ERR_NOMEM;
+  ue->toggle = 0;
+  uhci_setup_td (td, ud->dev_addr, USB_TOKEN_SETUP, ue->eop,
+                 setup, sizeof *setup, ue->toggle, ud->low_speed);
+
+  /* Data stage: IN/OUT packets. */
+  if (data != NULL) 
     {
-      return USB_HOST_ERR_NODEV;
+      size_alloced = 0;
+      while (size_alloced < *size) 
+        {
+          int packet = *size - size_alloced;
+          if (packet > ue->maxpkt)
+            packet = ue->maxpkt;
+
+          td = allocate_transfer_descriptor (qh);
+          if (td == NULL)
+            return USB_HOST_ERR_NOMEM;
+
+          ue->toggle = !ue->toggle;
+          uhci_setup_td (td, ud->dev_addr,
+                         setup->direction ? USB_TOKEN_IN : USB_TOKEN_OUT,
+                         ue->eop, data + size_alloced, packet,
+                         ue->toggle, ud->low_speed);
+          td->control.spd = 1;
+          td->offset = size_alloced;
+
+          size_alloced += packet;
+        }
     }
+  
+  /* Status stage: OUT/IN packet. */
+  td = allocate_transfer_descriptor (qh);
+  if (td == NULL)
+    return USB_HOST_ERR_NOMEM;
+  ue->toggle = 1;
+  status_token = setup->direction ? USB_TOKEN_OUT : USB_TOKEN_IN;
+  uhci_setup_td (td, ud->dev_addr, status_token, ue->eop,
+                 NULL, 0, ue->toggle, ud->low_speed);
 
-  /* setup token acts to synchronize data toggle */
-  if (token == USB_TOKEN_SETUP)
-    ue->toggle = 0;
-
-  if (min_sz != 0)
+  /* Execute. */
+  td = execute_qh (ud->ui, qh);
+  if (td != NULL)
+    ue->toggle = td->token.data_toggle;
+  //printf ("execution done, td=%p\n", td);
+  if (td != NULL
+      && setup->direction
+      && list_front (&qh->td_list) != &td->td_elem
+      && list_back (&qh->td_list) != &td->td_elem
+      && !td->control.active
+      && !td->control.stalled
+      && !td->control.buffer_error
+      && !td->control.babble
+      && !td->control.nak
+      && !td->control.timeout
+      && !td->control.bitstuff
+      && (((td->control.actual_len + 1) & 0x7ff)
+          < ((td->token.maxlen + 1) & 0x7ff))) 
     {
-      return uhci_tx_pkt_bulk (ue, token, pkt, max_sz, in_sz);
+      /* Short packet detected in stream, which indicates that
+         the input data is shorter than the maximum that we
+         expected.
+
+         Re-queue the Status stage. */
+
+      *size = td->offset + ((td->control.actual_len + 1) & 0x7ff);
+
+      //delayed_free_qh (qh);
+
+      qh = allocate_queue_head ();
+      if (qh == NULL)
+        return USB_HOST_ERR_NOMEM;
+
+      td = allocate_transfer_descriptor (qh);
+      if (td == NULL)
+        return USB_HOST_ERR_NOMEM;
+      ue->toggle = 1;
+      uhci_setup_td (td, ud->dev_addr, status_token, ue->eop,
+                     NULL, 0, ue->toggle, ud->low_speed);
+
+      //printf ("short packet, requeuing status\n");
+      td = execute_qh (ud->ui, qh);
+      if (td != NULL)
+        ue->toggle = td->token.data_toggle;
+    }
+      
+  if (td != NULL) 
+    {
+      if (td->control.bitstuff)
+        err = USB_HOST_ERR_BITSTUFF;
+      else if (td->control.timeout)
+        err = USB_HOST_ERR_TIMEOUT;
+      else if (td->control.nak)
+        err = USB_HOST_ERR_NAK;
+      else if (td->control.babble)
+        err = USB_HOST_ERR_BABBLE;
+      else if (td->control.buffer_error)
+        err = USB_HOST_ERR_BUFFER;
+      else if (td->control.stalled)
+        err = USB_HOST_ERR_STALL;
+      else
+        PANIC ("unknown USB error");
     }
   else
-    {
-      if (wait == false)
-	{
-	  if (in_sz != NULL)
-	    *in_sz = max_sz;
-	  return uhci_tx_pkt_now (ue, token, pkt, max_sz);
-	}
-      else
-	{
-	  return uhci_tx_pkt_wait (ue, token, pkt, max_sz, in_sz);
-	}
-    }
+    err = USB_HOST_ERR_NONE;
 
-  return 0;
+  //delayed_free_qh (qh);
+  
+  //printf ("err=%d\n", err);
+  if (err == 0 && data != NULL)
+    hex_dump (0, data, *size, true);
+  return err;
 }
 
 static int
-uhci_tx_pkt_bulk (struct uhci_eop_info *ue, int token, void *buf,
-		  int sz, int *tx)
+uhci_dev_bulk (host_eop_info hei, bool out, void *data, size_t *size) 
 {
-  /* XXX this can be made to use async packets */
-  int bytes = 0;
-  int txed = 0;
+  struct uhci_eop_info *ue;
+  struct uhci_dev_info *ud;
+  struct queue_head *qh;
+  struct tx_descriptor *td;
+  size_t size_alloced;
+  int err;
 
-  /* send data in max_pkt sized chunks */
-  while (bytes < sz)
+  ue = hei;
+  ud = ue->ud;
+
+  /* don't bother if ports are down */
+  if (ud->ui->attached_ports == 0)
+    return USB_HOST_ERR_NODEV;
+
+  if (!out)
+    memset (data, 0xcc, *size);
+
+  qh = allocate_queue_head ();
+  if (qh == NULL)
+    return USB_HOST_ERR_NOMEM;
+
+  /* Data stage: IN/OUT packets. */
+  size_alloced = 0;
+  while (size_alloced < *size)
     {
-      int to_tx, pkt_txed;
-      int left;
-      int err;
-      bool wait_on_pkt;
+      int packet = *size - size_alloced;
+      if (packet > ue->maxpkt)
+        packet = ue->maxpkt;
 
-      left = sz - bytes;
-      to_tx = (left > ue->maxpkt) ? ue->maxpkt : left;
-      wait_on_pkt = (left <= to_tx) ? true : false;
+      td = allocate_transfer_descriptor (qh);
+      if (td == NULL)
+        return USB_HOST_ERR_NOMEM;
 
-      pkt_txed = 0;
-      err = uhci_tx_pkt (ue, token, buf + bytes, 0, to_tx, &pkt_txed, 
-			 wait_on_pkt);
-      if (err)
-	{
-	  if (tx != NULL)
-	    *tx = txed;
-	  return err;
-	}
-      txed += pkt_txed;
-      bytes += pkt_txed;
+      uhci_setup_td (td, ud->dev_addr,
+                     out ? USB_TOKEN_OUT : USB_TOKEN_IN,
+                     ue->eop, data + size_alloced, packet,
+                     ue->toggle, ud->low_speed);
+      ue->toggle = !ue->toggle;
+      td->control.spd = 1;
+      td->offset = size_alloced;
+
+      size_alloced += packet;
     }
+  
+  /* Execute. */
+  td = execute_qh (ud->ui, qh);
+  if (td != NULL) 
+    {
+      ue->toggle = !td->token.data_toggle;
+      if (!out) 
+        *size = td->offset + ((td->control.actual_len + 1) & 0x7ff);
+      
+      if (td->control.bitstuff)
+        err = USB_HOST_ERR_BITSTUFF;
+      else if (td->control.timeout)
+        err = USB_HOST_ERR_TIMEOUT;
+      else if (td->control.nak)
+        err = USB_HOST_ERR_NAK;
+      else if (td->control.babble)
+        err = USB_HOST_ERR_BABBLE;
+      else if (td->control.buffer_error)
+        err = USB_HOST_ERR_BUFFER;
+      else if (td->control.stalled)
+        err = USB_HOST_ERR_STALL;
+      else if (!out)
+        {
+          /* Just a short packet. */
+          printf ("short packet\n");
+          err = USB_HOST_ERR_NONE;
+        }
+      else
+        PANIC ("unknown USB error");
+    }
+  else
+    err = USB_HOST_ERR_NONE;
 
-  if (tx != NULL)
-    *tx = txed;
+  //delayed_free_qh (qh);
 
-  return USB_HOST_ERR_NONE;
+  if (err)
+    PANIC ("err=%d\n", err);
+  if (err == 0 && data != NULL && !out)
+    hex_dump (0, data, *size, true);
+  return err;
 }
 
 static int
@@ -567,7 +781,7 @@ token_to_pid (int token)
 
 static void
 uhci_setup_td (struct tx_descriptor *td, int dev_addr, int token,
-	       int eop, void *pkt, int sz, int toggle, bool ls)
+	       int eop, void *pkt, int sz, int toggle, bool ls UNUSED)
 {
   td->buf_ptr = (sz == 0) ? 0 : vtop (pkt);
 
@@ -580,148 +794,10 @@ uhci_setup_td (struct tx_descriptor *td, int dev_addr, int token,
 
   td->control.actual_len = 0;
   td->control.active = 1;
-  td->flp.qh_select = 0;
-  td->flp.depth_select = 0;
+  td->next_td = UHCI_LP_TERMINATE;
 
   /* kill packet if too many errors */
   td->control.error_limit = 3;
-}
-
-static int
-uhci_tx_pkt_now (struct uhci_eop_info *ue, int token, void *pkt, int sz)
-{
-  struct tx_descriptor *td;
-  struct uhci_dev_info *ud;
-
-  ud = ue->ud;
-
-  uhci_lock (ud->ui);
-
-  td = uhci_acquire_td (ud->ui);
-  memset (td, 0, sizeof (struct tx_descriptor));
-  uhci_setup_td (td, ud->dev_addr, token, ue->eop, pkt, sz, ue->toggle,
-		 ud->low_speed);
-  td->control.ioc = 1;
-
-  uhci_stop (ud->ui);
-
-  uhci_add_td_to_qh (ud->qh, td);
-  td->flags = TD_FL_ASYNC | TD_FL_USED;
-
-  uhci_run (ud->ui);
-  uhci_unlock (ud->ui);
-
-  ue->toggle ^= 1;
-  return USB_HOST_ERR_NONE;
-}
-
-static int
-uhci_tx_pkt_wait (struct uhci_eop_info *ue, int token, void *pkt,
-		  int max_sz, int *in_sz)
-{
-  enum intr_level old_lvl;
-  struct tx_descriptor *td;
-  struct usb_wait w;
-  int err;
-  struct uhci_dev_info *ud;
-
-  ud = ue->ud;
-
-  uhci_lock (ud->ui);
-
-  td = uhci_acquire_td (ud->ui);
-  memset (td, 0, sizeof (struct tx_descriptor));
-
-  uhci_setup_td (td, ud->dev_addr, token, ue->eop, pkt, max_sz, ue->toggle,
-		 ud->low_speed);
-  td->control.ioc = 1;
-
-  w.td = td;
-  w.ud = ud;
-  sema_init (&w.sem, 0);
-
-  uhci_stop (ud->ui);
-
-  /* put into device's queue and add to waiting packet list */
-  uhci_add_td_to_qh (ud->qh, td);
-  td->flags = TD_FL_USED;
-
-  list_push_back (&ud->ui->waiting, &w.peers);
-
-  /* reactivate controller and wait */
-  old_lvl = intr_disable ();
-  uhci_run (ud->ui);
-  uhci_unlock (ud->ui);
-  sema_down (&w.sem);
-  intr_set_level (old_lvl);
-
-  if (in_sz != NULL)
-    {
-      if (w.td->control.actual_len == 0x7ff)
-	*in_sz = 0;
-      else
-	*in_sz = w.td->control.actual_len + 1;
-    }
-
-  if (w.td->control.bitstuff)
-    err = USB_HOST_ERR_BITSTUFF;
-  else if (w.td->control.timeout)
-    err = USB_HOST_ERR_TIMEOUT;
-  else if (w.td->control.nak)
-    err = USB_HOST_ERR_NAK;
-  else if (w.td->control.babble)
-    err = USB_HOST_ERR_BABBLE;
-  else if (w.td->control.buffer_error)
-    err = USB_HOST_ERR_BUFFER;
-  else if (w.td->control.stalled)
-    err = USB_HOST_ERR_STALL;
-  else
-    {
-      err = USB_HOST_ERR_NONE;
-      ue->toggle ^= 1;
-    }
-
-  uhci_release_td (ud->ui, td);
-
-  return err;
-}
-
-static void
-uhci_add_td_to_qh (struct queue_head *qh, struct tx_descriptor *td)
-{
-  struct frame_list_ptr *fp;
-
-  ASSERT (td != NULL);
-
-  td->head = &qh->qelp;
-  if (qh->qelp.terminate == 1)
-    {
-      /* queue is empty */
-      td->flp.terminate = 1;
-      barrier ();
-      td->flp.flp = 0;
-      qh->qelp.flp = ptr_to_flp (vtop (td));
-      qh->qelp.terminate = 0;
-    }
-  else
-    {
-      /* find the last element in the queue */
-      fp = ptov (flp_to_ptr (qh->qelp.flp));
-      ASSERT (qh->qelp.terminate == 0);
-      while (!fp->terminate)
-	{
-	  fp = ptov (flp_to_ptr (fp->flp));
-	}
-
-      /* set TD to terminated ptr */
-      td->flp = *fp;
-
-      fp->qh_select = 0;
-      fp->depth_select = 0;
-      fp->flp = ptr_to_flp (vtop (td));
-      barrier ();
-      fp->terminate = 0;
-    }
 }
 
 static void
@@ -730,113 +806,88 @@ uhci_irq (void *uhci_data)
   struct uhci_info *ui;
   uint16_t status;
 
+  //printf ("uhci_irq\n");
   ui = uhci_data;
   status = pci_reg_read16 (ui->io, UHCI_REG_USBSTS);
   if (status & USB_STATUS_PROCESSERR)
     {
-      dump_all_qh (ui);
+      //dump_all_qh (ui);
       dump_regs (ui);
       PANIC ("UHCI: Malformed schedule");
     }
   else if (status & USB_STATUS_HOSTERR)
     {
-      dump_all_qh (ui);
+      //dump_all_qh (ui);
       dump_regs (ui);
       PANIC ("UHCI: Host system error");
     }
-  else if (status & USB_STATUS_INTERR)
+  else if (status & (USB_STATUS_INTERR | USB_STATUS_USBINT))
     {
       /* errors */
-      pci_reg_write16 (ui->io, UHCI_REG_USBSTS, USB_STATUS_INTERR);
-    }
-
-  if (status & USB_STATUS_USBINT)
-    {
-      /* turn off interrupt */
-      uhci_stop_unlocked (ui);
-      pci_reg_write16 (ui->io, UHCI_REG_USBSTS, USB_STATUS_USBINT);
+      //pci_reg_write16 (ui->io, UHCI_REG_USBINTR, 0);
+      pci_reg_write16 (ui->io, UHCI_REG_USBSTS,
+                       status & (USB_STATUS_INTERR | USB_STATUS_USBINT));
+      if (status & USB_STATUS_INTERR) 
+        {
+          printf ("USB_STATUS_INTERR\n");
+          print_qh_list (ui);
+          dump_regs (ui); 
+        }
+      //if (status & USB_STATUS_USBINT)
+      //printf ("USB_STATUS_USBINT\n");
+      barrier ();
       uhci_process_completed (ui);
-      uhci_run_unlocked (ui);
     }
+  else
+    printf ("nothing?\n");
 }
 
-static int
-uhci_process_completed (struct uhci_info *ui)
+/* Queue processing finished.
+   Remove from lists, wake up waiter. */
+static void
+finish_qh (struct queue_head *qh)
 {
-  struct list_elem *li;
-  int completed = 0;
-  size_t start = 0;
+  struct list_elem *p = list_prev (&qh->qh_elem);
+  struct queue_head *prev_qh = list_entry (p, struct queue_head, qh_elem);
 
-  li = list_begin (&ui->waiting);
-  while (li != list_end (&ui->waiting))
-    {
-      struct usb_wait *uw;
-      struct list_elem *next;
-
-      next = list_next (li);
-      uw = list_entry (li, struct usb_wait, peers);
-
-      if (!uw->td->control.active)
-	{
-	  list_remove (li);
-	  if (uw->td->control.error_limit == 0 || uw->td->control.stalled)
-	    {
-	      uhci_remove_error_td (uw->td);
-	    }
-	  uw->td->flags = 0;
-	  sema_up (&uw->sem);
-	  completed++;
-	}
-      li = next;
-    }
-
-  /* must be a completed async TD.. */
-  /* is this too time consuming? I hope not */
-  if (completed != 0)
-    return completed;
-
-  while (start < TD_ENTRIES)
-    {
-      struct tx_descriptor *td;
-
-      start = bitmap_scan (ui->td_used, start, 1, true);
-      if (start == BITMAP_ERROR)
-	break;
-
-      td = td_from_pool (ui, start);
-
-      if (!td->control.active && (td->flags & TD_FL_ASYNC) &&
-	  (td->flags & TD_FL_USED))
-	{
-	  if (td->control.error_limit == 0 || td->control.stalled)
-	    {
-	      uhci_remove_error_td (td);
-	    }
-	  uhci_release_td (ui, td);
-	  completed++;
-	}
-      start++;
-    }
-
-  return completed;
+  //printf ("finish_qh\n");
+  prev_qh->next_qh = qh->next_qh;
+  list_remove (&qh->qh_elem);
+  sema_up (&qh->completion);
 }
 
 static void
-uhci_remove_error_td (struct tx_descriptor *td)
+uhci_process_completed (struct uhci_info *ui)
 {
-  struct frame_list_ptr *fp;
-  uint32_t td_flp;
+  struct list_elem *e;
 
-  ASSERT (td->head != NULL);
+  if (list_empty (&ui->qh_list))
+    return;
 
-  fp = td->head;
-  td_flp = ptr_to_flp (vtop (td));
-  while (fp->flp != td_flp)
+  /* Note that we skip the first element in the list, which is an
+     empty queue head pointed to by every frame list pointer. */
+  for (e = list_next (list_begin (&ui->qh_list));
+       e != list_end (&ui->qh_list); ) 
     {
-      ASSERT (fp->terminate == 0);
-      fp = ptov (flp_to_ptr (fp->flp));
+      struct queue_head *qh = list_entry (e, struct queue_head, qh_elem);
+      uint32_t first_td = qh->first_td;
+      bool delete = false;
+
+      barrier ();
+      //printf ("first_td=%08x\n", first_td);
+      if ((first_td & UHCI_LP_POINTER) == 0)
+        delete = true;
+      else 
+        {
+          struct tx_descriptor *td = ptov (first_td & UHCI_LP_POINTER);
+          if (!td->control.active) 
+            delete = true;
+        }
+
+      e = list_next (e);
+      if (delete)
+        finish_qh (qh);
     }
-  *fp = td->flp;
 }
 
 static int
@@ -877,12 +928,50 @@ check_and_flip_change (struct uhci_info *ui, int port)
   return 0;
 }
 
+static struct queue_head *
+allocate_queue_head (void) 
+{
+  size_t qh_size = sizeof *allocate_queue_head ();
+  struct queue_head *qh = calloc (1, qh_size > 16 ? qh_size : 16);
+  if (qh != NULL) 
+    {
+      qh->next_qh = UHCI_LP_TERMINATE;
+      qh->first_td = UHCI_LP_TERMINATE;
+      list_init (&qh->td_list);
+      sema_init (&qh->completion, 0); 
+    }
+  return qh;
+}
+
+static struct tx_descriptor *
+allocate_transfer_descriptor (struct queue_head *qh) 
+{
+  struct tx_descriptor *td = calloc (1, sizeof *td);
+  if (td == NULL) 
+    {
+      /* FIXME: free the whole queue head. */
+      return NULL; 
+    }
+
+  if (list_empty (&qh->td_list))
+    qh->first_td = make_lp (td);
+  else
+    {
+      struct list_elem *p = list_back (&qh->td_list);
+      struct tx_descriptor *prev_td = list_entry (p, struct tx_descriptor,
+                                                  td_elem);
+      prev_td->next_td = make_lp (td);
+    }
+  list_push_back (&qh->td_list, &td->td_elem);
+  td->next_td = UHCI_LP_TERMINATE;
+  return td;
+}
+
 static host_dev_info
 uhci_create_chan (host_info hi, int dev_addr, int ver)
 {
   struct uhci_info *ui;
   struct uhci_dev_info *ud;
-  int i;
 
   ASSERT (dev_addr <= 127 && dev_addr >= 0);
 
@@ -896,187 +985,15 @@ uhci_create_chan (host_info hi, int dev_addr, int ver)
   ud->ui = ui;
   lock_init (&ud->lock);
 
-  uhci_lock (ui);
-
-  ud->qh = qh_alloc (ud->ui);
-
-  /* queue data */
-  memset (ud->qh, 0, sizeof (*ud->qh));
-  ud->qh->qelp.terminate = 1;
-  barrier ();
-  ud->qh->qelp.flp = 0;
-  ud->qh->qelp.qh_select = 0;
-  ud->qh->qhlp.qh_select = 1;
-
-  uhci_stop (ui);
-
-  /* add to queues in frame list */
-  ud->qh->qhlp.flp = ui->frame_list[0].flp;
-  ud->qh->qhlp.terminate = ui->frame_list[0].terminate;
-  for (i = 0; i < FRAME_LIST_ENTRIES; i++)
-    {
-      ui->frame_list[i].flp = ptr_to_flp (vtop (ud->qh));
-      ui->frame_list[i].qh_select = 1;
-      ui->frame_list[i].terminate = 0;
-    }
-
-  /* add to device list */
-  list_push_back (&ui->devices, &ud->peers);
-
-  uhci_run (ui);
-  uhci_unlock (ui);
-
   return ud;
 }
 
 static void
-uhci_destroy_chan (host_dev_info hd)
+uhci_destroy_chan (host_dev_info hd UNUSED)
 {
-  struct uhci_dev_info *ud;
-  struct list_elem *li;
-
-  ud = hd;
-  uhci_lock (ud->ui);
-
-  uhci_stop (ud->ui);
-
-  uhci_remove_qh (ud->ui, ud->qh);
-
-  /* wake up all waiting */
-  li = list_begin (&ud->ui->waiting);
-  while (li != list_end (&ud->ui->waiting))
-    {
-      struct usb_wait *w;
-      w = list_entry (li, struct usb_wait, peers);
-      if (w->ud == ud)
-	{
-	  sema_up (&w->sem);
-	  list_remove (li);
-	}
-      li = list_next (li);
-    }
-
-  list_remove (&ud->peers);
-
-  uhci_run (ud->ui);
-
-  qh_free (ud->ui, ud->qh);
-
-  uhci_unlock (ud->ui);
-
-  free (ud);
-}
-
-/**
- * Remove a queue from the UHCI schedule
- */
-static void
-uhci_remove_qh (struct uhci_info *ui, struct queue_head *qh)
-{
-  uintptr_t qh_flp;
-
-  ASSERT (lock_held_by_current_thread (&ui->lock));
-  ASSERT (uhci_is_stopped (ui));
-  ASSERT (qh != NULL);
-
-  qh_flp = ptr_to_flp (vtop (qh));
-  /* remove from host queue */
-  if (ui->frame_list[0].flp == qh_flp)
-    {
-      int i;
-      /* up top */
-      for (i = 0; i < FRAME_LIST_ENTRIES; i++)
-	{
-	  ui->frame_list[i] = qh->qhlp;
-	}
-    }
-  else
-    {
-      /* in the middle */
-      struct frame_list_ptr *fp;
-      struct frame_list_ptr *prev;
-
-      fp = ptov (flp_to_ptr (ui->frame_list[0].flp));
-      ASSERT (!fp->terminate);
-      do
-	{
-	  prev = fp;
-	  fp = ptov (flp_to_ptr (fp->flp));
-	}
-      while (!fp->terminate && fp->flp != qh_flp);
-      *prev = qh->qhlp;
-    }
-}
-
-/**
- * Put UHCI into stop state
- * Wait until status register reflects setting
- */
-static void
-uhci_stop (struct uhci_info *ui)
-{
-  ASSERT (intr_get_level () != INTR_OFF);
-  ASSERT (lock_held_by_current_thread (&ui->lock));
-
-  uhci_stop_unlocked (ui);
-}
-
-static void
-uhci_stop_unlocked (struct uhci_info *ui)
-{
-  uint16_t cmd;
-  int i;
-
-  cmd = pci_reg_read16 (ui->io, UHCI_REG_USBCMD);
-  cmd = cmd & ~USB_CMD_RS;
-
-  pci_reg_write16 (ui->io, UHCI_REG_USBCMD, cmd);
-
-  /* wait for execution schedule to finish up */
-  for (i = 0; i < 1000; i++)
-    {
-      if (uhci_is_stopped (ui))
-	return;
-    }
-
-  PANIC ("UHCI: Controller did not halt\n");
-
-}
-
-static void
-uhci_run_unlocked (struct uhci_info *ui)
-{
-  uint16_t cmd;
-  cmd = pci_reg_read16 (ui->io, UHCI_REG_USBCMD);
-  cmd = cmd | USB_CMD_RS | USB_CMD_MAX_PACKET;
-  pci_reg_write16 (ui->io, UHCI_REG_USBCMD, cmd);
-}
-
-/**
- * Put UHCI into 'Run' State 
- */
-static void
-uhci_run (struct uhci_info *ui)
-{
-  ASSERT (lock_held_by_current_thread (&ui->lock));
-  uhci_run_unlocked (ui);
-}
-
-static struct tx_descriptor *
-uhci_acquire_td (struct uhci_info *ui)
-{
-  size_t td_idx;
-  struct tx_descriptor *td;
-
-  ASSERT (lock_held_by_current_thread (&ui->lock));
-  ASSERT (!uhci_is_stopped (ui));
-
-  sema_down (&ui->td_sem);
-  td_idx = bitmap_scan_and_flip (ui->td_used, 0, 1, false);
-  ASSERT (td_idx != BITMAP_ERROR);
-  td = td_from_pool (ui, td_idx);
-
-  return td;
+  /* FIXME */
+  /* FIXME: wake up all waiting queue heads. */
+  /* FIXME: arrange for qhs to be freed. */
 }
 
 static void
@@ -1087,44 +1004,6 @@ uhci_modify_chan (host_dev_info hd, int dev_addr, int ver)
   ud = hd;
   ud->dev_addr = dev_addr;
   ud->low_speed = (ver == USB_VERSION_1_0) ? true : false;
-}
-
-static void
-dump_all_qh (struct uhci_info *ui)
-{
-  struct list_elem *li;
-
-  printf ("schedule: %x...", vtop (ui->frame_list));
-  printf ("%x", *((uint32_t *) ui->frame_list));
-  li = list_begin (&ui->devices);
-  while (li != list_end (&ui->devices))
-    {
-      struct uhci_dev_info *ud;
-      ud = list_entry (li, struct uhci_dev_info, peers);
-      dump_qh (ud->qh);
-      li = list_next (li);
-    }
-}
-
-static void
-dump_qh (struct queue_head *qh)
-{
-  struct frame_list_ptr *fp;
-  printf ("qh: %p %x\n", qh, vtop (qh));
-  fp = &qh->qelp;
-  while (!fp->terminate)
-    {
-      printf ("%x %x\n", *((uint32_t *) fp), *(uint32_t *) (fp + 1));
-      fp = ptov (flp_to_ptr (fp->flp));
-    }
-  printf ("%x %x\n\n", *(uint32_t *) fp, *(uint32_t *) (fp + 1));
-}
-
-static struct tx_descriptor *
-td_from_pool (struct uhci_info *ui, int idx)
-{
-  ASSERT (idx >= 0 && idx < TD_ENTRIES);
-  return (((void *) ui->td_pool) + idx * 32);
 }
 
 static void
@@ -1140,75 +1019,6 @@ uhci_detect_ports (struct uhci_info *ui)
 	return;
       ui->num_ports++;
     }
-}
-
-static void
-uhci_stall_watchdog (struct uhci_info *ui)
-{
-  while (1)
-    {
-      int rmved;
-      timer_msleep (1000);
-      printf ("watchdog\n");
-      uhci_lock (ui);
-      uhci_stop (ui);
-      rmved = uhci_remove_stalled (ui);
-      if (rmved > 0)
-	printf ("removed stalled packet in watchdog\n");
-      uhci_run (ui);
-      uhci_unlock (ui);
-    }
-}
-
-static int
-uhci_remove_stalled (struct uhci_info *ui)
-{
-  struct list_elem *li;
-  int rmved;
-
-  rmved = 0;
-  li = list_begin (&ui->waiting);
-
-  intr_disable ();
-
-  while (li != list_end (&ui->waiting))
-    {
-      struct usb_wait *uw;
-      struct list_elem *next;
-      uint32_t ctrl;
-
-      next = list_next (li);
-      uw = list_entry (li, struct usb_wait, peers);
-
-      if ((!uw->td->control.active && uw->td->control.stalled) ||
-	  (uw->td->control.nak))
-	{
-	  memcpy (&ctrl, &uw->td->control, 4);
-	  printf ("CTRL: %x\n", ctrl);
-	  list_remove (li);
-	  uhci_remove_error_td (uw->td);
-	  sema_up (&uw->sem);
-	  rmved++;
-	}
-      li = next;
-    }
-
-  intr_enable ();
-
-  return rmved;
-}
-
-static void
-uhci_release_td (struct uhci_info *ui, struct tx_descriptor *td)
-{
-  int ofs = (uintptr_t) td - (uintptr_t) ui->td_pool;
-  int entry = ofs / 32;
-
-  ASSERT (entry < TD_ENTRIES);
-
-  td->flags = 0;
-  bitmap_reset (ui->td_used, entry);
-  sema_up (&ui->td_sem);
 }
 
 static host_eop_info
@@ -1232,32 +1042,4 @@ static void
 uhci_remove_eop (host_eop_info hei)
 {
   free (hei);
-}
-
-static struct queue_head *
-qh_alloc (struct uhci_info *ui)
-{
-  size_t qh_idx;
-  struct queue_head *qh;
-
-  ASSERT (lock_held_by_current_thread (&ui->lock));
-
-  qh_idx = bitmap_scan_and_flip (ui->qh_used, 0, 1, false);
-  if (qh_idx == BITMAP_ERROR)
-    {
-      PANIC ("UHCI: Too many queue heads in use-- runaway USB stack?\n");
-    }
-  qh = (void *) (((intptr_t) ui->qh_pool) + qh_idx * 16);
-
-  return qh;
-}
-
-static void
-qh_free (struct uhci_info *ui, struct queue_head *qh)
-{
-  size_t entry;
-  ASSERT (lock_held_by_current_thread (&ui->lock));
-
-  entry = ((intptr_t) qh - (intptr_t) ui->qh_pool) / 16;
-  bitmap_reset (ui->qh_used, entry);
 }

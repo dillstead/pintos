@@ -20,8 +20,10 @@
    Otherwise, a new page of memory, called an "arena", is
    obtained from the page allocator (if none is available,
    malloc() returns a null pointer).  The new arena is divided
-   into blocks, all of which are added to the descriptor's free
-   list.  Then we return one of the new blocks.
+   into blocks.  The first block in the page is reserved for
+   arena bookkeeping data (struct arena).  The remaining blocks
+   are added to the descriptor's free list.  Then we return one
+   of the new blocks.
 
    When we free a block, we add it to its descriptor's free list.
    But if the arena that the block was in now has no in-use
@@ -61,7 +63,7 @@ struct block
   };
 
 /* Our set of descriptors. */
-static struct desc descs[10];   /* Descriptors. */
+static struct desc descs[11];   /* Descriptors. */
 static size_t desc_cnt;         /* Number of descriptors. */
 
 static struct arena *block_to_arena (struct block *);
@@ -73,19 +75,25 @@ malloc_init (void)
 {
   size_t block_size;
 
-  for (block_size = 16; block_size < PGSIZE / 2; block_size *= 2)
+  for (block_size = 16; block_size <= PGSIZE / 2; block_size *= 2)
     {
       struct desc *d = &descs[desc_cnt++];
       ASSERT (desc_cnt <= sizeof descs / sizeof *descs);
+      ASSERT (block_size >= sizeof (struct arena));
       d->block_size = block_size;
-      d->blocks_per_arena = (PGSIZE - sizeof (struct arena)) / block_size;
+      d->blocks_per_arena = (PGSIZE / block_size) - 1;
       list_init (&d->free_list);
       lock_init (&d->lock);
     }
 }
 
 /* Obtains and returns a new block of at least SIZE bytes.
-   Returns a null pointer if memory is not available. */
+   Returns a null pointer if memory is not available.
+
+   If SIZE is PGSIZE / 2 or less, the returned block is
+   guaranteed to be aligned on the least power-of-2 boundary
+   greater than or equal to SIZE.  (Hence, such a block never
+   crosses the boundary between two physical pages.) */
 void *
 malloc (size_t size) 
 {
@@ -174,7 +182,9 @@ calloc (size_t a, size_t b)
   return p;
 }
 
-/* Returns the number of bytes allocated for BLOCK. */
+/* Returns the number of bytes allocated for BLOCK.  If the
+   return value is PGSIZE / 2 or less, the block is also
+   guaranteed to be aligned to that power-of-2 boundary. */
 static size_t
 block_size (void *block) 
 {
@@ -274,9 +284,10 @@ block_to_arena (struct block *b)
   ASSERT (a->magic == ARENA_MAGIC);
 
   /* Check that the block is properly aligned for the arena. */
-  ASSERT (a->desc == NULL
-          || (pg_ofs (b) - sizeof *a) % a->desc->block_size == 0);
-  ASSERT (a->desc != NULL || pg_ofs (b) == sizeof *a);
+  ASSERT (a->desc != NULL
+          ? pg_ofs (b) % a->desc->block_size == 0
+          : pg_ofs (b) == sizeof *a);
+  ASSERT (pg_ofs (b) != 0);
 
   return a;
 }
@@ -288,7 +299,5 @@ arena_to_block (struct arena *a, size_t idx)
   ASSERT (a != NULL);
   ASSERT (a->magic == ARENA_MAGIC);
   ASSERT (idx < a->desc->blocks_per_arena);
-  return (struct block *) ((uint8_t *) a
-                           + sizeof *a
-                           + idx * a->desc->block_size);
+  return (struct block *) ((uint8_t *) a + (idx + 1) * a->desc->block_size);
 }

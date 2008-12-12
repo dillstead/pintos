@@ -4,6 +4,7 @@
 #include "threads/malloc.h"
 #include "devices/timer.h"
 #include <kernel/bitmap.h>
+#include <ctype.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -136,10 +137,7 @@ static char *usb_get_string (struct usb_dev *d, int ndx);
 static struct class *usb_get_class_by_id (int id);
 static void usb_setup_dev_addr (struct usb_dev *dev);
 static void usb_config_dev (struct usb_dev *dev, int config_val);
-static int usb_load_config (struct usb_dev *dev, int idx, void *data,
-			    int dsz);
-static int usb_tx_all (struct usb_endpoint *eop, void *buf,
-		       int max_bytes, int bailout, bool in);
+static int usb_load_config (struct usb_dev *dev, int idx);
 static void usb_attach_interfaces (struct usb_dev *dev);
 static void usb_apply_class_to_interfaces (struct class *c);
 static size_t wchar_to_ascii (char *dst, const char *src);
@@ -241,16 +239,16 @@ usb_configure_default (struct host *h)
 {
   struct usb_dev *dev;
   struct usb_setup_pkt sp;
-  char data[256];
-  struct device_descriptor *dd;
+  struct device_descriptor dd;
   host_dev_info hi;
   host_eop_info cfg_eop;
   bool ignore_device = false;
-  int err, sz, txed;
+  int err;
   int config_val;
+  size_t size;
 
   hi = h->dev->create_dev_channel (h->info, ADDR_DEFAULT, USB_VERSION_1_1);
-  cfg_eop = h->dev->create_eop (hi, 0, 64);
+  cfg_eop = h->dev->create_eop (hi, 0, 8);
 
   /* determine device descriptor */
   sp.recipient = USB_SETUP_RECIP_DEV;
@@ -259,53 +257,36 @@ usb_configure_default (struct host *h)
   sp.request = REQ_STD_GET_DESC;
   sp.value = SETUP_DESC_DEVICE << 8;
   sp.index = 0;
-  sp.length = sizeof (struct device_descriptor);
+  sp.length = 8;
 
-  err =
-    h->dev->tx_pkt (cfg_eop, USB_TOKEN_SETUP, &sp, 0, sizeof (sp), NULL,
-		    true);
-  /* did it timeout? - no device */
-  if (err != USB_HOST_ERR_NONE)
+  size = sp.length;
+  err = h->dev->dev_control (cfg_eop, &sp, &dd, &size); 
+  if (err)
     {
-      h->dev->remove_eop (cfg_eop);
-      h->dev->remove_dev_channel (hi);
+      /* FIXME: free memory. */
+      printf ("err=%d: no more devices\n", err);
       return NULL;
     }
 
-  dd = (void *) &data;
-  memset (dd, 0, sizeof (data));
-  txed = 0;
-  h->dev->tx_pkt (cfg_eop, USB_TOKEN_IN, data, 0, sizeof (data) - txed, &sz,
-		  true);
-
-  /* some devices only send 16 bytes for the device descriptor - 
-   * they wind up with a NAK, waiting for another command to be issued
-   *
-  * if it's a 16 byte max packet device, we just take the first 16 bytes */
-
-  if (dd->usb_spec == USB_VERSION_1_0)
+  if (dd.usb_spec == USB_VERSION_1_0)
     {
       /* USB 1.0 devices have strict schedule requirements not yet supported */
       printf ("USB 1.0 device detected - skipping\n");
     }
-  else if (sz == 8)
-    {
-      /* read in the full descriptor */
-      txed = sz;
-      while (txed <= 16)
-	{
-	  if (h->dev->
-	      tx_pkt (cfg_eop, USB_TOKEN_IN, data + txed, 0,
-		      sizeof (data) - txed, &sz, true) != USB_HOST_ERR_NONE)
-	    break;
-	  txed += sz;
-	}
-    }
-  if (dd->num_configs == 0)
+  if (dd.num_configs == 0)
     ignore_device = true;
 
   h->dev->remove_eop (cfg_eop);
-  cfg_eop = h->dev->create_eop (hi, 0, dd->max_pktsz);
+  cfg_eop = h->dev->create_eop (hi, 0, dd.max_pktsz);
+
+  sp.length = sizeof dd;
+  size = sp.length;
+  err = h->dev->dev_control (cfg_eop, &sp, &dd, &size);
+  if (err)
+    {
+      /* FIXME: free memory. */
+      return NULL;
+    }
 
   /* device exists - create device structure */
   dev = malloc (sizeof (struct usb_dev));
@@ -318,37 +299,38 @@ usb_configure_default (struct host *h)
 
   dev->cfg_eop.h_eop = cfg_eop;
 
-  dev->usb_version = dd->usb_spec;
-  dev->default_iface.class_id = dd->dev_class;
-  dev->default_iface.subclass_id = dd->dev_subclass;
+  dev->usb_version = dd.usb_spec;
+  dev->default_iface.class_id = dd.dev_class;
+  dev->default_iface.subclass_id = dd.dev_subclass;
   dev->default_iface.iface_num = 0;
-  dev->default_iface.proto = dd->dev_proto;
+  dev->default_iface.proto = dd.dev_proto;
   dev->default_iface.class = NULL;
   dev->default_iface.c_info = NULL;
   dev->default_iface.dev = dev;
 
   dev->cfg_eop.iface = &dev->default_iface;
-  dev->cfg_eop.max_pkt = dd->max_pktsz;
+  dev->cfg_eop.max_pkt = dd.max_pktsz;
   dev->cfg_eop.eop = 0;
 
   dev->host = h;
 
-  dev->vendor_id = dd->vendor_id;
-  dev->product_id = dd->product_id;
-  dev->device_id = dd->device_id;
+  dev->vendor_id = dd.vendor_id;
+  dev->product_id = dd.product_id;
+  dev->device_id = dd.device_id;
 
   if (ignore_device == false)
     {
-      dev->product = usb_get_string (dev, dd->product);
-      dev->manufacturer = usb_get_string (dev, dd->manufacturer);
+      dev->product = usb_get_string (dev, dd.product);
+      dev->manufacturer = usb_get_string (dev, dd.manufacturer);
+      printf ("product=%s manufacturer=%s\n", dev->product, dev->manufacturer);
     }
 
   config_val = -123;
   /* read in configuration data if there are configurations available */
   /* (which there should be...) */
-  if (dd->num_configs > 0 && ignore_device == false)
+  if (dd.num_configs > 0 && ignore_device == false)
     {
-      config_val = usb_load_config (dev, 0, data, sizeof (data));
+      config_val = usb_load_config (dev, 0);
       if (config_val < 0)
 	{
 	  printf
@@ -370,14 +352,16 @@ usb_configure_default (struct host *h)
  * XXX support multiple configurations
  */
 static int
-usb_load_config (struct usb_dev *dev, int idx, void *data, int dsz)
+usb_load_config (struct usb_dev *dev, int idx)
 {
   struct usb_setup_pkt sp;
   struct config_descriptor *cd;
   struct host *h;
   host_eop_info cfg;
   void *ptr;
-  int config_val, err, sz;
+  int config_val, err;
+  size_t size;
+  uint8_t data[256];
   int i;
 
   h = dev->host;
@@ -389,33 +373,28 @@ usb_load_config (struct usb_dev *dev, int idx, void *data, int dsz)
   sp.request = REQ_STD_GET_DESC;
   sp.value = SETUP_DESC_CONFIG << 8 | idx;
   sp.index = 0;
-  sp.length = dsz;
-  cd = data;
+  sp.length = sizeof data;
+  cd = (struct config_descriptor *) data;
 
-  err = h->dev->tx_pkt (cfg, USB_TOKEN_SETUP, &sp, 0, sizeof (sp), &sz, true);
+  size = sp.length;
+  err = h->dev->dev_control (cfg, &sp, data, &size);
   if (err != USB_HOST_ERR_NONE)
     {
       printf ("USB: Could not setup GET descriptor\n");
       return -err;
     }
 
-  sz = usb_tx_all (&dev->cfg_eop, cd, dsz,
-		   sizeof (struct config_descriptor), true);
-  if (sz < sizeof (struct config_descriptor))
-    {
-      printf ("USB: Did not rx GET descriptor (%d bytes, expected %d)\n", sz,
-	      sizeof (struct config_descriptor));
-      return -err;
-    }
-
-  if (sz == 0 || cd->hdr.type != SETUP_DESC_CONFIG)
+  if (size < sizeof *cd || cd->hdr.type != SETUP_DESC_CONFIG)
     {
       printf ("USB: Invalid descriptor\n");
       return -1;
     }
 
-  if (sz < cd->total_length)
-    sz += usb_tx_all (&dev->cfg_eop, data+sz, dsz, cd->total_length - sz, true);
+  if (size < cd->total_length) 
+    {
+      printf ("USB: configuration data too long\n");
+      return -1;
+    }
 
   dev->pwr = cd->max_power;
 
@@ -499,13 +478,9 @@ usb_config_dev (struct usb_dev *dev, int config_val)
   sp.value = config_val;
   sp.index = 0;
   sp.length = 0;
-  err = h->dev->tx_pkt (cfg, USB_TOKEN_SETUP, &sp, 0, sizeof (sp), NULL, true);
+  err = h->dev->dev_control (cfg, &sp, 0, NULL);
   if (err != USB_HOST_ERR_NONE)
-    PANIC ("USB: Config setup packet did not tx\n");
-
-  err = h->dev->tx_pkt (cfg, USB_TOKEN_IN, NULL, 0, 0, NULL, true);
-  if (err != USB_HOST_ERR_NONE)
-    PANIC ("USB: Could not configure device!\n");
+    PANIC ("USB: Could not configure device (err=%d)", err);
 }
 
 /**
@@ -533,13 +508,7 @@ usb_setup_dev_addr (struct usb_dev *dev)
   sp.value = dev->addr;
   sp.index = 0;
   sp.length = 0;
-  err =
-    h->dev->tx_pkt (cfg, USB_TOKEN_SETUP, &sp, 0, sizeof (sp), NULL, true);
-  if (err != USB_HOST_ERR_NONE)
-    {
-      PANIC ("USB: WHOOPS!!!!!!!\n");
-    }
-  err = h->dev->tx_pkt (cfg, USB_TOKEN_IN, NULL, 0, 0, NULL, true);
+  err = h->dev->dev_control (cfg, &sp, 0, NULL);
   if (err != USB_HOST_ERR_NONE)
     {
       PANIC ("USB: Error on setting device address (err = %d)\n", err);
@@ -554,9 +523,10 @@ static char *
 usb_get_string (struct usb_dev *udev, int ndx)
 {
   struct usb_setup_pkt sp;
-  char str[MAX_USB_STR];
+  char str[MAX_USB_STR + 1];
   char *ret;
-  int sz;
+  size_t size;
+  int err;
 
   sp.recipient = USB_SETUP_RECIP_DEV;
   sp.type = USB_SETUP_TYPE_STD;
@@ -564,26 +534,20 @@ usb_get_string (struct usb_dev *udev, int ndx)
   sp.request = REQ_STD_GET_DESC;
   sp.value = (SETUP_DESC_STRING << 8) | ndx;
   sp.index = 0;
-  sp.length = MAX_USB_STR;
-  udev->host->dev->tx_pkt (udev->h_cfg_eop, USB_TOKEN_SETUP,
-			   &sp, 0, sizeof (sp), NULL, false);
-  sz = usb_tx_all (&udev->cfg_eop, &str, MAX_USB_STR, 2, true);
-  sz +=
-    usb_tx_all (&udev->cfg_eop, str + sz, (uint8_t) (str[0]) - sz, 0, true);
-
-  /* string failed to tx? */
-  if (sz == 0)
+  size = sp.length = MAX_USB_STR;
+  err = udev->host->dev->dev_control (udev->h_cfg_eop, &sp, str, &size);
+  if (err)
     return NULL;
 
   /* some devices don't respect the string descriptor length value (str[0]) 
    * and just send any old value they want, so we can't use it */
-
-  str[(sz < (MAX_USB_STR - 1)) ? (sz) : (MAX_USB_STR - 1)] = '\0';
+  str[size] = '\0';
 
   /* usb uses wchars for strings, convert to ASCII */
   wchar_to_ascii (str, str + 2);
   ret = malloc (strlen (str) + 1);
-  strlcpy (ret, str, MAX_USB_STR);
+  if (ret != NULL)
+    strlcpy (ret, str, MAX_USB_STR);
   return ret;
 }
 
@@ -679,47 +643,31 @@ usb_apply_class_to_interfaces (struct class *c)
 }
 
 int
-usb_dev_bulk (struct usb_endpoint *eop, void *buf, int sz, int *tx)
+usb_dev_control (struct usb_endpoint *eop, struct usb_setup_pkt *setup,
+                 void *data, size_t *size) 
 {
   struct host *h;
   int err;
-  int token;
 
-  ASSERT (eop != NULL);
   h = eop->iface->dev->host;
-
-  if (eop->direction == 0)
-    token = USB_TOKEN_OUT;
-  else
-    token = USB_TOKEN_IN;
-
-  err = h->dev->tx_pkt (eop->h_eop, token, buf, sz, sz, tx, true);
-
+  err = h->dev->dev_control (eop->h_eop, setup, data, size);
   return err;
 }
 
 int
-usb_dev_setup (struct usb_endpoint *eop, bool in,
-	       struct usb_setup_pkt *s, void *buf, int sz)
+usb_dev_bulk (struct usb_endpoint *eop, void *buf, int sz, int *tx)
 {
   struct host *h;
+  size_t size;
   int err;
 
-  ASSERT (eop != NULL);
   h = eop->iface->dev->host;
 
-  err = h->dev->tx_pkt (eop->h_eop, USB_TOKEN_SETUP, s,
-			0, sizeof (struct usb_setup_pkt), NULL, true);
-  if (err != USB_HOST_ERR_NONE)
-    {
-      printf ("usb_dev_setup: failed\n");
-      return 0;
-    }
-
-  err = h->dev->tx_pkt (eop->h_eop, (in) ? USB_TOKEN_IN : USB_TOKEN_OUT,
-			buf, 0, sz, &sz, true);
-
-  return sz;
+  size = sz;
+  err = h->dev->dev_bulk (eop->h_eop, eop->direction == 0, buf, &size);
+  *tx = size;
+  printf ("usb_dev_bulk=%d\n", err);
+  return err;
 }
 
 /** convert a wchar string to ascii in place */
@@ -731,46 +679,8 @@ wchar_to_ascii (char *dst, const char *src)
     {
       dst[sz] = src[sz * 2];
     }
+  while (sz > 0 && isspace (dst[sz - 1]))
+    sz--;
   dst[sz] = '\0';
   return sz;
-}
-
-/* this is used for variable sized transfers where a normal bulk transfer would 
-   probably fail, since it expects some minimum size - we just want to 
-   read/write as much to the pipe as we can
- */
-static int
-usb_tx_all (struct usb_endpoint *eop, void *buf,
-	    int max_bytes, int bailout, bool in)
-{
-  int txed;
-  int token;
-  int prev_sz = 0;
-  struct host *h;
-
-  if (max_bytes <= 0)
-    return 0;
-
-  if (bailout == 0)
-    bailout = 512;
-
-  txed = 0;
-  token = (in) ? USB_TOKEN_IN : USB_TOKEN_OUT;
-  h = eop->iface->dev->host;
-  while (txed < max_bytes && txed < bailout)
-    {
-      int sz, err;
-      sz = 0;
-      err = h->dev->tx_pkt (eop->h_eop, token,
-			    buf + txed, 0, max_bytes - txed, &sz, true);
-      if (prev_sz == 0)
-	prev_sz = sz;
-      txed += sz;
-      /* this should probably be using short packet detection */
-      if (err != USB_HOST_ERR_NONE || sz != prev_sz || sz == 0)
-	{
-	  return txed;
-	}
-    }
-  return txed;
 }
