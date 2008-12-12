@@ -329,7 +329,7 @@ pci_reg_write8 (struct pci_io *pio, int reg, uint8_t data)
 
   if (pio->type == PCI_IO_MEM)
     {
-      ((uint8_t *) pio->addr.ptr)[reg] = data;
+      *((uint8_t *) (pio->addr.ptr + reg)) = data;
     }
   else if (pio->type == PCI_IO_PORT)
     {
@@ -349,7 +349,7 @@ pci_reg_read32 (struct pci_io *pio, int reg)
 
   if (pio->type == PCI_IO_MEM)
     {
-      ret = ((uint32_t *) pio->addr.ptr)[reg];
+      ret = *((uint32_t *) (pio->addr.ptr + reg));
     }
   else if (pio->type == PCI_IO_PORT)
     {
@@ -372,7 +372,7 @@ pci_reg_read16 (struct pci_io * pio, int reg)
   ret = 0;
   if (pio->type == PCI_IO_MEM)
     {
-      ret = ((uint16_t *) pio->addr.ptr)[reg];
+      ret = *((uint16_t *) (pio->addr.ptr + reg));
     }
   else if (pio->type == PCI_IO_PORT)
     {
@@ -395,7 +395,7 @@ pci_reg_read8 (struct pci_io * pio, int reg)
 
   if (pio->type == PCI_IO_MEM)
     {
-      ret = ((uint8_t *) pio->addr.ptr)[reg];
+      ret = *((uint8_t *) (pio->addr.ptr + reg));
     }
   else if (pio->type == PCI_IO_PORT)
     {
