@@ -327,7 +327,7 @@ sub find_disks {
     $disk{DISK} = $make_disk;
     $disk{HANDLE} = $handle;
     $disk{ALIGN} = $align;
-    $disk{GEOMETRY} = %geometry;
+    $disk{GEOMETRY} = \%geometry;
     $disk{FORMAT} = 'partitioned';
     $disk{LOADER} = read_loader ($loader_fn);
     $disk{ARGS} = \@args;

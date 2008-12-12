@@ -148,7 +148,9 @@ sub set_align {
 sub assemble_disk {
     my (%args) = @_;
 
-    my (%geometry) = $args{GEOMETRY} || (H => 16, S => 63);
+    my (%geometry) = %{$args{GEOMETRY}};
+    $geometry{H} = 16 if !defined $geometry{H};
+    $geometry{S} = 63 if !defined $geometry{S};
 
     my ($align);	# Align partition start, end to cylinder boundary?
     my ($pad);		# Pad end of disk out to cylinder boundary?
@@ -258,6 +260,7 @@ sub make_partition_table {
 	$table .= pack ("V", $p->{SECTORS});          # Length in sectors
 	die if length ($table) % 16;
     }
+    $table = "\0" x 16 . $table while length ($table) < 64;
     return pack ("a64", $table);
 }
 
