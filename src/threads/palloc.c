@@ -39,6 +39,7 @@ static struct pool kernel_pool, user_pool;
 static void init_pool (struct pool *, void *base, size_t page_cnt,
                        const char *name);
 static bool page_from_pool (const struct pool *, void *page);
+static void page_set_cache(void* page, bool enable_cache);
 
 /* Initializes the page allocator.  At most USER_PAGE_LIMIT
    pages are put into the user pool. */

@@ -36,6 +36,12 @@ devices_SRC += devices/intq.c		# Interrupt queue.
 devices_SRC += devices/rtc.c		# Real-time clock.
 devices_SRC += devices/shutdown.c	# Reboot and power off.
 devices_SRC += devices/speaker.c	# PC speaker.
+devices_SRC += devices/pci.c		# PCI bus.
+devices_SRC += devices/usb.c		# USB layer.
+devices_SRC += devices/usb_uhci.c	# UHCI device.
+devices_SRC += devices/usb_ehci.c	# EHCI device.
+devices_SRC += devices/usb_storage.c	# USB mass storage class driver.
+devices_SRC += devices/usb_hub.c	# USB hub class driver.
 
 # Library code shared between kernel and user programs.
 lib_SRC  = lib/debug.c			# Debug helpers.

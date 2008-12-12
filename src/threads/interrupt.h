@@ -67,4 +67,9 @@ void intr_yield_on_return (void);
 void intr_dump_frame (const struct intr_frame *);
 const char *intr_name (uint8_t vec);
 
+void intr_irq_mask(int irq);
+void intr_irq_unmask(int irq);
+
+bool intr_is_registered ( uint8_t vec );
+
 #endif /* threads/interrupt.h */

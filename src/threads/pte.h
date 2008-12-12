@@ -28,6 +28,14 @@
 #define PDBITS  10                         /* Number of page dir bits. */
 #define PDMASK  BITMASK(PDSHIFT, PDBITS)   /* Page directory bits (22:31). */
 
+/* memory dedicated to PCI - make sure this is 4MB aligned */
+#define PCI_ADDR_ZONE_BEGIN	0xe0000000
+#define PCI_ADDR_ZONE_END	0xe0800000
+#define PCI_ADDR_ZONE_PDES	2
+#define PCI_ADDR_ZONE_PAGES	(PCI_ADDR_ZONE_END-PCI_ADDR_ZONE_BEGIN)/PGSIZE
+
+
+
 /* Obtains page table index from a virtual address. */
 static inline unsigned pt_no (const void *va) {
   return ((uintptr_t) va & PTMASK) >> PTSHIFT;
@@ -64,13 +72,22 @@ static inline uintptr_t pd_no (const void *va) {
 #define PTE_P 0x1               /* 1=present, 0=not present. */
 #define PTE_W 0x2               /* 1=read/write, 0=read-only. */
 #define PTE_U 0x4               /* 1=user/kernel, 0=kernel only. */
+#define PTE_WT (1 << 3)         /* 1=write-through, 0=write-back */
+#define PTE_CD (1 << 4)         /* 1=cache disabled, 0=cache enabled. */
 #define PTE_A 0x20              /* 1=accessed, 0=not acccessed. */
 #define PTE_D 0x40              /* 1=dirty, 0=not dirty (PTEs only). */
+#define PTE_G (1 << 8)          /* 1=global page, do not flush */
 
 /* Returns a PDE that points to page table PT. */
-static inline uint32_t pde_create (uint32_t *pt) {
+static inline uint32_t pde_create_user (uint32_t *pt) {
   ASSERT (pg_ofs (pt) == 0);
   return vtop (pt) | PTE_U | PTE_P | PTE_W;
+}
+
+/* Returns a PDE that points to page table PT. */
+static inline uint32_t pde_create_kernel (uint32_t *pt) {
+  ASSERT (pg_ofs (pt) == 0);
+  return vtop (pt) | PTE_P | PTE_W | PTE_G;
 }
 
 /* Returns a pointer to the page table that page directory entry
@@ -86,7 +103,7 @@ static inline uint32_t *pde_get_pt (uint32_t pde) {
    The page will be usable only by ring 0 code (the kernel). */
 static inline uint32_t pte_create_kernel (void *page, bool writable) {
   ASSERT (pg_ofs (page) == 0);
-  return vtop (page) | PTE_P | (writable ? PTE_W : 0);
+  return vtop (page) | PTE_P | (writable ? PTE_W : 0) | PTE_G;
 }
 
 /* Returns a PTE that points to PAGE.
@@ -94,7 +111,8 @@ static inline uint32_t pte_create_kernel (void *page, bool writable) {
    If WRITABLE is true then it will be writable as well.
    The page will be usable by both user and kernel code. */
 static inline uint32_t pte_create_user (void *page, bool writable) {
-  return pte_create_kernel (page, writable) | PTE_U;
+  ASSERT (pg_ofs (page) == 0);
+  return vtop (page) | PTE_P | (writable ? PTE_W : 0) | PTE_U;
 }
 
 /* Returns a pointer to the page that page table entry PTE points

@@ -6,10 +6,13 @@
 /* How to allocate pages. */
 enum palloc_flags
   {
-    PAL_ASSERT = 001,           /* Panic on failure. */
-    PAL_ZERO = 002,             /* Zero page contents. */
-    PAL_USER = 004              /* User page. */
+    PAL_ASSERT = 1 << 0,   /* Panic on failure. */
+    PAL_ZERO = 1 << 1,     /* Zero page contents. */
+    PAL_USER = 1 << 2,     /* User page. */
+    PAL_NOCACHE = 1 << 3   /* Disable memory caching for page. */
   };
+
+extern void *zero_page;
 
 void palloc_init (size_t user_page_limit);
 void *palloc_get_page (enum palloc_flags);
