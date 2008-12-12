@@ -309,7 +309,7 @@ msc_get_geometry (struct msc_class_info *mci)
   usb_dev_bulk (mci->eop_out, &cbw, sizeof (cbw), &tx);
   usb_dev_bulk (mci->eop_in, &buf, sizeof (buf), &tx);
 
-  mci->blk_count = be32_to_machine (cap->blocks);
+  mci->blk_count = be32_to_machine (cap->blocks) + 1;
   mci->blk_size = be32_to_machine (cap->block_len);
 
   /* did CSW stall?  */
