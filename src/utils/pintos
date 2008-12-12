@@ -32,6 +32,7 @@ our (@disks);			# Extra disk images to pass to simulator.
 our ($loader_fn);		# Bootstrap loader.
 our (%geometry);		# IDE disk geometry.
 our ($align);			# Partition alignment.
+our ($fake_usb) = 0;		# Use fake USB disks instead of IDE?
 
 parse_command_line ();
 prepare_scratch_disk ();
@@ -55,6 +56,7 @@ sub parse_command_line {
 		    "bochs" => sub { set_sim ("bochs") },
 		    "qemu" => sub { set_sim ("qemu") },
 		    "player" => sub { set_sim ("player") },
+		    "hardware" => sub { set_sim ("hardware") },
 
 		    "debug=s" => sub { set_debug ($_[1]) },
 		    "no-debug" => sub { set_debug ("none") },
@@ -94,6 +96,7 @@ sub parse_command_line {
 					   $tmp_disk = 0; },
 		    "disk=s" => sub { set_disk ($_[1]); },
 		    "loader=s" => \$loader_fn,
+		    "fake-usb" => \$fake_usb,
 
 		    "geometry=s" => \&set_geometry,
 		    "align=s" => \&set_align)
@@ -103,6 +106,15 @@ sub parse_command_line {
     $sim = "bochs" if !defined $sim;
     $debug = "none" if !defined $debug;
     $vga = exists ($ENV{DISPLAY}) ? "window" : "none" if !defined $vga;
+
+    if ($sim eq 'hardware') {
+	$make_disk = "pintos.dsk" if !defined $make_disk;
+	$tmp_disk = 0;
+	$align = 'full' if !defined $align;
+    }
+
+    $fake_usb = 0, print "warning: ignoring --fake-usb with $sim simulator\n"
+      if $fake_usb && $sim ne 'qemu';
 
     undef $timeout, print "warning: disabling timeout with --$debug\n"
       if defined ($timeout) && $debug ne 'none';
@@ -129,6 +141,7 @@ Simulator selection:
   --bochs                  (default) Use Bochs as simulator
   --qemu                   Use QEMU as simulator
   --player                 Use VMware Player as simulator
+  --hardware               Don't run simulator; create images for real hardware
 Debugger selection:
   --no-debug               (default) No debugger
   --monitor                Debug with simulator's monitor
@@ -168,6 +181,7 @@ Advanced disk configuration options:
   --align=full             Align partition boundaries to cylinder boundary to
                            let fdisk guess correct geometry and quiet warnings
   --align=none             Don't align partitions at all, to save space
+  --fake-usb               Use USB disks, not IDE, except for boot (qemu only)
 Other options:
   -h, --help               Display this help message.
 EOF
@@ -365,7 +379,7 @@ sub prepare_scratch_disk {
 
 # Read "get" files from the scratch disk.
 sub finish_scratch_disk {
-    return if !@gets;
+    return if !@gets || $sim eq 'hardware';
 
     # Open scratch partition.
     my ($p) = $parts{SCRATCH};
@@ -534,6 +548,9 @@ sub run_vm {
 	run_qemu ();
     } elsif ($sim eq 'player') {
 	run_player ();
+    } elsif ($sim eq 'hardware') {
+	print "Pintos disk image written to $make_disk.\n";
+	print "Copy this image to a physical disk for hardware boot.\n";
     } else {
 	die "unknown simulator `$sim'\n";
     }
@@ -620,10 +637,16 @@ sub run_qemu {
       if defined $jitter;
     my (@cmd) = ('qemu');
     push (@cmd, '-no-kqemu');
-    push (@cmd, '-hda', $disks[0]) if defined $disks[0];
-    push (@cmd, '-hdb', $disks[1]) if defined $disks[1];
-    push (@cmd, '-hdc', $disks[2]) if defined $disks[2];
-    push (@cmd, '-hdd', $disks[3]) if defined $disks[3];
+    if ($fake_usb) {
+	push (@cmd, '-hda', $disks[0]) if defined $disks[0];
+	push (@cmd, '-usb');
+	push (@cmd, '-usbdevice', "disk:$_") foreach @disks[1...$#disks];
+    } else {
+	push (@cmd, '-hda', $disks[0]) if defined $disks[0];
+	push (@cmd, '-hdb', $disks[1]) if defined $disks[1];
+	push (@cmd, '-hdc', $disks[2]) if defined $disks[2];
+	push (@cmd, '-hdd', $disks[3]) if defined $disks[3];
+    }
     push (@cmd, '-m', $mem);
     push (@cmd, '-net', 'none');
     push (@cmd, '-nographic') if $vga eq 'none';
@@ -662,7 +685,7 @@ config.version = 8
 guestOS = "linux"
 memsize = $mem
 floppy0.present = FALSE
-usb.present = FALSE
+usb.present = TRUE
 sound.present = FALSE
 gui.exitAtPowerOff = TRUE
 gui.exitOnCLIHLT = TRUE
