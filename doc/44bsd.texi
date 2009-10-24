@@ -300,8 +300,8 @@ Suppose that we are using a @m{p.q} fixed-point format, and let @am{f =
 2^q, f = 2**q}.  By the definition above, we can convert an integer or
 real number into @m{p.q} format by multiplying with @m{f}.  For example,
 in 17.14 format the fraction 59/60 used in the calculation of
-@var{load_avg}, above, is @am{(59/60)2^{14}, 59/60*(2**14)} = 16,111
-(rounded to nearest).  To convert a fixed-point value back to an
+@var{load_avg}, above, is @am{(59/60)2^{14}, 59/60*(2**14)} = 16,110.
+To convert a fixed-point value back to an
 integer, divide by @m{f}.  (The normal @samp{/} operator in C rounds
 toward zero, that is, it rounds positive numbers down and negative
 numbers up.  To round to nearest, add @m{f / 2} to a positive number, or
