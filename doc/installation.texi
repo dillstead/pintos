@@ -41,7 +41,7 @@ Required: @uref{http://www.gnu.org/software/make/, GNU make}, version
 
 @item
 Recommended: @uref{http://fabrice.bellard.free.fr/qemu/, QEMU}, version
-0.8.0 or later.  If QEMU is not available, Bochs can be used, but its
+0.11.0 or later.  If QEMU is not available, Bochs can be used, but its
 slowness is frustrating.
 
 @item
