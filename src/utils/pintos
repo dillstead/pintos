@@ -819,7 +819,7 @@ sub xsystem {
 	    for (;;) {
 		if (waitpid ($pid, WNOHANG) != 0) {
 		    # Subprocess died.  Pass through any remaining data.
-		    print $buf while sysread ($in, $buf, 4096) > 0;
+		    do { print $buf } while sysread ($in, $buf, 4096) > 0;
 		    last;
 		}
 
