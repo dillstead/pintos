@@ -600,8 +600,8 @@ programs only.)  System call numbers for each system call are defined in
 @file{lib/syscall-nr.h}:
 
 @deftypefn {System Call} void halt (void)
-Terminates Pintos by calling @func{power_off} (declared in
-@file{threads/init.h}).  This should be seldom used, because you lose
+Terminates Pintos by calling @func{shutdown_power_off} (declared in
+@file{devices/shutdown.h}).  This should be seldom used, because you lose
 some information about possible deadlock situations, etc.
 @end deftypefn
 

@@ -203,7 +203,7 @@ the kernel command line, such as @command{run} to run a test (in project
 1) or a user program (in later projects).
 
 Finally, if @option{-q} was specified on the kernel command line, we
-call @func{power_off} to terminate the machine simulator.  Otherwise,
+call @func{shutdown_power_off} to terminate the machine simulator.  Otherwise,
 @func{main} calls @func{thread_exit}, which allows any other running
 threads to continue running.
 
