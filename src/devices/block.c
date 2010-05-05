@@ -166,7 +166,7 @@ block_print_stats (void)
 {
   int i;
 
-  for (i = 0; i < BLOCK_CNT; i++)
+  for (i = 0; i < BLOCK_ROLE_CNT; i++)
     {
       struct block *block = block_by_role[i];
       if (block != NULL)
