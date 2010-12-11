@@ -22,8 +22,8 @@ free_map_init (void)
 /* Allocates CNT consecutive sectors from the free map and stores
    the first into *SECTORP.
    Returns true if successful, false if not enough consecutive
-   sectors were available or if the free_map file could not be
-   written. */
+   sectors were available or if the free_map file could not be
+   written. */
 bool
 free_map_allocate (size_t cnt, block_sector_t *sectorp)
 {
