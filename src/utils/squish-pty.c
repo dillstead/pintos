@@ -77,9 +77,8 @@ make_nonblocking (int fd, bool nonblocking)
 /* Handle a read or write on *FD, which is the pty if FD_IS_PTY
    is true, that returned end-of-file or error indication RETVAL.
    The system call is named CALL, for use in error messages.
-   Returns true if processing may continue, false if we're all
-   done. */
-static bool
+   Sets *FD to -1 if the fd is no longer readable or writable. */
+static void
 handle_error (ssize_t retval, int *fd, bool fd_is_pty, const char *call)
 {
   if (fd_is_pty)
@@ -89,13 +88,11 @@ handle_error (ssize_t retval, int *fd, bool fd_is_pty, const char *call)
           if (errno == EIO)
             {
               /* Slave side of pty has been closed. */
-              return false;
+              *fd = -1;
             }
           else
             fail_io (call); 
         }
-      else
-        return true;
     }
   else 
     {
@@ -103,7 +100,6 @@ handle_error (ssize_t retval, int *fd, bool fd_is_pty, const char *call)
         {
           close (*fd);
           *fd = -1;
-          return true;
         }
       else
         fail_io (call);
@@ -142,7 +138,7 @@ relay (int pty, int dead_child_fd)
   pipes[1].in = pty;
   pipes[1].out = STDOUT_FILENO;
   
-  while (pipes[0].in != -1 || pipes[1].in != -1)
+  while (pipes[1].in != -1)
     {
       fd_set read_fds, write_fds;
       int retval;
@@ -176,34 +172,7 @@ relay (int pty, int dead_child_fd)
         fail_io ("select");
 
       if (FD_ISSET (dead_child_fd, &read_fds))
-        {
-          /* Child died.  Do final relaying. */
-          struct pipe *p = &pipes[1];
-          if (p->out == -1)
-            return;
-          make_nonblocking (STDOUT_FILENO, false);
-          for (;;) 
-            {
-              ssize_t n;
-                  
-              /* Write buffer. */
-              while (p->size > 0) 
-                {
-                  n = write (p->out, p->buf + p->ofs, p->size);
-                  if (n < 0)
-                    fail_io ("write");
-                  else if (n == 0)
-                    fail_io ("zero-length write");
-                  p->ofs += n;
-                  p->size -= n;
-                }
-              p->ofs = 0;
-
-              p->size = n = read (p->in, p->buf, sizeof p->buf);
-              if (n <= 0)
-                return;
-            }
-        }
+        break;
 
       for (i = 0; i < 2; i++) 
         {
@@ -222,8 +191,8 @@ relay (int pty, int dead_child_fd)
                       p->ofs = 0;
                     }
                 }
-              else if (!handle_error (n, &p->in, p->in == pty, "read"))
-                return;
+              else
+                handle_error (n, &p->in, p->in == pty, "read");
             }
           if (p->out != -1 && FD_ISSET (p->out, &write_fds)) 
             {
@@ -235,11 +204,38 @@ relay (int pty, int dead_child_fd)
                   if (p->size == 0)
                     p->ofs = 0;
                 }
-              else if (!handle_error (n, &p->out, p->out == pty, "write"))
-                return;
+              else
+                handle_error (n, &p->out, p->out == pty, "write");
             }
         }
     }
+
+    if (pipes[1].out == -1)
+      return;
+
+    make_nonblocking (STDOUT_FILENO, false);
+    for (;;)
+      {
+        struct pipe *p = &pipes[1];
+        ssize_t n;
+
+        /* Write buffer. */
+        while (p->size > 0) 
+          {
+            n = write (p->out, p->buf + p->ofs, p->size);
+            if (n < 0)
+              fail_io ("write");
+            else if (n == 0)
+              fail_io ("zero-length write");
+            p->ofs += n;
+            p->size -= n;
+          }
+        p->ofs = 0;
+
+        p->size = n = read (p->in, p->buf, sizeof p->buf);
+        if (n <= 0)
+          return;
+      }
 }
 
 static int dead_child_fd;
