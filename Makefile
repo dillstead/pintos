@@ -10,4 +10,4 @@ distclean:: clean
 	find . -name '*~' -exec rm '{}' \;
 
 check::
-	make -C tests $@
+	$(MAKE) -C tests $@
