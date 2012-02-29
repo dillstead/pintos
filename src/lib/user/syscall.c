@@ -38,8 +38,8 @@
              "pushl %[number]; int $0x30; addl $12, %%esp"      \
                : "=a" (retval)                                  \
                : [number] "i" (NUMBER),                         \
-                 [arg0] "g" (ARG0),                             \
-                 [arg1] "g" (ARG1)                              \
+                 [arg0] "r" (ARG0),                             \
+                 [arg1] "r" (ARG1)                              \
                : "memory");                                     \
           retval;                                               \
         })
@@ -54,9 +54,9 @@
              "pushl %[number]; int $0x30; addl $16, %%esp"      \
                : "=a" (retval)                                  \
                : [number] "i" (NUMBER),                         \
-                 [arg0] "g" (ARG0),                             \
-                 [arg1] "g" (ARG1),                             \
-                 [arg2] "g" (ARG2)                              \
+                 [arg0] "r" (ARG0),                             \
+                 [arg1] "r" (ARG1),                             \
+                 [arg2] "r" (ARG2)                              \
                : "memory");                                     \
           retval;                                               \
         })
