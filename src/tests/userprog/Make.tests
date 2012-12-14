@@ -3,19 +3,20 @@
 tests/%.output: FILESYSSOURCE = --filesys-size=2
 tests/%.output: PUTFILES = $(filter-out kernel.bin loader.bin, $^)
 
-tests/userprog_TESTS = $(addprefix tests/userprog/,args-none		\
-args-single args-multiple args-many args-dbl-space sc-bad-sp		\
-sc-bad-arg sc-boundary sc-boundary-2 halt exit create-normal		\
-create-empty create-null create-bad-ptr create-long create-exists	\
-create-bound open-normal open-missing open-boundary open-empty		\
-open-null open-bad-ptr open-twice close-normal close-twice close-stdin	\
-close-stdout close-bad-fd read-normal read-bad-ptr read-boundary	\
-read-zero read-stdout read-bad-fd write-normal write-bad-ptr		\
-write-boundary write-zero write-stdin write-bad-fd exec-once exec-arg	\
-exec-multiple exec-missing exec-bad-ptr wait-simple wait-twice		\
-wait-killed wait-bad-pid multi-recurse multi-child-fd rox-simple	\
-rox-child rox-multichild bad-read bad-write bad-read2 bad-write2        \
-bad-jump bad-jump2)
+tests/userprog_TESTS = $(addprefix tests/userprog/,args-none            \
+args-single args-multiple args-many args-dbl-space sc-bad-sp            \
+sc-bad-arg sc-boundary sc-boundary-2 sc-boundary-3 halt exit            \
+create-normal create-empty create-null create-bad-ptr create-long       \
+create-exists create-bound open-normal open-missing open-boundary       \
+open-empty open-null open-bad-ptr open-twice close-normal               \
+close-twice close-stdin close-stdout close-bad-fd read-normal           \
+read-bad-ptr read-boundary read-zero read-stdout read-bad-fd            \
+write-normal write-bad-ptr write-boundary write-zero write-stdin        \
+write-bad-fd exec-once exec-arg exec-bound exec-bound-2                 \
+exec-bound-3 exec-multiple exec-missing exec-bad-ptr wait-simple        \
+wait-twice wait-killed wait-bad-pid multi-recurse multi-child-fd        \
+rox-simple rox-child rox-multichild bad-read bad-write bad-read2        \
+bad-write2 bad-jump bad-jump2)
 
 tests/userprog_PROGS = $(tests/userprog_TESTS) $(addprefix \
 tests/userprog/,child-simple child-args child-bad child-close child-rox)
@@ -33,9 +34,11 @@ tests/userprog/bad-jump_SRC = tests/userprog/bad-jump.c tests/main.c
 tests/userprog/bad-read2_SRC = tests/userprog/bad-read2.c tests/main.c
 tests/userprog/bad-write2_SRC = tests/userprog/bad-write2.c tests/main.c
 tests/userprog/bad-jump2_SRC = tests/userprog/bad-jump2.c tests/main.c
-tests/userprog/sc-boundary_SRC = tests/userprog/sc-boundary.c	\
+tests/userprog/sc-boundary_SRC = tests/userprog/sc-boundary.c           \
 tests/userprog/boundary.c tests/main.c
 tests/userprog/sc-boundary-2_SRC = tests/userprog/sc-boundary-2.c	\
+tests/userprog/boundary.c tests/main.c
+tests/userprog/sc-boundary-3_SRC = tests/userprog/sc-boundary-3.c	\
 tests/userprog/boundary.c tests/main.c
 tests/userprog/halt_SRC = tests/userprog/halt.c tests/main.c
 tests/userprog/exit_SRC = tests/userprog/exit.c tests/main.c
@@ -77,6 +80,12 @@ tests/userprog/write-stdin_SRC = tests/userprog/write-stdin.c tests/main.c
 tests/userprog/write-bad-fd_SRC = tests/userprog/write-bad-fd.c tests/main.c
 tests/userprog/exec-once_SRC = tests/userprog/exec-once.c tests/main.c
 tests/userprog/exec-arg_SRC = tests/userprog/exec-arg.c tests/main.c
+tests/userprog/exec-bound_SRC = tests/userprog/exec-bound.c       \
+tests/userprog/boundary.c  tests/main.c
+tests/userprog/exec-bound-2_SRC = tests/userprog/exec-bound-2.c         \
+tests/userprog/boundary.c  tests/main.c
+tests/userprog/exec-bound-3_SRC = tests/userprog/exec-bound-3.c         \
+tests/userprog/boundary.c  tests/main.c
 tests/userprog/exec-multiple_SRC = tests/userprog/exec-multiple.c tests/main.c
 tests/userprog/exec-missing_SRC = tests/userprog/exec-missing.c tests/main.c
 tests/userprog/exec-bad-ptr_SRC = tests/userprog/exec-bad-ptr.c tests/main.c
@@ -127,6 +136,7 @@ tests/userprog/wait-simple_PUTFILES += tests/userprog/child-simple
 tests/userprog/wait-twice_PUTFILES += tests/userprog/child-simple
 
 tests/userprog/exec-arg_PUTFILES += tests/userprog/child-args
+tests/userprog/exec-bound_PUTFILES += tests/userprog/child-args
 tests/userprog/multi-child-fd_PUTFILES += tests/userprog/child-close
 tests/userprog/wait-killed_PUTFILES += tests/userprog/child-bad
 tests/userprog/rox-child_PUTFILES += tests/userprog/child-rox

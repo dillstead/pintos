@@ -31,3 +31,14 @@ copy_string_across_boundary (const char *src)
   return p;
 }
 
+/* Returns an address that is invalid, but the preceding bytes
+ * are all valid. Used to position information such that the
+ * first byte of the information is valid, but not all the
+ * information is valid. */
+void *
+get_bad_boundary (void)
+{
+  /* This code assumes that dst will be in the highest page
+   * allocated to the user process. */
+  return (void *) ROUND_UP ((uintptr_t) (dst + sizeof(dst) - 1), 4096);
+}

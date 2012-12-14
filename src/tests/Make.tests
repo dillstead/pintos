@@ -47,6 +47,7 @@ outputs:: $(OUTPUTS)
 $(foreach prog,$(PROGS),$(eval $(prog).output: $(prog)))
 $(foreach test,$(TESTS),$(eval $(test).output: $($(test)_PUTFILES)))
 $(foreach test,$(TESTS),$(eval $(test).output: TEST = $(test)))
+$(foreach test,$(TESTS),$(eval $(test).result: $(test).output $(test).ck))
 
 # Prevent an environment variable VERBOSE from surprising us.
 VERBOSE =
