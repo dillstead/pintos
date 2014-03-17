@@ -4,10 +4,13 @@
 #include "tests/lib.h"
 #include "tests/main.h"
 
+typedef int (* volatile functionptr)(void);
+
 void
 test_main (void) 
 {
+  functionptr fp = NULL;
   msg ("Congratulations - you have successfully called NULL: %d", 
-        ((int (*)(void))NULL)());
+        fp());
   fail ("should have exited with -1");
 }
