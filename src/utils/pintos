@@ -618,7 +618,9 @@ sub run_qemu {
       if $vga eq 'terminal';
     print "warning: qemu doesn't support jitter\n"
       if defined $jitter;
-    my (@cmd) = ('qemu');
+    my (@cmd) = ('qemu-system-i386');
+    push (@cmd, '-device', 'isa-debug-exit');
+
     push (@cmd, '-hda', $disks[0]) if defined $disks[0];
     push (@cmd, '-hdb', $disks[1]) if defined $disks[1];
     push (@cmd, '-hdc', $disks[2]) if defined $disks[2];
@@ -857,7 +859,11 @@ sub xsystem {
 	    exit 0;
 	}
 
-	return $?;
+        # Kind of a gross hack, because qemu's isa-debug-exit device
+        # only allows odd-numbered exit values, so we can't exit
+        # cleanly with 0.  We use exit status 0x63 as an alternate
+        # "clean" exit status.
+	return ($? != 0x6300) && $?;
     }
 }
 
