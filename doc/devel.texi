@@ -6,7 +6,12 @@ Here are some tools that you might find useful while developing code.
 @menu
 * Tags::
 * cscope::
+@ifset recommendcvs
 * CVS::
+@end ifset
+@ifset recommendgit
+* Git::
+@end ifset
 @ifset recommendvnc
 * VNC::
 @end ifset 
@@ -58,6 +63,20 @@ Emacs and some versions of @command{vi} have their own interfaces to
 visit @url{http://cscope.sourceforge.net, the @command{cscope} home
 page}.
 
+@ifset recommendgit
+@node Git
+@section Git
+
+It's crucial that you use a source code control system to manage your
+Pintos code. This will allow you to keep track of your changes
+and coordinate changes made by different people in the project. For this
+class we recommend that you use Git; if you followed the instructions on
+getting started, a Git repository will already have been created for you.
+If you don't already know how to use Git, we recommend that you read
+the @uref{http://git-scm.com/book, , Pro Git} book online.
+@end ifset
+
+@ifset recommendcvs
 @node CVS
 @section CVS
 
@@ -78,6 +97,7 @@ For more information, visit the @uref{https://www.cvshome.org/, , CVS
 home page}.
 
 @include localcvsinstructions.texi
+@end ifset
 
 @ifset recommendvnc
 @node VNC

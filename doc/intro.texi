@@ -68,11 +68,8 @@ environment.
 Now you can extract the source for Pintos into a directory named
 @file{pintos/src}, by executing
 @example
-zcat @value{localpintostarpath} | tar x
+git clone @value{gitrepo}
 @end example
-Alternatively, fetch
-@uref{@value{localpintoshttppath}}
-and extract it in a similar way.
 
 Let's take a look at what's inside.  Here's the directory structure
 that you should see in @file{pintos/src}:

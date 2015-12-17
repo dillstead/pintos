@@ -1,17 +1,17 @@
 @c Local settings
 
-@set localpintostarpath /usr/class/cs140/pintos/pintos.tar.gz
+@set gitrepo file:///usr/class/cs140/winter13/pintos/.git
 @set localpintoshttppath http://@/www.stanford.edu/@/class/@/cs140/@/pintos/@/pintos.@/tar.gz
 @set localpintosbindir /usr/class/cs140/`uname -m`/bin
 
 @set recommendvnc
+@set recommendgit
 @clear recommendcygwin
+@clear recommendcvs
 
 @macro localmachines{}
 The CS 140 ``officially supported'' Pintos development machines are
-the machines in Sweet Hall managed by Stanford ITSS, as described on
-the @uref{http://www.stanford.edu/services/cluster/environs/sweet/, ,
-ITSS webpage}.  You may use the Solaris or Linux machines.
+those in the myth, corn, and cardinal clusters.
 @end macro
 
 @macro localpathsetup{}
@@ -31,14 +31,6 @@ you log in.
 @end macro
 
 @macro localcrossbuild{}
-Watch the commands executed during the build.  On the Linux machines,
-the ordinary system tools are used.  On a SPARC machine, special build
-tools are used, whose names begin with @samp{i386-elf-}, e.g.@:
-@code{i386-elf-gcc}, @code{i386-elf-ld}.  These are ``cross-compiler''
-tools.  That is, the build is running on a SPARC machine (called the
-@dfn{host}), but the result will run on a simulated 80@var{x}86 machine
-(called the @dfn{target}).  The @samp{i386-elf-@var{program}} tools are
-specially built for this configuration.
 @end macro
 
 @macro localhonorcodepolicy{}
@@ -56,7 +48,7 @@ inspired your own in your design documentation.
 
 @macro localcvspolicy{}
 Instead, we recommend integrating your team's changes early and often,
-using a source code control system such as CVS (@pxref{CVS}).
+using a source code control system such as Git (@pxref{Git}).
 This is less likely to produce surprises, because everyone can see
 everyone else's code as it is written, instead of just when it is
 finished.  These systems also make it possible to review changes and,
