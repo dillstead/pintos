@@ -24,6 +24,7 @@ fsutil_ls (char **argv UNUSED)
     PANIC ("root dir open failed");
   while (dir_readdir (dir, name))
     printf ("%s\n", name);
+  dir_close (dir);
   printf ("End of listing.\n");
 }
 
