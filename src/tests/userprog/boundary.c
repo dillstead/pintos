@@ -7,7 +7,10 @@
 #include <string.h>
 #include "tests/userprog/boundary.h"
 
-static char dst[8192];
+/* Together with statements in src/lib/user/user.lds, arranges
+   for the following array to be at the very end of the .bss
+   segment (needed for get_bad_boundary below). */
+static char dst[8192] __attribute__ ((section (".testEndmem,\"aw\",@nobits#")));
 
 /* Returns the beginning of a page.  There are at least 2048
    modifiable bytes on either side of the pointer returned. */
@@ -32,9 +35,9 @@ copy_string_across_boundary (const char *src)
 }
 
 /* Returns an address that is invalid, but the preceding bytes
- * are all valid. Used to position information such that the
- * first byte of the information is valid, but not all the
- * information is valid. */
+ * are all valid (the highest address in the bss segment). Used
+ * to position information such that the first byte of the
+ * information is valid, but not all the information is valid. */
 void *
 get_bad_boundary (void)
 {
