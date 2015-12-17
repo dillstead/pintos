@@ -147,15 +147,15 @@ address, on the right.
 
 @example
 @group
-                         +----------+
-        .--------------->|Page Table|-----------.
-       /                 +----------+            |
-   0   |  12 11 0                            0   V  12 11 0
-  +---------+----+                          +---------+----+
-  |Page Nr  | Ofs|                          |Frame Nr | Ofs|
-  +---------+----+                          +---------+----+
-   Virt Addr   |                             Phys Addr   ^
-                \_______________________________________/
+                          +----------+
+         .--------------->|Page Table|---------.
+        /                 +----------+          |
+   31   |   12 11    0                    31    V   12 11    0
+  +-----------+-------+                  +------------+-------+
+  |  Page Nr  |  Ofs  |                  |  Frame Nr  |  Ofs  |
+  +-----------+-------+                  +------------+-------+
+   Virt Addr      |                       Phys Addr       ^
+                   \_____________________________________/
 @end group
 @end example
 
@@ -175,7 +175,7 @@ You will need to design the following data structures:
 @table @asis
 @item Supplemental page table
 
-Enables page fault handling by supplementing the page table.
+Enables page fault handling by supplementing the hadrware page table.
 @xref{Managing the Supplemental Page Table}.
 
 @item Frame table

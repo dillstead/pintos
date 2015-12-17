@@ -1,6 +1,5 @@
 @c Local settings
 
-@set coursenumber CS 140
 @set localpintostarpath /usr/class/cs140/pintos/pintos.tar.gz
 @set localpintoshttppath http://@/www.stanford.edu/@/class/@/cs140/@/pintos/@/pintos.@/tar.gz
 @set localpintosbindir /usr/class/cs140/`uname -m`/bin
@@ -17,8 +16,8 @@ ITSS webpage}.  You may use the Solaris or Linux machines.
 
 @macro localpathsetup{}
 Under @command{csh}, Stanford's login shell, you can do so
-with this command:@footnote{The term @samp{`uname -m`} expands to either
-@file{sun4u} or @file{i686} according to the type of computer you're
+with this command:@footnote{The term @samp{`uname -m`} expands to a value
+such as @file{x86_64} that indicates the type of computer you're
 logged into.}
 @example
 set path = ( @value{localpintosbindir} $path )

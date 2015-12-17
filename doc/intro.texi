@@ -9,7 +9,7 @@ project team will strengthen its support in all three of these areas.
 You will also add a virtual memory implementation.
 
 Pintos could, theoretically, run on a regular IBM-compatible PC.
-Unfortunately, it is impractical to supply every @value{coursenumber} student
+Unfortunately, it is impractical to supply every student
 a dedicated PC for use with Pintos.  Therefore, we will run Pintos projects
 in a system simulator, that is, a program that simulates an 80@var{x}86
 CPU and its peripheral devices accurately enough that unmodified operating
@@ -19,7 +19,7 @@ systems and software can run under it.  In class we will use the
 QEMU} simulators.  Pintos has also been tested with
 @uref{http://www.vmware.com/, , VMware Player}.
 
-These projects are hard.  @value{coursenumber} has a reputation of taking a lot of
+These projects are hard.  They have a reputation of taking a lot of
 time, and deservedly so.  We will do what we can to reduce the workload, such
 as providing a lot of support material, but there is plenty of
 hard work that needs to be done.  We welcome your

@@ -261,7 +261,7 @@ processor's floating-point unit when switching threads.
 
 The @file{src/examples} directory contains a few sample user
 programs.  The @file{Makefile} in this directory
-compiles the provided examples, and you can edit it
+compiles the provided examples, and you can edit it to
 compile your own programs as well.  Some of the example programs will
 only work once projects 3 or 4 have been implemented.
 

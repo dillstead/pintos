@@ -726,7 +726,7 @@ kernel thread but the first.
 Don't worry about the possibility of timer values overflowing.  Timer
 values are expressed as signed 64-bit numbers, which at 100 ticks per
 second should be good for almost 2,924,712,087 years.  By then, we
-expect Pintos to have been phased out of the @value{coursenumber} curriculum.
+expect Pintos to have been phased out of the Computer Science curriculum.
 @end table
 
 @node Priority Scheduling FAQ
