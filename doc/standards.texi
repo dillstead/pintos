@@ -151,7 +151,7 @@ A few of the string functions declared in the standard
 The worst offenders are intentionally not included in the Pintos C
 library:
 
-@table @func
+@table @code
 @item strcpy
 When used carelessly this function can overflow the buffer reserved
 for its output string.  Use @func{strlcpy} instead.  Refer to
