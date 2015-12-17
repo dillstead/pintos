@@ -371,7 +371,7 @@ data segment can be adjusted with a system call, but you will not have
 to implement this.
 
 The code segment in Pintos starts at user virtual address
-@t{0x08084000}, approximately 128 MB from the bottom of the address
+@t{0x08048000}, approximately 128 MB from the bottom of the address
 space.  This value is specified in @bibref{SysV-i386} and has no deep
 significance.
 
