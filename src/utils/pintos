@@ -912,7 +912,7 @@ sub get_load_average {
 # Calls setitimer to set a timeout, then execs what was passed to us.
 sub exec_setitimer {
     if (defined $timeout) {
-	if ($ ge 5.8.0) {
+	if ($^V ge 5.8.0) {
 	    eval "
               use Time::HiRes qw(setitimer ITIMER_VIRTUAL);
               setitimer (ITIMER_VIRTUAL, $timeout, 0);
