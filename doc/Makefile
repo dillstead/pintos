@@ -21,7 +21,7 @@ pintos.ps: pintos.dvi
 	dvips $< -o $@
 
 pintos.pdf: $(TEXIS)
-	pdftex $< -o $@
+	texi2pdf $< -o $@
 
 %.texi: %
 	sed < $< > $@ 's/\([{}@]\)/\@\1/g;'
