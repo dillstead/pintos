@@ -16,8 +16,11 @@ SECTIONS
   .rodata : { *(.rodata) *(.rodata.*) 
 	      . = ALIGN(0x1000); 
 	      _end_kernel_text = .; }
+  .eh_frame : { *(.eh_frame) }
   .data : { *(.data) 
 	    _signature = .; LONG(0xaa55aa55) }
+
+  .plt : { *(.plt*) }
 
   /* BSS (zero-initialized data) is after everything else. */
   _start_bss = .;
