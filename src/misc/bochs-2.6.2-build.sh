@@ -18,6 +18,7 @@ cat $PINTOSDIR/src/misc/bochs-2.6.2-jitter-plus-segv.patch | patch -p1
 cat $PINTOSDIR/src/misc/bochs-2.6.2-xrandr-pkgconfig.patch | patch -p1
 cat $PINTOSDIR/src/misc/bochs-2.6.2-banner-stderr.patch | patch -p1
 cat $PINTOSDIR/src/misc/bochs-2.6.2-block-device-check.patch | patch -p1
+cat $PINTOSDIR/src/misc/bochs-2.6.2-link-tinfo.patch | patch -p1
 CFGOPTS="--with-x --with-x11 --with-term --with-nogui --prefix=$DSTDIR"
 mkdir plain &&
         cd plain && 
