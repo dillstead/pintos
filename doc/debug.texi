@@ -351,13 +351,13 @@ Attach debugger to a waiting pintos process on the same machine.
 Shorthand for @code{target remote localhost:1234}.
 @end deffn
 
-@deffn {GDB Macro} dumplist list type element
+@deffn {GDB Macro} dumplist &list type element
 Prints the elements of @var{list}, which should be a @code{struct} list
 that contains elements of the given @var{type} (without the word
 @code{struct}) in which @var{element} is the @struct{list_elem} member
 that links the elements.
 
-Example: @code{dumplist all_list thread allelem} prints all elements of
+Example: @code{dumplist &all_list thread allelem} prints all elements of
 @struct{thread} that are linked in @code{struct list all_list} using the
 @code{struct list_elem allelem} which is part of @struct{thread}.
 @end deffn
