@@ -6163,7 +6163,7 @@ sub substitute_style
     {
         $changed = 0;
         $done = '';
-        while (/\@(\w+){([^\{\}]+)}/ || /\@(,){([^\{\}]+)}/)
+        while (/\@(\w+)\{([^\{\}]+)}/ || /\@(,)\{([^\{\}]+)}/)
         {
             $text = &apply_style($1, $2);
             if ($text)
