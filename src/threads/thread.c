@@ -21,7 +21,9 @@
 #define THREAD_MAGIC 0xcd6abf4b
 
 /* List of processes in THREAD_READY state, that is, processes
-   that are ready to run but not actually running. */
+   that are ready to run but not actually running. The list
+   is maintained in sorted order by priority with the process 
+   of highest priority at the beginning of the list.*/
 static struct list ready_list;
 
 /* List of all processes.  Processes are added to this list
@@ -224,10 +226,9 @@ thread_block (void)
    This is an error if T is not blocked.  (Use thread_yield() to
    make the running thread ready.)
 
-   This function does not preempt the running thread.  This can
-   be important: if the caller had disabled interrupts itself,
-   it may expect that it can atomically unblock a thread and
-   update other data. */
+   This function may preempt the running thread if the thread
+   being unblocked has a priority greater than the currently
+   running thread. */
 void
 thread_unblock (struct thread *t) 
 {
@@ -237,8 +238,18 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
-  t->status = THREAD_READY;
+
+  list_insert_ordered (&ready_list, &t->elem, thread_priority_compare,
+                       NULL);
+  t->status = THREAD_READY;      
+
+  if (t->priority > thread_current ()->priority)
+    {
+      if (intr_context ())
+        intr_yield_on_return ();
+      else
+        thread_yield ();
+    }
   intr_set_level (old_level);
 }
 
@@ -307,8 +318,9 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+  if (cur != idle_thread)
+    list_insert_ordered (&ready_list, &cur->elem, thread_priority_compare,
+                         NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -335,14 +347,42 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+  enum intr_level old_level;
+
+  old_level = intr_disable ();
   thread_current ()->priority = new_priority;
+  if (!list_empty (&ready_list))
+    {
+      if (new_priority
+          < list_entry (list_front (&ready_list), struct thread,
+                        elem)->priority)
+        {
+          thread_yield ();
+        }
+    }
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
 {
-  return thread_current ()->priority;
+  enum intr_level old_level;
+  int priority;
+  
+  old_level = intr_disable ();
+  priority = thread_current ()->priority;
+  intr_set_level (old_level);
+
+  return priority;
+}
+
+/* Used to keep the ready list in priority order. */
+bool thread_priority_compare (const struct list_elem *a, const struct list_elem *b,
+                              void *aux UNUSED)
+{
+  return list_entry (a, struct thread, elem)
+    > list_entry (b, struct thread, elem);
 }
 
 /* Sets the current thread's nice value to NICE. */
