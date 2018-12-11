@@ -24,9 +24,6 @@ static int64_t ticks;
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
 
-/* List of processes that are asleep. */
-static struct list sleep_list;
-
 static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
@@ -40,8 +37,6 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
-  
-  list_init (&sleep_list);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -89,46 +84,15 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
-/* A sleeping thead. */
-struct sleeping_thread
-  {
-    struct list_elem elem;
-    struct thread *thread;
-    /* The number of ticks from the previous entry (if any) in the list to wakeup after. */
-    int64_t wakeup;  
-  };
 
 /* Sleeps for approximately TICKS timer ticks. */
 void
 timer_sleep (int64_t ticks) 
 {
-  struct sleeping_thread to_sleep_thread;
-  struct sleeping_thread *sleeping_thread;
-  struct list_elem *e;
   enum intr_level old_level;
 
-  ASSERT (!intr_context ());
-
   old_level = intr_disable ();
-  if (ticks > 0)
-    {
-      to_sleep_thread.thread = thread_current ();
-      to_sleep_thread.wakeup = ticks;
-      for (e = list_begin (&sleep_list); e != list_end (&sleep_list); e = list_next (e))
-        {
-          sleeping_thread = list_entry (e, struct sleeping_thread, elem);
-          if (to_sleep_thread.wakeup < sleeping_thread->wakeup)
-            break;
-          to_sleep_thread.wakeup -= sleeping_thread->wakeup;
-        }
-      if (e != list_end (&sleep_list))
-        {
-          sleeping_thread = list_entry (e, struct sleeping_thread, elem);
-          sleeping_thread->wakeup -= to_sleep_thread.wakeup;
-        }
-      list_insert (e, &to_sleep_thread.elem);
-      thread_block();
-    }
+  thread_sleep (ticks);
   intr_set_level (old_level);
 }
 
@@ -206,24 +170,7 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  struct sleeping_thread *sleeping_thread;
-  struct list_elem *e;
-  
   ticks++;
-  e = list_begin (&sleep_list);
-  if (e != list_end (&sleep_list))
-    {
-      sleeping_thread = list_entry (e, struct sleeping_thread, elem);
-      sleeping_thread->wakeup -= 1;
-      for (e = list_begin (&sleep_list); e != list_end (&sleep_list); )
-        {
-          sleeping_thread = list_entry (e, struct sleeping_thread, elem);
-          if (sleeping_thread->wakeup > 0)
-            break;
-          e = list_remove (e);
-          thread_unblock (sleeping_thread->thread);
-        }
-    }
   thread_tick ();
 }
 

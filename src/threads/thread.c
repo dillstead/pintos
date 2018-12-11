@@ -55,7 +55,7 @@ static long long user_ticks;    /* # of timer ticks in user programs. */
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
-
+  
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
@@ -72,6 +72,22 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+
+/* Sleeping. */
+struct sleeping_thread
+  {
+    struct list_elem elem;
+    struct thread *thread;
+    /* The number of ticks from the previous entry (if any) in the list to wakeup after. */
+    int64_t wakeup;  
+  };
+
+/* List of threads that are asleep. */
+static struct list sleep_list;
+
+/* Used to keep the list of sleeping threads in correct order. */
+static bool sleepers_tick_compare (const struct list_elem *a, const struct list_elem *b,
+                                   void *aux UNUSED);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -94,6 +110,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&sleep_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -125,6 +142,8 @@ void
 thread_tick (void) 
 {
   struct thread *t = thread_current ();
+  struct sleeping_thread *sleeping_thread;
+  struct list_elem *e;
 
   /* Update statistics. */
   if (t == idle_thread)
@@ -135,6 +154,22 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
+
+  /* Wakeup any sleeping threads. */
+  e = list_begin (&sleep_list);
+  if (e != list_end (&sleep_list))
+    {
+      sleeping_thread = list_entry (e, struct sleeping_thread, elem);
+      sleeping_thread->wakeup -= 1;
+      for (e = list_begin (&sleep_list); e != list_end (&sleep_list); )
+        {
+          sleeping_thread = list_entry (e, struct sleeping_thread, elem);
+          if (sleeping_thread->wakeup > 0)
+            break;
+          e = list_remove (e);
+          thread_unblock (sleeping_thread->thread);
+        }
+    }
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -220,6 +255,24 @@ thread_block (void)
 
   thread_current ()->status = THREAD_BLOCKED;
   schedule ();
+}
+
+void
+thread_sleep (int64_t ticks)
+{
+  struct sleeping_thread to_sleep_thread;
+  
+  ASSERT (!intr_context ());
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  if (ticks > 0)
+    {
+      to_sleep_thread.thread = thread_current ();
+      to_sleep_thread.wakeup = ticks;
+      list_insert_ordered (&sleep_list, &to_sleep_thread.elem,
+                           sleepers_tick_compare, NULL);
+      thread_block();
+    }
 }
 
 /* Transitions a blocked thread T to the ready-to-run state.
@@ -378,11 +431,12 @@ thread_get_priority (void)
 }
 
 /* Used to keep the ready list in priority order. */
-bool thread_priority_compare (const struct list_elem *a, const struct list_elem *b,
-                              void *aux UNUSED)
+bool
+thread_priority_compare (const struct list_elem *a, const struct list_elem *b,
+                         void *aux UNUSED)
 {
-  return list_entry (a, struct thread, elem)
-    > list_entry (b, struct thread, elem);
+  return list_entry (a, struct thread, elem)->priority
+    > list_entry (b, struct thread, elem)->priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -618,6 +672,29 @@ allocate_tid (void)
 
   return tid;
 }
+
+static bool
+sleepers_tick_compare (const struct list_elem *a, const struct list_elem *b,
+                       void *aux UNUSED)
+{
+  struct sleeping_thread *to_sleep_thread;
+  struct sleeping_thread *sleeping_thread;
+    
+  to_sleep_thread = list_entry (a, struct sleeping_thread, elem);
+  sleeping_thread = list_entry (b, struct sleeping_thread, elem);
+  
+  if (to_sleep_thread->wakeup < sleeping_thread->wakeup)
+    {
+      sleeping_thread->wakeup -= to_sleep_thread->wakeup;
+      return true;
+    }
+  else
+    {
+      to_sleep_thread->wakeup -= sleeping_thread->wakeup;
+      return false;
+    }
+}
+                                   
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
