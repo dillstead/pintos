@@ -9,7 +9,6 @@
 #include "threads/intr-stubs.h"
 #include "threads/palloc.h"
 #include "threads/switch.h"
-#include "threads/synch.h"
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -19,6 +18,11 @@
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
+
+/* If a lock is waiting on a lock which is waiting on a lock...
+   don't go further than MAX_PRIORITY_DONATION_NESTING when
+   donating priorities. */
+#define MAX_PRIORITY_DONATION_NESTING 8
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. The list
@@ -47,6 +51,18 @@ struct kernel_thread_frame
     void *aux;                  /* Auxiliary data for function. */
   };
 
+/* Sleeping. */
+struct sleeping_thread
+  {
+    struct list_elem elem;
+    struct thread *thread;
+    /* The number of ticks from the previous entry (if any) in the list to wakeup after. */
+    int64_t wakeup;  
+  };
+
+/* List of threads that are asleep. */
+static struct list sleep_list;
+
 /* Statistics. */
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
@@ -72,19 +88,11 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
-
-/* Sleeping. */
-struct sleeping_thread
-  {
-    struct list_elem elem;
-    struct thread *thread;
-    /* The number of ticks from the previous entry (if any) in the list to wakeup after. */
-    int64_t wakeup;  
-  };
-
-/* List of threads that are asleep. */
-static struct list sleep_list;
-
+static void shuffle_ready_thread (struct thread *thread);
+static bool maybe_raise_priority (struct thread *thread, int priority);
+static void maybe_lower_priority (struct thread *thread, int priority);
+static void maybe_yield_to_ready_thread (void);
+static bool lock_in_thread_locks_owned_list (struct lock *lock);
 /* Used to keep the list of sleeping threads in correct order. */
 static bool sleepers_tick_compare (const struct list_elem *a, const struct list_elem *b,
                                    void *aux UNUSED);
@@ -111,6 +119,7 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
   list_init (&sleep_list);
+
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -257,6 +266,7 @@ thread_block (void)
   schedule ();
 }
 
+/* Puts the thread to sleep to be woken up after ticks clock ticks. */
 void
 thread_sleep (int64_t ticks)
 {
@@ -280,7 +290,7 @@ thread_sleep (int64_t ticks)
    make the running thread ready.)
 
    This function may preempt the running thread if the thread
-   being unblocked has a priority greater than the currently
+   being unblocked has an effective priority greater than the
    running thread. */
 void
 thread_unblock (struct thread *t) 
@@ -296,13 +306,7 @@ thread_unblock (struct thread *t)
                        NULL);
   t->status = THREAD_READY;      
 
-  if (t->priority > thread_current ()->priority)
-    {
-      if (intr_context ())
-        intr_yield_on_return ();
-      else
-        thread_yield ();
-    }
+  maybe_yield_to_ready_thread ();
   intr_set_level (old_level);
 }
 
@@ -396,33 +400,40 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
-/* Sets the current thread's priority to NEW_PRIORITY. */
+/* Sets the current thread's base priority to NEW_PRIORITY.
+   The thread's effective priority will be set if new_priority
+   is higher than the effective priority or if priority 
+   donation is not in effect.  
+
+   This function may preempt the running thread if the effective
+   priority is lowered below that of the highest priority ready 
+   thread. */
 void
 thread_set_priority (int new_priority) 
 {
   enum intr_level old_level;
 
+  if (new_priority > PRI_MAX)
+    new_priority = PRI_MAX;
+  if (new_priority < PRI_MIN)
+    new_priority = PRI_MIN;
+  
   old_level = intr_disable ();
-  thread_current ()->priority = new_priority;
-  if (!list_empty (&ready_list))
-    {
-      if (new_priority
-          < list_entry (list_front (&ready_list), struct thread,
-                        elem)->priority)
-        {
-          thread_yield ();
-        }
-    }
+  if (thread_current ()->base_priority == thread_current ()->priority
+      || new_priority > thread_current ()->priority)
+    thread_current ()->priority = new_priority;      
+  thread_current ()->base_priority = new_priority;
+  maybe_yield_to_ready_thread ();
   intr_set_level (old_level);
 }
 
-/* Returns the current thread's priority. */
+/* Returns the current thread's effective priority. */
 int
 thread_get_priority (void) 
 {
   enum intr_level old_level;
   int priority;
-  
+
   old_level = intr_disable ();
   priority = thread_current ()->priority;
   intr_set_level (old_level);
@@ -430,13 +441,109 @@ thread_get_priority (void)
   return priority;
 }
 
-/* Used to keep the ready list in priority order. */
+/* Used to keep the ready list in effective priority order. */
 bool
 thread_priority_compare (const struct list_elem *a, const struct list_elem *b,
                          void *aux UNUSED)
 {
   return list_entry (a, struct thread, elem)->priority
-    > list_entry (b, struct thread, elem)->priority;
+    <= list_entry (b, struct thread, elem)->priority;
+}
+
+/* Called after a thread has acquired a lock, adds the lock to the list
+   of locks owned by the thread. */
+void
+thread_lock_acquired (struct lock *lock)
+{
+  ASSERT (intr_get_level () == INTR_OFF);
+  ASSERT (!intr_context ());
+  ASSERT (lock != NULL);
+  ASSERT (lock_get_holder (lock) == thread_current());
+  ASSERT (!lock_in_thread_locks_owned_list (lock));
+
+  // Push to front as locks are usually released in reverse
+  // order of acquisition.
+  list_push_front (&thread_current ()->locks_owned_list, &lock->elem);
+  thread_current ()->waiting_lock = NULL;
+}
+
+/* Called when a thread will wait on a lock.  If the effective priority of the
+   thread is higher than that of the lock owner, the higher priority will be 
+   donated to the owner and so on. */
+void
+thread_lock_will_wait (struct lock *lock)
+{
+  struct thread *thread;
+  int nesting;
+  
+  ASSERT (intr_get_level () == INTR_OFF);
+  ASSERT (!intr_context ());
+  ASSERT (lock != NULL);
+  ASSERT (lock_get_holder (lock) != thread_current());
+  ASSERT (!lock_in_thread_locks_owned_list (lock));
+
+  thread = lock_get_holder (lock);
+  nesting = 0;
+
+  while (thread != NULL && nesting < MAX_PRIORITY_DONATION_NESTING)
+    {
+      if (thread->status == THREAD_BLOCKED)
+        {
+          maybe_raise_priority (thread, thread_current ()->priority);
+          if (thread->waiting_lock != NULL)
+            thread = lock_get_holder (thread->waiting_lock);
+          else
+            thread = NULL;
+        }
+      else
+        {
+          if (thread->status == THREAD_READY
+              && maybe_raise_priority (thread, thread_current ()->priority))
+            shuffle_ready_thread (thread);
+          thread = NULL;
+        }
+      nesting++;
+    }
+  thread_current ()->waiting_lock = lock;
+}
+
+/* Called after a thread has released a lock.  The threads effective priority will be
+   set to the highest priority waiting thread on the remaining locks that it owns.
+
+   This function may preempt the running thread if the effective priority 
+   is lowered below that of the highest priority ready thread. */
+void
+thread_lock_released (struct lock *lock)
+{
+  struct list *locks_owned_list;
+  struct list_elem *e;
+  struct lock *owned_lock;
+  struct thread *waiting_thread;
+  int highest_waiting_priority;
+
+  ASSERT (intr_get_level () == INTR_OFF);
+  ASSERT (lock != NULL);
+  ASSERT (lock_get_holder (lock) != thread_current());
+  ASSERT (lock_in_thread_locks_owned_list (lock));
+    
+  highest_waiting_priority = PRI_MIN;
+  locks_owned_list = &thread_current ()->locks_owned_list;
+  for (e = list_begin (locks_owned_list); e != list_end (locks_owned_list); )
+    {
+      owned_lock = list_entry (e, struct lock, elem);
+      if (lock == owned_lock)
+        e = list_remove (e);
+      else
+        {
+          waiting_thread = lock_get_highest_priority_waiting_thread (owned_lock);
+          if (waiting_thread != NULL
+              && waiting_thread->priority > highest_waiting_priority)
+            highest_waiting_priority = waiting_thread->priority;
+          e = list_next (e);
+        }
+    }
+  maybe_lower_priority (thread_current(), highest_waiting_priority);
+  maybe_yield_to_ready_thread ();
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -555,8 +662,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
+  t->base_priority = priority;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  list_init (&t->locks_owned_list);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -587,7 +696,7 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    return list_entry (list_pop_back (&ready_list), struct thread, elem);
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -671,6 +780,78 @@ allocate_tid (void)
   lock_release (&tid_lock);
 
   return tid;
+}
+
+/* Shuffles a ready thread's position in the ready list after a priority donation. */
+static void
+shuffle_ready_thread (struct thread *thread)
+{
+  ASSERT (intr_get_level () == INTR_OFF);
+  ASSERT (!intr_context ());
+  ASSERT (thread->status == THREAD_READY);
+
+  list_remove(&thread->elem);
+  list_insert_ordered (&ready_list, &thread->elem, thread_priority_compare,
+                       NULL);
+}
+
+/* Returns true if thread's effective priority was raised to priority, false 
+   if not. */
+static bool 
+maybe_raise_priority (struct thread *thread, int priority)
+{
+  if (priority > thread->priority)
+    {
+      thread->priority = priority;
+      return true;
+    }
+  return false;
+}
+
+/* Lowers the thread's effective priority to priority, but no lower than 
+   the base priority. */
+static void
+maybe_lower_priority (struct thread *thread, int priority)
+{
+  ASSERT (priority <= thread->priority);
+  
+  if (priority < thread->base_priority)
+    thread->priority = thread->base_priority;
+  else
+    thread->priority = priority;
+}
+
+/* If the thread's effective priority has dropped below that of the highest
+   priority waiting thread, yield the CPU. */
+static void
+maybe_yield_to_ready_thread (void)
+{
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  if (!list_empty (&ready_list)
+    && thread_current ()->priority
+      < list_entry (list_back (&ready_list), struct thread, elem)->priority)
+    {
+      if (intr_context ())
+        intr_yield_on_return ();
+      else
+        thread_yield ();
+    }
+}
+
+static bool
+lock_in_thread_locks_owned_list (struct lock *lock)
+{
+  struct list *locks_list;
+  struct list_elem *e;
+
+  locks_list = &thread_current ()->locks_owned_list;
+  for (e = list_begin (locks_list); e != list_end (locks_list);
+       e = list_next (e))
+    if (lock == list_entry (e, struct lock, elem))
+      return true;
+  
+  return false;
 }
 
 static bool

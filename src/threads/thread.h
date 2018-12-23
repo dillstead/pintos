@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -87,11 +88,22 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
-    int priority;                       /* Priority. */
+    int priority;                       /* Effective Priority (can be raised 
+                                           or lowered automatically by 
+                                           priority donation). */
+    int base_priority;                  /* The effective priority of the 
+                                           thread can't go lower than the 
+                                           base */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+
+    /* List of locks the thread is currently holding. */ 
+    struct list locks_owned_list;
+
+    /* If the thread is waiting on a lock, the lock it's waiting on. */
+    struct lock *waiting_lock;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -133,7 +145,13 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-bool thread_priority_compare (const struct list_elem *a, const struct list_elem *b,
+
+/* For internal use to support priority donation. */
+void thread_lock_acquired (struct lock *lock);
+void thread_lock_will_wait (struct lock *lock);
+void thread_lock_released (struct lock *lock);
+bool thread_priority_compare (const struct list_elem *a,
+                              const struct list_elem *b,
                               void *aux UNUSED);
 
 int thread_get_nice (void);
