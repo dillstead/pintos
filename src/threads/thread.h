@@ -25,6 +25,11 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+/* Thread niceness. */
+#define NICE_MIN -20
+#define NICE_DEFAULT 0
+#define NICE_MAX 20
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -105,6 +110,17 @@ struct thread
     /* If the thread is waiting on a lock, the lock it's waiting on. */
     struct lock *waiting_lock;
 
+    /* Used for advanced scheduler. */
+
+    int nice;                           /* Only used with the advanced 
+                                           scheduler.  How "nice" a thread
+                                           is to other threads.  A postive
+                                           value decreases the priority of 
+                                           the thread while a negative value
+                                           increases the priority. */
+    int recent_cpu;                     /* Estimate of how much CPU the thread
+                                           has used recently. */
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -150,10 +166,8 @@ void thread_set_priority (int);
 void thread_lock_acquired (struct lock *lock);
 void thread_lock_will_wait (struct lock *lock);
 void thread_lock_released (struct lock *lock);
-bool thread_priority_compare (const struct list_elem *a,
-                              const struct list_elem *b,
-                              void *aux UNUSED);
 
+/* Used for advanced scheduler. */
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);

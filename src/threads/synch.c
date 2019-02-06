@@ -32,6 +32,14 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+static bool
+thread_priority_compare (const struct list_elem *a, const struct list_elem *b,
+                         void *aux UNUSED)
+{
+  return list_entry (a, struct thread, elem)->priority
+    < list_entry (b, struct thread, elem)->priority;
+}
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -70,7 +78,7 @@ sema_down (struct semaphore *sema)
     {
       /* It makes no sense to do an ordered insert as the priority of
          the waiting thread can change at any time due to priority donation. */
-      list_push_front (&sema->waiters, &thread_current ()->elem);
+      list_push_back (&sema->waiters, &thread_current ()->elem);
       thread_block ();
     }
   sema->value--;
@@ -309,13 +317,12 @@ struct semaphore_elem
     struct thread *thread;              /* Thread waiting on semaphore. */
   };
 
-/* Used to find the maximum priority semaphore waiting on a condition. */
 static bool
 waiters_priority_compare (const struct list_elem *a, const struct list_elem *b,
                           void *aux UNUSED)
 {
   return list_entry (a, struct semaphore_elem, elem)->thread->priority
-    <= list_entry (b, struct semaphore_elem, elem)->thread->priority;
+    < list_entry (b, struct semaphore_elem, elem)->thread->priority;
 }
 
 /* Initializes condition variable COND.  A condition variable
@@ -364,7 +371,7 @@ cond_wait (struct condition *cond, struct lock *lock)
 
   /* It makes no sense to do an ordered insert as the priority of
      the waiting thread can change at any time due to priority donation. */
-  list_push_front (&cond->waiters, &waiter.elem);
+  list_push_back (&cond->waiters, &waiter.elem);
   
   lock_release (lock);
   sema_down (&waiter.semaphore);
