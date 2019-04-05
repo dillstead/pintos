@@ -311,11 +311,11 @@ lock_held_by_current_thread (const struct lock *lock)
 
 /* One semaphore in a list. */
 struct semaphore_elem 
-  {
-    struct list_elem elem;              /* List element. */
-    struct semaphore semaphore;         /* This semaphore. */
-    struct thread *thread;              /* Thread waiting on semaphore. */
-  };
+{
+  struct list_elem elem;              /* List element. */
+  struct semaphore semaphore;         /* This semaphore. */
+  struct thread *thread;              /* Thread waiting on semaphore. */
+};
 
 static bool
 waiters_priority_compare (const struct list_elem *a, const struct list_elem *b,

@@ -222,10 +222,10 @@ thread_tick (void)
     intr_yield_on_return ();
 
   /* Wakeup any sleeping threads. */
-  e = list_begin (&sleep_list);
-  if (e != list_end (&sleep_list))
+  if (!list_empty (&sleep_list))
     {
-      sleeping_thread = list_entry (e, struct sleeping_thread, elem);
+      sleeping_thread = list_entry (list_front (&sleep_list),
+                                    struct sleeping_thread, elem);
       sleeping_thread->wakeup -= 1;
       for (e = list_begin (&sleep_list); e != list_end (&sleep_list); )
         {
@@ -413,18 +413,23 @@ thread_tid (void)
 void
 thread_exit (void) 
 {
+  struct thread *cur = thread_current();
+  
   ASSERT (!intr_context ());
 
 #ifdef USERPROG
   process_exit ();
+  ASSERT (intr_get_level () == INTR_OFF);
+#else
+  intr_disable ();
+  cur->status = THREAD_DYING;
 #endif
 
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
-     when it calls thread_schedule_tail(). */
-  intr_disable ();
-  list_remove (&thread_current()->allelem);
-  thread_current ()->status = THREAD_DYING;
+     when it calls thread_schedule_tail() but only if our parent
+     has already been destroyed and can't wait for us. */
+  list_remove (&cur->allelem);
   schedule ();
   NOT_REACHED ();
 }
@@ -516,8 +521,8 @@ thread_lock_acquired (struct lock *lock)
   ASSERT (lock_get_holder (lock) == thread_current());
   ASSERT (!lock_in_thread_locks_owned_list (lock));
 
-  // Push to front as locks are usually released in reverse
-  // order of acquisition.
+  /* Push to front as locks are usually released in reverse
+     order of acquisition. */
   list_push_front (&thread_current ()->locks_owned_list, &lock->elem);
   thread_current ()->waiting_lock = NULL;
 }
@@ -782,6 +787,13 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   list_init (&t->locks_owned_list);
+#ifdef USERPROG
+  t->ptid = TID_NONE;
+  t->exit_status = -1;
+  list_init (&t->child_list);
+  lock_init (&t->exit_lock);
+  cond_init (&t->exiting);
+#endif
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
