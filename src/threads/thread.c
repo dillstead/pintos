@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/vaddr.h"
 #include "threads/fixed-point.h"
+#include "threads/malloc.h"
 #include "devices/timer.h"
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -788,7 +789,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   list_init (&t->locks_owned_list);
 #ifdef USERPROG
-  t->ptid = TID_NONE;
   t->exit_status = -1;
   list_init (&t->child_list);
   lock_init (&t->exit_lock);
@@ -869,6 +869,11 @@ thread_schedule_tail (struct thread *prev)
   if (prev != NULL && prev->status == THREAD_DYING && prev != initial_thread) 
     {
       ASSERT (prev != cur);
+#ifdef USERPROG
+      process_close_all_files ();
+      if (prev->ofiles != NULL)
+        free (prev->ofiles);
+#endif          
       palloc_free_page (prev);
     }
 }

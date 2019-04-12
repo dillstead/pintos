@@ -15,11 +15,12 @@
 #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
 /* Maximum size of program arguments. */
-#define MAX_ARGS_SIZE 512
+#define MAX_ARGS_SIZE  512
 
 struct start_args
 {
@@ -41,6 +42,7 @@ static bool load (char *program_name, char *program_args, void (**eip) (void),
 tid_t
 process_execute (const char *file_name_) 
 {
+  struct thread *cur = thread_current ();
   char *file_name;
   struct start_args args;
   tid_t tid;
@@ -52,7 +54,7 @@ process_execute (const char *file_name_)
     return TID_ERROR;
   strlcpy (file_name, file_name_, PGSIZE);
   args.program_name = strtok_r (file_name, " ", &args.program_args);
-  args.ptid = thread_current ()->tid;
+  args.ptid = cur->tid;
 
   /* Create a new thread to execute FILE_NAME. */
   sema_init (&args.start_wait, 0);
@@ -63,7 +65,7 @@ process_execute (const char *file_name_)
          list. */
       sema_down (&args.start_wait);
       if (args.child != NULL)  
-        list_push_back (&thread_current ()->child_list, &args.child->child_elem);
+        list_push_back (&cur->child_list, &args.child->child_elem);
       else
         tid = TID_ERROR;
     }
@@ -76,6 +78,7 @@ process_execute (const char *file_name_)
 static void
 start_process (void *args_)
 {
+  struct thread *cur = thread_current ();
   struct start_args *args = args_;
   struct intr_frame if_;
   bool success = false;
@@ -87,8 +90,8 @@ start_process (void *args_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   if (load (args->program_name, args->program_args, &if_.eip, &if_.esp))
     {
-      args->child = thread_current ();
-      thread_current ()->ptid = args->ptid;
+      args->child = cur;
+      cur->ptid = args->ptid;
       success = true;
     }
   else
@@ -222,7 +225,10 @@ process_exit (void)
 #ifdef DO_DEBUG_PROCESS          
           printf ("free child %s\n", child->name);
 #endif
-          /* It's safe to free an exited child's stack. */
+          /* It's safe to free an exited child's resources. */
+          process_close_all_files();
+          if (child->ofiles != NULL)
+            free (child->ofiles);
           palloc_free_page (child);
         }
       lock_release (&child->exit_lock);
@@ -265,14 +271,24 @@ process_exit (void)
 void
 process_activate (void)
 {
-  struct thread *t = thread_current ();
+  struct thread *cur = thread_current ();
 
   /* Activate thread's page tables. */
-  pagedir_activate (t->pagedir);
+  pagedir_activate (cur->pagedir);
 
   /* Set thread's kernel stack for use in processing
      interrupts. */
   tss_update ();
+}
+
+/* Closes all of the files opened by the process. */
+void
+process_close_all_files (void)
+{
+  int fd;
+
+  for (fd = 2; fd < MAX_OPEN_FILES; fd++)
+    process_file_close (fd);
 }
 
 
@@ -445,8 +461,10 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
         }
     }
 
+  t->ofiles = calloc (sizeof (struct file *), MAX_OPEN_FILES);
+  if (t->ofiles == NULL)
+    goto done;
   
-
   /* Set up stack. */
   if (!setup_stack (program_name, program_args, esp))
     goto done;

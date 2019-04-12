@@ -145,8 +145,11 @@ page_fault (struct intr_frame *f)
 
   /* Determine cause. */
   not_present = (f->error_code & PF_P) == 0;
+  (void) not_present;
   write = (f->error_code & PF_W) != 0;
+  (void) write; 
   user = (f->error_code & PF_U) != 0;
+  (void) user;
 
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to

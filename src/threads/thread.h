@@ -135,7 +135,7 @@ struct thread
        or the parent has already exited. */
     tid_t ptid;
 
-    /* List of child threads if this thread is a user process. */
+    /* List of child threads. */
     struct list child_list;
 
     /* List element for child list. */
@@ -151,7 +151,7 @@ struct thread
     struct condition exiting;
 
     /* Table of open files. */
-    struct file **files;
+    struct file **ofiles;
  #endif
     
     /* Owned by thread.c. */
