@@ -39,6 +39,17 @@ static inline void *pg_round_up (const void *va) {
 static inline void *pg_round_down (const void *va) {
   return (void *) ((uintptr_t) va & ~PGMASK);
 }
+
+#define WORDSHIFT 0
+#define WORDBITS  2     
+#define WORDSIZE  (1 << WORDBITS)                /* Bytes in a word. */
+#define WORDMASK  BITMASK(WORDSHIFT, WORDBITS)   /* Word offset bits (0:1). */
+
+/* Round down to nearest word boundary. */
+static inline void *word_round_down (const void *va) {
+  return (void *) ((uintptr_t) va & ~WORDMASK);
+}
+
 
 /* Base address of the 1:1 physical-to-virtual mapping.  Physical
    memory is mapped starting at this virtual address.  Thus,

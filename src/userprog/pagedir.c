@@ -243,7 +243,7 @@ active_pd (void)
   return ptov (pd);
 }
 
-/* Seom page table changes can cause the CPU's translation
+/* Some page table changes can cause the CPU's translation
    lookaside buffer (TLB) to become out-of-sync with the page
    table.  When this happens, we have to "invalidate" the TLB by
    re-activating it.

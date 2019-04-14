@@ -12,12 +12,18 @@ enum thread_status
     THREAD_RUNNING,     /* Running thread. */
     THREAD_READY,       /* Not running but ready to run. */
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
-    THREAD_DYING        /* About to be destroyed. */
+    THREAD_DYING,       /* About to be destroyed. */
+ #ifdef USERPROG    
+    THREAD_EXITING      /* Exiting, to be freed by parent. */
+ #endif
   };
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
+#ifdef USERPROG
+#define TID_NONE ((tid_t) 0)            /* Identifiers start at 1. */
+#endif
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
 
 /* Thread priorities. */
@@ -121,11 +127,33 @@ struct thread
     int recent_cpu;                     /* Estimate of how much CPU the thread
                                            has used recently. */
 
-#ifdef USERPROG
+ #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-#endif
 
+    /* Parent thread identifier, TID_NONE if the thread has no parent
+       or the parent has already exited. */
+    tid_t ptid;
+
+    /* List of child threads. */
+    struct list child_list;
+
+    /* List element for child list. */
+    struct list_elem child_elem;
+
+    /* Exit status. */
+    int exit_status;
+    
+    /* Lock used by process_exit() and process_wait(). */
+    struct lock exit_lock;
+
+    /* Protected by exit_lock and signaled when the process is exiting. */
+    struct condition exiting;
+
+    /* Table of open files. */
+    struct file **ofiles;
+ #endif
+    
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
