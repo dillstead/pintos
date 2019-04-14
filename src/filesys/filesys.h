@@ -21,7 +21,7 @@ struct file *filesys_open (const char *name);
 bool filesys_remove (const char *name);
 bool process_file_create (const char *name, off_t initial_size);
 bool process_file_remove (const char *name);
-int process_file_open (const char *name);
+int process_file_open (const char *name, bool deny_write);
 off_t process_file_size (int fd);
 off_t process_file_read (int fd, void *buffer_, off_t size);
 off_t process_file_write (int fd, const void *buffer, off_t size);

@@ -153,13 +153,15 @@ process_file_remove (const char *name)
 }
 
 int
-process_file_open (const char *name)
+process_file_open (const char *name, bool deny_write)
 {
   struct file *file;
   int fd = -1;
   
   lock_acquire (&filesys_lock);
   file = filesys_open (name);
+  if (file != NULL && deny_write)
+    file_deny_write (file);
   lock_release (&filesys_lock);
 
   if (file != NULL)
@@ -232,7 +234,7 @@ process_file_write (int fd, const void *buffer, off_t size)
 {
   struct file *file;
   off_t bytes_written = 0;
-  
+
   if (fd == STDOUT_FILENO)
     {
       /* Treat stdout as a special file descriptor that writes to the console. */
@@ -294,6 +296,7 @@ process_file_close (int fd)
   if (file != NULL)
     {
       lock_acquire (&filesys_lock);
+      file_allow_write (file);
       file_close (file);
       lock_release (&filesys_lock);
       cur->ofiles[fd] = NULL;

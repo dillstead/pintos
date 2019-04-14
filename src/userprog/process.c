@@ -129,19 +129,12 @@ process_wait (tid_t child_tid)
   struct list_elem *e;
   int exit_status;
 
-#ifdef DO_DEBUG_PROCESS
-  printf ("%s: waiting for %d\n", cur->name, child_tid);
-#endif  
-       
   for (child = NULL, e = list_begin (&cur->child_list);
        e != list_end (&cur->child_list); e = list_next (e))
     {
       child = list_entry (e, struct thread, child_elem);
       if (child->tid == child_tid)
         {
-#ifdef DO_DEBUG_PROCESS          
-          printf ("found child %s\n", child->name);
-#endif
           list_remove (e);
           break;
         }
@@ -152,28 +145,15 @@ process_wait (tid_t child_tid)
          exit. */
       lock_acquire (&child->exit_lock);
       while (child->status != THREAD_EXITING)
-        {
-#ifdef DO_DEBUG_PROCESS          
-          printf ("waiting for exit\n");
-#endif          
-          cond_wait (&child->exiting, &child->exit_lock);
-        }
+        cond_wait (&child->exiting, &child->exit_lock);
       lock_release (&child->exit_lock);
       /* At this point it's safe to free the child since
          it's no longer running and will never be rescheduled. */
-#ifdef DO_DEBUG_PROCESS      
-      printf ("child exit status %d\n", child->exit_status);
-#endif      
       exit_status = child->exit_status;
       palloc_free_page (child);
     }
   else
-    {
-#ifdef DO_DEBUG_PROCESS      
-      printf ("child not found\n");
-#endif      
-      exit_status = -1; /* Child not found. */
-    }
+    exit_status = -1; /* Child not found. */
 
   return exit_status;
 }
@@ -186,6 +166,7 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+  int fd;
   struct list_elem *e;
   enum thread_status status;
 
@@ -206,6 +187,12 @@ process_exit (void)
       pagedir_destroy (pd);
       printf ("%s: exit(%d)\n", cur->name, cur->exit_status);
     }
+  if (cur->ofiles != NULL)
+    {
+      for (fd = 2; fd < MAX_OPEN_FILES; fd++)
+        process_file_close (fd);
+      free (cur->ofiles);
+    }
 
   lock_acquire (&cur->exit_lock);
   for (e = list_begin (&cur->child_list); e != list_end (&cur->child_list);
@@ -214,23 +201,12 @@ process_exit (void)
       struct thread *child = list_entry (e, struct thread, child_elem);
       
       lock_acquire (&child->exit_lock);
-#ifdef DO_DEBUG_PROCESS      
-      printf ("orphan child %s\n", child->name);
-#endif
       /* Orphan the child so when it exits it won't bother signaling the 
          parent. */
       child->ptid = TID_NONE;
       if (child->status == THREAD_EXITING)
-        {
-#ifdef DO_DEBUG_PROCESS          
-          printf ("free child %s\n", child->name);
-#endif
-          /* It's safe to free an exited child's resources. */
-          process_close_all_files();
-          if (child->ofiles != NULL)
-            free (child->ofiles);
-          palloc_free_page (child);
-        }
+        /* It's safe to free an exited child's stack. */
+        palloc_free_page (child);
       lock_release (&child->exit_lock);
     }
   
@@ -241,21 +217,13 @@ process_exit (void)
          parent to read exit_status, it's the parent's responsibility to
          free the stack now.  Marking the status as THREAD_EXITING
          ensures that it won't be freed in thread_exit(). */
-#ifdef DO_DEBUG_PROCESS      
-      printf ("signal parent\n");
-#endif      
       status = THREAD_EXITING;
       cond_signal (&cur->exiting, &cur->exit_lock);
     }
   else
-    {
-#ifdef DO_DEBUG_PROCESS      
-      printf ("no parent\n");
-#endif      
-      /* Marking the status as THREAD_DYING ensures that it will be freed
-         in thread_exit(). */
-      status = THREAD_DYING;
-    }
+    /* Marking the status as THREAD_DYING ensures that it will be freed
+       in thread_exit(). */
+    status = THREAD_DYING;
   
   /* Interrupts must be disabled before releasing the lock.  If they
      aren't it's possible for the parent waiting on us to free our 
@@ -279,16 +247,6 @@ process_activate (void)
   /* Set thread's kernel stack for use in processing
      interrupts. */
   tss_update ();
-}
-
-/* Closes all of the files opened by the process. */
-void
-process_close_all_files (void)
-{
-  int fd;
-
-  for (fd = 2; fd < MAX_OPEN_FILES; fd++)
-    process_file_close (fd);
 }
 
 
@@ -356,8 +314,8 @@ struct Elf32_Phdr
 #define PF_R 4          /* Readable. */
 
 static bool setup_stack (const char *program_name, char *args, void **esp);
-static bool validate_segment (const struct Elf32_Phdr *, struct file *);
-static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
+static bool validate_segment (const struct Elf32_Phdr *, int fd);
+static bool load_segment (int fd, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
                           bool writable);
 
@@ -370,10 +328,10 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
-  struct file *file = NULL;
   off_t file_ofs;
   bool success = false;
   int i;
+  int fd;
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
@@ -381,16 +339,21 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
-  /* Open executable file. */
-  file = filesys_open (program_name);
-  if (file == NULL) 
+  t->ofiles = calloc (sizeof (struct file *), MAX_OPEN_FILES);
+  if (t->ofiles == NULL)
+    goto done;
+
+  /* Open executable file as read-only so it can't be modified
+     while the process is running. */
+  fd = process_file_open (program_name, true);
+  if (fd == -1)
     {
       printf ("load: %s: open failed\n", program_name);
-      goto done; 
+      goto done;       
     }
 
   /* Read and verify executable header. */
-  if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
+  if (process_file_read (fd, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
       || ehdr.e_type != 2
       || ehdr.e_machine != 3
@@ -408,11 +371,11 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
     {
       struct Elf32_Phdr phdr;
 
-      if (file_ofs < 0 || file_ofs > file_length (file))
+      if (file_ofs < 0 || file_ofs > process_file_size (fd))
         goto done;
-      file_seek (file, file_ofs);
+      process_file_seek (fd, file_ofs);
 
-      if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
+      if (process_file_read (fd, &phdr, sizeof phdr) != sizeof phdr)
         goto done;
       file_ofs += sizeof phdr;
       switch (phdr.p_type) 
@@ -429,7 +392,7 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
         case PT_SHLIB:
           goto done;
         case PT_LOAD:
-          if (validate_segment (&phdr, file)) 
+          if (validate_segment (&phdr, fd)) 
             {
               bool writable = (phdr.p_flags & PF_W) != 0;
               uint32_t file_page = phdr.p_offset & ~PGMASK;
@@ -451,7 +414,7 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
                   read_bytes = 0;
                   zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                 }
-              if (!load_segment (file, file_page, (void *) mem_page,
+              if (!load_segment (fd, file_page, (void *) mem_page,
                                  read_bytes, zero_bytes, writable))
                 goto done;
             }
@@ -460,10 +423,6 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
           break;
         }
     }
-
-  t->ofiles = calloc (sizeof (struct file *), MAX_OPEN_FILES);
-  if (t->ofiles == NULL)
-    goto done;
   
   /* Set up stack. */
   if (!setup_stack (program_name, program_args, esp))
@@ -476,7 +435,6 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
   return success;
 }
 
@@ -487,14 +445,14 @@ static bool install_page (void *upage, void *kpage, bool writable);
 /* Checks whether PHDR describes a valid, loadable segment in
    FILE and returns true if so, false otherwise. */
 static bool
-validate_segment (const struct Elf32_Phdr *phdr, struct file *file) 
+validate_segment (const struct Elf32_Phdr *phdr, int fd) 
 {
   /* p_offset and p_vaddr must have the same page offset. */
   if ((phdr->p_offset & PGMASK) != (phdr->p_vaddr & PGMASK)) 
     return false; 
 
   /* p_offset must point within FILE. */
-  if (phdr->p_offset > (Elf32_Off) file_length (file)) 
+  if (phdr->p_offset > (Elf32_Off) process_file_size (fd)) 
     return false;
 
   /* p_memsz must be at least as big as p_filesz. */
@@ -544,14 +502,14 @@ validate_segment (const struct Elf32_Phdr *phdr, struct file *file)
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
 static bool
-load_segment (struct file *file, off_t ofs, uint8_t *upage,
+load_segment (int fd, off_t ofs, uint8_t *upage,
               uint32_t read_bytes, uint32_t zero_bytes, bool writable) 
 {
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
 
-  file_seek (file, ofs);
+  process_file_seek (fd, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
     {
       /* Calculate how to fill this page.
@@ -566,7 +524,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
         return false;
 
       /* Load this page. */
-      if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
+      if (process_file_read (fd, kpage, page_read_bytes) != (int) page_read_bytes)
         {
           palloc_free_page (kpage);
           return false; 

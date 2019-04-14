@@ -224,7 +224,7 @@ sys_open (const uint8_t *arg_base)
   if (!get_str_arg (arg_base, 0, &name))
     thread_exit ();
   
-  return process_file_open (name);  
+  return process_file_open (name, false);  
 }
 
 static int
@@ -244,13 +244,15 @@ sys_read (const uint8_t *arg_base)
   int fd;
   void *buffer;
   off_t size;
-
+  int b0, b1;
   
   if (!get_int_arg (arg_base, 0, &fd)
       || !get_int_arg (arg_base, 1, (int *) &buffer)
       || !get_int_arg (arg_base, 2, (int *) &size)
-      || !put_user (buffer, 0)
-      || !put_user (buffer + size, 0))
+      || (b0 = get_user (buffer)) == -1
+      || (b1 = get_user (buffer +  size)) == -1
+      || !put_user (buffer, b0)
+      || !put_user (buffer + size, b1))
     thread_exit ();
   
   return process_file_read (fd, buffer, size);

@@ -869,11 +869,6 @@ thread_schedule_tail (struct thread *prev)
   if (prev != NULL && prev->status == THREAD_DYING && prev != initial_thread) 
     {
       ASSERT (prev != cur);
-#ifdef USERPROG
-      process_close_all_files ();
-      if (prev->ofiles != NULL)
-        free (prev->ofiles);
-#endif          
       palloc_free_page (prev);
     }
 }

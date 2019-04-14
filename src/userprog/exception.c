@@ -149,7 +149,6 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   (void) write; 
   user = (f->error_code & PF_U) != 0;
-  (void) user;
 
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
@@ -159,10 +158,12 @@ page_fault (struct intr_frame *f)
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",
           user ? "user" : "kernel");*/
-  f->eip = (void (*)(void)) f->eax;
-  f->eax = 0xFFFFFFFF;
-  /*kill (f);*/
-  
-  
+  if (user)
+    kill (f);
+  else
+    {
+      f->eip = (void (*)(void)) f->eax;
+      f->eax = 0xFFFFFFFF;
+    }
 }
 
