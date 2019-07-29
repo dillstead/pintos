@@ -40,6 +40,11 @@ static inline void *pg_round_down (const void *va) {
   return (void *) ((uintptr_t) va & ~PGMASK);
 }
 
+/* Round up to the next page. */
+static inline void *pg_next_page (const void *va) {
+  return (void *) (((uintptr_t) va + PGSIZE) & ~PGMASK);
+}
+
 #define WORDSHIFT 0
 #define WORDBITS  2     
 #define WORDSIZE  (1 << WORDBITS)                /* Bytes in a word. */

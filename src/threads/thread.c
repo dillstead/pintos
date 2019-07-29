@@ -11,7 +11,6 @@
 #include "threads/switch.h"
 #include "threads/vaddr.h"
 #include "threads/fixed-point.h"
-#include "threads/malloc.h"
 #include "devices/timer.h"
 #ifdef USERPROG
 #include "userprog/process.h"

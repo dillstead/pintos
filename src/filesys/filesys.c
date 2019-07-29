@@ -113,17 +113,6 @@ allocate_fd (struct file *file)
   return fd;
 }
 
-static struct file *
-get_file (int fd)
-{
-  struct thread *cur = thread_current ();
-    
-  if (fd < 2 || fd >= MAX_OPEN_FILES)
-    return NULL;
-  
-  return cur->ofiles[fd];
-}
-
 /* The following functions provide a file descriptor wrapper around 
    the file system functionality.  The file system is not thread safe
    so the underlying file system calls are locked to prevent simultaneous
@@ -184,7 +173,7 @@ process_file_size (int fd)
   struct file *file;
   off_t size = 0;
 
-  file = get_file (fd);
+  file = process_file_get_file (fd);
   if (file != NULL)
     {
       lock_acquire (&filesys_lock);
@@ -217,7 +206,7 @@ process_file_read (int fd, void *buffer_, off_t size)
     }
   else
     {
-      file = get_file (fd);
+      file = process_file_get_file (fd);
       if (file != NULL)
         {
           lock_acquire (&filesys_lock);
@@ -243,7 +232,7 @@ process_file_write (int fd, const void *buffer, off_t size)
     }
   else
     {
-      file = get_file (fd);
+      file = process_file_get_file (fd);
       if (file != NULL)
         {
           lock_acquire (&filesys_lock);
@@ -260,7 +249,7 @@ process_file_seek (int fd, off_t new_pos)
 {
   struct file *file;
 
-  file = get_file (fd);
+  file = process_file_get_file (fd);
   if (file != NULL)
     {
       lock_acquire (&filesys_lock);
@@ -275,7 +264,7 @@ process_file_tell (int fd)
   struct file *file;
   off_t pos = 0;
 
-  file = get_file (fd);
+  file = process_file_get_file (fd);
   if (file != NULL)
     {
       lock_acquire (&filesys_lock);
@@ -292,7 +281,7 @@ process_file_close (int fd)
   struct thread *cur = thread_current ();
   struct file *file;
 
-  file = get_file (fd);
+  file = process_file_get_file (fd);
   if (file != NULL)
     {
       lock_acquire (&filesys_lock);
@@ -301,6 +290,17 @@ process_file_close (int fd)
       lock_release (&filesys_lock);
       cur->ofiles[fd] = NULL;
     }
+}
+
+struct file *
+process_file_get_file (int fd)
+{
+  struct thread *cur = thread_current ();
+  
+  if (fd < 2 || fd >= MAX_OPEN_FILES)
+    return NULL;
+  
+  return cur->ofiles[fd];
 }
 
 

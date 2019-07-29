@@ -18,6 +18,7 @@
 #include "threads/malloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "vm/pageinfo.h"
 
 /* Maximum size of program arguments. */
 #define MAX_ARGS_SIZE  512
@@ -259,7 +260,7 @@ typedef uint16_t Elf32_Half;
 
 /* For use with ELF types in printf(). */
 #define PE32Wx PRIx32   /* Print Elf32_Word in hexadecimal. */
-#define PE32Ax PRIx32   /* Print Elf32_Addr in hexadecimal. */
+#define PE32Ax PRIx32   /* Print Enlf32_Addr in hexadecimal. */
 #define PE32Ox PRIx32   /* Print Elf32_Off in hexadecimal. */
 #define PE32Hx PRIx16   /* Print Elf32_Half in hexadecimal. */
 
@@ -339,7 +340,7 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
-  t->ofiles = calloc (sizeof (struct file *), MAX_OPEN_FILES);
+  t->ofiles = calloc (MAX_OPEN_FILES, sizeof t->ofiles);
   if (t->ofiles == NULL)
     goto done;
 
@@ -505,39 +506,41 @@ static bool
 load_segment (int fd, off_t ofs, uint8_t *upage,
               uint32_t read_bytes, uint32_t zero_bytes, bool writable) 
 {
+  struct thread *cur = thread_current ();
+  struct page_info *page_info;
+  struct file *file;
+    
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
 
-  process_file_seek (fd, ofs);
+  file = process_file_get_file (fd);
   while (read_bytes > 0 || zero_bytes > 0) 
     {
+      page_info = pageinfo_create ();
+      if (page_info == NULL)
+        return false;
+      
       /* Calculate how to fill this page.
          We will read PAGE_READ_BYTES bytes from FILE
          and zero the final PAGE_ZERO_BYTES bytes. */
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-      /* Get a page of memory. */
-      uint8_t *kpage = palloc_get_page (PAL_USER);
-      if (kpage == NULL)
-        return false;
-
-      /* Load this page. */
-      if (process_file_read (fd, kpage, page_read_bytes) != (int) page_read_bytes)
+      pageinfo_set_pagedir (page_info, cur->pagedir);
+      pageinfo_set_upage (page_info, upage);
+      if (page_read_bytes > 0)
         {
-          palloc_free_page (kpage);
-          return false; 
+          ofs += page_read_bytes;
+          pageinfo_set_type (page_info, PAGE_TYPE_FILE);
+          pageinfo_set_fileinfo (page_info, file, ofs);
         }
-      memset (kpage + page_read_bytes, 0, page_zero_bytes);
-
-      /* Add the page to the process's address space. */
-      if (!install_page (upage, kpage, writable)) 
-        {
-          palloc_free_page (kpage);
-          return false; 
-        }
-
+      else
+        pageinfo_set_type (page_info, PAGE_TYPE_ZERO);
+      if (writable)
+        pageinfo_set_writable (page_info, WRITABLE_TO_SWAP);
+      pagedir_set_info (cur->pagedir, upage, page_info);
+      
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
@@ -551,16 +554,21 @@ load_segment (int fd, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (const char *program_name, char *args, void **esp)
 {
+  struct thread *cur = thread_current ();
+  struct page_info *page_info;
   const char *arg;
   uint8_t *kpage, *top, *bottom, *base;
+  void *upage;
   size_t len;
   int argc;
   bool success = false;
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  if (kpage != NULL)
+  kpage = palloc_get_page (PAL_ZERO);
+  page_info = pageinfo_create ();
+  if (kpage != NULL && page_info != NULL)
     {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+      upage = (void *) (PHYS_BASE - PGSIZE);
+      success = install_page (upage, kpage, true);
       if (success)
         {
           bottom = PHYS_BASE;
@@ -596,9 +604,22 @@ setup_stack (const char *program_name, char *args, void **esp)
           base -= sizeof (void *);
           *base = 0;
           *esp = base;
+
+          /* Setup the page info and allow the stack to be properly paged
+             in during a page fault. */
+          pageinfo_set_upage (page_info, upage);
+          pageinfo_set_pagedir (page_info, cur->pagedir);
+          pageinfo_set_type (page_info, PAGE_TYPE_KERNEL);
+          pageinfo_set_kpage (page_info, kpage);
+          pageinfo_set_writable (page_info, WRITABLE_TO_SWAP);
+          pagedir_set_info (cur->pagedir, upage, page_info);
+          pagedir_clear_page (cur->pagedir, upage);
         }
       else
-        palloc_free_page (kpage);
+        {
+          pageinfo_destroy (page_info);
+          palloc_free_page (kpage);
+        }
     }
   return success;
 }
