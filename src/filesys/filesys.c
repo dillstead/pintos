@@ -303,6 +303,12 @@ process_file_get_file (int fd)
   return cur->ofiles[fd];
 }
 
+bool
+process_file_is_file (int fd)
+{
+  return process_file_get_file (fd) != NULL;
+}
+
 
 /* Formats the file system. */
 static void

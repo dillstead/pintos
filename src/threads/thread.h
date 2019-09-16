@@ -152,8 +152,14 @@ struct thread
 
     /* Table of open files. */
     struct file **ofiles;
- #endif
-    
+
+    /* Table of memory mapped files. */
+    struct mmap *mfiles;
+
+    /* User stack pointer used for dynamic stack growth. */
+    void *user_esp;
+#endif
+
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };

@@ -19,9 +19,10 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "vm/pageinfo.h"
+#include "vm/mmap.h"
 
 /* Maximum size of program arguments. */
-#define MAX_ARGS_SIZE  512
+#define MAX_ARGS_SIZE 512
 
 struct start_args
 {
@@ -168,9 +169,16 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
   int fd;
+  int md;
   struct list_elem *e;
   enum thread_status status;
 
+  if (cur->mfiles != NULL)
+    {
+      for (md = 0; md < MAX_MMAP_FILES; md++)
+        munmap (md);
+      free (cur->mfiles);
+    }
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -340,10 +348,12 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
-  t->ofiles = calloc (MAX_OPEN_FILES, sizeof t->ofiles);
+  t->ofiles = calloc (MAX_OPEN_FILES, sizeof *t->ofiles);
   if (t->ofiles == NULL)
     goto done;
-
+  t->mfiles = calloc (MAX_MMAP_FILES, sizeof *t->mfiles);
+  if (t->mfiles == NULL)
+    goto done;
   /* Open executable file as read-only so it can't be modified
      while the process is running. */
   fd = process_file_open (program_name, true);
@@ -500,8 +510,8 @@ validate_segment (const struct Elf32_Phdr *phdr, int fd)
    The pages initialized by this function must be writable by the
    user process if WRITABLE is true, read-only otherwise.
 
-   Return true if successful, false if a memory allocation error
-   or disk read error occurs. */
+   Return true if successful, false if a memory allocation error occurs.
+*/
 static bool
 load_segment (int fd, off_t ofs, uint8_t *upage,
               uint32_t read_bytes, uint32_t zero_bytes, bool writable) 

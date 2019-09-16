@@ -28,5 +28,6 @@ off_t process_file_write (int fd, const void *buffer, off_t size);
 void process_file_seek (int fd, off_t new_pos);
 off_t process_file_tell (int fd);
 void process_file_close (int fd);
+bool process_file_is_file (int fd);
 struct file *process_file_get_file (int fd);
 #endif /* filesys/filesys.h */

@@ -8,7 +8,11 @@
 #include "threads/thread.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/pte.h"
 #include "devices/shutdown.h"
+#include "vm/frametable.h"
+#include "vm/growstack.h"
+#include "vm/mmap.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -25,6 +29,8 @@ static int sys_write(const uint8_t *arg_base);
 static int sys_seek(const uint8_t *arg_base);
 static int sys_tell(const uint8_t *arg_base);
 static int sys_close(const uint8_t *arg_base);
+static int sys_mmap(const uint8_t *arg_base);
+static int sys_munmap(const uint8_t *arg_base);
 
 static int (*syscalls[])(const uint8_t *arg_base) =
 {
@@ -40,7 +46,9 @@ static int (*syscalls[])(const uint8_t *arg_base) =
   [SYS_WRITE] sys_write,
   [SYS_SEEK] sys_seek,
   [SYS_TELL] sys_tell,
-  [SYS_CLOSE] sys_close
+  [SYS_CLOSE] sys_close,
+  [SYS_MMAP] sys_mmap,
+  [SYS_MUNMAP] sys_munmap
 };
 
 void
@@ -56,30 +64,7 @@ syscall_init (void)
 static int
 get_user (const uint8_t *uaddr)
 {
-  int result;
-
-  if (!is_user_vaddr (uaddr))
-      return -1;
-  asm ("movl $1f, %0; movzbl %1, %0; 1:"
-       : "=&a" (result) : "m" (*uaddr));
-      
-  return result;
-}
- 
-/* Writes BYTE to user address UDST.
-   UDST must be below PHYS_BASE.
-   Returns true if successful, false if a segfault occurred. */
-static bool
-put_user (uint8_t *udst, uint8_t byte)
-{
-  int error_code;
-
-  if (!is_user_vaddr (udst))
-      return false;
-  asm ("movl $1f, %0; movb %b2, %1; 1:"
-       : "=&a" (error_code), "=m" (*udst) : "q" (byte));
-      
-  return error_code != -1;
+  return is_user_vaddr (uaddr) ? *uaddr : -1; 
 }
 
 static bool
@@ -131,13 +116,62 @@ get_str_arg (const uint8_t *uaddr, int pos, char **pstr)
   return false;
 }
 
+/* Lock the buffer in memory to prevent reentering the file system code to 
+   page the buffer in during a file system operation. */
+static bool
+lock_buffer (const void *buffer, off_t size, bool write)
+{
+  struct thread *cur = thread_current ();
+  void *upage;
+  /* Buffer has already been checked for wraparound. */
+  size_t num_pages
+    = (pg_round_down (buffer + size) - pg_round_down (buffer)) / PGSIZE + 1;
+  size_t i;
+
+  /* It's possible for buffer to be on a yet to be mapped porition of the
+     stack. */
+  maybe_grow_stack (cur->pagedir, buffer);
+  for (upage = pg_round_down (buffer), i = 0; i < num_pages;
+       i++, upage += PGSIZE)
+    {
+      maybe_grow_stack (cur->pagedir, upage);
+      if (!frametable_lock_frame (cur->pagedir, upage, write))
+        break;
+    }
+  /* Unlock the pages in case of an error. */
+  if (i < num_pages)
+    {
+      num_pages = i;
+      for (upage = pg_round_down (buffer), i = 0; i < num_pages;
+           i++, upage += PGSIZE)
+        frametable_unlock_frame (cur->pagedir, upage);
+      return false;
+    }
+  else
+    return true;
+}
+
+static void
+unlock_buffer (const void *buffer, off_t size)
+{
+  void *upage;
+  size_t num_pages
+    = (pg_round_down (buffer + size) - pg_round_down (buffer)) / PGSIZE + 1;
+  size_t i;
+  
+  for (upage = pg_round_down (buffer), i = 0; i < num_pages;
+       i++, upage += PGSIZE)
+    frametable_unlock_frame (thread_current ()->pagedir, upage);  
+}
+
 static void
 syscall_handler (struct intr_frame *f) 
 {
   unsigned num;
 
+  thread_current ()->user_esp = f->esp;
   if (!get_int_arg (f->esp, 0, (int *) &num))
-      thread_exit ();
+    thread_exit ();
   if (num > 0 && num < sizeof syscalls / sizeof *syscalls
       && syscalls[num] != NULL)
     f->eax = syscalls[num] ((uint8_t *) f->esp + sizeof (int));
@@ -187,7 +221,7 @@ sys_wait (const uint8_t *arg_base)
   tid_t child_tid;
 
   if (!get_int_arg (arg_base, 0, (int *) &child_tid))
-      thread_exit ();
+    thread_exit ();
   
   return process_wait (child_tid);
 }
@@ -244,18 +278,26 @@ sys_read (const uint8_t *arg_base)
   int fd;
   void *buffer;
   off_t size;
-  int b0, b1;
+  off_t bytes_read;
   
   if (!get_int_arg (arg_base, 0, &fd)
       || !get_int_arg (arg_base, 1, (int *) &buffer)
       || !get_int_arg (arg_base, 2, (int *) &size)
-      || (b0 = get_user (buffer)) == -1
-      || (b1 = get_user (buffer +  size)) == -1
-      || !put_user (buffer, b0)
-      || !put_user (buffer + size, b1))
+      || !is_user_vaddr (buffer)
+      || !is_user_vaddr (buffer + size)
+      || buffer > buffer + size)
     thread_exit ();
+  if (process_file_is_file (fd))
+    {
+      if (!lock_buffer (buffer, size, true))
+        thread_exit ();
+      bytes_read = process_file_read (fd, buffer, size);    
+      unlock_buffer (buffer, size);
+    }
+  else
+    bytes_read = process_file_read (fd, buffer, size);          
   
-  return process_file_read (fd, buffer, size);
+  return bytes_read;
 }
 
 static int
@@ -264,15 +306,26 @@ sys_write (const uint8_t *arg_base)
   int fd;
   const void *buffer;
   off_t size;
+  off_t bytes_written;
   
   if (!get_int_arg (arg_base, 0, &fd)
       || !get_int_arg (arg_base, 1, (int *) &buffer)
       || !get_int_arg (arg_base, 2, (int *) &size)
-      || get_user (buffer) == -1
-      || get_user (buffer + size) == -1)
+      || !is_user_vaddr (buffer)
+      || !is_user_vaddr (buffer + size)
+      || buffer > buffer + size)
     thread_exit ();
+  if (process_file_is_file (fd))
+    {
+      if (!lock_buffer (buffer, size, false))
+        thread_exit ();
+      bytes_written = process_file_write (fd, buffer, size);
+      unlock_buffer (buffer, size);
+    }
+  else 
+    bytes_written = process_file_write (fd, buffer, size);
   
-  return process_file_write (fd, buffer, size);
+  return bytes_written;
 }
 
 static int
@@ -308,6 +361,31 @@ sys_close (const uint8_t *arg_base)
   if (!get_int_arg (arg_base, 0, &fd))
     thread_exit ();
   process_file_close (fd);
+
+  return 0;
+}
+
+static int
+sys_mmap (const uint8_t *arg_base)
+{
+  int fd;
+  void *addr;
+
+  if (!get_int_arg (arg_base, 0, &fd)
+      || !get_int_arg (arg_base, 1, (int *) &addr))
+    thread_exit ();
+
+  return mmap (fd, addr);
+}
+
+static int
+sys_munmap (const uint8_t *arg_base)
+{
+  int md;
+
+  if (!get_int_arg (arg_base, 0, &md))
+    thread_exit ();
+  munmap (md);
 
   return 0;
 }

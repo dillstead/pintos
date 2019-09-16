@@ -154,7 +154,7 @@ list_head (struct list *list)
   return &list->head;
 }
 
-/* Return's LIST's tail. */
+/* Return LIST's tail. */
 struct list_elem *
 list_tail (struct list *list) 
 {

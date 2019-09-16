@@ -1,15 +1,12 @@
-#include <stdio.h>
+#include "userprog/pagedir.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
-#include "userprog/pagedir.h"
 #include "threads/init.h"
 #include "threads/pte.h"
 #include "threads/palloc.h"
 #include "vm/pageinfo.h"
 #include "vm/frametable.h"
-
-#define DEBUG_PAGEDIR 1
 
 static uint32_t *active_pd (void);
 static void invalidate_pagedir (uint32_t *);
@@ -35,54 +32,35 @@ pagedir_destroy (uint32_t *pd)
   uint32_t *pde;
   uint32_t *pt;
   uint32_t *pte;
+  void *ubase;
   void *upage;
 
   if (pd == NULL)
     return;
 
   ASSERT (pd != init_page_dir);
-  upage = 0;
-  for (pde = pd; pde < pd + pd_no (PHYS_BASE); pde++)
+  for (ubase = 0, pde = pd; pde < pd + pd_no (PHYS_BASE);
+       ubase += PTSPAN, pde++)
     {
       if (*pde & PTE_P)
         {
           pt = pde_get_pt (*pde);
-          for (pte = pt; pte < pt + PGSIZE / sizeof *pte;
+          for (upage = ubase, pte = pt; pte < pt + PGSIZE / sizeof *pte;
                upage += PGSIZE, pte++)
-            pagedir_unload_page (pd, upage);
+              pagedir_unload_page (pd, upage);
           palloc_free_multiple (pt, 2);
         }
     }
   palloc_free_page (pd);
 }
 
-/* Clears the page table entry, frees the associated frame, 
-   unloads the associated frame, and frees the page info. */
-void
-pagedir_unload_page (uint32_t *pd, const void *upage)
-{
-  struct page_info *info;
-
-  ASSERT (pg_ofs (upage) == 0);
-  ASSERT (is_user_vaddr (upage));
-  ASSERT (pd != init_page_dir);
-
-  info = pagedir_get_info (pd, upage);
-  if (info != NULL)
-    {
-      /* The frame table will free the frame and clear
-         the entry. */
-      frametable_unload_frame (pd, upage);
-      pageinfo_destroy (info);
-    }
-}
-
 /* Returns the address of the page table entry for virtual
    address VADDR in page directory PD.
    If PD does not have a page table for VADDR, behavior depends
-   on CREATE.  If CREATE is true, then a new page table plus 
-   additional space for page infos is created and a pointer into 
-   it is returned.  Otherwise, a null pointer is returned. */
+   on CREATE.  If CREATE is true, then a new page table is created
+   along with additional space for page info and a pointer to the
+   page table is returned.  Otherwise, a null pointer is returned.
+*/
 static uint32_t *
 lookup_page (uint32_t *pd, const void *vaddr, bool create)
 {
@@ -147,39 +125,7 @@ pagedir_set_page (uint32_t *pd, const void *upage, void *kpage, bool writable)
     return false;
 }
 
-/* Associates a pointer to additional information with a
-   page.  UPAGE may or may not already be mapped.  Returns 
-   true if successful, false if memory allocation failed. */
-bool
-pagedir_set_info (uint32_t *pd, const void *upage, struct page_info *info)
-{
-  uint32_t *pte;
-  struct page_info **pie;
-
-  ASSERT (pg_ofs (upage) == 0);
-  ASSERT (is_user_vaddr (upage));
-  ASSERT (pd != init_page_dir);
-
-#if DEBUG_PAGEDIR
-  if (info != NULL)
-    {
-      printf ("pagedir_set_info\n");
-      pageinfo_print (info, false);
-    }
-#endif  
-
-  pte = lookup_page (pd, upage, true);
-  if (pte != NULL)
-    {
-      pie = ((struct page_info **) pg_next_page (pte)) + pt_no (upage);
-      *pie = info;
-      return true;
-    }
-  else
-    return false;
-}
-
-/* Lopoks up the physical address that corresponds to user virtual
+/* Looks up the physical address that corresponds to user virtual
    address UADDR in PD.  Returns the kernel virtual address
    corresponding to thxat physical address, or a null pointer if
    UADDR is unmapped. */
@@ -193,30 +139,6 @@ pagedir_get_page (uint32_t *pd, const void *uaddr)
   pte = lookup_page (pd, uaddr, false);
   if (pte != NULL && (*pte & PTE_P) != 0)
     return pte_get_page (*pte) + pg_ofs (uaddr);
-  else
-    return NULL;
-}
-
-/* Looks up the pointer to additional information associated
-   with the page that corresponds to user virtual address 
-   UPAGE in PD.  Returns a pointer to the page information
-   or null if there is none. */
-struct page_info *
-pagedir_get_info (uint32_t *pd, const void *upage)
-{
-  uint32_t *pte;
-  struct page_info **pie;
-
-  ASSERT (pg_ofs (upage) == 0);
-  ASSERT (is_user_vaddr (upage));
-  ASSERT (pd != init_page_dir);
-
-  pte = lookup_page (pd, upage, false);
-  if (pte != NULL)
-    {
-      pie = ((struct page_info **) pg_next_page (pte)) + pt_no (upage);
-      return *pie;
-    }
   else
     return NULL;
 }
@@ -345,4 +267,72 @@ invalidate_pagedir (uint32_t *pd)
          "Translation Lookaside Buffers (TLBs)". */
       pagedir_activate (pd);
     } 
+}
+
+/* Clears the page table entry, frees the associated frame, 
+   unloads the associated frame, and frees the page info. */
+void
+pagedir_unload_page (uint32_t *pd, const void *upage)
+{
+  struct page_info *info;
+
+  ASSERT (pg_ofs (upage) == 0);
+  ASSERT (is_user_vaddr (upage));
+  ASSERT (pd != init_page_dir);
+
+  info = pagedir_get_info (pd, upage);
+  if (info != NULL)
+    {
+      /* The frame table will free the frame and page info and clear
+         the entry. */
+      frametable_unload_frame (pd, upage);
+    }
+}
+
+/* Associates a pointer to additional information with a
+   page.  UPAGE may or may not already be mapped.  Returns 
+   true if successful, false if memory allocation failed. */
+bool
+pagedir_set_info (uint32_t *pd, const void *upage, struct page_info *info)
+{
+  uint32_t *pte;
+  struct page_info **pie;
+
+  ASSERT (pg_ofs (upage) == 0);
+  ASSERT (is_user_vaddr (upage));
+  ASSERT (pd != init_page_dir);
+
+  pte = lookup_page (pd, upage, true);
+  if (pte != NULL)
+    {
+      pie = ((struct page_info **) pg_next_page (pte)) + pt_no (upage);
+      *pie = info;
+      return true;
+    }
+  else
+    return false;
+}
+
+/* Looks up the pointer to additional information associated
+   with the page that corresponds to user virtual address 
+   UPAGE in PD.  Returns a pointer to the page information
+   or null if there is none. */
+struct page_info *
+pagedir_get_info (uint32_t *pd, const void *upage)
+{
+  uint32_t *pte;
+  struct page_info **pie;
+
+  ASSERT (pg_ofs (upage) == 0);
+  ASSERT (is_user_vaddr (upage));
+  ASSERT (pd != init_page_dir);
+
+  pte = lookup_page (pd, upage, false);
+  if (pte != NULL)
+    {
+      pie = ((struct page_info **) pg_next_page (pte)) + pt_no (upage);
+      return *pie;
+    }
+  else
+    return NULL;
 }
