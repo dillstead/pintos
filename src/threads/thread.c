@@ -53,15 +53,6 @@ struct kernel_thread_frame
   void *aux;                  /* Auxiliary data for function. */
 };
 
-/* Sleeping. */
-struct sleeping_thread
-{
-  struct list_elem elem;
-  struct thread *thread;
-  /* The number of ticks from the previous entry (if any) in the list to wakeup after. */
-  int64_t wakeup;  
-};
-
 /* List of threads that are asleep. */
 static struct list sleep_list;
 
@@ -171,7 +162,7 @@ void
 thread_tick (void) 
 {
   struct thread *t = thread_current ();
-  struct sleeping_thread *sleeping_thread;
+  struct thread *sleeping_thread;
   struct list_elem *e;
   bool is_idle_thread;
   
@@ -225,15 +216,15 @@ thread_tick (void)
   if (!list_empty (&sleep_list))
     {
       sleeping_thread = list_entry (list_front (&sleep_list),
-                                    struct sleeping_thread, elem);
-      sleeping_thread->wakeup -= 1;
+                                    struct thread, sleep_elem);
+      sleeping_thread->wakeup_ticks -= 1;
       for (e = list_begin (&sleep_list); e != list_end (&sleep_list); )
         {
-          sleeping_thread = list_entry (e, struct sleeping_thread, elem);
-          if (sleeping_thread->wakeup > 0)
+          sleeping_thread = list_entry (e, struct thread, sleep_elem);
+          if (sleeping_thread->wakeup_ticks > 0)
             break;
           e = list_remove (e);
-          thread_unblock (sleeping_thread->thread);
+          thread_unblock (sleeping_thread);
         }
     }
 }
@@ -335,16 +326,15 @@ thread_block (void)
 void
 thread_sleep (int64_t ticks)
 {
-  struct sleeping_thread to_sleep_thread;
+  struct thread *cur = thread_current ();
   
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
 
   if (ticks > 0)
     {
-      to_sleep_thread.thread = thread_current ();
-      to_sleep_thread.wakeup = ticks;
-      list_insert_ordered (&sleep_list, &to_sleep_thread.elem,
+      cur->wakeup_ticks = ticks;
+      list_insert_ordered (&sleep_list, &cur->sleep_elem,
                            sleepers_tick_compare, NULL);
       thread_block();
     }
@@ -1006,20 +996,20 @@ static bool
 sleepers_tick_compare (const struct list_elem *a, const struct list_elem *b,
                        void *aux UNUSED)
 {
-  struct sleeping_thread *to_sleep_thread;
-  struct sleeping_thread *sleeping_thread;
+  struct thread *to_sleep_thread;
+  struct thread *sleeping_thread;
     
-  to_sleep_thread = list_entry (a, struct sleeping_thread, elem);
-  sleeping_thread = list_entry (b, struct sleeping_thread, elem);
+  to_sleep_thread = list_entry (a, struct thread, sleep_elem);
+  sleeping_thread = list_entry (b, struct thread, sleep_elem);
   
-  if (to_sleep_thread->wakeup < sleeping_thread->wakeup)
+  if (to_sleep_thread->wakeup_ticks < sleeping_thread->wakeup_ticks)
     {
-      sleeping_thread->wakeup -= to_sleep_thread->wakeup;
+      sleeping_thread->wakeup_ticks -= to_sleep_thread->wakeup_ticks;
       return true;
     }
   else
     {
-      to_sleep_thread->wakeup -= sleeping_thread->wakeup;
+      to_sleep_thread->wakeup_ticks -= sleeping_thread->wakeup_ticks;
       return false;
     }
 }

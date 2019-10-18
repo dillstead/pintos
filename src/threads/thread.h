@@ -107,6 +107,13 @@ struct thread
                                            base */
     struct list_elem allelem;           /* List element for all threads list. */
 
+    /* List element for sleep list. */
+    struct list_elem sleep_elem;
+    
+    /* The number of ticks from the previous entry (if any) in the sleeping 
+       threads list to wakeup after. */    
+    int64_t wakeup_ticks;
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
