@@ -24,7 +24,11 @@ bool process_file_remove (const char *name);
 int process_file_open (const char *name, bool deny_write);
 off_t process_file_size (int fd);
 off_t process_file_read (int fd, void *buffer_, off_t size);
+off_t process_file_read_at (struct file *file, void *buffer, off_t size,
+                            off_t file_ofs);
 off_t process_file_write (int fd, const void *buffer, off_t size);
+off_t process_file_write_at (struct file *file, const void *buffer, off_t size,
+                             off_t file_ofs);
 void process_file_seek (int fd, off_t new_pos);
 off_t process_file_tell (int fd);
 void process_file_close (int fd);
