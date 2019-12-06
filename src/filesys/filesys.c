@@ -219,6 +219,18 @@ process_file_read (int fd, void *buffer_, off_t size)
 }
 
 off_t
+process_file_read_at (struct file *file, void *buffer, off_t size, off_t file_ofs)
+{
+  off_t bytes_read;
+  
+  lock_acquire (&filesys_lock);
+  bytes_read = file_read_at (file, buffer, size, file_ofs);
+  lock_release (&filesys_lock);
+  
+  return bytes_read;
+}
+
+off_t
 process_file_write (int fd, const void *buffer, off_t size)
 {
   struct file *file;
@@ -241,6 +253,19 @@ process_file_write (int fd, const void *buffer, off_t size)
         }
     }
     
+  return bytes_written;
+}
+
+off_t
+process_file_write_at (struct file *file, const void *buffer, off_t size,
+                       off_t file_ofs)
+{
+  off_t bytes_written;
+  
+  lock_acquire (&filesys_lock);
+  bytes_written = file_write_at (file, buffer, size, file_ofs);
+  lock_release (&filesys_lock);
+  
   return bytes_written;
 }
 
@@ -321,3 +346,4 @@ do_format (void)
   free_map_close ();
   printf ("done.\n");
 }
+
