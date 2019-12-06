@@ -390,7 +390,7 @@ load_frame (uint32_t *pd, const void *upage, bool write, bool keep_locked)
               lock_acquire (&frame_lock);
               frame->lock--;
               frame->io = false;
-              cond_signal (&frame->io_done, &frame_lock);
+              cond_broadcast (&frame->io_done, &frame_lock);
             }
           else if (page_info->type & PAGE_TYPE_KERNEL)
             {
@@ -485,8 +485,7 @@ evict_frame (void)
   for (e = list_begin (&frame->page_info_list);
        e != list_end (&frame->page_info_list); e = list_next (e))
     {
-      page_info = list_entry (list_front (&frame->page_info_list),
-                              struct page_info, elem);
+      page_info = list_entry (e, struct page_info, elem);
       dirty = dirty || pagedir_is_dirty (page_info->pd, page_info->upage);
       /* Make sure to cause page faults before the data is written out or
          else it's possible for a process to be writing to memory as the
@@ -523,7 +522,7 @@ evict_frame (void)
       lock_acquire (&frame_lock);
       frame->lock--;
       frame->io = false;
-      cond_signal (&frame->io_done, &frame_lock);
+      cond_broadcast (&frame->io_done, &frame_lock);
     }
   else if (page_info->type & PAGE_TYPE_FILE && page_info->writable == 0)
     {
