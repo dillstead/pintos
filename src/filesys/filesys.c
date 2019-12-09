@@ -6,6 +6,7 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
+#include "filesys/buffers.h"
 #include "threads/thread.h"
 #include "devices/input.h"
 
@@ -28,6 +29,7 @@ filesys_init (bool format)
   if (fs_device == NULL)
     PANIC ("No file system device found, can't initialize file system.");
 
+  buffers_init ();
   inode_init ();
   free_map_init ();
 
@@ -42,6 +44,7 @@ filesys_init (bool format)
 void
 filesys_done (void) 
 {
+  buffers_done ();
   free_map_close ();
 }
 
@@ -52,6 +55,10 @@ filesys_done (void)
 bool
 filesys_create (const char *name, off_t initial_size) 
 {
+#ifdef DEBUG_FILESYS
+  printf ("filesys_create enter %s%d, nm: %s, sz: %u\n", thread_name (),
+          thread_current ()->tid, name, initial_size);
+#endif
   block_sector_t inode_sector = 0;
   struct dir *dir = dir_open_root ();
   bool success = (dir != NULL
@@ -62,6 +69,10 @@ filesys_create (const char *name, off_t initial_size)
     free_map_release (inode_sector, 1);
   dir_close (dir);
 
+#ifdef DEBUG_FILESYS
+  printf ("filesys_create exit %s%d, suc:%d\n", thread_name (),
+          thread_current ()->tid, success);
+#endif
   return success;
 }
 
@@ -73,14 +84,25 @@ filesys_create (const char *name, off_t initial_size)
 struct file *
 filesys_open (const char *name)
 {
+#ifdef DEBUG_FILESYS
+  printf ("filesys_open enter %s%d, nm: %s\n", thread_name (),
+          thread_current ()->tid, name);
+#endif
   struct dir *dir = dir_open_root ();
   struct inode *inode = NULL;
+  struct file *file;
 
   if (dir != NULL)
     dir_lookup (dir, name, &inode);
   dir_close (dir);
 
-  return file_open (inode);
+
+  file = file_open (inode);
+#ifdef DEBUG_FILESYS
+  printf ("filesys_open exit %s%d, file: %p\n", thread_name (),
+          thread_current ()->tid, file);
+#endif
+  return file;
 }
 
 /* Deletes the file named NAME.
@@ -90,10 +112,18 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name) 
 {
+#ifdef DEBUG_FILESYS
+  printf ("filesys_remove enter %s%d, nm: %s\n", thread_name (),
+          thread_current ()->tid, name);
+#endif
   struct dir *dir = dir_open_root ();
   bool success = dir != NULL && dir_remove (dir, name);
   dir_close (dir); 
 
+#ifdef DEBUG_FILESYS
+  printf ("filesys_remove exit %s%d, suc: %d\n", thread_name (),
+          thread_current ()->tid, success);
+#endif
   return success;
 }
 
@@ -120,11 +150,20 @@ allocate_fd (struct file *file)
 bool
 process_file_create (const char *name, off_t initial_size)
 {
+#ifdef DEBUG_FILESYS
+  printf ("process_file_create enter %s%d, nm: %s sz: %u\n", thread_name (),
+          thread_current ()->tid, name, initial_size);
+#endif
   bool success;
-  
+
   lock_acquire (&filesys_lock);
   success = filesys_create (name, initial_size);
   lock_release (&filesys_lock);
+
+#ifdef DEBUG_FILESYS
+  printf ("process_file_create exit %s%d, suc: %d\n", thread_name (),
+          thread_current ()->tid, success);
+#endif
   
   return success;
 }
@@ -132,18 +171,30 @@ process_file_create (const char *name, off_t initial_size)
 bool
 process_file_remove (const char *name)
 {
+#ifdef DEBUG_FILESYS
+  printf ("process_file_remove enter %s%d, nm: %s\n", thread_name (),
+          thread_current ()->tid, name);
+#endif
   bool success;
   
   lock_acquire (&filesys_lock);
   success = filesys_remove (name);
   lock_release (&filesys_lock);
-  
+
+#ifdef DEBUG_FILESYS
+  printf ("process_file_remove exit %s%d, suc: %d\n", thread_name (),
+          thread_current ()->tid, success);
+#endif
   return success;
 }
 
 int
 process_file_open (const char *name, bool deny_write)
 {
+#ifdef DEBUG_FILESYS
+  printf ("process_file_open enter %s%d, nm: %s\n", thread_name (),
+          thread_current ()->tid, name);
+#endif  
   struct file *file;
   int fd = -1;
   
@@ -163,13 +214,21 @@ process_file_open (const char *name, bool deny_write)
           lock_release (&filesys_lock);
         }
     }
-  
+
+#ifdef DEBUG_FILESYS
+  printf ("process_file_open exit %s%d, fd: %d\n", thread_name (),
+          thread_current ()->tid, fd);
+#endif  
   return fd;
 }
 
 off_t
 process_file_size (int fd)
 {
+#ifdef DEBUG_FILESYS
+  printf ("process_file_size enter %s%d, fd: %d\n", thread_name (),
+          thread_current ()->tid, fd);
+#endif  
   struct file *file;
   off_t size = 0;
 
@@ -180,13 +239,21 @@ process_file_size (int fd)
       size = file_length (file);
       lock_release (&filesys_lock);
     }
-  
+
+#ifdef DEBUG_FILESYS
+  printf ("process_file_size exit %s%d, sz: %u\n", thread_name (),
+          thread_current ()->tid, size);
+#endif  
   return size;
 }
 
 off_t
 process_file_read (int fd, void *buffer_, off_t size)
 {
+#ifdef DEBUG_FILESYS
+  printf ("process_file_read enter %s%d, fd: %d, sz: %u\n", thread_name (),
+          thread_current ()->tid, fd, size);
+#endif  
   uint8_t *buffer = buffer_;
   struct file *file;
   off_t bytes_read = 0;
@@ -215,6 +282,10 @@ process_file_read (int fd, void *buffer_, off_t size)
         }
     }
 
+#ifdef DEBUG_FILESYS
+  printf ("process_file_read exit %s%d, bytes: %u\n", thread_name (),
+          thread_current ()->tid, bytes_read);
+#endif  
   return bytes_read;
 }
 
@@ -233,6 +304,10 @@ process_file_read_at (struct file *file, void *buffer, off_t size, off_t file_of
 off_t
 process_file_write (int fd, const void *buffer, off_t size)
 {
+#ifdef DEBUG_FILESYS
+  printf ("process_file_write enter %s%d, fd: %d, sz: %u\n", thread_name (),
+          thread_current ()->tid, fd, size);
+#endif  
   struct file *file;
   off_t bytes_written = 0;
 
@@ -252,7 +327,11 @@ process_file_write (int fd, const void *buffer, off_t size)
           lock_release (&filesys_lock);
         }
     }
-    
+
+#ifdef DEBUG_FILESYS
+  printf ("process_file_write exit %s%d, bytes: %u\n", thread_name (),
+          thread_current ()->tid, bytes_written);
+#endif  
   return bytes_written;
 }
 
@@ -272,6 +351,10 @@ process_file_write_at (struct file *file, const void *buffer, off_t size,
 void
 process_file_seek (int fd, off_t new_pos)
 {
+#ifdef DEBUG_FILESYS
+  printf ("process_file_seek enter %s%d, fd: %d, pos: %u\n", thread_name (),
+          thread_current ()->tid, fd, new_pos);
+#endif  
   struct file *file;
 
   file = process_file_get_file (fd);
@@ -281,11 +364,20 @@ process_file_seek (int fd, off_t new_pos)
       file_seek (file, new_pos);
       lock_release (&filesys_lock);
     }
+
+#ifdef DEBUG_FILESYS
+  printf ("process_file_seek exit %s%d\n", thread_name (),
+          thread_current ()->tid);
+#endif  
 }
 
 off_t
 process_file_tell (int fd)
 {
+#ifdef DEBUG_FILESYS
+  printf ("process_file_tell enter %s%d, fd: %d\n", thread_name (),
+          thread_current ()->tid, fd);
+#endif  
   struct file *file;
   off_t pos = 0;
 
@@ -296,13 +388,21 @@ process_file_tell (int fd)
       pos = file_tell (file);
       lock_release (&filesys_lock);
     }
-  
+
+#ifdef DEBUG_FILESYS
+  printf ("process_file_tell exit %s%d, pos: %u\n", thread_name (),
+          thread_current ()->tid, pos);
+#endif  
   return pos;
 }
 
 void
 process_file_close (int fd)
 {
+#ifdef DEBUG_FILESYS
+  printf ("process_file_close enter %s%d, fd: %d\n", thread_name (),
+          thread_current ()->tid, fd);
+#endif  
   struct thread *cur = thread_current ();
   struct file *file;
 
@@ -315,6 +415,11 @@ process_file_close (int fd)
       lock_release (&filesys_lock);
       cur->ofiles[fd] = NULL;
     }
+
+#ifdef DEBUG_FILESYS
+  printf ("process_file_close exit %s%d\n", thread_name (),
+          thread_current ()->tid);
+#endif  
 }
 
 struct file *

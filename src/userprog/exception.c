@@ -129,7 +129,9 @@ static void
 page_fault (struct intr_frame *f) 
 {
   struct thread *cur = thread_current ();
-  /*bool not_present;*/  /* True: not-present page, false: writing r/o page. */
+#ifdef DEBUG_PAGE_FAULTS  
+  bool not_present;  /* True: not-present page, false: writing r/o page. */
+#endif  
   bool write;        /* True: access was write, false: access was read. */
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
@@ -151,21 +153,21 @@ page_fault (struct intr_frame *f)
   page_fault_cnt++;
 
   /* Determine cause. */
-  /*not_present = (f->error_code & PF_P) == 0;*/
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
-  /*
-  printf ("Page fault at %p: %s error %s page in %s context.\n",
-          fault_addr,
+#ifdef DEBUG_PAGE_FAULTS
+  not_present = (f->error_code & PF_P) == 0;  
+  printf ("page fault %s%d %p at %p: %s error %s page in %s context.\n",
+          thread_name (), thread_current ()->tid, f->eip, fault_addr,
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",
           user ? "user" : "kernel");
-  */
+#endif
   if (!is_user_vaddr (fault_addr))
-    thread_exit ();
+      thread_exit ();
   if (user)
     thread_current ()->user_esp = f->esp;
   maybe_grow_stack (cur->pagedir, fault_addr);
   if (!frametable_load_frame (cur->pagedir, pg_round_down (fault_addr), write))
-    thread_exit ();
+      thread_exit ();
 }
