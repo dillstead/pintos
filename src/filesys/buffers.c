@@ -22,7 +22,7 @@
    for as long as possible for performance reasons. */
 #define BUF_META               0x08
 
-#define CACHE_SIZE             10
+#define CACHE_SIZE             64
 /* How often the background write back thread wakes up to write dirty
    buffers to disk. */
 #define WRITE_BACK_INTERVAL_MS 100

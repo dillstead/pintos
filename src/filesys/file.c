@@ -237,7 +237,9 @@ file_seek (struct file *file, off_t new_pos)
           thread_current ()->tid, file, new_pos);
 #endif
   ASSERT (file != NULL);
-  ASSERT (new_pos >= 0);  
+  ASSERT (new_pos >= 0);
+  if (new_pos >= MAX_FILE_SIZE)
+    new_pos = MAX_FILE_SIZE - 1;
   file->pos = new_pos;
 #ifdef DEBUG_FILE
   printf ("file_seek exit %s%d\n", thread_name (), thread_current ()->tid);
@@ -261,4 +263,11 @@ file_tell (struct file *file)
           thread_current ()->tid, pos);
 #endif
   return pos;
+}
+
+/* Returns whether or not this FILE is a directory. */
+bool
+file_is_dir (struct file *file)
+{
+  return inode_is_dir (file->inode);
 }

@@ -134,7 +134,7 @@ struct thread
     int recent_cpu;                     /* Estimate of how much CPU the thread
                                            has used recently. */
 
- #ifdef USERPROG
+#ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 
@@ -166,7 +166,10 @@ struct thread
     /* User stack pointer used for dynamic stack growth. */
     void *user_esp;
 #endif
-
+#ifdef FILESYS
+    /* The current working directory. */
+    struct inode *cwd;
+#endif    
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };

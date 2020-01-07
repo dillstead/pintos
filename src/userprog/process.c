@@ -199,7 +199,7 @@ process_exit (void)
   if (cur->ofiles != NULL)
     {
       for (fd = 2; fd < MAX_OPEN_FILES; fd++)
-        process_file_close (fd);
+        fd_close (fd);
       free (cur->ofiles);
     }
 
@@ -356,7 +356,7 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
     goto done;
   /* Open executable file as read-only so it can't be modified
      while the process is running. */
-  fd = process_file_open (program_name, true);
+  fd = fd_open (program_name, true);
   if (fd == -1)
     {
       printf ("load: %s: open failed\n", program_name);
@@ -364,7 +364,7 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
     }
 
   /* Read and verify executable header. */
-  if (process_file_read (fd, &ehdr, sizeof ehdr) != sizeof ehdr
+  if (fd_read (fd, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
       || ehdr.e_type != 2
       || ehdr.e_machine != 3
@@ -382,11 +382,11 @@ load (char *program_name, char *program_args, void (**eip) (void), void **esp)
     {
       struct Elf32_Phdr phdr;
 
-      if (file_ofs < 0 || file_ofs > process_file_size (fd))
+      if (file_ofs < 0 || file_ofs > fd_size (fd))
         goto done;
-      process_file_seek (fd, file_ofs);
+      fd_seek (fd, file_ofs);
 
-      if (process_file_read (fd, &phdr, sizeof phdr) != sizeof phdr)
+      if (fd_read (fd, &phdr, sizeof phdr) != sizeof phdr)
         goto done;
       file_ofs += sizeof phdr;
       switch (phdr.p_type) 
@@ -463,7 +463,7 @@ validate_segment (const struct Elf32_Phdr *phdr, int fd)
     return false; 
 
   /* p_offset must point within FILE. */
-  if (phdr->p_offset > (Elf32_Off) process_file_size (fd)) 
+  if (phdr->p_offset > (Elf32_Off) fd_size (fd)) 
     return false;
 
   /* p_memsz must be at least as big as p_filesz. */
@@ -524,7 +524,7 @@ load_segment (int fd, off_t ofs, uint8_t *upage,
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
 
-  file = process_file_get_file (fd);
+  file = fd_get_file (fd);
   while (read_bytes > 0 || zero_bytes > 0) 
     {
       page_info = pageinfo_create ();

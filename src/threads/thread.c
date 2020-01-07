@@ -15,6 +15,9 @@
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
+#ifdef FILESYS
+#include "filesys/inode.h"
+#endif
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -299,7 +302,10 @@ thread_create (const char *name, int priority,
       t->priority = cur->priority;
       intr_set_level (old_level);
     }
-
+#ifdef FILESYS
+  if (cur->cwd != NULL)
+    t->cwd = inode_reopen (cur->cwd);
+#endif  
   /* Add to run queue. */
   thread_unblock (t);
 
@@ -407,6 +413,10 @@ thread_exit (void)
   
   ASSERT (!intr_context ());
 
+#ifdef FILESYS
+  if (cur->cwd != NULL)
+    inode_close (cur->cwd);
+#endif
 #ifdef USERPROG
   process_exit ();
   ASSERT (intr_get_level () == INTR_OFF);

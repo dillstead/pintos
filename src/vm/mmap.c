@@ -16,7 +16,7 @@ allocate_md (void *upage, struct file *file, size_t num_pages);
 int mmap (int fd, void *vaddr)
 {
   struct thread *cur = thread_current ();
-  struct file *file = process_file_get_file (fd);
+  struct file *file = fd_get_file (fd);
   struct page_info *page_info;
   int md;
   off_t length;
@@ -51,9 +51,7 @@ int mmap (int fd, void *vaddr)
     {
       page_info = pageinfo_create ();
       if (page_info == NULL)
-        {
           break;
-        }
       if (length > PGSIZE)
         {
           ofs += PGSIZE;

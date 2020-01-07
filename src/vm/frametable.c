@@ -281,10 +281,10 @@ frametable_unload_frame (uint32_t *pd, const void *upage)
             {
               ASSERT (page_info->writable != 0);
               file_info = &page_info->data.file_info;
-              bytes_written = process_file_write_at (file_info->file,
-                                                     frame->kpage,
-                                                     size (file_info->end_offset),
-                                                     offset (file_info->end_offset));
+              bytes_written = file_write_at (file_info->file,
+                                             frame->kpage,
+                                             size (file_info->end_offset),
+                                             offset (file_info->end_offset));
               ASSERT (bytes_written == size (file_info->end_offset));
             }
           palloc_free_page (frame->kpage);
@@ -480,10 +480,10 @@ load_frame (uint32_t *pd, const void *upage, bool write, bool keep_locked)
                           thread_name (), thread_current ()->tid);
 #endif                    
                   lock_release (&frame_lock);
-                  bytes_read = process_file_read_at (file_info->file,
-                                                     frame->kpage,
-                                                     size (file_info->end_offset),
-                                                     offset (file_info->end_offset));
+                  bytes_read = file_read_at (file_info->file,
+                                             frame->kpage,
+                                             size (file_info->end_offset),
+                                             offset (file_info->end_offset));
                   ASSERT (bytes_read == size (file_info->end_offset));
                 }
               lock_acquire (&frame_lock);
@@ -636,10 +636,10 @@ evict_frame (void)
                   thread_name (), thread_current ()->tid);
 #endif                              
           lock_release (&frame_lock);
-          bytes_written = process_file_write_at (file_info->file,
-                                                 frame->kpage,
-                                                 size (file_info->end_offset),
-                                                 offset (file_info->end_offset));
+          bytes_written = file_write_at (file_info->file,
+                                         frame->kpage,
+                                         size (file_info->end_offset),
+                                         offset (file_info->end_offset));
           ASSERT (bytes_written == size (file_info->end_offset));          
         }
       else

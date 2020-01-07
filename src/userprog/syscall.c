@@ -2,6 +2,7 @@
 #include "userprog/process.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
+#include "filesys/directory.h"
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
@@ -31,6 +32,11 @@ static int sys_tell(const uint8_t *arg_base);
 static int sys_close(const uint8_t *arg_base);
 static int sys_mmap(const uint8_t *arg_base);
 static int sys_munmap(const uint8_t *arg_base);
+static int sys_chdir(const uint8_t *arg_base);
+static int sys_mkdir(const uint8_t *arg_base);
+static int sys_readdir(const uint8_t *arg_base);
+static int sys_isdir(const uint8_t *arg_base);
+static int sys_inumber(const uint8_t *arg_base);
 
 static int (*syscalls[])(const uint8_t *arg_base) =
 {
@@ -48,7 +54,12 @@ static int (*syscalls[])(const uint8_t *arg_base) =
   [SYS_TELL] sys_tell,
   [SYS_CLOSE] sys_close,
   [SYS_MMAP] sys_mmap,
-  [SYS_MUNMAP] sys_munmap
+  [SYS_MUNMAP] sys_munmap,
+  [SYS_CHDIR] sys_chdir,
+  [SYS_MKDIR] sys_mkdir,    
+  [SYS_READDIR] sys_readdir,
+  [SYS_ISDIR] sys_isdir,
+  [SYS_INUMBER] sys_inumber              
 };
 
 void
@@ -128,7 +139,7 @@ lock_buffer (const void *buffer, off_t size, bool write)
     = (pg_round_down (buffer + size) - pg_round_down (buffer)) / PGSIZE + 1;
   size_t i;
 
-  /* It's possible for buffer to be on a yet to be mapped porition of the
+  /* It's possible for buffer to be on a yet to be mapped portion of the
      stack. */
   maybe_grow_stack (cur->pagedir, buffer);
   for (upage = pg_round_down (buffer), i = 0; i < num_pages;
@@ -229,36 +240,36 @@ sys_wait (const uint8_t *arg_base)
 static int
 sys_create (const uint8_t *arg_base)
 {
-  char *name;
+  char *path;
   off_t initial_size;
 
-  if (!get_str_arg (arg_base, 0, &name)
+  if (!get_str_arg (arg_base, 0, &path)
       || !get_int_arg (arg_base, 1, (int *) &initial_size))
     thread_exit ();
   
-  return process_file_create (name, initial_size);
+  return filesys_create (path, initial_size);
 }
 
 static int
 sys_remove (const uint8_t *arg_base)
 {
-  char *name;
+  char *path;
 
-  if (!get_str_arg (arg_base, 0, &name))
+  if (!get_str_arg (arg_base, 0, &path))
     thread_exit ();
   
-  return process_file_remove (name);
+  return filesys_remove (path);
 }
 
 static int
 sys_open (const uint8_t *arg_base)
 {
-  char *name;
+  char *path;
 
-  if (!get_str_arg (arg_base, 0, &name))
+  if (!get_str_arg (arg_base, 0, &path))
     thread_exit ();
   
-  return process_file_open (name, false);  
+  return fd_open (path, false);  
 }
 
 static int
@@ -269,7 +280,7 @@ sys_filesize (const uint8_t *arg_base)
   if (!get_int_arg (arg_base, 0, &fd))
     thread_exit ();
   
-  return process_file_size (fd);
+  return fd_size (fd);
 }
 
 static int
@@ -287,15 +298,11 @@ sys_read (const uint8_t *arg_base)
       || !is_user_vaddr (buffer + size)
       || buffer > buffer + size)
     thread_exit ();
-  if (process_file_is_file (fd))
-    {
-      if (!lock_buffer (buffer, size, true))
-        thread_exit ();
-      bytes_read = process_file_read (fd, buffer, size);    
-      unlock_buffer (buffer, size);
-    }
-  else
-    bytes_read = process_file_read (fd, buffer, size);          
+  
+  if (!lock_buffer (buffer, size, true))
+    thread_exit ();
+  bytes_read = fd_read (fd, buffer, size);    
+  unlock_buffer (buffer, size);
   
   return bytes_read;
 }
@@ -315,15 +322,11 @@ sys_write (const uint8_t *arg_base)
       || !is_user_vaddr (buffer + size)
       || buffer > buffer + size)
     thread_exit ();
-  if (process_file_is_file (fd))
-    {
-      if (!lock_buffer (buffer, size, false))
-        thread_exit ();
-      bytes_written = process_file_write (fd, buffer, size);
-      unlock_buffer (buffer, size);
-    }
-  else 
-    bytes_written = process_file_write (fd, buffer, size);
+
+  if (!lock_buffer (buffer, size, false))
+    thread_exit ();
+  bytes_written = fd_write (fd, buffer, size);
+  unlock_buffer (buffer, size);
   
   return bytes_written;
 }
@@ -337,7 +340,7 @@ sys_seek (const uint8_t *arg_base)
   if (!get_int_arg (arg_base, 0, &fd)
       || !get_int_arg (arg_base, 1, (int *) &new_pos))
     thread_exit ();
-  process_file_seek (fd, new_pos);
+  fd_seek (fd, new_pos);
   
   return 0;
 }
@@ -350,7 +353,7 @@ sys_tell (const uint8_t *arg_base)
   if (!get_int_arg (arg_base, 0, &fd))
     thread_exit ();
   
-  return process_file_tell (fd);
+  return fd_tell (fd);
 }
 
 static int
@@ -360,7 +363,8 @@ sys_close (const uint8_t *arg_base)
 
   if (!get_int_arg (arg_base, 0, &fd))
     thread_exit ();
-  process_file_close (fd);
+  
+  fd_close (fd);
 
   return 0;
 }
@@ -388,4 +392,64 @@ sys_munmap (const uint8_t *arg_base)
   munmap (md);
 
   return 0;
+}
+
+static int
+sys_chdir(const uint8_t *arg_base)
+{
+  char *path;
+
+  if (!get_str_arg (arg_base, 0, &path))
+    thread_exit ();
+  
+  return filesys_chdir (path);
+}
+
+static int
+sys_mkdir(const uint8_t *arg_base)
+{
+  char *path;
+
+  if (!get_str_arg (arg_base, 0, &path))
+    thread_exit ();
+  
+  return filesys_mkdir (path, 0);
+}
+
+static int
+sys_readdir(const uint8_t *arg_base)
+{
+  int fd;
+  void *name;
+
+  if (!get_int_arg (arg_base, 0, &fd)
+      || !get_int_arg (arg_base, 1, (int *) &name)
+      || !is_user_vaddr (name)
+      || !is_user_vaddr (name + NAME_MAX + 1)
+      || name > name + NAME_MAX + 1)
+    thread_exit ();
+
+  return fd_readdir (fd, name);
+}
+
+static int
+sys_isdir(const uint8_t *arg_base)
+{
+    int fd;
+
+    if (!get_int_arg (arg_base, 0, &fd))
+      thread_exit ();
+
+    return fd_is_dir (fd);
+}
+
+static int
+sys_inumber(const uint8_t *arg_base)
+{
+  int fd;
+
+    if (!get_int_arg (arg_base, 0, &fd))
+      thread_exit ();
+
+    return fd_inumber (fd);
 }
