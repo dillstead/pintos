@@ -32,6 +32,7 @@ skip_elem (const char *path, char name[NAME_MAX + 1], bool *len_exceeded)
   const char *s;
   int len;
 
+  *len_exceeded = false;
   while (*path == '/')
     path++;
   if (*path == '\0')
@@ -45,8 +46,6 @@ skip_elem (const char *path, char name[NAME_MAX + 1], bool *len_exceeded)
       len = NAME_MAX;
       *len_exceeded = true;
     }
-  else
-    *len_exceeded = false;
   memcpy(name, s, len);
   name[len] = '\0';
   while (*path == '/')

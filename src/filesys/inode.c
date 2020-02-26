@@ -1,11 +1,5 @@
 #include "filesys/inode.h"
-#ifdef DEBUG_INODE
-#include <stdio.h>
-#endif
 #include <list.h>
-#ifdef DEBUG_INODE
-#include <string.h>
-#endif
 #include <debug.h>
 #include <round.h>
 #include <limits.h>
@@ -14,9 +8,6 @@
 #include "filesys/free-map.h"
 #include "filesys/buffers.h"
 #include "threads/malloc.h"
-#ifdef DEBUG_INODE
-#include "threads/thread.h"
-#endif
 
 /* Number of sector indices stored directly in the inode. */
 #define NDIRECT_SECTORS   124
@@ -89,11 +80,6 @@ static bool
 byte_to_sector (struct inode *inode, bool is_dir, off_t pos,
                 block_sector_t *psector)
 {
-#ifdef DEBUG_INODE_MAP
-  printf ("byte_to_sector enter %s%d, inode: %p, pos: %u, dir: %d\n",
-          thread_name (), thread_current ()->tid, inode, pos, is_dir);
-  size_t asector_idx;
-#endif
   ASSERT (inode != NULL);
   ASSERT (pos < MAX_FILE_SIZE);
   size_t sector_idx;
@@ -116,9 +102,6 @@ byte_to_sector (struct inode *inode, bool is_dir, off_t pos,
   buffer = buffer_acquire (inode->sector, true);
   inode->data = (struct inode_disk *) buffer->data;
   next_sector = inode->data->sectors[sector_idx];
-#ifdef DEBUG_INODE_MAP
-  printf ("indirect or data idx: %u, sec: %u\n", sector_idx, next_sector);
-#endif  
   if (next_sector == 0)
     {
       buffer_release (buffer, false);
@@ -126,10 +109,6 @@ byte_to_sector (struct inode *inode, bool is_dir, off_t pos,
       if (!free_map_allocate (1, &next_sector))
         goto done;
       allocated = true;
-#ifdef DEBUG_INODE_MAP
-      printf ("%s%d allocating indirect or data, idx: %u, sec: %u\n",
-              thread_name (), thread_current ()->tid, sector_idx, next_sector);
-#endif
       buffer = buffer_acquire (inode->sector, true);
       inode->data = (struct inode_disk *) buffer->data;        
       inode->data->sectors[sector_idx] = next_sector;
@@ -159,24 +138,13 @@ byte_to_sector (struct inode *inode, bool is_dir, off_t pos,
           data = (block_sector_t *) buffer->data;
         }
       sector_idx = indirect_sector_idx (pos);
-#ifdef DEBUG_INODE_MAP
-      asector_idx = NDIRECT_SECTORS + 128 * sector_idx;
-#endif
       next_sector = data[sector_idx];
-#ifdef DEBUG_INODE_MAP
-      printf ("doubly indirect idx: %u, sec: %u\n", sector_idx, next_sector);
-#endif        
       if (next_sector == 0)
         {
           buffer_release (buffer, false);
           /* Allocate and add a new doubly indirect block. */
           if (!free_map_allocate (1, &next_sector))
             goto done;
-#ifdef DEBUG_INODE_MAP
-          printf ("%s%d allocating doubly indirect, idx: %u, sec: %u\n",
-                  thread_name (), thread_current ()->tid, sector_idx,
-                  next_sector);
-#endif
           buffer = buffer_acquire (sector, true);
           data = (block_sector_t *) buffer->data;
           data[sector_idx] = next_sector;
@@ -193,23 +161,12 @@ byte_to_sector (struct inode *inode, bool is_dir, off_t pos,
         }
       sector = next_sector;
       sector_idx = dindirect_sector_idx (pos);
-#ifdef DEBUG_INODE_MAP
-      asector_idx += sector_idx;
-#endif      
       next_sector = data[sector_idx];
-#ifdef DEBUG_INODE_MAP
-      printf ("data idx: %u, sec: %u\n", sector_idx, next_sector);
-#endif        
       if (next_sector == 0)
         {
           buffer_release (buffer, false);
           if (!free_map_allocate (1, &next_sector))
             goto done;
-#ifdef DEBUG_INODE_MAP
-          printf ("%s%d allocating data, idx: %u sec: %u\n",
-                  thread_name (), thread_current ()->tid, sector_idx,
-                  next_sector);
-#endif
           buffer = buffer_acquire (sector, true);
           data = (block_sector_t *) buffer->data;          
           data[sector_idx] = next_sector;
@@ -228,11 +185,6 @@ byte_to_sector (struct inode *inode, bool is_dir, off_t pos,
  done:
   if (!is_dir)
     lock_release (&inode->lock);
-#ifdef DEBUG_INODE_MAP
-  printf ("byte_to_sector exit %s%d, suc: %d, eidx: %u, aidx: %u, sec: %u\n",
-          thread_name (), thread_current ()->tid, success,
-          pos / BLOCK_SECTOR_SIZE, asector_idx, next_sector);
-#endif
   return success;
 }
 
@@ -256,11 +208,6 @@ inode_init (void)
 bool
 inode_create (block_sector_t sector, off_t length, bool is_dir)
 {
-#ifdef DEBUG_INODE
-  printf ("inode_create enter %s%d, sec: %u, len: %u, dir: %u\n",
-          thread_name (), thread_current ()->tid, sector, length,
-          is_dir);
-#endif
   struct inode_disk *disk_inode = NULL;
   struct buffer *buffer;
   bool success = false;
@@ -283,11 +230,6 @@ inode_create (block_sector_t sector, off_t length, bool is_dir)
       success = true; 
       free (disk_inode);
     }
-
-#ifdef DEBUG_INODE
-  printf ("inode_create exit %s%d, suc: %d\n", thread_name (),
-          thread_current ()->tid, success);
-#endif
   return success;
 }
 
@@ -300,10 +242,6 @@ inode_open (block_sector_t sector)
   struct list_elem *e;
   struct inode *inode = NULL;
 
-#ifdef DEBUG_INODE
-  printf ("inode_open enter %s%d, sec: %u\n", thread_name (),
-          thread_current ()->tid, sector);
-#endif
   lock_acquire (&inodes_lock);
   /* Check whether this inode is already open. */
   for (e = list_begin (&open_inodes); e != list_end (&open_inodes);
@@ -313,10 +251,6 @@ inode_open (block_sector_t sector)
       if (inode->sector == sector) 
         {
           inode->open_cnt++;
-#ifdef DEBUG_INODE
-          printf ("inode_open exit %s%d, inode: %p\n", thread_name (),
-                  thread_current ()->tid, inode);
-#endif
           goto done;
         }
     }
@@ -324,13 +258,7 @@ inode_open (block_sector_t sector)
   /* Allocate memory. */
   inode = malloc (sizeof *inode);
   if (inode == NULL)
-    {
-#ifdef DEBUG_INODE
-      printf ("inode_open exit %s%d, inode: NULL\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      goto done;
-    }
+    goto done;
 
   /* Initialize. */
   list_push_front (&open_inodes, &inode->elem);
@@ -339,11 +267,8 @@ inode_open (block_sector_t sector)
   inode->deny_write_cnt = 0;
   inode->removed = false;
   lock_init (&inode->lock);
-#ifdef DEBUG_INODE
-  printf ("inode_open exit %s%d, inode: %p\n", thread_name (),
-          thread_current ()->tid, inode);
-#endif
-done:
+
+ done:
   lock_release (&inodes_lock);
   return inode;
 }
@@ -352,10 +277,6 @@ done:
 struct inode *
 inode_reopen (struct inode *inode)
 {
-#ifdef DEBUG_INODE
-  printf ("inode_reopen %s%d, inode: %p\n", thread_name (),
-          thread_current ()->tid, inode);
-#endif
   lock_acquire (&inodes_lock);
   if (inode != NULL)
     inode->open_cnt++;
@@ -367,10 +288,6 @@ inode_reopen (struct inode *inode)
 block_sector_t
 inode_get_inumber (const struct inode *inode)
 {
-#ifdef DEBUG_INODE
-  printf ("inode_get_inumber %s%d, inode: %u\n", thread_name (),
-          thread_current ()->tid, inode->sector);
-#endif
   return inode->sector;
 }
 
@@ -385,10 +302,6 @@ inode_get_inumber (const struct inode *inode)
 void
 inode_close (struct inode *inode) 
 {
-#ifdef DEBUG_INODE
-  printf ("inode_close enter %s%d, inode: %p\n", thread_name (),
-          thread_current ()->tid, inode);
-#endif
   /* A data sector. */
   block_sector_t sector;
   /* An indirect sector. */
@@ -403,21 +316,11 @@ inode_close (struct inode *inode)
   
   /* Ignore null pointer. */
   if (inode == NULL)
-    {
-#ifdef DEBUG_INODE
-      printf ("inode_close exit %s%d\n", thread_name (),
-              thread_current ()->tid);
-#endif      
-      return;
-    }
+    return;
   lock_acquire (&inodes_lock);
   /* Release resources if this was the last opener. */
   if (--inode->open_cnt == 0)
     {
-#ifdef DEBUG_INODE
-          printf ("%s%d release resources\n", thread_name (),
-                  thread_current ()->tid);
-#endif      
       /* Remove from inode list and release lock. */
       list_remove (&inode->elem);
       lock_release (&inodes_lock);
@@ -425,10 +328,6 @@ inode_close (struct inode *inode)
       /* Deallocate blocks if removed. */
       if (inode->removed) 
         {
-#ifdef DEBUG_INODE
-          printf ("%s%d free blocks\n", thread_name (),
-                  thread_current ()->tid);
-#endif      
           /* Free direct data blocks and disk inode. */
           buffer = buffer_acquire (inode->sector, true);
           inode->data = (struct inode_disk *) buffer->data;
@@ -436,20 +335,10 @@ inode_close (struct inode *inode)
             {
               sector = inode->data->sectors[i];
               if (sector != 0)
-                {
-#ifdef DEBUG_INODE
-                  printf ("%s%d free data %u\n", thread_name (),
-                          thread_current ()->tid, sector);
-#endif      
-                  free_map_release (sector, 1);
-                }
+                free_map_release (sector, 1);
             }
           isector = inode->data->sectors[NDIRECT_SECTORS];
           buffer_release (buffer, false);
-#ifdef DEBUG_INODE
-          printf ("%s%d free dinode %u\n", thread_name (),
-                  thread_current ()->tid, inode->sector);
-#endif      
           free_map_release (inode->sector, 1);
           /* Free indirect, doubly indirect, and data blocks. */
           if (isector != 0)
@@ -469,25 +358,11 @@ inode_close (struct inode *inode)
                           sector = data[j];
                           buffer_release (buffer, false);
                           if (sector != 0)
-                            {
-#ifdef DEBUG_INODE
-                              printf ("%s%d free data %u\n", thread_name (),
-                                      thread_current ()->tid, sector);
-#endif      
-                              free_map_release (sector, 1);
-                            }         
+                            free_map_release (sector, 1);
                         }
-#ifdef DEBUG_INODE
-                      printf ("%s%d free dindirect %u\n", thread_name (),
-                              thread_current ()->tid, disector);
-#endif                            
                       free_map_release (disector, 1);
                     }
                 }
-#ifdef DEBUG_INODE
-              printf ("%s%d free indirect %u\n", thread_name (),
-                      thread_current ()->tid, isector);
-#endif                            
               free_map_release (isector, 1);
             }
         }
@@ -495,10 +370,6 @@ inode_close (struct inode *inode)
     }
   else
     lock_release (&inodes_lock);
-#ifdef DEBUG_INODE
-  printf ("inode_close exit %s%d\n", thread_name (),
-          thread_current ()->tid);
-#endif      
 }
 
 void
@@ -510,7 +381,7 @@ inode_lock (struct inode *inode )
 void
 inode_unlock (struct inode *inode)
 {
-    lock_release (&inode->lock);
+  lock_release (&inode->lock);
 }
 
 /* Marks INODE to be deleted when it is closed by the last caller who
@@ -518,11 +389,8 @@ inode_unlock (struct inode *inode)
 void
 inode_remove (struct inode *inode) 
 {
-#ifdef DEBUG_INODE
-  printf ("inode_remove %s%d, inode: %p\n", thread_name (),
-          thread_current ()->tid, inode);
-#endif
   ASSERT (inode != NULL);
+  
   inode->removed = true;
 }
 
@@ -532,12 +400,6 @@ inode_remove (struct inode *inode)
 off_t
 inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset) 
 {
-#ifdef DEBUG_INODE
-  printf ("inode_read_at %s%d enter, inode: %p, sz: %u, off: %u, len: %u\n",
-          thread_name (), thread_current ()->tid,
-          inode, size, offset, inode_length (inode));
-
-#endif
   struct buffer *cached_buffer;
   uint8_t *buffer = buffer_;
   off_t bytes_read = 0;
@@ -547,23 +409,11 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
   block_sector_t sector;
 
   if (size <= 0)
-    {
-#ifdef DEBUG_INODE
-      printf ("inode_read_at %s%d exits, bytes: 0\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      return 0;
-    }
+    return 0;
   length = inode_length (inode);
   is_dir = inode_is_dir (inode);
   if (offset >= length)
-    {
-#ifdef DEBUG_INODE
-      printf ("inode_read_at %s%d exits, offset beyond length, bytes: 0\n",
-              thread_name (), thread_current ()->tid);
-#endif
-      return 0;
-    }    
+    return 0;
   while (size > 0) 
     {
       if (!byte_to_sector (inode, is_dir, offset, &sector))
@@ -594,24 +444,10 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
     }
   /* If possible, read ahead the next sector so it's cached for a sequential
      read. */
-#ifdef DEBUG_INODE
-  //printf ("%s%d: reading ahead\n", thread_name (), thread_current ()->tid);
-#endif  
   new_offset = offset + BLOCK_SECTOR_SIZE - 1;
   if (size == 0 && new_offset > offset && new_offset < length
       && byte_to_sector (inode, is_dir, new_offset, &sector))
-    {
-#ifdef DEBUG_INODE
-      printf ("read ahead %s%d, off: %u, new: %u\n", thread_name (),
-              thread_current ()->tid, offset / BLOCK_SECTOR_SIZE,
-              new_offset / BLOCK_SECTOR_SIZE);
-#endif           
-      buffer_read_ahead (sector, false);
-    }
-#ifdef DEBUG_INODE
-  printf ("inode_read_at %s%d exits, bytes: %u\n", thread_name (),
-          thread_current ()->tid, bytes_read);
-#endif
+    buffer_read_ahead (sector, false);
   return bytes_read;
 }
 
@@ -622,12 +458,6 @@ off_t
 inode_write_at (struct inode *inode, const void *buffer_, off_t size,
                 off_t offset) 
 {
-#ifdef DEBUG_INODE
-  printf ("inode_write_at %s%d enter, inode: %p, sz: %u, off: %u, len: %u\n",
-          thread_name (), thread_current ()->tid,
-          inode, size, offset, inode_length (inode));
-
-#endif
   struct buffer *cached_buffer;
   const uint8_t *buffer = buffer_;
   off_t bytes_written = 0;
@@ -637,13 +467,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   block_sector_t sector;
 
   if (inode->deny_write_cnt || size <= 0)
-    {
-#ifdef DEBUG_INODE
-      printf ("inode_write_at %s%d exit, bytes: 0\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      return 0;
-    }
+    return 0;
   is_dir = inode_is_dir (inode);
   while (size > 0) 
     {
@@ -664,11 +488,6 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
         break;
       
       cached_buffer = buffer_acquire (sector, false);
-#ifdef DEBUG_INODE
-      printf ("%s%d copying from %u to %u, sz: %u\n", thread_name (),
-              thread_current ()->tid, sector_ofs, bytes_written,
-              chunk_size);
-#endif      
       memcpy (cached_buffer->data + sector_ofs, buffer + bytes_written,
               chunk_size);
       buffer_release (cached_buffer, true);
@@ -682,24 +501,10 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   length = update_length (inode, offset);
   /* If possible, read ahead the next sector so it's cached for a sequential
      write. */
-#ifdef DEBUG_INODE
-  //printf ("%s%d: reading ahead\n", thread_name (), thread_current ()->tid);
-#endif
   new_offset = offset + BLOCK_SECTOR_SIZE - 1;
   if (size == 0 && new_offset > offset && new_offset < length
       && byte_to_sector (inode, is_dir, new_offset, &sector))
-    {
-#ifdef DEBUG_INODE
-      printf ("read ahead %s%d, off: %u, new: %u\n", thread_name (),
-              thread_current ()->tid, offset / BLOCK_SECTOR_SIZE,
-              new_offset / BLOCK_SECTOR_SIZE);
-#endif           
-      buffer_read_ahead (sector, false);
-    }
-#ifdef DEBUG_INODE
-  printf ("inode_write_at %s%d exit, bytes: %u\n", thread_name (),
-          thread_current ()->tid, bytes_written);
-#endif
+    buffer_read_ahead (sector, false);
   return bytes_written;
 }
 
@@ -777,5 +582,3 @@ update_length (struct inode *inode, off_t offset)
     buffer_release (buffer, false);
   return length;
 }
-
-

@@ -61,43 +61,21 @@ filesys_done (void)
 bool
 filesys_create (const char *path, off_t initial_size) 
 {
-#ifdef DEBUG_FILESYS
-  printf ("filesys_create enter %s%d, pth: %s, sz: %u\n",
-          thread_name (), thread_current ()->tid, path, initial_size);
-#endif
   char name[NAME_MAX + 1];
   struct inode *dinode;
   block_sector_t inode_sector = 0;
   bool success = false;
 
   if (path_is_empty (path) || path_has_trailing_slash (path))
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_create exit %s%d, file ends in slash\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      return false;
-    }
+    return false;
   dinode = path_lookup_parent (path, name);
   if (dinode == NULL)
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_create exit %s%d, parent lookup failed\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      return false;
-    }
+    return false;
   inode_lock (dinode);
   if (!free_map_allocate (1, &inode_sector)
       || !inode_create (inode_sector, initial_size, false)
       || !dir_add (dinode, name, inode_sector))
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_create %s%d, create failed\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      goto done;
-    }
+    goto done;
   success = true;
 
  done:
@@ -105,10 +83,6 @@ filesys_create (const char *path, off_t initial_size)
     free_map_release (inode_sector, 1);
   inode_unlock (dinode);
   inode_close (dinode);
-#ifdef DEBUG_FILESYS
-  printf ("filesys_create exit %s%d, suc:%d\n", thread_name (),
-          thread_current ()->tid, success);
-#endif
   return success;
 }
 
@@ -120,39 +94,19 @@ filesys_create (const char *path, off_t initial_size)
 struct file *
 filesys_open (const char *path)
 {
-#ifdef DEBUG_FILESYS
-  printf ("filesys_open enter %s%d, pth: %s\n", thread_name (),
-          thread_current ()->tid, path);
-#endif
   struct inode *inode;
-  struct file *file;
 
   if (path_is_empty (path))
     return NULL;
   inode = path_lookup (path);
   if (inode == NULL)
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_open exit %s%d, file: NULL, lookup failed\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      return NULL;
-    }
+    return NULL;
   if (path_has_trailing_slash (path) && !inode_is_dir (inode))
     {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_open exit %s%d, file: NULL, file ends in slash\n",
-              thread_name (), thread_current ()->tid);
-#endif
       inode_close (inode);
       return NULL;
     }
-  file = file_open (inode);
-#ifdef DEBUG_FILESYS
-  printf ("filesys_open exit %s%d, file: %p\n", thread_name (),
-          thread_current ()->tid, file);
-#endif
-  return file;
+  return file_open (inode);
 }
 
 /* Deletes a file or directory named PATH.
@@ -163,10 +117,6 @@ filesys_open (const char *path)
 bool
 filesys_remove (const char *path) 
 {
-#ifdef DEBUG_FILESYS
-  printf ("filesys_remove enter %s%d, pth: %s\n", thread_name (),
-          thread_current ()->tid, path);
-#endif
   char name[NAME_MAX + 1];
   struct inode *dinode;
   struct inode *inode = NULL;
@@ -177,31 +127,15 @@ filesys_remove (const char *path)
     return false;
   dinode = path_lookup_parent (path, name);
   if (dinode == NULL)
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_remove exit %s%d, suc: false, parent lookup failed\n",
-              thread_name (), thread_current ()->tid);
-#endif
-      return false;
-    }
+    return false;
   if (strcmp (name, ".") == 0 || strcmp (name, "..") == 0)
     {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_remove exit %s%d, can't remove links\n", thread_name (),
-              thread_current ()->tid);
-#endif
       inode_close (dinode);
       return false;
     }
   inode_lock (dinode);
   if (!dir_lookup (dinode, name, &inode))
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_remove %s%d, dir lookup failed\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      goto done;
-    }
+    goto done;
   is_dir = inode_is_dir (inode);
   if (is_dir)
     {
@@ -213,22 +147,12 @@ filesys_remove (const char *path)
       inode_lock (inode);
       if (!dir_is_empty (inode))
         {
-#ifdef DEBUG_FILESYS
-          printf ("filesys_remove %s%d, dir not empty\n", thread_name (),
-                  thread_current ()->tid);
-#endif
           inode_unlock (inode);
           goto done;
         }
     }
   else if (path_has_trailing_slash (path))
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_remove %s%d, file ends in slash\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      goto done;
-    }
+    goto done;
   dir_remove (dinode, name);
   /* Remove a directory with the lock held in case another thread is reading the
      deleted directory. */
@@ -242,10 +166,6 @@ filesys_remove (const char *path)
     inode_close (inode);
   inode_unlock (dinode);
   inode_close (dinode);
-#ifdef DEBUG_FILESYS
-  printf ("filesys_remove exit %s%d, suc:%d\n", thread_name (),
-          thread_current ()->tid, success);
-#endif
   return success;
 }
 
@@ -270,10 +190,6 @@ allocate_fd (struct file *file)
 int
 fd_open (const char *name, bool deny_write)
 {
-#ifdef DEBUG_FILESYS
-  printf ("fd_open enter %s%d, nm: %s\n", thread_name (),
-          thread_current ()->tid, name);
-#endif  
   struct file *file;
   int fd = -1;
 
@@ -287,41 +203,24 @@ fd_open (const char *name, bool deny_write)
       if (fd == -1)
         file_close (file);
     }
-#ifdef DEBUG_FILESYS
-  printf ("fd_open exit %s%d, fd: %d\n", thread_name (),
-          thread_current ()->tid, fd);
-#endif  
   return fd;
 }
 
 off_t
 fd_size (int fd)
 {
-#ifdef DEBUG_FILESYS
-  printf ("fd_size enter %s%d, fd: %d\n", thread_name (),
-          thread_current ()->tid, fd);
-#endif  
   struct file *file;
   off_t size = -1;
 
   file = fd_get_file (fd);
   if (file != NULL && !file_is_dir (file))
     size = file_length (file);
-
-#ifdef DEBUG_FILESYS
-  printf ("fd_size exit %s%d, sz: %u\n", thread_name (),
-          thread_current ()->tid, size);
-#endif  
   return size;
 }
 
 off_t
 fd_read (int fd, void *buffer_, off_t size)
 {
-#ifdef DEBUG_FILESYS
-  printf ("fd_read enter %s%d, fd: %d, sz: %u\n", thread_name (),
-          thread_current ()->tid, fd, size);
-#endif  
   uint8_t *buffer = buffer_;
   struct file *file;
   off_t bytes_read = -1;
@@ -345,10 +244,6 @@ fd_read (int fd, void *buffer_, off_t size)
       if (file != NULL && !file_is_dir (file))
         bytes_read = file_read (file, buffer, size);
     }
-#ifdef DEBUG_FILESYS
-  printf ("fd_read exit %s%d, bytes: %u\n", thread_name (),
-          thread_current ()->tid, bytes_read);
-#endif  
   return bytes_read;
 }
 
@@ -366,17 +261,9 @@ fd_write (int fd, const void *buffer, off_t size)
     }
   else
     {
-#ifdef DEBUG_FILESYS
-      printf ("fd_write enter %s%d, fd: %d, sz: %u\n", thread_name (),
-              thread_current ()->tid, fd, size);
-#endif        
       file = fd_get_file (fd);
       if (file != NULL && !file_is_dir (file))
         bytes_written = file_write (file, buffer, size);
-#ifdef DEBUG_FILESYS
-      printf ("fd_write exit %s%d, bytes: %u\n", thread_name (),
-              thread_current ()->tid, bytes_written);
-#endif        
     }
   return bytes_written;
 }
@@ -384,10 +271,6 @@ fd_write (int fd, const void *buffer, off_t size)
 void
 fd_seek (int fd, off_t new_pos)
 {
-#ifdef DEBUG_FILESYS
-  printf ("fd_seek enter %s%d, fd: %d, pos: %u\n", thread_name (),
-          thread_current ()->tid, fd, new_pos);
-#endif  
   struct file *file;
 
   file = fd_get_file (fd);
@@ -395,20 +278,11 @@ fd_seek (int fd, off_t new_pos)
     {
       file_seek (file, new_pos);
     }
-
-#ifdef DEBUG_FILESYS
-  printf ("fd_seek exit %s%d\n", thread_name (),
-          thread_current ()->tid);
-#endif  
 }
 
 off_t
 fd_tell (int fd)
 {
-#ifdef DEBUG_FILESYS
-  printf ("fd_tell enter %s%d, fd: %d\n", thread_name (),
-          thread_current ()->tid, fd);
-#endif  
   struct file *file;
   off_t pos = -1;
 
@@ -417,21 +291,12 @@ fd_tell (int fd)
     {
       pos = file_tell (file);
     }
-
-#ifdef DEBUG_FILESYS
-  printf ("fd_tell exit %s%d, pos: %u\n", thread_name (),
-          thread_current ()->tid, pos);
-#endif  
   return pos;
 }
 
 void
 fd_close (int fd)
 {
-#ifdef DEBUG_FILESYS
-  printf ("fd_close enter %s%d, fd: %d\n", thread_name (),
-          thread_current ()->tid, fd);
-#endif  
   struct thread *cur = thread_current ();
   struct file *file;
 
@@ -442,21 +307,12 @@ fd_close (int fd)
       file_close (file);
       cur->ofiles[fd] = NULL;
     }
-
-#ifdef DEBUG_FILESYS
-  printf ("fd_close exit %s%d\n", thread_name (),
-          thread_current ()->tid);
-#endif  
 }
 
 /* Changes the current directory of a process to PATH. */
 bool
 filesys_chdir (const char *path)
 {
-#ifdef DEBUG_FILESYS
-  printf ("filesys_chdir enter %s%d, pth: %s\n", thread_name (),
-          thread_current ()->tid, path);
-#endif
   struct thread *cur = thread_current ();
   struct inode *inode;
 
@@ -464,13 +320,7 @@ filesys_chdir (const char *path)
     return false;
   inode = path_lookup (path);
   if (inode == NULL)
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_chdir exit %s%d, suc: false, lookup failed\n",
-              thread_name (), thread_current ()->tid);
-#endif
-      return false;
-    }
+    return false;
   inode_close (cur->cwd);
   cur->cwd = inode;
   return true;
@@ -484,10 +334,6 @@ filesys_chdir (const char *path)
 bool
 filesys_mkdir (const char *path, off_t initial_size)
 {
-#ifdef DEBUG_FILESYS
-  printf ("filesys_mkdir enter %s%d, pth: %s, sz: %u\n",
-          thread_name (), thread_current ()->tid, path, initial_size);
-#endif
   char name[NAME_MAX + 1];
   struct inode *dinode;
   struct inode *inode = NULL;
@@ -498,44 +344,19 @@ filesys_mkdir (const char *path, off_t initial_size)
     return false;
   dinode = path_lookup_parent (path, name);
   if (dinode == NULL)
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_mkdir exit %s%d, parent lookup failed\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      return false;
-    }
+    return false;
   inode_lock (dinode);
   if (!free_map_allocate (1, &inode_sector)
       || !inode_create (inode_sector, initial_size, true))
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_mkdir %s%d, create failed\n", thread_name (),
-              thread_current ()->tid);
-#endif  
-      goto done;
-    }
+    goto done;
   inode = inode_open (inode_sector);
   if (inode == NULL)
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_mkdir %s%d, open failed\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      goto done;      
-    }
+    goto done;
   /* pAdd "." and ".." to the directory. */
   if (!dir_add (inode, ".", inode_sector)
       || !dir_add (inode, "..", inode_get_inumber (dinode))
       || !dir_add (dinode, name, inode_sector))
-    {
-#ifdef DEBUG_FILESYS
-      printf ("filesys_mkdir %s%d, add failed\n", thread_name (),
-              thread_current ()->tid);
-#endif
-      goto done;
-
-    }
+    goto done;
   success = true;
 
  done:
@@ -550,73 +371,42 @@ filesys_mkdir (const char *path, off_t initial_size)
     inode_close (inode);
   inode_unlock (dinode);
   inode_close (dinode);
-#ifdef DEBUG_FILESYS
-  printf ("filesys_mkdir exit %s%d, suc:%d\n", thread_name (),
-          thread_current ()->tid, success);
-#endif
   return success;
 }
 
 bool
 fd_readdir (int fd, char *name)
 {
-#ifdef DEBUG_FILESYS
-  printf ("fd_readdir enter %s%d, nm: %s\n", thread_name (),
-          thread_current ()->tid, name);
-#endif
   struct file *file;
   bool success = false;
 
   file = fd_get_file (fd);
   if (file != NULL && file_is_dir (file))
     success = dir_readdir (file, name);
-  
-#ifdef DEBUG_FILESYS
-  printf ("fd_readdir exit %s%d, suc: %d\n", thread_name (),
-          thread_current ()->tid, success);
-#endif  
   return success;
 }
 
 bool
 fd_is_dir (int fd)
 {
-#ifdef DEBUG_FILESYS
-  printf ("fd_is_dir enter %s%d, fd: %d\n", thread_name (),
-          thread_current ()->tid, fd);
-#endif
   struct file *file;
   bool is_dir = false;
 
   file = fd_get_file (fd);
   if (file != NULL)
     is_dir = file_is_dir (file);
-  
-#ifdef DEBUG_FILESYS
-  printf ("fd_is_dir exit %s%d, isdir %d\n", thread_name (),
-          thread_current ()->tid, is_dir);
-#endif
   return is_dir;
 }
 
 block_sector_t
 fd_inumber (int fd)
 {
-#ifdef DEBUG_FILESYS
-  printf ("fd_inumber enter %s%d, fd: %d\n", thread_name (),
-          thread_current ()->tid, fd);
-#endif
   struct file *file;
   block_sector_t inumber = 0;
 
   file = fd_get_file (fd);
   if (file != NULL)
     inumber = inode_get_inumber (file_get_inode (file));
-
-#ifdef DEBUG_FILESYS
-  printf ("fd_inumber exit %s%d, inum: %u\n", thread_name (),
-          thread_current ()->tid, inumber);
-#endif
   return inumber;
 }
 
@@ -627,7 +417,6 @@ fd_get_file (int fd)
   
   if (fd < 2 || fd >= MAX_OPEN_FILES)
     return NULL;
-  
   return cur->ofiles[fd];
 }
 

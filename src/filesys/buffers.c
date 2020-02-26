@@ -57,9 +57,6 @@ static struct semaphore read_ahead_done;
 static int cache_accesses;
 static int cache_hits;
 
-#ifdef DEBUG_BUFFERS
-static void print_buffer (const struct buffer *buffer);
-#endif
 static struct buffer *get_buffer_to_acquire (block_sector_t sector);
 static struct buffer *get_buffer_to_write_back (void);
 static void load_buffer (block_sector_t sector, bool is_meta,
@@ -96,9 +93,6 @@ void
 buffers_done (void)
 {
   lock_acquire (&cache_lock);
-#ifdef DEBUG_BUFFERS
-  printf ("%s%d buffer_done\n", thread_name (), thread_current ()->tid);
-#endif
   stop_read_ahead = true;
   cond_signal (&read_ahead_available, &cache_lock);
   lock_release (&cache_lock);
@@ -122,58 +116,29 @@ buffer_acquire (block_sector_t sector, bool is_meta)
 
   lock_acquire (&cache_lock);
   cache_accesses++;
-#ifdef DEBUG_BUFFERS
-  printf ("\n%s%d: buffer_acquire sector: %u, meta: %d\n", thread_name (),
-          thread_current ()->tid, sector, is_meta);
-#endif
 
   while (!acquire)
     {
       buffer = get_buffer_to_acquire (sector);
       if (buffer == NULL)
-        {
-#ifdef DEBUG_BUFFERS
-          printf ("%s%d: waiting for available buffer\n", thread_name (),
-                  thread_current ()->tid);
-#endif
-          cond_wait (&buffer_available, &cache_lock);
-        }
+        cond_wait (&buffer_available, &cache_lock);
       else if (sector == buffer->sector)
         {
           cache_hits++;
-#ifdef DEBUG_BUFFERS
-          printf ("%s%d: buffer in cache\n", thread_name (),
-                  thread_current ()->tid);
-#endif          
           buffer->waiting++;
           while (buffer->flags & BUF_IN_USE)
-            {
-#ifdef DEBUG_BUFFERS
-              printf ("%s%d: waiting for availability\n",
-                      thread_name (), thread_current ()->tid);
-#endif                        
-              cond_wait (&buffer->available, &cache_lock);
-            }
+            cond_wait (&buffer->available, &cache_lock);
           buffer->waiting--;
           buffer->flags |= BUF_IN_USE;
-#ifdef DEBUG_BUFFERS
-          printf ("%s%d: acquired\n", thread_name (), thread_current ()->tid);
-          print_buffer (buffer);
-#endif                                  
           lock_release (&cache_lock);
           acquire = true;
         }
       else if (sector == buffer->evicting_sector)
         {
           ASSERT (buffer->flags & BUF_IN_USE);
+          
           while (sector == buffer->evicting_sector)
-            {
-#ifdef DEBUG_BUFFERS
-              printf ("%s%d: waiting for eviction", thread_name (),
-                      thread_current ()->tid);
-#endif
-              cond_wait (&buffer->evicted, &cache_lock);
-            }
+            cond_wait (&buffer->evicted, &cache_lock);
         }
       else
         {
@@ -190,12 +155,8 @@ void
 buffer_release (struct buffer *buffer, bool dirty)
 {
   ASSERT (buffer->flags & BUF_IN_USE);
+  
   lock_acquire (&cache_lock);
-#ifdef DEBUG_BUFFERS
-  printf ("\n%s%d: buffer_release %u dirty %d\n", thread_name (),
-          thread_current ()->tid, buffer->sector, dirty);
-  print_buffer (buffer);
-#endif
   buffer->flags &= ~BUF_IN_USE;
   if (dirty)
     buffer->flags |= BUF_DIRTY;
@@ -218,10 +179,6 @@ buffer_read_ahead (block_sector_t sector, bool is_meta)
   struct read_ahead_sector ra_sector;
   
   lock_acquire (&read_ahead_lock);
-#ifdef DEBUG_BUFFERS
-  printf ("%s%d: buffer_read_ahead sector: %u, meta: %d\n", thread_name(),
-          thread_current ()->tid, sector, is_meta);
-#endif
   if (sectors_size < CACHE_SIZE)
     {
       ra_sector.sector = sector;
@@ -229,13 +186,6 @@ buffer_read_ahead (block_sector_t sector, bool is_meta)
       read_ahead_sectors[sectors_head++ % CACHE_SIZE] = ra_sector;
       sectors_size++;
       cond_signal (&read_ahead_available, &read_ahead_lock);
-    }
-  else
-    {
-#ifdef DEBUG_BUFFERS
-      printf ("%s%d: read ahead queue full\n", thread_name (),
-              thread_current ()->tid);
-#endif       
     }
   lock_release (&read_ahead_lock);
 }
@@ -245,11 +195,8 @@ buffer_read_ahead (block_sector_t sector, bool is_meta)
 static void
 load_buffer (block_sector_t sector, bool is_meta, struct buffer *buffer)
 {
-#ifdef DEBUG_BUFFERS
-  printf ("%s%d: load_buffer sector: %u, is_meta: %d \n", thread_name (), thread_current ()->tid, sector,
-          is_meta);
-#endif                    
   ASSERT (!(buffer->flags & BUF_IN_USE));
+  
   buffer->flags |= BUF_IN_USE;
   if (is_meta)
     buffer->flags |= BUF_META;
@@ -257,9 +204,6 @@ load_buffer (block_sector_t sector, bool is_meta, struct buffer *buffer)
     buffer->flags &= ~BUF_META;
   if (buffer->flags & BUF_DIRTY)
     {
-#ifdef DEBUG_BUFFERS
-      printf ("%s%d: evicting %u\n", thread_name (), thread_current ()->tid, buffer->sector);
-#endif                        
       buffer->evicting_sector = buffer->sector;
       buffer->sector = sector;
       lock_release (&cache_lock);
@@ -273,10 +217,6 @@ load_buffer (block_sector_t sector, bool is_meta, struct buffer *buffer)
     buffer->sector = sector;
   lock_release (&cache_lock);
   ASSERT (buffer->evicting_sector == UINT_MAX);
-#ifdef DEBUG_BUFFERS
-  printf ("%s%d: loaded\n", thread_name (), thread_current ()->tid);
-  print_buffer (buffer);
-#endif                                  
   block_read (fs_device, buffer->sector, buffer->data);
 }
 
@@ -289,25 +229,12 @@ void flush_all (void)
   struct buffer *buffer;
 
   lock_acquire (&cache_lock);
-#ifdef DEBUG_BUFFERS
-  printf ("%s%d: flush all\n", thread_name (), thread_current ()->tid);
-#endif
   buffer = get_buffer_to_write_back ();
   while (buffer != NULL)
     {
-#ifdef DEBUG_BUFFERS
-      printf ("%s%d: writing buffer\n", thread_name (), thread_current ()->tid);
-      print_buffer (buffer);
-#endif
       buffer->waiting++;
       while (buffer->flags & BUF_IN_USE)
-        {
-#ifdef DEBUG_BUFFERS
-          printf ("%s%d: waiting for availability\n", thread_name (),
-                  thread_current ()->tid);
-#endif                        
-          cond_wait (&buffer->available, &cache_lock);
-        }
+        cond_wait (&buffer->available, &cache_lock);
       buffer->waiting--;
       buffer->flags |= BUF_IN_USE;
       lock_release (&cache_lock);
@@ -315,15 +242,8 @@ void flush_all (void)
       buffer->flags &= ~BUF_DIRTY;
       buffer_release (buffer, false);
       lock_acquire (&cache_lock);
-#ifdef DEBUG_BUFFERS
-      printf ("%s%d: done\n", thread_name (), thread_current ()->tid);
-      print_buffer (buffer);
-#endif
       buffer = get_buffer_to_write_back ();
     }
-#ifdef DEBUG_BUFFERS
-  printf ("%s%d: finished flushing\n", thread_name (), thread_current ()->tid);
-#endif
   lock_release (&cache_lock);
 }
 
@@ -339,28 +259,13 @@ read_ahead (void *aux UNUSED)
     {
       lock_acquire (&read_ahead_lock);
       while (sectors_size == 0 && !stop_read_ahead)
-        {
-#ifdef DEBUG_BUFFERS
-          printf ("%s%d: waiting for read ahead\n", thread_name (),
-                  thread_current ()->tid);
-#endif
-          cond_wait (&read_ahead_available, &read_ahead_lock);      
-        }
+        cond_wait (&read_ahead_available, &read_ahead_lock);      
       if (stop_read_ahead)
-        {
-#ifdef DEBUG_BUFFERS
-          printf ("%s%d: stopping\n", thread_name (), thread_current ()->tid);
-#endif
-          break;        
-        }
+        break;
       ra_sector = read_ahead_sectors[sectors_tail++ % CACHE_SIZE];
       sectors_size--;
       lock_release (&read_ahead_lock);
       lock_acquire (&cache_lock);
-#ifdef DEBUG_BUFFERS
-      printf ("%s%d: read ahead sector: %u, meta: %d\n", thread_name (),
-              thread_current ()->tid, ra_sector.sector, ra_sector.is_meta);
-#endif
       buffer = get_buffer_to_acquire (ra_sector.sector);
       if (buffer != NULL && ra_sector.sector != buffer->sector
           && ra_sector.sector != buffer->evicting_sector)
@@ -369,12 +274,7 @@ read_ahead (void *aux UNUSED)
           buffer_release (buffer, false);
         }
       else
-        {
-#ifdef DEBUG_BUFFERS
-          printf ("no buffer found\n");
-#endif
-          lock_release (&cache_lock);
-        }
+        lock_release (&cache_lock);
     }
     sema_up (&read_ahead_done);
     thread_exit ();
@@ -389,21 +289,6 @@ write_back (void *aux UNUSED)
       timer_msleep (WRITE_BACK_INTERVAL_MS);
     }
 }
-
-#ifdef DEBUG_BUFFERS
-static void
-print_buffer (const struct buffer *buffer)
-{
-  ASSERT (buffer != NULL);
-
-  printf ("%s%d: buffer wait: %u, sec: %u, esec: %u, %c%c%c\n",
-          thread_name (), thread_current ()->tid,
-          buffer->waiting, buffer->sector, buffer->evicting_sector,
-          buffer->flags & BUF_IN_USE ? 'u' : '-',
-          buffer->flags & BUF_DIRTY ? 'd' : '-',
-          buffer->flags & BUF_META ? 'm' : 'd');
-}
-#endif
 
 /* Looks for a buffer in the cache.  If a buffer is already in the cache returns
    it immediately.  If not, the least recently used unused buffer is returned 

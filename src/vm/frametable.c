@@ -12,9 +12,6 @@
 #include "threads/malloc.h"
 #include "threads/vaddr.h"
 #include "threads/synch.h"
-#ifdef DEBUG_FRAMETABLE
-#include "threads/thread.h"
-#endif
 #include "filesys/file.h"
 #include "filesys/inode.h"
 #include "filesys/filesys.h"
@@ -96,11 +93,6 @@ static struct list frame_list;
    which is used for choosing a frame to evict. The clock hand 
    points to the next frame to examine. */
 static struct list_elem *clock_hand;
-
-#ifdef DEBUG_FRAMETABLE
-static void pageinfo_print (struct page_info *page_info, bool tab);
-static void frame_print (struct frame *frame);
-#endif
 
 static void frame_init (struct frame *frame);
 static struct frame *allocate_frame (void);
@@ -184,17 +176,7 @@ frametable_init (void)
 bool
 frametable_load_frame (uint32_t *pd, const void *upage, bool write)
 {
-  bool loaded;
-#ifdef DEBUG_FRAMETABLE
-  printf ("frametable_load_frame enter %s%d, %p, wr: %d \n", thread_name (),
-          thread_current ()->tid, upage, write);
-#endif  
-  loaded = load_frame (pd, upage, write, false);
-#ifdef DEBUG_FRAMETABLE
-  printf ("frametable_load_frame exit %s%d, ld: %d\n", thread_name (),
-          thread_current ()->tid, loaded);
-#endif
-  return loaded;
+  return load_frame (pd, upage, write, false);
 }
 
 /* Unmaps the frame mapped by UPAGE, writes out any modified data to the 
@@ -203,10 +185,6 @@ frametable_load_frame (uint32_t *pd, const void *upage, bool write)
 void
 frametable_unload_frame (uint32_t *pd, const void *upage)
 {
-#ifdef DEBUG_FRAMETABLE
-  printf ("frametable_unload_frame enter %s%d, %p\n", thread_name (),
-          thread_current ()->tid, upage);
-#endif  
   struct page_info *page_info, *p;
   struct file_info *file_info;
   void *kpage;
@@ -217,22 +195,12 @@ frametable_unload_frame (uint32_t *pd, const void *upage)
   ASSERT (is_user_vaddr (upage));
   page_info = pagedir_get_info (pd, upage);
   if (page_info == NULL)
-    {
-#ifdef DEBUG_FRAMETABLE
-      printf ("frametable_unload_frame exit %s%d NULL\n", thread_name (),
-              thread_current ()->tid);
-#endif  
     return;
-    }
   lock_acquire (&frame_lock);
   /* It's possible the frame could be in the process of being evicted.
      If so, wait for eviction to finish before continuing. When 
      wait_for_io_done returns, frame_lock will be held. */
   wait_for_io_done (&page_info->frame);
-#ifdef DEBUG_FRAMETABLE  
-  pageinfo_print (page_info, false);
-  frame_print (page_info->frame);
-#endif  
   if (page_info->frame != NULL)
     {
       frame = page_info->frame;
@@ -261,7 +229,11 @@ frametable_unload_frame (uint32_t *pd, const void *upage)
           if (page_info->type & PAGE_TYPE_FILE && page_info->writable == 0)
             hash_delete (&read_only_frames, &frame->hash_elem);
           if (clock_hand == &frame->list_elem)
-            clock_hand = list_next (clock_hand);
+            {
+              clock_hand = list_next (clock_hand);
+              if (clock_hand == list_end (&frame_list))
+                clock_hand = list_begin (&frame_list);
+            }
           list_remove (&page_info->elem);
           list_remove (&frame->list_elem);
         }
@@ -269,10 +241,6 @@ frametable_unload_frame (uint32_t *pd, const void *upage)
       /* At this point the frame has been removed from the shared data
          structures and it's safe to release the lock and, if necessary,
          free the resources associated with the frame. */
-#ifdef DEBUG_FRAMETABLE
-      printf ("frametable_unload_frame %s%d, freeing resources\n",
-              thread_name (), thread_current ()->tid);
-#endif  
       lock_release (&frame_lock);
       if (list_empty (&frame->page_info_list))
         {
@@ -293,13 +261,7 @@ frametable_unload_frame (uint32_t *pd, const void *upage)
         }
     }
   else
-    {
-#ifdef DEBUG_FRAMETABLE
-      printf ("frametable_unload_frame %s%d, freeing resources\n",
-              thread_name (), thread_current ()->tid);
-#endif  
-      lock_release (&frame_lock);
-    }
+    lock_release (&frame_lock);
   /* Free resources associated with page info. */
   if (page_info->swapped)
     {
@@ -317,10 +279,6 @@ frametable_unload_frame (uint32_t *pd, const void *upage)
     }
   pagedir_set_info (page_info->pd, upage, NULL);
   free (page_info);
-#ifdef DEBUG_FRAMETABLE
-  printf ("frametable_unload_frame exit %s%d\n", thread_name (),
-          thread_current ()->tid);
-#endif  
 }
 
 /* Identical to frametale_load_frame with the exception that,
@@ -328,17 +286,7 @@ frametable_unload_frame (uint32_t *pd, const void *upage)
 bool
 frametable_lock_frame(uint32_t *pd, const void *upage, bool write)
 {
-#ifdef DEBUG_FRAMETABLE
-  printf ("frametable_lock_frame enter %s%d, %p, wr: %d\n", thread_name (),
-          thread_current ()->tid, upage, write);
-#endif  
-  bool locked;
-  locked = load_frame (pd, upage, write, true);
-#ifdef DEBUG_FRAMETABLE
-  printf ("frametable_lock_frame exit %s%d,lck: %d\n", thread_name (),
-          thread_current ()->tid, locked);
-#endif  
-  return locked;
+  return load_frame (pd, upage, write, true);
 }
 
 /* Unlocks a frame that was locked with frametable_lock_frame.  NOTE:
@@ -346,10 +294,6 @@ frametable_lock_frame(uint32_t *pd, const void *upage, bool write)
 void
 frametable_unlock_frame(uint32_t *pd, const void *upage)
 {
-#ifdef DEBUG_FRAMETABLE
-  printf ("frametable_unlock_frame enter %s%d, %p\n", thread_name (),
-          thread_current ()->tid, upage);
-#endif  
   struct page_info *page_info;
   
   ASSERT (is_user_vaddr (upage));
@@ -360,10 +304,6 @@ frametable_unlock_frame(uint32_t *pd, const void *upage)
   lock_acquire (&frame_lock);
   page_info->frame->lock--;
   lock_release (&frame_lock);
-#ifdef DEBUG_FRAMETABLE
-  printf ("frametable_unlock_frame enter %s%d\n", thread_name (),
-          thread_current ()->tid);
-#endif  
 }
 
 static bool
@@ -382,22 +322,13 @@ load_frame (uint32_t *pd, const void *upage, bool write, bool keep_locked)
   ASSERT (is_user_vaddr (upage));
   page_info = pagedir_get_info (pd, upage);
   if (page_info == NULL || (write && page_info->writable == 0))
-    {
-#ifdef DEBUG_FRAMETABLE  
-      pageinfo_print (page_info, false);
-#endif
-      return false;
-    }
+    return false;
   lock_acquire (&frame_lock);
   /* It's possible the frame could be in the process of being evicted.
      If so, wait for eviction to finish before continuing. When 
      wait_for_io_done returns, frame_lock will be held and frame will be
      NULL. */
   wait_for_io_done (&page_info->frame);
-#ifdef DEBUG_FRAMETABLE  
-  pageinfo_print (page_info, false);
-  frame_print (page_info->frame);
-#endif    
   ASSERT (page_info->frame == NULL || keep_locked);
   if (page_info->frame != NULL)
     {
@@ -414,10 +345,6 @@ load_frame (uint32_t *pd, const void *upage, bool write, bool keep_locked)
       frame = lookup_read_only_frame (page_info);
       if (frame != NULL)
         {
-#ifdef DEBUG_FRAMETABLE
-          printf ("load_frame %s%d, found read-only frame\n",
-                  thread_name (), thread_current ()->tid);
-#endif  
           /* Make sure to map the page before releasing the lock.  If not,
              it's possible that frame could be freed if the final process 
              that maps the frame exits. */
@@ -427,19 +354,8 @@ load_frame (uint32_t *pd, const void *upage, bool write, bool keep_locked)
              after it's loaded in and before the page is mapped. */
           frame->lock++;
           wait_for_io_done (&frame);
-#ifdef DEBUG_FRAMETABLE
-          pageinfo_print (page_info, false);
-          frame_print (page_info->frame);
-#endif  
           frame->lock--;
           success = true;
-        }
-      else
-        {
-#ifdef DEBUG_FRAMETABLE
-          printf ("load_frame %s%d, did not find read-only frame\n",
-                  thread_name (), thread_current ()->tid);
-#endif            
         }
     }
   /* Fill a new frame. */
@@ -456,10 +372,6 @@ load_frame (uint32_t *pd, const void *upage, bool write, bool keep_locked)
               frame->lock++;
               if (page_info->swapped)
                 {
-#ifdef DEBUG_FRAMETABLE
-                  printf ("load_frame %s%d, read from swap\n",
-                          thread_name (), thread_current ()->tid);
-#endif  
                   lock_release (&frame_lock);
                   swap_read (page_info->data.swap_sector, frame->kpage);
                   page_info->swapped = false;
@@ -475,10 +387,6 @@ load_frame (uint32_t *pd, const void *upage, bool write, bool keep_locked)
                       hash_insert (&read_only_frames, &frame->hash_elem);
                     }
                   file_info = &page_info->data.file_info;
-#ifdef DEBUG_FRAMETABLE
-                  printf ("load_frame %s%d, read from file\n",
-                          thread_name (), thread_current ()->tid);
-#endif                    
                   lock_release (&frame_lock);
                   bytes_read = file_read_at (file_info->file,
                                              frame->kpage,
@@ -489,10 +397,6 @@ load_frame (uint32_t *pd, const void *upage, bool write, bool keep_locked)
               lock_acquire (&frame_lock);
               frame->lock--;
               frame->io = false;
-#ifdef DEBUG_FRAMETABLE
-              printf ("frametable load_frame %s%d, broadcast loaded\n",
-                      thread_name (), thread_current ()->tid);
-#endif    
               cond_broadcast (&frame->io_done, &frame_lock);
             }
           else if (page_info->type & PAGE_TYPE_KERNEL)
@@ -569,17 +473,7 @@ static void
 wait_for_io_done (struct frame **frame)
 {
   while (*frame != NULL && (*frame)->io)
-    {
-#ifdef DEBUG_FRAMETABLE
-      printf ("%s%d waiting for io\n", thread_name (),
-              thread_current ()->tid);
-#endif      
-      cond_wait (&(*frame)->io_done, &frame_lock);
-    }
-#ifdef DEBUG_FRAMETABLE
-      printf ("%s%d io finished\n", thread_name (),
-              thread_current ()->tid);
-#endif      
+    cond_wait (&(*frame)->io_done, &frame_lock);
 }
 
 /* Evicts and returns a free frame. */
@@ -595,11 +489,6 @@ evict_frame (void)
   bool dirty = false;
 
   frame = get_frame_to_evict();
-#ifdef DEBUG_FRAMETABLE
-  printf ("frametable evict_frame %s%d, evicting frame\n",
-          thread_name (), thread_current ()->tid);
-  frame_print (frame);
-#endif    
   for (e = list_begin (&frame->page_info_list);
        e != list_end (&frame->page_info_list); e = list_next (e))
     {
@@ -608,11 +497,6 @@ evict_frame (void)
       /* Make sure to cause page faults before the data is written out or
          else it's possible for a process to be writing to memory as the
          data is being written or swapped. This could result in lost data. */
-#ifdef DEBUG_FRAMETABLE
-      printf ("evict_frame %s%d, clearing page\n",
-              thread_name (), thread_current ()->tid);
-      pageinfo_print (page_info, false);
-#endif                                    
       pagedir_clear_page (page_info->pd, page_info->upage);
       /* Make sure to set the frame to NULL in page_info after swapping or
          writing the data.  Both load and unload_frame need the frame to wait
@@ -631,10 +515,6 @@ evict_frame (void)
       if (page_info->writable & WRITABLE_TO_FILE)
         {
           file_info = &page_info->data.file_info;
-#ifdef DEBUG_FRAMETABLE
-          printf ("evict_frame %s%d, write to file\n",
-                  thread_name (), thread_current ()->tid);
-#endif                              
           lock_release (&frame_lock);
           bytes_written = file_write_at (file_info->file,
                                          frame->kpage,
@@ -644,28 +524,16 @@ evict_frame (void)
         }
       else
         {
-#ifdef DEBUG_FRAMETABLE
-          printf ("evict_frame %s%d, write to swap\n",
-                  thread_name (), thread_current ()->tid);
-#endif                                        
           lock_release (&frame_lock);
           swap_sector = swap_write (frame->kpage);
         }
       lock_acquire (&frame_lock);
       frame->lock--;
       frame->io = false;
-#ifdef DEBUG_FRAMETABLE
-      printf ("frametable evict_frame %s%d, broadcast evicted\n",
-              thread_name (), thread_current ()->tid);
-#endif    
       cond_broadcast (&frame->io_done, &frame_lock);
     }
   else if (page_info->type & PAGE_TYPE_FILE && page_info->writable == 0)
     {
-#ifdef DEBUG_FRAMETABLE
-      printf ("frametable evict_frame %s%d, removing from read only list\n",
-              thread_name (), thread_current ()->tid);
-#endif          
       ASSERT (hash_find (&read_only_frames, &frame->hash_elem) != NULL);
       hash_delete (&read_only_frames, &frame->hash_elem);
     }
@@ -681,18 +549,8 @@ evict_frame (void)
           page_info->data.swap_sector = swap_sector;
         }
       e = list_remove (e);
-#ifdef DEBUG_FRAMETABLE
-      printf ("frametable evict_frame %s%d, removing page info from frame\n",
-              thread_name (), thread_current ()->tid);
-      pageinfo_print (page_info, false);
-#endif      
     }
   memset (frame->kpage, 0, PGSIZE);
-#ifdef DEBUG_FRAMETABLE
-  printf ("frametable evict_frame %s%d, finished\n",
-              thread_name (), thread_current ()->tid);
-  frame_print (frame);  
-#endif            
   return frame;
 }
 
@@ -716,19 +574,21 @@ get_frame_to_evict (void)
   frame = start;
   do
     {
-      accessed = false;
-      ASSERT (!list_empty (&frame->page_info_list));
-      for (e = list_begin (&frame->page_info_list);
-           e != list_end (&frame->page_info_list); e = list_next (e))
+      if (frame->lock == 0)
         {
-          page_info = list_entry (e, struct page_info, elem);
-          accessed = accessed || pagedir_is_accessed (page_info->pd,
-                                                      page_info->upage);
-          pagedir_set_accessed (page_info->pd, page_info->upage, false);
-
+          accessed = false;
+          ASSERT (!list_empty (&frame->page_info_list));
+          for (e = list_begin (&frame->page_info_list);
+               e != list_end (&frame->page_info_list); e = list_next (e))
+            {
+              page_info = list_entry (e, struct page_info, elem);
+              accessed = accessed || pagedir_is_accessed (page_info->pd,
+                                                          page_info->upage);
+              pagedir_set_accessed (page_info->pd, page_info->upage, false);
+            }
+          if (!accessed)
+            found = frame;
         }
-      if (!accessed && frame->lock == 0)
-        found = frame;
       clock_hand = list_next (clock_hand);
       if (clock_hand == list_end (&frame_list))
         clock_hand = list_begin (&frame_list);
@@ -809,70 +669,3 @@ frame_less (const struct hash_elem *a_, const struct hash_elem *b_,
     else
       return false;
 }
-
-#ifdef DEBUG_FRAMETABLE
-static const char *
-type_string (int type)
-{
-  if (type & PAGE_TYPE_ZERO)
-    return "zero"; 
-  else if (type & PAGE_TYPE_KERNEL)
-    return "kernel";
-  else if (type & PAGE_TYPE_FILE)
-    return "file";
-  else
-    return "unknown";
-}
-
-static const char *
-writable_string (int writable)
-{
-  if (writable & WRITABLE_TO_FILE)
-    return "file";
-  else if (writable & WRITABLE_TO_SWAP)
-    return "swap";
-  else
-    return "no";
-}
-
-static void
-pageinfo_print (struct page_info *page_info, bool tab)
-{
-  if (tab)
-    printf ("\t");
-  printf ("page info %s%d w: %s, t: %s, upg: %p, sw: %u, fr: %p, pd: %p\n",
-          thread_name (), thread_current ()->tid,    
-          writable_string (page_info->writable), type_string (page_info->type),
-          page_info->upage, page_info->swapped, page_info->frame,
-          page_info->pd);
-  if (page_info->type & PAGE_TYPE_KERNEL)
-    printf ("\t%s%d kpg: %p\n", thread_name (), thread_current ()->tid,
-            page_info->data.kpage); 
-  else if (page_info->type & PAGE_TYPE_FILE)
-    printf ("\t%s%d off: %u, sz: %u\n",
-            thread_name (), thread_current ()->tid,
-            offset (page_info->data.file_info.end_offset),
-            size (page_info->data.file_info.end_offset));
-  if (page_info->swapped)
-    printf ("\t%s%d swap: %u\n", thread_name (),
-            thread_current ()->tid, page_info->data.swap_sector);
-}
-
-static void
-frame_print (struct frame *frame)
-{
-  struct list_elem *e;
-
-  if (frame)
-    {
-      printf ("frame %s%d kpg: %p, lck: %u, io: %u\n",
-              thread_name (), thread_current ()->tid, frame->kpage, frame->lock,
-              frame->io);
-      for (e = list_begin (&frame->page_info_list);
-           e != list_end (&frame->page_info_list); e = list_next (e))
-        pageinfo_print (list_entry (e, struct page_info, elem), true);
-    }
-  else
-    printf ("frame %s%d: NULL\n", thread_name (), thread_current ()->tid);
-}
-#endif 

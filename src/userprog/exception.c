@@ -129,9 +129,6 @@ static void
 page_fault (struct intr_frame *f) 
 {
   struct thread *cur = thread_current ();
-#ifdef DEBUG_PAGE_FAULTS  
-  bool not_present;  /* True: not-present page, false: writing r/o page. */
-#endif  
   bool write;        /* True: access was write, false: access was read. */
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
@@ -155,14 +152,6 @@ page_fault (struct intr_frame *f)
   /* Determine cause. */
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
-#ifdef DEBUG_PAGE_FAULTS
-  not_present = (f->error_code & PF_P) == 0;  
-  printf ("page fault %s%d %p at %p: %s error %s page in %s context.\n",
-          thread_name (), thread_current ()->tid, f->eip, fault_addr,
-          not_present ? "not present" : "rights violation",
-          write ? "writing" : "reading",
-          user ? "user" : "kernel");
-#endif
   if (!is_user_vaddr (fault_addr))
       thread_exit ();
   if (user)

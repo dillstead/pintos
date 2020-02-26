@@ -8,10 +8,6 @@
 #include "threads/malloc.h"
 #include "threads/synch.h"
 
-
-
-#include "threads/thread.h"
-
 /* A single directory entry. */
 struct dir_entry 
 {
@@ -25,11 +21,6 @@ struct dir_entry
 bool
 dir_create (block_sector_t sector, size_t entry_cnt)
 {
-#ifdef DEBUG_DIR
-  printf ("dir_create %s%d, sec: %u, cnt: %u\n",
-          thread_name (), thread_current ()->tid, sector, entry_cnt);
-
-#endif          
   return inode_create (sector, entry_cnt * sizeof (struct dir_entry), true);
 }
 
@@ -42,10 +33,6 @@ static bool
 lookup (struct inode *dinode, const char *name,
         struct dir_entry *ep, off_t *ofsp) 
 {
-#ifdef DEBUG_DIR
-  printf ("lookup enter %s%d, nm: %s\n",
-          thread_name (), thread_current ()->tid, name);
-#endif          
   struct dir_entry e;
   size_t ofs;
   
@@ -55,28 +42,15 @@ lookup (struct inode *dinode, const char *name,
   for (ofs = 0; inode_read_at (dinode, &e, sizeof e, ofs) == sizeof e;
        ofs += sizeof e)
     {
-#ifdef DEBUG_DIR
-      if (e.in_use)
-        printf ("%s%d, nm: %s, sec: %u\n",
-                thread_name (), thread_current ()->tid, e.name, e.inode_sector);
-#endif       
       if (e.in_use && !strcmp (name, e.name)) 
         {
           if (ep != NULL)
             *ep = e;
           if (ofsp != NULL)
             *ofsp = ofs;
-#ifdef DEBUG_DIR
-          printf ("lookup exit %s%d, suc: 1\n",
-                  thread_name (), thread_current ()->tid);
-#endif                  
           return true;
         }
     }
-#ifdef DEBUG_DIR
-  printf ("lookup exit %s%d, suc: 0\n",
-          thread_name (), thread_current ()->tid);
-#endif            
   return false;
 }
 
@@ -88,11 +62,6 @@ bool
 dir_lookup (struct inode *dinode, const char *name,
             struct inode **inode) 
 {
-#ifdef DEBUG_DIR
-  printf ("dir_lookup enter %s%d, dinode: %p, nm: %s\n",
-          thread_name (), thread_current ()->tid, dinode,
-          name);
-#endif          
   struct dir_entry e;
 
   ASSERT (dinode != NULL);
@@ -103,12 +72,6 @@ dir_lookup (struct inode *dinode, const char *name,
     *inode = inode_open (e.inode_sector);
   else
     *inode = NULL;
-
-#ifdef DEBUG_DIR
-  printf ("dir_lookup exit %s%d, suc: %d\n",
-          thread_name (), thread_current ()->tid,
-          *inode != NULL);
-#endif          
   return *inode != NULL;
 }
 
@@ -121,11 +84,6 @@ dir_lookup (struct inode *dinode, const char *name,
 bool
 dir_add (struct inode *dinode, const char *name, block_sector_t inode_sector)
 {
-#ifdef DEBUG_DIR
-  printf ("dir_add enter %s%d, dinode: %p, nm: %s, sec: %u\n",
-          thread_name (), thread_current ()->tid, dinode,
-          name, inode_sector);
-#endif          
   struct dir_entry e;
   off_t ofs;
   bool success = false;
@@ -135,14 +93,7 @@ dir_add (struct inode *dinode, const char *name, block_sector_t inode_sector)
 
   /* Check NAME for validity. */
   if (*name == '\0' || strlen (name) > NAME_MAX)
-    {
-#ifdef DEBUG_DIR
-      printf ("dir_add exit %s%d, suc: %d\n",
-              thread_name (), thread_current ()->tid,
-              success);
-#endif          
-      return false;
-    }
+    return false;
 
   /* Check that NAME is not in use. */
   if (lookup (dinode, name, NULL, NULL))
@@ -169,11 +120,6 @@ dir_add (struct inode *dinode, const char *name, block_sector_t inode_sector)
   success = inode_write_at (dinode, &e, sizeof e, ofs) == sizeof e;
 
  done:
-#ifdef DEBUG_DIR
-  printf ("dir_add exit %s%d, suc: %d\n",
-          thread_name (), thread_current ()->tid,
-          success);
-#endif          
   return success;
 }
 
@@ -183,11 +129,6 @@ dir_add (struct inode *dinode, const char *name, block_sector_t inode_sector)
 bool
 dir_remove (struct inode *dinode, const char *name) 
 {
-#ifdef DEBUG_DIR
-  printf ("dir_remove enter %s%d, dinode: %p, nm: %s\n",
-          thread_name (), thread_current ()->tid, dinode,
-          name);
-#endif          
   struct dir_entry e;
   off_t ofs;
 
@@ -196,28 +137,12 @@ dir_remove (struct inode *dinode, const char *name)
 
   /* Find directory entry. */
   if (!lookup (dinode, name, &e, &ofs))
-    {
-#ifdef DEBUG_DIR
-      printf ("dir_remove exit %s%d, suc: false\n",
-              thread_name (), thread_current ()->tid);
-#endif          
-      return false;
-    }
+    return false;
 
   /* Erase directory entry. */
   e.in_use = false;
   if (inode_write_at (dinode, &e, sizeof e, ofs) != sizeof e)
-    {
-#ifdef DEBUG_DIR
-      printf ("dir_remove exit %s%d, suc: false\n",
-              thread_name (), thread_current ()->tid);
-#endif          
-      return false;
-    }
-#ifdef DEBUG_DIR
-  printf ("dir_remove exit %s%d, suc: true\n",
-          thread_name (), thread_current ()->tid);
-#endif          
+    return false;
   return true;
 }
 
@@ -227,10 +152,6 @@ dir_remove (struct inode *dinode, const char *name)
 bool
 dir_readdir (struct file *file, char name[NAME_MAX + 1])
 {
-#ifdef DEBUG_DIR
-  printf ("dir_readdir enter %s%d, file: %p\n",
-          thread_name (), thread_current ()->tid, file);
-#endif          
   struct inode *dinode;
   struct dir_entry e;
   bool success = false;
@@ -254,10 +175,6 @@ dir_readdir (struct file *file, char name[NAME_MAX + 1])
         }
     }
   inode_unlock (dinode);
-#ifdef DEBUG_DIR
-  printf ("dir_readdir exit %s%d, suc: %d\n",
-          thread_name (), thread_current ()->tid, success);
-#endif            
   return success;
 }
 
@@ -266,10 +183,6 @@ dir_readdir (struct file *file, char name[NAME_MAX + 1])
 bool
 dir_is_empty (struct inode *dinode)
 {
-#ifdef DEBUG_DIR
-  printf ("dir_is_empty enter %s%d, dinode: %p\n",
-          thread_name (), thread_current ()->tid, dinode);
-#endif          
   struct dir_entry e;
   size_t ofs;
 
@@ -279,16 +192,6 @@ dir_is_empty (struct inode *dinode)
   for (ofs = 2 * sizeof e;
        inode_read_at (dinode, &e, sizeof e, ofs) == sizeof e; ofs += sizeof e) 
     if (e.in_use)
-      {
-#ifdef DEBUG_DIR
-        printf ("dir_is_empty exit %s%d, suc: false\n",
-                thread_name (), thread_current ()->tid);
-#endif                    
-        return false;
-      }
-#ifdef DEBUG_DIR
-  printf ("dir_is_empty exit %s%d, suc: true\n",
-          thread_name (), thread_current ()->tid);
-#endif            
+      return false;
   return true;
 }
